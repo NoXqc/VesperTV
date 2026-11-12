@@ -55,6 +55,8 @@ class _HomeWallpaperScreenState extends State<HomeWallpaperScreen> {
     return SettingsScaffold(
       title: tr('Home wallpaper'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(
@@ -108,7 +110,7 @@ class _HomeWallpaperScreenState extends State<HomeWallpaperScreen> {
             TvSwitchListTile(
               title: Text(tr('Also behind "Who is watching?"')),
               subtitle: Text(tr(
-                  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).')),
+                  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles & startup).')),
               value: _onProfiles,
               onChanged: (value) {
                 setState(() => _onProfiles = value);

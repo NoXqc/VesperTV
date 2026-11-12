@@ -218,6 +218,8 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
       (context) => SettingsScaffold(
         title: tr('Network folder'),
         body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
           padding: const EdgeInsets.all(16),
           children: [
             Text(tr(
@@ -244,15 +246,33 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _field(_address, _addressFocus, _folderFocus, tr('Shared folder'),
-                hint: '\\\\192.168.1.20\\Media'),
-            _field(_folder, _folderFocus, _userFocus,
-                tr('Folder inside it (made if missing)'),
-                hint: 'VesperTV'),
-            _field(_user, _userFocus, _passwordFocus,
-                tr('User name (empty for a guest share)')),
-            _field(_password, _passwordFocus, _testFocus, tr('Password'),
-                obscure: true),
+            // Two fields per line when there is room (owner, 2026-11-10: a
+            // whole page of full-width fields for a few words each).
+            LayoutBuilder(builder: (context, box) {
+              final address = _field(
+                  _address, _addressFocus, _folderFocus, tr('Shared folder'),
+                  hint: '\\\\192.168.1.20\\Media');
+              final folder = _field(_folder, _folderFocus, _userFocus,
+                  tr('Folder inside it (made if missing)'),
+                  hint: 'VesperTV');
+              final user = _field(_user, _userFocus, _passwordFocus,
+                  tr('User name (empty for a guest share)'));
+              final password = _field(
+                  _password, _passwordFocus, _testFocus, tr('Password'),
+                  obscure: true);
+              if (box.maxWidth < 560) {
+                return Column(children: [address, folder, user, password]);
+              }
+              Widget pair(Widget a, Widget b) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: a),
+                    const SizedBox(width: 12),
+                    Expanded(child: b),
+                  ]);
+              return Column(
+                  children: [pair(address, folder), pair(user, password)]);
+            }),
             Wrap(spacing: 12, runSpacing: 8, children: [
               OutlinedButton(
                 focusNode: _testFocus,

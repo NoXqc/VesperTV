@@ -16,6 +16,12 @@ VesperTV tools act on the viewer's TV right now.
 - my_groups: the viewer's own live groups ("make a Sports group with my
   sports favourites"): create, add / remove channels, delete, order the
   channels in a group, move a group or a channel up / down.
+- collections: the Media Hub's rows of tiles (Streaming: Netflix,
+  Disney+…): turn one on / off, show it on Home, order them, add / remove
+  the add-on catalogs a tile opens, make or rename tiles. Only catalogs the
+  add-ons already have (action catalogs lists them).
+- hub_rows: hide / show / pin / move / rename the Media Hub tab's rows
+  (add-on catalogs, Continue watching…), like Customize Media Hub.
 - favorites: also move one favourite or set the whole favourites order.
 - game_channel: save which channel a Sports Trak game card plays. Read
   topic "sports" first.
@@ -35,7 +41,7 @@ cannot change playlists or settings, or clear history.''',
 PLAYLIST EDITOR (tool playlist_editor)
 
 What it edits: the TV's editor layer over each playlist (the same one as
-Settings > Playlists & guide > Playlist editor on the TV and its phone/PC
+Settings > Playlists & sources > Playlist editor on the TV and its phone/PC
 page). The provider's playlist is never changed. Live TV channels only (not
 movies / shows). Edits are per viewer profile.
 

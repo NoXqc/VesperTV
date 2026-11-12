@@ -19,8 +19,10 @@ class PhoneLinkScreen extends StatefulWidget {
   /// Shows the page; the value the phone sent, or null.
   static Future<String?> open(BuildContext context,
           {required String title, PairingKind kind = PairingKind.link}) =>
-      Navigator.of(context).push<String>(MaterialPageRoute(
-          builder: (_) => PhoneLinkScreen(title: title, kind: kind)));
+      // A glass panel over the form it fills (TV box / computer).
+      openSettingsPage<String>(
+          context, (_) => PhoneLinkScreen(title: title, kind: kind),
+          floating: true);
 
   @override
   State<PhoneLinkScreen> createState() => _PhoneLinkScreenState();

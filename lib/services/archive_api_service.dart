@@ -81,6 +81,32 @@ class ArchiveApiService {
   /// schema relies on it for episodes, so only encode what has to be.
   static String _seg(String s) => Uri.encodeComponent(s).replaceAll('%3A', ':');
 
+  /// The manifest's `version`, when it gives a short one ("1.2.0").
+  static String? _version(Map j) {
+    final v = j['version']?.toString().trim() ?? '';
+    return v.isEmpty || v.length > 24 ? null : v;
+  }
+
+  /// The manifest's `id` ("aio-metadata"), what collections match on.
+  static String? _addonId(Map j) {
+    final v = j['id']?.toString().trim() ?? '';
+    return v.isEmpty || v.length > 120 ? null : v;
+  }
+
+  /// Any JSON document (a collections file is a list, not an object).
+  Future<Object?> fetchAnyJson(Uri uri) async {
+    final r = await _client.get(uri).timeout(_timeout);
+    if (r.statusCode != 200) {
+      throw ArchiveApiException('HTTP ${r.statusCode}',
+          statusCode: r.statusCode);
+    }
+    try {
+      return jsonDecode(utf8.decode(r.bodyBytes));
+    } on FormatException {
+      throw ArchiveApiException('Not a JSON file');
+    }
+  }
+
   /// Fetches and checks a manifest — this is the "does the connection
   /// work" test. A source either serves its own catalogs (any type, any id
   /// scheme: custom types are browsed under Movies, see
@@ -126,7 +152,11 @@ class ArchiveApiService {
         ...(c['extraRequired'] as List? ?? const []),
       };
       // Search-only catalogs are valid search endpoints, not browse rows.
-      if (required.any((name) => name != 'search')) continue;
+      // A required genre alone = a catalog kept off the home screen
+      // (ArchiveCatalog.homeHidden): collection tiles still use it.
+      if (required.any((name) => name != 'search' && name != 'genre')) {
+        continue;
+      }
       final cat = ArchiveCatalog.fromJson(Map<String, dynamic>.from(c));
       if (cat != null) catalogs.add(cat);
     }
@@ -161,6 +191,8 @@ class ArchiveApiService {
             : Uri.parse(url).host,
         description: j['description']?.toString() ?? '',
         logoUrl: j['logo']?.toString(),
+        version: _version(j),
+        addonId: _addonId(j),
         catalogs: lists,
         listOnly: true,
         imdbResources: imdbResources,
@@ -209,6 +241,8 @@ class ArchiveApiService {
           : Uri.parse(url).host,
       description: j['description']?.toString() ?? '',
       logoUrl: j['logo']?.toString(),
+      version: _version(j),
+      addonId: _addonId(j),
       catalogs: catalogs,
       catalogProviderUrl: providerUrl,
       imdbResources: imdbResources,
@@ -239,7 +273,8 @@ class ArchiveApiService {
       if (skip > 0) 'skip': '$skip',
     });
     final j = await _getJson(Uri.parse(
-        '$baseUrl/catalog/${_seg(catalog.wire)}/${_seg(catalog.id)}$extra.json'));
+        '$baseUrl/catalog/${_seg(catalog.requestWire)}/'
+        '${_seg(catalog.id)}$extra.json'));
     final out = [
       for (final m in (j['metas'] as List? ?? const []))
         if (m is Map)

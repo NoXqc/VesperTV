@@ -92,6 +92,8 @@ class _ArchivePostersScreenState extends State<ArchivePostersScreen> {
     return SettingsScaffold(
       title: tr('Custom posters'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(

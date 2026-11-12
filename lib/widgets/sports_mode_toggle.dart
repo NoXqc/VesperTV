@@ -5,7 +5,6 @@ import '../l10n/l10n.dart';
 import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
-import 'settings_scaffold.dart';
 import 'tv_switch_list_tile.dart';
 import '../utils/desktop_platform.dart';
 
@@ -52,15 +51,3 @@ class _SportsModeToggleState extends State<SportsModeToggle> {
       );
 }
 
-class SportsModeSettingsScreen extends StatelessWidget {
-  const SportsModeSettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => SettingsScaffold(
-        title: tr('Sports Mode'),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: const [SportsModeToggle()],
-        ),
-      );
-}

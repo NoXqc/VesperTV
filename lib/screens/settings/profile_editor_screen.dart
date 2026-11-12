@@ -10,6 +10,7 @@ import '../../services/storage_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/parental_pin.dart';
 import '../../utils/tv_theme.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/profile_card.dart';
 import '../../widgets/profile_photo_actions.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -260,7 +261,7 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
                       ]),
                       for (final option in ProfileCopy.values)
                         if (!_restricted || option != ProfileCopy.visibility)
-                          CheckboxListTile(
+                          GlassFocusFrame(child: CheckboxListTile(
                               title: Text(tr(labels[option]!)),
                               value: _options.contains(option),
                               onChanged: _saving
@@ -271,7 +272,7 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
                                         } else {
                                           _options.remove(option);
                                         }
-                                      })),
+                                      }))),
                       const SizedBox(height: 20),
                       FilledButton(
                           onPressed: _saving ? null : _save,

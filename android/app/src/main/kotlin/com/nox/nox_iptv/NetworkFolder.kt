@@ -36,9 +36,10 @@ import java.util.concurrent.TimeUnit
  * BouncyCastle; smbj skips Kerberos on Android by itself).
  *
  * A recording's path is `smb://host[:port]/share/folder/file.ts`; the
- * credentials are not in it, they live here (app-private prefs, this device
- * only — Transfer / Backup never carry them). Dart sends them on every
- * change because a timed recording may start with the app closed.
+ * credentials are not in it, they live here (app-private prefs). This is a
+ * copy: Dart keeps them in recordings.json's settings (Transfer / Backup
+ * carry those, StorageService) and sends them on every change because a
+ * timed recording may start with the app closed.
  */
 object NetworkFolder {
     private const val TAG = "VesperNetFolder"

@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../hub_remote.dart';
 import '../phone_pairing_service.dart' show kPairRelayBase, kRelayAppHeaders;
 import '../storage_service.dart';
 import 'phone_mic_server.dart' show askFromPhone;
@@ -59,6 +60,22 @@ class McpBridge {
     return s == null || !(enabled || phoneLinkActive)
         ? null
         : '$kPairRelayBase/ai#$s';
+  }
+
+  /// Settings > Media Hub sources > Manage from phone: the relay's sources
+  /// page ([HubRemote]) on the same link.
+  String? get hubUrl {
+    final s = _secret;
+    return s == null || !(enabled || phoneLinkActive)
+        ? null
+        : '$kPairRelayBase/hub#$s';
+  }
+
+  /// Starts (or extends) the phone-only link for the sources page; returns
+  /// its URL.
+  Future<String?> startHubLink() async {
+    await startPhoneLink();
+    return hubUrl;
   }
 
   /// Phone-only link: the relay phone page without AI apps turned on (a TV
@@ -216,7 +233,13 @@ class McpBridge {
     final params = msg['params'] is Map
         ? (msg['params'] as Map).cast<String, Object?>()
         : const <String, Object?>{};
-    // Phone-only link (AI apps off): the phone page, nothing else.
+    // The sources page (Manage from phone): answered in phone-only mode too.
+    if (method is String && HubRemote.handles(method)) {
+      _touchPhone();
+      if (method != 'hub/list') _log('${_clock()} sources');
+      return HubRemote.instance.handle(method, params);
+    }
+    // Phone-only link (AI apps off): the phone pages, nothing else.
     if (!enabled && method != 'vesper/say') {
       return {
         'error': {

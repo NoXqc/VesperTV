@@ -28,7 +28,7 @@
     "category": "Live TV",
     "title": "Catch-up not working",
     "answer": "If replay channels or past programmes are missing after updating, run Update Content and update your playlists, then Update EPG Now once. Catch-up is available on Android TV, Fire TV and Android phones, and on Windows since 1.0.61. Your provider must offer catch-up for that channel. The provider decides how many days are available; guide data may cover fewer hours, with older hours shown as Catch-up HH:MM blocks. Refreshing cannot add replay support to a channel your provider does not support.",
-    "controls": "Update Content → update playlists · Settings → Playlists & guide → EPG → Update EPG Now",
+    "controls": "Update Content → update playlists · Settings → Playlists & sources → EPG → Update EPG Now",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
@@ -131,7 +131,7 @@
     "id": "c4521d562ce2fca7",
     "category": "Live TV",
     "title": "Catch-up playlists",
-    "answer": "The Catch-up group lists every channel your provider marks with catch-up. OK or → on a playlist hides or shows its channels in this group only (for a provider that marks channels it doesn't really keep). Settings > Interface > Tabs can hide the whole group.",
+    "answer": "The Catch-up group lists every channel your provider marks with catch-up. OK or → on a playlist hides or shows its channels in this group only (for a provider that marks channels it doesn't really keep). Settings > Appearance > Live TV > Catch-up group hides the whole group.",
     "controls": "Hold OK on Catch-up",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -267,7 +267,7 @@
     "id": "3fa8134b91e5d845",
     "category": "Full screen",
     "title": "Skip intro / credits",
-    "answer": "While the white Skip intro, Skip recap or Skip credits button shows, OK skips it. In the credits with another episode queued, it says Next episode and plays it. The button hides after 10 seconds and comes back when you bring up the player bar. Times come from IntroDB; turn it off in Settings › Playback › Skip intro.",
+    "answer": "While the white Skip intro, Skip recap or Skip credits button shows, OK skips it. In the credits with another episode queued, it says Next episode and plays it. The button hides after 10 seconds and comes back when you bring up the player bar. Times come from IntroDB; turn it off in Settings › Playback › Skip intro and credits button.",
     "controls": "OK EPISODE · ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -275,7 +275,7 @@
     "id": "7dd60da1eb923f65",
     "category": "Full screen",
     "title": "Data pool",
-    "answer": "Stream info in the options row opens the stream details card for 10 seconds: resolution, frame rate, codecs, measured bitrate, buffer and playback state. It's on by default; turn it off in Settings › Playback › Data pool to remove the tile.",
+    "answer": "Stream info in the options row opens the stream details card for 10 seconds: resolution, frame rate, codecs, measured bitrate, buffer and playback state. It's on by default; turn it off in Settings › Advanced › Data pool display to remove the tile.",
     "controls": "Options row: Stream info ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -283,15 +283,23 @@
     "id": "5f71da8ddda39a6a",
     "category": "Full screen",
     "title": "More options",
-    "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Fill screen and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
+    "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Picture and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
     "controls": "OK then ▼ TV",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "de81a069e57db471",
+    "category": "Full screen",
+    "title": "Change how the picture fills the screen",
+    "answer": "Each press of the picture button (it shows the current mode, Fit at first) moves to the next one and names it at the top of the screen: Fit (black bars), Stretched (fills the screen, shapes change), Crop (fills the screen, edges cut), Fit height, Fit width, Slight zoom (loses thin borders) and Cinema zoom (a wide film shown with black bars inside the picture fills the screen). After Cinema zoom it returns to Fit. The choice is remembered on this device for every channel, movie and episode. On a phone it is the top bar's button; anything but Fit also hides the phone's status bars.",
+    "controls": "Options row → Picture (Fit)",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "e00cfc92c6e8de46",
     "category": "Full screen",
     "title": "Audio sync (audio delay)",
-    "answer": "If the sound is ahead of or behind the picture, open Audio sync and press Right (sound later) or Left (sound earlier) in 25 ms steps (hold to go faster, up to 5 seconds either way); it changes as you press, so line it up by eye, then OK. Also in Settings › Playback › Audio › Audio delay. Applies to this device, every channel.",
+    "answer": "If the sound is ahead of or behind the picture, open Audio sync and press Right (sound later) or Left (sound earlier) in 25 ms steps (hold to go faster, up to 5 seconds either way); it changes as you press, so line it up by eye, then OK. Also in Settings › Playback › Audio delay. Applies to this device, every channel.",
     "controls": "Options row: Audio sync ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -348,14 +356,14 @@
     "category": "Home",
     "title": "Choose a profile at startup",
     "answer": "Turn this on, then fully close and reopen VesperTV. After the splash, use the arrows and OK, or tap a profile, to open the app in that profile. The last-used profile starts focused. Photos appear when set; leaving a restricted profile still needs the PIN. The switch is off by default and applies to this device.",
-    "controls": "Settings > Playlists & guide > Profiles > Launch with profiles selector",
+    "controls": "Settings > Profiles & startup > Launch with profiles selector",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
     "id": "8b1446377f0dda91",
     "category": "Home",
     "title": "Home mini player",
-    "answer": "Press OK on a live channel card (Favourite channels, Recent channels, a game on now) and it plays in the mini player at the top right of Home. OK again on the playing card opens it full screen with the same stream; Back returns to Home with it still playing. With Settings > Interface > Guide > Preview on highlight on, stopping on a card for a moment plays it by itself. To turn it off without leaving Home, press ⏯ (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until OK (or ⏯ ) on a channel card plays one again. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
+    "answer": "Press OK on a live channel card (Favourite channels, Recent channels, a game on now) and it plays in the mini player at the top right of Home. OK again on the playing card opens it full screen with the same stream; Back returns to Home with it still playing. With Settings > Appearance > Live TV > Preview on highlight on, stopping on a card for a moment plays it by itself. To turn it off without leaving Home, press ⏯ (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until OK (or ⏯ ) on a channel card plays one again. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Appearance > Home > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
     "controls": "Home · OK on a channel card",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -363,15 +371,15 @@
     "id": "7292204b66bcb258",
     "category": "Home",
     "title": "Hide profiles on Home",
-    "answer": "Turn this on to remove the profiles row from Home. It is off by default and applies to the active profile. You can still manage profiles in Settings.",
-    "controls": "Settings > Interface > Tabs > Hide profiles",
+    "answer": "Turn this off to remove the profiles row from Home. It is on by default and applies to the active profile. You can still manage profiles in Settings.",
+    "controls": "Settings > Appearance > Home > Profiles row on Home",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
     "id": "fc418dd9a734ec36",
     "category": "Home",
     "title": "Back to Who's watching",
-    "answer": "With Settings > Playlists & guide > Profiles > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
+    "answer": "With Settings > Profiles & startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
     "controls": "TV home / Sports Mode root · Back",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -408,11 +416,43 @@
     "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
   },
   {
-    "id": "e0d0f205e4e4645b",
+    "id": "26b86b9eed0663af",
     "category": "Media Hub",
-    "title": "Manage source cards",
-    "answer": "Open from Settings › Media Hub › Media Hub sources, or Sources in the Media Hub tab. Add a source, From phone, Stremio import, Jellyfin / Emby and Trakt / Simkl are at the top. Playback sources provide video; Catalogs & lists, including Cinemeta, provide titles that play through those sources. Left/Right moves between cards; Up/Down moves through their controls and grid rows, scrolling as needed. OK on Enabled switches a source on or off; hold OK there to remove it. View source URL reveals the saved link and offers Copy URL. Show under Other puts an add-on behind the Other genre filter; refresh Media Hub after changing it.",
+    "title": "Hide or show a row with its eye",
+    "answer": "The eye beside the row's name hides its titles (OK, or a tap). The row folds to its name line, with how many titles it holds beside the eye, and the rows below move up; OK on the eye again shows the titles. Each profile keeps its own choice.",
+    "controls": "Media Hub → ↑ from Continue watching or Recently watched",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "379850184a4df45a",
+    "category": "Media Hub",
+    "title": "Your add-ons in one list",
+    "answer": "Open from Settings › Playlists & sources › Media Hub sources, or Sources in the Media Hub tab. On the left: Add a source, then All, Streams, Catalogs & lists, Media servers, Live TV and Subtitles with how many each has, then Manage from phone, Customize Media Hub and Advanced. On the right, one row per add-on with its logo, version, description and tags (Streams, Movies, TV Shows, Live TV, Subtitles, Built in, Under Other). OK on a row turns it on or off for this profile (subtitle add-ons for the device); a dimmed row is off. Right goes to its ⋯ button and OK opens its options: Enabled, Show under Other, TV add-on, View source URL (with Copy URL) and Remove, which asks first. Holding OK on a row opens the same options. Cinemeta is built in: it can be turned off, not removed. The line under the list explains the row you are on. Add a source has the link field (several links at once work) and From phone, Manage from phone, Import from Stremio, Jellyfin / Emby / Plex, Trakt & Simkl and Online subtitles. Advanced has Refresh Media Hub (reads every add-on again: new catalogs, logos, versions) and Clear Media Hub.",
     "controls": "Media Hub sources → ↑ / ↓ / ← / →",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "023592f47e1d1ea5",
+    "category": "Media Hub",
+    "title": "Collections: tiles that open a page of catalogs",
+    "answer": "Like Nuvio. Each tile (Netflix, Disney+, Horror…) opens its own page: one row per catalog, movies and shows together; Up / Down change row, Back returns. The focused tile plays its moving picture. The catalogs come from your own add-ons (AIOMetadata), so a tile shows only when your add-on has its catalogs, and those catalogs leave the Media Hub rows (Settings can keep them).",
+    "controls": "Media Hub → a row of tiles (Streaming, Genres…) → OK",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "c7e57284184bd721",
+    "category": "Media Hub",
+    "title": "Import a Nuvio collections file",
+    "answer": "Add from a link (a Nuvio collections .json), From phone, or the community pack Nuvio Perfect Collections; a .json pasted in Add a source or on the Manage from phone page works too. OK on a collection: turn it on or off, Show on Home (its tiles also get a row on Home, under Continue Watching; hold OK on a tile there = Remove from Home), move it, update it from its link or remove it. The tiles need the AIOMetadata catalogs the file was made for: import that AIOMetadata setup too.",
+    "controls": "Media Hub sources → Collections",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "241f7f16fec28d02",
+    "category": "Media Hub",
+    "title": "Manage your sources from your phone",
+    "answer": "Choose Show the code and scan it with your phone's camera. Your phone shows the TV's list of sources and add-ons with the same filters: turn one on or off, Show under Other, TV add-on, Copy link, Remove (it asks first), and add one or more links at once. It works from any network while VesperTV is open, for an hour after its last use. On and Under Other change the profile in use on the TV.",
+    "controls": "Media Hub sources → Manage from phone",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
@@ -868,7 +908,7 @@
     "category": "Settings",
     "title": "Move or copy channels to a group",
     "answer": "Open the editor on your phone or PC, tick channels and use the bottom bar. Move to group: the channels leave their group and show only in the group you pick. Copy to group: they stay where they are and also show in the group you pick. The group can be one of your own custom groups (pick one or type a new name) or a group of any playlist. It is applied on the TV at once, without Save to TV. Reset group puts the ticked channels back in their own groups and removes their copies. On the TV, hold OK on a copy and choose Remove from group, or Move Up / Down to place it in the group it was copied into. Search and Multiview follow the group you picked: a channel moved into a hidden group is left out. On a Kids profile, a channel from a group the profile is not allowed to see stays hidden wherever you put it.",
-    "controls": "Settings → Playlists & guide → Playlist editor → Channels",
+    "controls": "Settings → Playlists & sources → Playlist editor → Channels",
     "url": "https://vespertv.app/remote.html#Settings"
   },
   {
@@ -876,7 +916,15 @@
     "category": "Settings",
     "title": "Use a channel logo from your EPG",
     "answer": "Open the editor on your phone or PC. In a channel's Guide popup, choose Main guide or an Extra guide, search for the channel and select Use EPG logo beside its preview. Save changes to apply the image. Link changes programme matching separately. Use provider logo resets only the image. If the directory is empty after starting VesperTV, choose Update EPG Now, then search again when it finishes. Your chosen logo URL is saved for this viewer and playlist, survives content updates and travels in Backup and Transfer. Later changes to the guide's logo URL require selecting it again.",
-    "controls": "Settings → Playlists & guide → Playlist editor → Guide and logo",
+    "controls": "Settings → Playlists & sources → Playlist editor → Guide and logo",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "4cef55da0128803f",
+    "category": "Settings",
+    "title": "Show or hide a whole country",
+    "answer": "Countries appears beside Show All and Hide All when the group names start with a country, however the provider writes it (US:, US|, [US], US -, AM | US, a flag…): each country is listed once with how many groups it has. Select one to show or hide all its groups at once; a country with only some groups shown shows them all. Other repeated prefixes (VIP, 4K…) are listed after the countries, then the groups without a country. TV, Movies and TV Shows each have their own list.",
+    "controls": "Group Management → Countries",
     "url": "https://vespertv.app/remote.html#Settings"
   },
   {
@@ -891,8 +939,32 @@
     "id": "4fe0c60f0a97b1c3",
     "category": "Settings",
     "title": "In and out of a category",
-    "answer": "",
+    "answer": "The line under the list explains the setting you are on.",
     "controls": "→ / OK , ← / Back",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "fed5f32b8d9d6d22",
+    "category": "Settings",
+    "title": "Change it in place",
+    "answer": "A switch turns on or off right there. A setting with a value on its right (Language, Theme color, Up Next…) opens its choices beside it; OK picks one. A row with › opens its page; short ones (TMDB key, Network folder, QR codes) open as a panel over Settings.",
+    "controls": "OK on a setting",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "3fdab758530d62a3",
+    "category": "Settings",
+    "title": "Step a value",
+    "answer": "Changes it by 5 % while it is highlighted. OK opens the list of values.",
+    "controls": "← / → on Guide transparency",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "e02a04861d2aa487",
+    "category": "Settings",
+    "title": "Find a setting by name",
+    "answer": "Press OK on the search box, type a word (subtitles, clock, Atmos…), then go down to the results. They work right there: a switch flips without leaving the search.",
+    "controls": "Search settings (top of the list)",
     "url": "https://vespertv.app/remote.html#Settings"
   },
   {
@@ -907,7 +979,7 @@
     "id": "6740b481c4f18114",
     "category": "Settings",
     "title": "On / off, or remove",
-    "answer": "Settings › Media Hub › Add-ons. In Media Hub sources, use the Enabled control inside a source card.",
+    "answer": "Settings › Playlists & sources › Online subtitles. Subtitle add-ons are also in Media Hub sources › Subtitles: OK on the row turns one on or off, Right then OK for its options and Remove.",
     "controls": "OK / Hold OK on an add-on",
     "url": "https://vespertv.app/remote.html#Settings"
   },
@@ -916,7 +988,7 @@
     "category": "Sync",
     "title": "Set up sync without an account",
     "answer": "Open Sync on your first device and choose Set up sync. No account, email or login is needed. Save the recovery code shown once, then choose I saved my recovery code. Your setup is encrypted on the device; the server stores only ciphertext and cannot read it.",
-    "controls": "Settings > Device & data > Sync > Set up sync",
+    "controls": "Settings > Backup & devices > Sync > Set up sync",
     "url": "https://vespertv.app/remote.html#Sync"
   },
   {
@@ -932,7 +1004,7 @@
     "category": "Sync",
     "title": "What syncs between devices",
     "answer": "Playlists, viewer profiles, favourites and their order, hidden groups and channels, own groups, watch positions, recently played / Continue Watching lists, Sports Trak preferences, Media Hub sources/favourites/resume/history and shared settings sync. Layout, enabled playlists on this box, playlist/guide caches, current viewer, PIN lockout and backup timers stay on this device. Profile photos and imported M3U files do not sync in this first version. Continue Watching and Media Hub Recently watched merge newest first. Sync copies your setup, not channels or video files.",
-    "controls": "Settings > Device & data > Sync",
+    "controls": "Settings > Backup & devices > Sync",
     "url": "https://vespertv.app/remote.html#Sync"
   },
   {

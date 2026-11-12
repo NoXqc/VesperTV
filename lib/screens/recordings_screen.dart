@@ -346,6 +346,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
         // Windows has downloads only.
         title: RecordingService.supported ? tr('Recordings') : tr('Downloads'),
         body: ListView(

@@ -4,12 +4,15 @@ import 'package:provider/provider.dart';
 
 import '../../models/m3u_group.dart';
 import '../../services/playlist_manager.dart';
+import '../../utils/group_regions.dart';
 import '../../utils/tv_theme.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_app_bar_button.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
+import 'group_regions_panel.dart';
 
 /// Lists every group/category (live, movies, TV shows) — including hidden
 /// ones, which is the whole point of this screen — with per-group and
@@ -220,6 +223,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               Navigator.of(context).pop(true);
             },
             child: SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
               title: tr('Group Management'),
               // Explicit "Done" so the caller can tell a deliberate finish apart
               // from just leaving the screen some other way (physical back, an
@@ -272,6 +277,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                     FocusScope(
                       node: _tabScopes[0],
                       child: _GroupList(
+                        category: 'tv',
                         groups: playlist.tvGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
@@ -285,6 +291,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                     FocusScope(
                       node: _tabScopes[1],
                       child: _GroupList(
+                        category: 'vod',
                         groups: playlist.vodGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
@@ -298,6 +305,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                     FocusScope(
                       node: _tabScopes[2],
                       child: _GroupList(
+                        category: 'series',
                         groups: playlist.seriesGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
@@ -355,6 +363,7 @@ class _ConfirmTab extends StatelessWidget {
 
 class _GroupList extends StatefulWidget {
   const _GroupList({
+    required this.category,
     required this.groups,
     required this.playlist,
     required this.playlistId,
@@ -363,6 +372,8 @@ class _GroupList extends StatefulWidget {
     this.deferLoading = false,
   });
 
+  /// 'tv', 'vod' or 'series'.
+  final String category;
   final List<M3uGroup> groups;
   final PlaylistManager playlist;
   final String playlistId;
@@ -386,6 +397,44 @@ class _GroupListState extends State<_GroupList> {
     _lastSearch = widget.searchController.text;
     widget.searchController.addListener(_searchChanged);
   }
+
+  /// Countries / prefixes in this tab's group names, re-read when the
+  /// groups change (owner, 2026-11-11: pick countries, not 400 groups).
+  List<GroupRegion> _regions = const [];
+  Object? _regionsOf;
+
+  bool get _hasRegions {
+    final groups = widget.groups;
+    final of = (
+      groups.length,
+      groups.isEmpty ? null : groups.first.title,
+      groups.isEmpty ? null : groups.last.title,
+    );
+    if (of != _regionsOf) {
+      _regionsOf = of;
+      _regions = GroupRegions.detect([for (final g in groups) g.title]);
+    }
+    return _regions.any((r) => r.key.isNotEmpty);
+  }
+
+  /// The tab's groups as they are now (the panel stays open while they
+  /// change).
+  List<M3uGroup> _groupsNow() => switch (widget.category) {
+        'vod' => widget.playlist.vodGroups,
+        'series' => widget.playlist.seriesGroups,
+        _ => widget.playlist.tvGroups,
+      }
+          .where((g) => g.playlistId == widget.playlistId)
+          .toList();
+
+  void _openRegions() => showGroupRegions(
+        context,
+        listenable: widget.playlist,
+        groups: _groupsNow,
+        setHidden: (titles, hidden) => widget.playlist.setGroupsHidden(
+            widget.playlistId, titles, hidden,
+            loadImmediately: !widget.deferLoading),
+      );
 
   void _searchChanged() {
     final text = widget.searchController.text;
@@ -488,6 +537,16 @@ class _GroupListState extends State<_GroupList> {
                   child: Text(tr(query.isEmpty ? 'Hide All' : 'Hide results')),
                 ),
               ),
+              if (_hasRegions) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.public, size: 18),
+                    label: Text(tr('Countries')),
+                    onPressed: _openRegions,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -570,8 +629,8 @@ class _GroupListState extends State<_GroupList> {
                     // after that change, so the `RepaintBoundary` above is
                     // likely no longer doing any real work — left in place
                     // anyway since it's strictly safe and costs nothing.
-                    return ListTile(
-                      key: ValueKey(group.title),
+                    return GlassFocusFrame(key: ValueKey(group.title), child: ListTile(
+                      
                       title: Text(group.title),
                       trailing: RepaintBoundary(
                         key: ValueKey(group.isHidden),
@@ -590,7 +649,7 @@ class _GroupListState extends State<_GroupList> {
                         !group.isHidden,
                         loadImmediately: !deferLoading,
                       ),
-                    );
+                    ));
                   },
                 ),
         ),

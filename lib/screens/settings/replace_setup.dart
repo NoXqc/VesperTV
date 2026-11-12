@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../services/catalog_database.dart';
 import '../../services/epg_service.dart';
+import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
 import '../../l10n/l10n.dart';
 
@@ -21,6 +22,9 @@ Future<void> replaceSetupAndExit(
   final storage = context.read<StorageService>();
   final catalogDb = context.read<CatalogDatabase>();
   final epg = context.read<EpgService>();
+  // Nothing playing may write its history / position over the new setup
+  // while the dialog below waits for OK.
+  await context.read<PlaybackService>().stop();
   await storage.clearCache();
   await epg.clearAll();
   await catalogDb.clearAll();

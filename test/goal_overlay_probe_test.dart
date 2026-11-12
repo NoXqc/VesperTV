@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/l10n/l10n.dart';
-import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/goal_overlay_probe.dart';
 import 'package:nox_iptv/services/storage_service.dart';
@@ -213,8 +213,7 @@ void main() {
             ChangeNotifierProvider.value(value: prefs),
           ],
           child: const MaterialApp(
-              home: GeneralSettingsScreen(
-                  sections: {'goals'}, title: 'Goals alert'))));
+              home: SettingsCategoryScreen(categoryId: 'sports'))));
       await tester.pumpAndSettle();
       expect(find.byType(GoalOverlayProbeSettings),
           tv ? findsOneWidget : findsNothing);

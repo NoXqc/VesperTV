@@ -329,7 +329,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         retainCapturedPicture(frozen);
         lastCapture = "cached frame + spinner";
       } else {
-        lastCapture = "no usable cached frame; logo + spinner";
+        lastCapture = "no usable cached frame; spinner";
       }
       Log.i(TAG, lastCapture);
       replace.run();
@@ -525,7 +525,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     Log.i(TAG, "video surface added behind Flutter (content children " + content.getChildCount()
         + (spare != null ? ", spare for zaps" : "") + ")");
     zapCover = new ImageView(activity);
-    zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
+    // No frame to show = the dark cover + spinner only (owner, 2026-11-12: the
+    // app icon in the middle of the preview looked like a placeholder).
     zapCover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
     zapCover.setBackgroundColor(Color.rgb(12, 12, 16));
     zapLayer = new FrameLayout(activity);
@@ -610,9 +611,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     }
     if (zapCover != null) {
       if (zapLayer != null) zapLayer.setVisibility(View.GONE);
-      if (activity != null) {
-        zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
-      }
+      zapCover.setImageDrawable(null);
     }
     if (lastPicture != null) {
       // A RenderThread display list can still reference the previous drawable

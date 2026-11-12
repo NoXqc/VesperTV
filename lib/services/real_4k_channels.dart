@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../utils/video_quality.dart';
 import 'storage_service.dart';
 
 /// Live channels this device has seen decode at real 4K — the gold "4K"
@@ -28,7 +29,8 @@ class Real4kChannels {
   /// starting) = ignored.
   static void record(String channelId, int width, int height) {
     if (height < 360 && width < 640) return;
-    final real4k = height >= 2160 || width >= 3800;
+    // Same rule as the player's badge, crops included.
+    final real4k = qualityLabelForTrack(height: height, width: width) == '4K';
     final current = ids.value;
     if (real4k == current.contains(channelId)) return;
     final next = {...current};

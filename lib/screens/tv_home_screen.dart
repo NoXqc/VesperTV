@@ -187,6 +187,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (prefs.hideLiveTv || query == null) return false;
         unawaited(_openLiveGroup(query));
         return true;
+      case 'favourites':
+        // Remote buttons: the TV tab's Favourites row.
+        if (prefs.hideLiveTv) return false;
+        unawaited(_openLiveGroup(_favoritesGroupSentinel));
+        return true;
       case 'search':
         unawaited(_pushOverLiveVideo(MaterialPageRoute(
             builder: (_) =>
@@ -402,6 +407,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// scope node itself rather than any real row.
   final FocusNode _firstGroupRowFocusNode =
       FocusNode(debugLabel: 'first-group-row');
+
+  /// Sort groups, drawn in the top bar above the groups column (owner,
+  /// 2026-11-11: above Favourites it pushed the groups lower than the
+  /// tabs). Its focus belongs to the groups column (`parentNode`), and
+  /// Up from Favourites / Down from it are wired by hand.
+  final FocusNode _groupSortFocusNode = FocusNode(debugLabel: 'group-sort');
 
   /// The groups column's "Playlists" row (2+ playlists) — the jump menu's
   /// anchor, and where focus goes back when it's dismissed.
@@ -1542,10 +1553,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// A starting estimate only — rows can grow to two lines for a long
   /// channel name — refined by `Scrollable.ensureVisible` once the target
   /// row is close enough to the viewport to have actually been built.
-  static double get _liveRowHeightEstimate => _compactUi ? 52 : 72;
+  static double get _liveRowHeightEstimate =>
+      _compactUi ? 52 : (_largeUi ? 96 : 72);
 
-  /// The live list's channel logo (smaller in Compact UI).
-  static double get _liveLogoSize => _compactUi ? 32 : 40;
+  /// The live list's channel logo (smaller in Compact UI, bigger in Large).
+  static double get _liveLogoSize => _compactUi ? 32 : (_largeUi ? 52 : 40);
 
   /// Keeps a whole row's header visible when D-pad focus lands on one of
   /// its cards, not just the card itself — Flutter's own default
@@ -2532,6 +2544,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       node.dispose();
     }
     _firstGroupRowFocusNode.dispose();
+    _groupSortFocusNode.dispose();
     _playlistsRowFocusNode.dispose();
     _groupsScroll.dispose();
     _timelineFilterButtonFocusNode.dispose();
@@ -3571,6 +3584,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // scale): a portrait phone keeps posters, they'd fill the screen.
     _wideBrowseCards = prefs.wideCards && !_compact;
     _compactUi = prefs.compactUi;
+    _largeUi = prefs.largeUi;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     if (!_compact) _phonePage = 2;
@@ -3662,17 +3676,26 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         : const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _TvTopBar(
-                        dense: _shortScreen || _compactUi,
-                        // Wide phones/tablets (including unfolded phones) use
-                        // columns too. Full-video mode hides passed columns
-                        // completely, so touch users need a visible way back.
-                        onBack:
-                            !_compact && !prefs.isTelevision && _focusDepth > 0
-                                ? _handleBack
-                                : null,
-                        showClock: prefs.showClock,
-                        isLoading: playlist.isLoading),
+                    _withGroupSort(
+                      showSort: !_compact &&
+                          !isBrowseTab &&
+                          _tab != 'Home' &&
+                          _focusDepth <= 1 &&
+                          !(playlist.error != null &&
+                              playlist.channels.isEmpty),
+                      topBar: _TvTopBar(
+                          dense: _shortScreen || _compactUi,
+                          // Wide phones/tablets (including unfolded phones) use
+                          // columns too. Full-video mode hides passed columns
+                          // completely, so touch users need a visible way back.
+                          onBack: !_compact &&
+                                  !prefs.isTelevision &&
+                                  _focusDepth > 0
+                              ? _handleBack
+                              : null,
+                          showClock: prefs.showClock,
+                          isLoading: playlist.isLoading),
+                    ),
                     const CatalogWarmupBanner(),
                     Expanded(
                       child: (playlist.error != null &&
@@ -3897,13 +3920,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                       children: [
                                         _collapsible(
                                           depth: 0,
-                                          expandedWidth: _compactUi ? 136 : 160,
+                                          expandedWidth: _compactUi
+                                              ? 136
+                                              : (_largeUi ? 200 : 160),
                                           child: _fullVideoScrim(_tabsScope(
                                               collapsed: _focusDepth > 0)),
                                         ),
                                         VerticalDivider(
                                             width: 1,
-                                            color: (_fullVideo || _fullArt) &&
+                                            color: (_hidesPassedColumns ||
+                                                        _fullArt) &&
                                                     _focusDepth > 0
                                                 ? Colors.transparent
                                                 : null),
@@ -3912,15 +3938,17 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                         else ...[
                                           _collapsible(
                                             depth: 1,
-                                            expandedWidth:
-                                                _compactUi ? 220 : 260,
+                                            expandedWidth: _compactUi
+                                                ? 220
+                                                : (_largeUi ? 320 : 260),
                                             child: _fullVideoScrim(_groupsScope(
                                                 playlist, isBrowseTab,
                                                 collapsed: _focusDepth > 1)),
                                           ),
                                           VerticalDivider(
                                               width: 1,
-                                              color: (_fullVideo || _fullArt) &&
+                                              color: (_hidesPassedColumns ||
+                                                          _fullArt) &&
                                                       _focusDepth > 1
                                                   ? Colors.transparent
                                                   : null),
@@ -3944,9 +3972,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                     child: IgnorePointer(
                         // Nothing playing yet: the cold-launch resume
                         // channel, so the card isn't empty.
-                        child: _buildFullVideoNowCard(
+                        child: _uiText(_buildFullVideoNowCard(
                             liveChannel ?? playbackState.pendingResumeChannel,
-                            epg)),
+                            epg))),
                   ),
                 ),
               if (!prefs.isTelevision &&
@@ -4001,7 +4029,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(0);
           },
-          child: _buildTabsColumn(collapsed: collapsed),
+          child: _uiText(_buildTabsColumn(collapsed: collapsed)),
         ),
       );
 
@@ -4013,9 +4041,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(1);
           },
-          child: isBrowseTab
+          child: _uiText(isBrowseTab
               ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
-              : _buildGroupsColumn(playlist, collapsed: collapsed),
+              : _buildGroupsColumn(playlist, collapsed: collapsed)),
         ),
       );
 
@@ -4036,11 +4064,27 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(2);
           },
+          // Movies / TV Shows posters keep their size: fixed cards.
           child: isBrowseTab
               ? _buildMainArea(playlist, epg)
-              : _buildLiveRegion(playlist, epg),
+              : _uiText(_buildLiveRegion(playlist, epg)),
         ),
       );
+
+  /// Interface size Large: text in the tabs, groups, live list and guide
+  /// 1.2x the viewer's own system size (on top of the bigger rows below).
+  /// Always the same wrapper so changing the size never remounts a column.
+  Widget _uiText(Widget child) {
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: _largeUi
+          ? mq.copyWith(
+              textScaler:
+                  TextScaler.linear(mq.textScaler.scale(1) * _largeUiTextScale))
+          : mq,
+      child: child,
+    );
+  }
 
   /// Portrait phone: the "Hold > to resume" pill hides while the live
   /// preview above the pages is showing (it named the channel already in
@@ -4286,8 +4330,18 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     );
   }
 
+  /// A passed column hides completely instead of leaving the icon strip:
+  /// always on a TV box (owner, 2026-11-11: like the full-video guide, so
+  /// the next column gets the room), and in full-video mode everywhere.
+  /// Back/Left still walk out to it, and it opens up again as soon as it's
+  /// the focused column. A mouse/touch user keeps the strip outside
+  /// full-video mode: it's how they tap back into the columns.
+  bool get _hidesPassedColumns =>
+      _fullVideo || context.read<AppPreferences>().isTelevision;
+
   /// A column that animates between [expandedWidth] and a narrow icon-only
-  /// strip once D-pad focus has moved past it (`_focusDepth > depth`).
+  /// strip (or nothing, [_hidesPassedColumns]) once D-pad focus has moved
+  /// past it (`_focusDepth > depth`).
   Widget _collapsible({
     required int depth,
     required double expandedWidth,
@@ -4295,15 +4349,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     double collapsedWidth = 56,
   }) {
     final collapsed = _focusDepth > depth;
-    // Full-video mode hides a passed column completely instead of leaving
-    // the icon strip (owner's request) — Back/Left still walk out to it,
-    // and it opens up again as soon as it's the focused column.
-    // What's New does the same on a TV only (a mouse/touch user needs the
-    // strip to tap back into the columns).
-    if (_fullVideo ||
-        (_fullArt && context.read<AppPreferences>().isTelevision)) {
-      collapsedWidth = 0;
-    }
+    if (_hidesPassedColumns) collapsedWidth = 0;
     // Touch/mouse: a tap on a collapsed strip opens it back up instead of
     // hitting one of its look-alike icons. Always the same wrappers (only
     // their flags change) so the column never remounts and keeps its
@@ -4731,7 +4777,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final rowBox = _playlistsRowFocusNode.context?.findRenderObject();
     final rowHeight =
         rowBox is RenderBox && rowBox.hasSize ? rowBox.size.height : 44.0;
-    final dividerHeight = _compactUi ? 40.0 : 50.0;
+    final dividerHeight = _compactUi ? 40.0 : (_largeUi ? 62.0 : 50.0);
     if (_groupsScroll.hasClients) {
       final estimate =
           rowsBefore * rowHeight + dividersBefore * dividerHeight - rowHeight;
@@ -4815,137 +4861,202 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
     return Column(
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: IconButton(
-            iconSize: 20,
-            visualDensity: VisualDensity.compact,
-            tooltip: tr('Sort groups'),
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showLiveGroupSort,
-          ),
-        ),
         Expanded(
-            child: ListView(
-          key: const ValueKey('TV'),
-          controller: _groupsScroll,
-          children: [
-            // Hold Select = clear this tab's Favourites (after a confirm).
-            HoldToActivate(
-              onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-              onHold: _confirmClearFavorites,
-              child: _SelectableRow(
-                icon: Icons.star,
-                label: tr('Favourites'),
-                selected: effectiveGroup == _favoritesGroupSentinel,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
-                focusNode: _firstGroupRowFocusNode,
-                onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-                onLongPress: _confirmClearFavorites,
-              ),
-            ),
-            // Hold Select = shortcut to Settings > General's channel-history
-            // clear (same HoldToActivate-over-InkWell shape as the live list).
-            HoldToActivate(
-              onTap: _showHistoryPopup,
-              onHold: _confirmClearChannelHistory,
-              child: _SelectableRow(
-                icon: Icons.history,
-                label: tr('History'),
-                selected: false,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
-                onTap: _showHistoryPopup,
-                onLongPress: _confirmClearChannelHistory,
-              ),
-            ),
-            // Hold Select = which playlists this group shows.
-            if (_showCatchupGroup)
-              HoldToActivate(
-                onTap: () => _onGroupSelected(_catchupGroupSentinel),
-                onHold: _showCatchupPlaylists,
-                child: _SelectableRow(
-                  icon: Icons.replay,
-                  label: tr('Catch-up'),
-                  selected: effectiveGroup == _catchupGroupSentinel,
-                  collapsed: collapsed,
-                  fontSize: _groupFontSize,
-                  focusNode: _catchupRowFocusNode,
-                  onTap: () => _onGroupSelected(_catchupGroupSentinel),
-                  onLongPress: _showCatchupPlaylists,
+            child: Focus(
+                // Up from Favourites = the Sort groups button in the top bar.
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyUpEvent ||
+                      event.logicalKey != LogicalKeyboardKey.arrowUp ||
+                      !_firstGroupRowFocusNode.hasFocus ||
+                      _groupSortFocusNode.context == null) {
+                    return KeyEventResult.ignored;
+                  }
+                  _groupSortFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                },
+                child: ListView(
+                  key: const ValueKey('TV'),
+                  controller: _groupsScroll,
+                  children: [
+                    // Hold Select = clear this tab's Favourites (after a confirm).
+                    HoldToActivate(
+                      onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+                      onHold: _confirmClearFavorites,
+                      child: _SelectableRow(
+                        icon: Icons.star,
+                        label: tr('Favourites'),
+                        selected: effectiveGroup == _favoritesGroupSentinel,
+                        collapsed: collapsed,
+                        fontSize: _groupFontSize,
+                        focusNode: _firstGroupRowFocusNode,
+                        onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+                        onLongPress: _confirmClearFavorites,
+                      ),
+                    ),
+                    // Hold Select = shortcut to Settings > General's channel-history
+                    // clear (same HoldToActivate-over-InkWell shape as the live list).
+                    HoldToActivate(
+                      onTap: _showHistoryPopup,
+                      onHold: _confirmClearChannelHistory,
+                      child: _SelectableRow(
+                        icon: Icons.history,
+                        label: tr('History'),
+                        selected: false,
+                        collapsed: collapsed,
+                        fontSize: _groupFontSize,
+                        onTap: _showHistoryPopup,
+                        onLongPress: _confirmClearChannelHistory,
+                      ),
+                    ),
+                    // Hold Select = which playlists this group shows.
+                    if (_showCatchupGroup)
+                      HoldToActivate(
+                        onTap: () => _onGroupSelected(_catchupGroupSentinel),
+                        onHold: _showCatchupPlaylists,
+                        child: _SelectableRow(
+                          icon: Icons.replay,
+                          label: tr('Catch-up'),
+                          selected: effectiveGroup == _catchupGroupSentinel,
+                          collapsed: collapsed,
+                          fontSize: _groupFontSize,
+                          focusNode: _catchupRowFocusNode,
+                          onTap: () => _onGroupSelected(_catchupGroupSentinel),
+                          onLongPress: _showCatchupPlaylists,
+                        ),
+                      ),
+                    // Channels the providers added lately (Settings > Tabs).
+                    if (_showRecentGroup)
+                      _SelectableRow(
+                        icon: Icons.fiber_new_outlined,
+                        label: tr('Recently added'),
+                        selected: effectiveGroup == _recentGroupSentinel,
+                        collapsed: collapsed,
+                        fontSize: _groupFontSize,
+                        onTap: () => _onGroupSelected(_recentGroupSentinel),
+                      ),
+                    // The viewer's own groups (any playlist's channels): above every
+                    // playlist's groups, never hidden with one.
+                    for (final title
+                        in sort.sorted(playlist.userGroups, (title) => title))
+                      _GroupRow(
+                        key: ValueKey(_groupKey(_myGroupsId, title)),
+                        icon: Icons.folder_special_outlined,
+                        label: title,
+                        count: showCounts
+                            ? playlist.liveGroupCount(null, title)
+                            : null,
+                        selected: effectiveGroup == title,
+                        collapsed: collapsed,
+                        fontSize: _groupFontSize,
+                        isFavorited: false,
+                        isPendingHide: false,
+                        onTap: () => _onGroupSelected(title),
+                        onLongPress: () => _showMyGroupOptions(title),
+                        moving:
+                            _movingGroupKey == _groupKey(_myGroupsId, title),
+                        onMove: (delta) =>
+                            _moveGroupStep(_myGroupsId, title, delta),
+                        onMoveDone: _endGroupMove,
+                        focusOnBuild: _focusGroupKeyOnBuild ==
+                            _groupKey(_myGroupsId, title),
+                        onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+                      ),
+                    if (playlistsRow != null) playlistsRow,
+                    ..._groupRowsWithPlaylistDividers(
+                      groups,
+                      playlist,
+                      collapsed: collapsed,
+                      rowBuilder: (group) => _GroupRow(
+                        // Keyed so a moved group keeps its row Element (and focus)
+                        // when the list reorders — see _movingGroupKey.
+                        key: ValueKey(_groupKey(group.playlistId, group.title)),
+                        icon: Icons.grid_view_rounded,
+                        label: group.title,
+                        count: showCounts
+                            ? playlist.liveGroupCount(
+                                group.playlistId, group.title)
+                            : null,
+                        selected: effectiveGroup == group.title,
+                        collapsed: collapsed,
+                        fontSize: _groupFontSize,
+                        isFavorited: playlist.isGroupFavorited(
+                            group.playlistId, group.title),
+                        isPendingHide: _pendingHideGroups
+                            .contains(_groupKey(group.playlistId, group.title)),
+                        onTap: () => _onGroupSelected(group.title,
+                            playlistId: group.playlistId),
+                        onLongPress: () =>
+                            _showGroupOptions(group.playlistId, group.title),
+                        moving: _movingGroupKey ==
+                            _groupKey(group.playlistId, group.title),
+                        onMove: (delta) => _moveGroupStep(
+                            group.playlistId, group.title, delta),
+                        onMoveDone: _endGroupMove,
+                        focusOnBuild: _focusGroupKeyOnBuild ==
+                            _groupKey(group.playlistId, group.title),
+                        onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+                      ),
+                    ),
+                  ],
+                ))),
+      ],
+    );
+  }
+
+  /// The top bar with the live groups' Sort button laid over it, at the
+  /// groups column's right edge (it follows the tabs column's width as
+  /// that opens and closes). Always the same Stack so the bar never
+  /// remounts.
+  Widget _withGroupSort({required bool showSort, required Widget topBar}) {
+    final tabsWidth = _focusDepth > 0
+        ? (_hidesPassedColumns ? 0.0 : 56.0)
+        : (_compactUi ? 136.0 : (_largeUi ? 200.0 : 160.0));
+    final groupsWidth = _compactUi ? 220.0 : (_largeUi ? 320.0 : 260.0);
+    return Stack(
+      children: [
+        topBar,
+        if (showSort)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            left: tabsWidth + 1,
+            width: groupsWidth,
+            top: 0,
+            bottom: 0,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Focus(
+                // In the groups column's focus scope: focusing it keeps
+                // the groups column the active one.
+                parentNode: _col1Scope,
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyUpEvent) return KeyEventResult.ignored;
+                  final key = event.logicalKey;
+                  if (key == LogicalKeyboardKey.arrowDown) {
+                    _firstGroupRowFocusNode.requestFocus();
+                  } else if (key == LogicalKeyboardKey.arrowLeft) {
+                    _moveColumnFocus(-1, 2);
+                  } else if (key == LogicalKeyboardKey.arrowRight) {
+                    _moveColumnFocus(1, 2);
+                  } else if (key != LogicalKeyboardKey.arrowUp) {
+                    return KeyEventResult.ignored;
+                  }
+                  return KeyEventResult.handled;
+                },
+                child: IconButton(
+                  focusNode: _groupSortFocusNode,
+                  iconSize: _largeUi ? 26 : 20,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: tr('Sort groups'),
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: _showLiveGroupSort,
                 ),
               ),
-            // Channels the providers added lately (Settings > Tabs).
-            if (_showRecentGroup)
-              _SelectableRow(
-                icon: Icons.fiber_new_outlined,
-                label: tr('Recently added'),
-                selected: effectiveGroup == _recentGroupSentinel,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
-                onTap: () => _onGroupSelected(_recentGroupSentinel),
-              ),
-            // The viewer's own groups (any playlist's channels): above every
-            // playlist's groups, never hidden with one.
-            for (final title
-                in sort.sorted(playlist.userGroups, (title) => title))
-              _GroupRow(
-                key: ValueKey(_groupKey(_myGroupsId, title)),
-                icon: Icons.folder_special_outlined,
-                label: title,
-                count: showCounts ? playlist.liveGroupCount(null, title) : null,
-                selected: effectiveGroup == title,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
-                isFavorited: false,
-                isPendingHide: false,
-                onTap: () => _onGroupSelected(title),
-                onLongPress: () => _showMyGroupOptions(title),
-                moving: _movingGroupKey == _groupKey(_myGroupsId, title),
-                onMove: (delta) => _moveGroupStep(_myGroupsId, title, delta),
-                onMoveDone: _endGroupMove,
-                focusOnBuild:
-                    _focusGroupKeyOnBuild == _groupKey(_myGroupsId, title),
-                onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
-              ),
-            if (playlistsRow != null) playlistsRow,
-            ..._groupRowsWithPlaylistDividers(
-              groups,
-              playlist,
-              collapsed: collapsed,
-              rowBuilder: (group) => _GroupRow(
-                // Keyed so a moved group keeps its row Element (and focus)
-                // when the list reorders — see _movingGroupKey.
-                key: ValueKey(_groupKey(group.playlistId, group.title)),
-                icon: Icons.grid_view_rounded,
-                label: group.title,
-                count: showCounts
-                    ? playlist.liveGroupCount(group.playlistId, group.title)
-                    : null,
-                selected: effectiveGroup == group.title,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
-                isFavorited:
-                    playlist.isGroupFavorited(group.playlistId, group.title),
-                isPendingHide: _pendingHideGroups
-                    .contains(_groupKey(group.playlistId, group.title)),
-                onTap: () =>
-                    _onGroupSelected(group.title, playlistId: group.playlistId),
-                onLongPress: () =>
-                    _showGroupOptions(group.playlistId, group.title),
-                moving:
-                    _movingGroupKey == _groupKey(group.playlistId, group.title),
-                onMove: (delta) =>
-                    _moveGroupStep(group.playlistId, group.title, delta),
-                onMoveDone: _endGroupMove,
-                focusOnBuild: _focusGroupKeyOnBuild ==
-                    _groupKey(group.playlistId, group.title),
-                onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
-              ),
             ),
-          ],
-        )),
+          ),
       ],
     );
   }
@@ -5730,7 +5841,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                           _TimelineGuideState
                                               ._compactUiRowHeight
                                       : 3 *
-                                          _TimelineGuideState._normalRowHeight),
+                                          (_largeUi
+                                              ? _TimelineGuideState
+                                                  ._largeUiRowHeight
+                                              : _TimelineGuideState
+                                                  ._normalRowHeight)),
                               child: _fullVideoScrim(guide),
                             ),
                           ]
@@ -6905,13 +7020,12 @@ class _SelectableRowState extends State<_SelectableRow> {
     final iconColor =
         (_focused || isPlaying) ? scheme.tertiary : Colors.white70;
     final leadingWidget = widget.leading ??
-        Icon(widget.icon, color: iconColor, size: _compactUi ? 18 : 20);
+        Icon(widget.icon, color: iconColor, size: _rowIconSize);
     // Compact UI: one size smaller than the row's own (14 = body text).
     final fontSize = _compactUi ? (widget.fontSize ?? 14) - 1 : widget.fontSize;
 
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: 8, vertical: _compactUi ? 1.5 : 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: _rowOuterPadding),
       child: Container(
         // Always present (even with an empty shadow list) rather than
         // conditionally wrapped — MinimalGlassFocus's own doc comment just
@@ -6993,7 +7107,7 @@ class _SelectableRowState extends State<_SelectableRow> {
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                    horizontal: 12, vertical: _compactUi ? 6 : 10),
+                    horizontal: 12, vertical: _rowInnerPadding),
                 child: widget.collapsed
                     ? Center(
                         child: Stack(
@@ -7099,8 +7213,8 @@ class _PlaylistDividerRow extends StatelessWidget {
     }
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding:
-          EdgeInsets.fromLTRB(8, _compactUi ? 10 : 16, 8, _compactUi ? 4 : 6),
+      padding: EdgeInsets.fromLTRB(8, _compactUi ? 10 : (_largeUi ? 20 : 16), 8,
+          _compactUi ? 4 : (_largeUi ? 8 : 6)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -7315,7 +7429,7 @@ class _GroupRowState extends State<_GroupRow> {
       clipBehavior: Clip.none,
       children: [
         Icon(widget.moving ? Icons.swap_vert : widget.icon,
-            color: iconColor, size: _compactUi ? 18 : 20),
+            color: iconColor, size: _rowIconSize),
         if (widget.isFavorited)
           Positioned(
             right: -4,
@@ -7330,7 +7444,7 @@ class _GroupRowState extends State<_GroupRow> {
       opacity: widget.isPendingHide ? 0.4 : 1.0,
       child: Padding(
         padding:
-            EdgeInsets.symmetric(horizontal: 8, vertical: _compactUi ? 1.5 : 3),
+            EdgeInsets.symmetric(horizontal: 8, vertical: _rowOuterPadding),
         child: Focus(
           focusNode: _focusNode,
           onKeyEvent: _handleKeyEvent,
@@ -7399,7 +7513,7 @@ class _GroupRowState extends State<_GroupRow> {
                   ),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                        horizontal: 12, vertical: _compactUi ? 6 : 10),
+                        horizontal: 12, vertical: _rowInnerPadding),
                     child: widget.collapsed
                         ? Center(child: iconWidget)
                         : Row(
@@ -7492,6 +7606,19 @@ const double _wideCardScale = PosterCard.wideStyleScale;
 /// bar and 40 px Timeline rows. Set at the top of every TV home build, like
 /// [_wideBrowseCards].
 bool _compactUi = false;
+
+/// Settings > Appearance > Interface size > Large (per viewer; owner,
+/// 2026-11-11: for older viewers with weaker eyesight). Wider tabs/groups/
+/// guide channel columns, taller rows, bigger icons and logos, and text
+/// 1.2x through `_TvHomeScreenState._uiText`. Movies/TV Shows posters,
+/// Home, Settings and the player are unchanged. Set each TV home build.
+bool _largeUi = false;
+const double _largeUiTextScale = 1.2;
+
+/// Tab / group / live-list row metrics for the three interface sizes.
+double get _rowIconSize => _compactUi ? 18 : (_largeUi ? 26 : 20);
+double get _rowOuterPadding => _compactUi ? 1.5 : (_largeUi ? 4 : 3);
+double get _rowInnerPadding => _compactUi ? 6 : (_largeUi ? 13 : 10);
 
 double get _browseScale =>
     (isDesktop ? _windowsPosterScale : 1.0) *
@@ -8967,6 +9094,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   static double _rowHeight = _normalRowHeight;
   static const double _normalRowHeight = 64;
   static const double _compactUiRowHeight = 40;
+  static const double _largeUiRowHeight = 84;
 
   /// Narrower with Compact UI (set each build).
   static double _channelColumnWidth = 160;
@@ -9697,12 +9825,16 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   Widget build(BuildContext context) {
     // A phone held sideways always gets the Compact guide's rows.
     final prefs = context.watch<AppPreferences>();
+    // Large: its own taller rows even with Compact guide on (the text is
+    // 1.2x; 48 px rows would cut it).
     _rowHeight = prefs.compactUi
         ? _compactUiRowHeight
-        : prefs.guideCompact || _isShortPhoneScreen(context)
-            ? 48
-            : _normalRowHeight;
-    _channelColumnWidth = prefs.compactUi ? 136 : 160;
+        : prefs.largeUi
+            ? _largeUiRowHeight
+            : prefs.guideCompact || _isShortPhoneScreen(context)
+                ? 48
+                : _normalRowHeight;
+    _channelColumnWidth = prefs.compactUi ? 136 : (prefs.largeUi ? 210 : 160);
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -10233,7 +10365,7 @@ class _ChannelLabel extends StatelessWidget {
     final tag = playlistTag;
     // Compact UI: smaller logo and name; one line under a playlist tag
     // (the 40 px row has no room for two).
-    final logo = _compactUi ? 24.0 : 32.0;
+    final logo = _compactUi ? 24.0 : (_largeUi ? 42.0 : 32.0);
     final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(

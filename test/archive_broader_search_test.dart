@@ -156,8 +156,15 @@ void main() {
     }));
     final source =
         await api.fetchManifest('https://source.example/manifest.json');
-    expect(source.catalogs.map((c) => c.id), ['modern', 'legacy']);
-    expect(source.catalogs.every((c) => c.searchOnly && c.searchable), isTrue);
+    // A required genre alone keeps the catalog for collection tiles only
+    // (homeHidden): never browsed, never searched.
+    expect(source.catalogs.map((c) => c.id), ['modern', 'legacy', 'unsupported']);
+    expect(source.catalogs.last.homeHidden, isTrue);
+    expect(
+        source.catalogs
+            .where((c) => !c.homeHidden)
+            .every((c) => c.searchOnly && c.searchable),
+        isTrue);
     final storage = await _storage([source.toJson()]);
     final service = ArchiveService(storage, api: api, cache: _Cache());
     addTearDown(service.dispose);

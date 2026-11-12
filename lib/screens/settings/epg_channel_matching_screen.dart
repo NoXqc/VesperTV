@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../services/epg_service.dart';
 import '../../services/playlist_manager.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
@@ -227,7 +228,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                       status = tr('No program data');
                       ok = false;
                     }
-                    return ListTile(
+                    return GlassFocusFrame(child: ListTile(
                       focusNode: i == 0 ? _firstResultFocus : null,
                       title: Text(channel.name,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -253,7 +254,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                           await playlist.setEpgIdOverride(channel, picked);
                         }
                       },
-                    );
+                    ));
                   },
                 ),
         ),
@@ -304,6 +305,8 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
       });
 
     return SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
       title: tr('Assign "{channelName}"', {'channelName': widget.channelName}),
       body: Column(
         children: [
@@ -353,7 +356,7 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
                           final entry = entries[i];
                           final nowPlaying =
                               epg.currentProgramInCatalog(entry.key);
-                          return ListTile(
+                          return GlassFocusFrame(child: ListTile(
                             title: Text(entry.value),
                             // What this candidate is airing right now,
                             // when the feed has that — the actual fix for
@@ -389,7 +392,7 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
                             ),
                             isThreeLine: true,
                             onTap: () => Navigator.of(context).pop(entry.key),
-                          );
+                          ));
                         },
                       ),
           ),

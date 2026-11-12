@@ -353,6 +353,7 @@ final List<_AiSetting> _aiSettings = [
         ('it', 'Italiano'),
         ('el', 'Ελληνικά'),
         ('de', 'Deutsch'),
+        ('pl', 'Polski'),
       ],
       read: (b) => b.prefs.language,
       write: (b, v) => b.prefs.setLanguage('$v')),
@@ -422,11 +423,24 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.guideExpanded,
       (b, on) => b.prefs.setGuideExpanded(on)),
   // ---- tabs
+  _AiSetting(
+      'ui_size',
+      'tabs',
+      'Interface size',
+      'Compact = smaller tabs, groups and channel rows (more fit on screen); '
+          'Large = bigger text and rows, easier to read.',
+      choices: const [
+        ('compact', 'Compact'),
+        ('normal', 'Normal'),
+        ('large', 'Large'),
+      ],
+      read: (b) => b.prefs.uiSize,
+      write: (b, v) async => b.prefs.setUiSize('$v')),
   _switch(
       'compact_ui',
       'tabs',
       'Compact UI',
-      'Smaller tabs, groups and channel rows: more fit on screen.',
+      'Same as ui_size compact (off = normal).',
       (b) => b.prefs.compactUi,
       (b, on) => b.prefs.setCompactUi(on)),
   _switch('hide_live_tv', 'tabs', 'Hide Live TV', 'Hides the TV tab.',

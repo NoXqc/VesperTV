@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<title>Media Hub sources</title>
+<style>
+  :root { --gold: #d4af37; --bg: #050505; --card: #111; --line: #262626; --text: #f2f2f2;
+    --dim: #9a9a9a; --bad: #ff8a80; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 620px; margin: 0 auto;
+    padding: 20px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+  h1 { margin: 4px 0 2px; font-size: 22px; color: var(--gold); letter-spacing: .5px; }
+  h1 span { font-size: 18px; }
+  p.sub { margin: 0 0 6px; color: var(--dim); font-size: 14px; }
+  #status { font-size: 13px; color: var(--dim); margin: 0 0 16px; min-height: 18px; }
+  #status.bad { color: var(--bad); }
+  .add { display: grid; gap: 8px; margin-bottom: 18px; }
+  textarea { width: 100%; min-height: 64px; resize: vertical; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid #333; background: var(--card); color: var(--text); font: 15px/1.35 inherit; }
+  textarea:focus, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { font: inherit; cursor: pointer; }
+  .primary { padding: 11px 18px; border-radius: 12px; border: 0; background: var(--gold); color: #000;
+    font-weight: 700; font-size: 15px; }
+  .primary:disabled { opacity: .5; }
+  .ghost { padding: 8px 12px; border-radius: 10px; border: 1px solid #3a3a3a; background: var(--card);
+    color: var(--text); font-size: 14px; }
+  .ghost.danger { color: var(--bad); border-color: #5a2a26; }
+  #msg { font-size: 14px; color: var(--dim); white-space: pre-wrap; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+  .chips button { flex: none; padding: 8px 13px; border-radius: 999px; border: 1px solid #3a3a3a;
+    background: var(--card); color: var(--text); font-size: 14px; white-space: nowrap; }
+  .chips button.on { border-color: var(--gold); color: var(--gold); }
+  .chips b { font-weight: 600; color: var(--dim); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  #list { display: grid; gap: 10px; }
+  .src { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+  .src.off .top, .src.off .tags { opacity: .5; }
+  .top { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .logo { width: 48px; height: 48px; border-radius: 12px; background: #262626; display: grid; place-items: center;
+    overflow: hidden; color: #fff; font-weight: 700; font-size: 16px; }
+  .logo img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .nm { min-width: 0; }
+  .nm b { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nm small { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ds { color: var(--dim); font-size: 13px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; border: 1px solid #3a3a3a;
+    color: #cfcfcf; }
+  .tag.g { border-color: #6b5a21; color: var(--gold); }
+  .tag.o { border-color: #6b3a32; color: #f0b49b; }
+  .sw { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 14px; color: #ddd; }
+  .sw input { appearance: none; width: 44px; height: 26px; border-radius: 13px; background: #333; position: relative;
+    cursor: pointer; flex: none; margin: 0; transition: background .15s; }
+  .sw input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: #bbb; transition: transform .15s; }
+  .sw input:checked { background: var(--gold); }
+  .sw input:checked::after { background: #000; transform: translateX(18px); }
+  .sw input:disabled { opacity: .5; }
+  .opts { display: flex; flex-wrap: wrap; gap: 4px 18px; border-top: 1px solid var(--line); padding-top: 6px; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .confirm { background: #1c1010; border: 1px solid #5a2a26; border-radius: 10px; padding: 10px; font-size: 14px; display: grid; gap: 8px; }
+  .url { width: 100%; font-size: 13px; padding: 8px; border-radius: 8px; border: 1px solid #333; background: #000; color: var(--text); }
+  .note { color: var(--dim); font-size: 13px; margin-top: 20px; }
+  .empty { color: var(--dim); font-size: 14px; padding: 16px 4px; }
+  @media (prefers-reduced-motion: reduce) { .sw input, .sw input::after { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1><span>&#10022;</span> <span id="title">Media Hub sources</span></h1>
+  <p class="sub" id="sub"></p>
+  <p id="status"></p>
+  <div class="add">
+    <label for="links" class="sub" id="addLabel"></label>
+    <textarea id="links" autocomplete="off" spellcheck="false" placeholder="https://…/manifest.json"></textarea>
+    <div class="row"><button class="primary" id="addBtn" type="button"></button><span id="msg"></span></div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="list"></div>
+  <p class="note" id="note"></p>
+</main>
+<script>
+(function () {
+  // Settings > Media Hub sources > Manage from phone, on the relay
+  // (https://pair.vespertv.app/hub#<link>): JSON-RPC "hub/..." through the
+  // TV's Vesper link. The link never leaves this page except to the relay.
+  var T = {
+    en: { title: "Media Hub sources", sub: "Your TV's Media Hub sources and add-ons.", add: "Add one or more add-on links", addBtn: "Add",
+      adding: "Checking…", none: "No sources here yet.", all: "All", streams: "Streams", catalogs: "Catalogs & lists", server: "Media servers",
+      live: "Live TV", subtitles: "Subtitles", on: "On", other: "Under Other", tv: "TV add-on", copy: "Copy link", copied: "Link copied",
+      remove: "Remove", cancel: "Cancel", sure: "Remove {name}? It leaves the TV for every profile.", built: "Built in", movies: "Movies",
+      shows: "Shows", lists: "Lists", tagOther: "Under Other", offline: "The TV did not answer. Is VesperTV open?", nolink: "Open this page from the QR code on your TV.",
+      connected: "Connected to your TV", sources: "{n} sources · {on} on", note: "On and Under Other are for the profile in use on the TV. This page works while VesperTV is open, for an hour after its last use.",
+      catalogsN: "{m} movie, {s} show catalogs", cinemeta: "Catalogs from Cinemeta", refresh: "Refresh", selectCopy: "Select the link and copy it:" },
+    fr: { title: "Sources du Media Hub", sub: "Les sources et extensions du Media Hub de votre télé.", add: "Ajoutez un ou plusieurs liens d'extension", addBtn: "Ajouter",
+      adding: "Vérification…", none: "Aucune source ici.", all: "Toutes", streams: "Flux", catalogs: "Catalogues et listes", server: "Serveurs multimédias",
+      live: "Télé en direct", subtitles: "Sous-titres", on: "Activée", other: "Sous Autre", tv: "Extension télé", copy: "Copier le lien", copied: "Lien copié",
+      remove: "Retirer", cancel: "Annuler", sure: "Retirer {name}? Elle quitte la télé pour tous les profils.", built: "Intégrée", movies: "Films",
+      shows: "Séries", lists: "Listes", tagOther: "Sous Autre", offline: "La télé n'a pas répondu. VesperTV est-il ouvert?", nolink: "Ouvrez cette page avec le code QR de votre télé.",
+      connected: "Connecté à votre télé", sources: "{n} sources · {on} activées", note: "Activée et Sous Autre valent pour le profil utilisé sur la télé. Cette page marche tant que VesperTV est ouvert, une heure après le dernier usage.",
+      catalogsN: "Catalogues: {m} films, {s} séries", cinemeta: "Catalogues de Cinemeta", refresh: "Actualiser", selectCopy: "Sélectionnez le lien et copiez-le:" },
+    es: { title: "Fuentes del Media Hub", sub: "Las fuentes y complementos del Media Hub de tu tele.", add: "Añade uno o varios enlaces de complemento", addBtn: "Añadir",
+      adding: "Comprobando…", none: "Aún no hay fuentes aquí.", all: "Todas", streams: "Streams", catalogs: "Catálogos y listas", server: "Servidores",
+      live: "TV en directo", subtitles: "Subtítulos", on: "Activada", other: "En Otros", tv: "Complemento de TV", copy: "Copiar enlace", copied: "Enlace copiado",
+      remove: "Quitar", cancel: "Cancelar", sure: "¿Quitar {name}? Sale de la tele para todos los perfiles.", built: "Integrada", movies: "Películas",
+      shows: "Series", lists: "Listas", tagOther: "En Otros", offline: "La tele no respondió. ¿Está abierto VesperTV?", nolink: "Abre esta página con el código QR de tu tele.",
+      connected: "Conectado a tu tele", sources: "{n} fuentes · {on} activadas", note: "Activada y En Otros son para el perfil en uso en la tele. Esta página funciona con VesperTV abierto, una hora después del último uso.",
+      catalogsN: "Catálogos: {m} películas, {s} series", cinemeta: "Catálogos de Cinemeta", refresh: "Actualizar", selectCopy: "Selecciona el enlace y cópialo:" },
+    it: { title: "Fonti del Media Hub", sub: "Le fonti e i componenti aggiuntivi del Media Hub della tua TV.", add: "Aggiungi uno o più link di componenti", addBtn: "Aggiungi",
+      adding: "Controllo…", none: "Ancora nessuna fonte qui.", all: "Tutte", streams: "Stream", catalogs: "Cataloghi e liste", server: "Server multimediali",
+      live: "TV in diretta", subtitles: "Sottotitoli", on: "Attiva", other: "In Altro", tv: "Componente TV", copy: "Copia link", copied: "Link copiato",
+      remove: "Rimuovi", cancel: "Annulla", sure: "Rimuovere {name}? Lascia la TV per tutti i profili.", built: "Integrata", movies: "Film",
+      shows: "Serie", lists: "Liste", tagOther: "In Altro", offline: "La TV non ha risposto. VesperTV è aperto?", nolink: "Apri questa pagina dal codice QR sulla TV.",
+      connected: "Collegato alla TV", sources: "{n} fonti · {on} attive", note: "Attiva e In Altro valgono per il profilo in uso sulla TV. Questa pagina funziona con VesperTV aperto, per un'ora dall'ultimo uso.",
+      catalogsN: "Cataloghi: {m} film, {s} serie", cinemeta: "Cataloghi da Cinemeta", refresh: "Aggiorna", selectCopy: "Seleziona il link e copialo:" },
+    de: { title: "Media-Hub-Quellen", sub: "Die Quellen und Add-ons des Media Hub auf deinem Fernseher.", add: "Einen oder mehrere Add-on-Links hinzufügen", addBtn: "Hinzufügen",
+      adding: "Prüfe…", none: "Noch keine Quellen hier.", all: "Alle", streams: "Streams", catalogs: "Kataloge und Listen", server: "Medienserver",
+      live: "Live-TV", subtitles: "Untertitel", on: "Ein", other: "Unter Andere", tv: "TV-Add-on", copy: "Link kopieren", copied: "Link kopiert",
+      remove: "Entfernen", cancel: "Abbrechen", sure: "{name} entfernen? Es verschwindet für alle Profile vom Fernseher.", built: "Eingebaut", movies: "Filme",
+      shows: "Serien", lists: "Listen", tagOther: "Unter Andere", offline: "Der Fernseher antwortet nicht. Ist VesperTV offen?", nolink: "Öffne diese Seite über den QR-Code auf dem Fernseher.",
+      connected: "Mit deinem Fernseher verbunden", sources: "{n} Quellen · {on} ein", note: "Ein und Unter Andere gelten für das Profil, das am Fernseher läuft. Die Seite geht, solange VesperTV offen ist, eine Stunde nach der letzten Nutzung.",
+      catalogsN: "Kataloge: {m} Filme, {s} Serien", cinemeta: "Kataloge von Cinemeta", refresh: "Aktualisieren", selectCopy: "Link markieren und kopieren:" },
+    el: { title: "Πηγές Media Hub", sub: "Οι πηγές και τα πρόσθετα του Media Hub στην τηλεόρασή σου.", add: "Πρόσθεσε έναν ή περισσότερους συνδέσμους", addBtn: "Προσθήκη",
+      adding: "Έλεγχος…", none: "Καμία πηγή εδώ ακόμα.", all: "Όλες", streams: "Ροές", catalogs: "Κατάλογοι και λίστες", server: "Διακομιστές",
+      live: "Ζωντανή TV", subtitles: "Υπότιτλοι", on: "Ενεργή", other: "Στα Άλλα", tv: "Πρόσθετο TV", copy: "Αντιγραφή συνδέσμου", copied: "Ο σύνδεσμος αντιγράφηκε",
+      remove: "Αφαίρεση", cancel: "Άκυρο", sure: "Αφαίρεση του {name}; Φεύγει από την τηλεόραση για όλα τα προφίλ.", built: "Ενσωματωμένη", movies: "Ταινίες",
+      shows: "Σειρές", lists: "Λίστες", tagOther: "Στα Άλλα", offline: "Η τηλεόραση δεν απάντησε. Είναι ανοιχτό το VesperTV;", nolink: "Άνοιξε τη σελίδα από τον κωδικό QR στην τηλεόραση.",
+      connected: "Συνδέθηκε με την τηλεόρασή σου", sources: "{n} πηγές · {on} ενεργές", note: "Το Ενεργή και το Στα Άλλα ισχύουν για το προφίλ που χρησιμοποιείται στην τηλεόραση. Η σελίδα λειτουργεί όσο είναι ανοιχτό το VesperTV, για μία ώρα μετά την τελευταία χρήση.",
+      catalogsN: "Κατάλογοι: {m} ταινίες, {s} σειρές", cinemeta: "Κατάλογοι από Cinemeta", refresh: "Ανανέωση", selectCopy: "Επίλεξε τον σύνδεσμο και αντίγραψέ τον:" }
+  };
+  var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+  var t = T[lang] || T.en;
+  function f(s, v) { return s.replace(/\{(\w+)\}/g, function (_, k) { return v[k] != null ? v[k] : ""; }); }
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  var link = location.hash.length > 1 ? location.hash.slice(1) : null;
+  var sources = [], filter = "all", confirmKey = null, busy = false;
+  var FILTERS = [
+    ["all", function () { return true; }],
+    ["streams", function (s) { return s.tags.indexOf("streams") >= 0; }],
+    ["catalogs", function (s) { return s.kind === "catalogs" || s.kind === "lists" || (s.tags.indexOf("catalogs") >= 0 && s.kind !== "live"); }],
+    ["server", function (s) { return s.kind === "server"; }],
+    ["live", function (s) { return s.kind === "live"; }],
+    ["subtitles", function (s) { return s.kind === "subtitles"; }]
+  ];
+  var TAGS = { streams: "streams", catalogs: "catalogs", movies: "movies", shows: "shows", live: "live", subtitles: "subtitles",
+    server: "server", lists: "lists", builtin: "built", other: "tagOther" };
+
+  $("title").textContent = t.title; $("sub").textContent = t.sub; $("addLabel").textContent = t.add;
+  $("addBtn").textContent = t.addBtn; $("note").textContent = t.note; document.title = t.title;
+
+  function status(text, bad) { var s = $("status"); s.textContent = text || ""; s.className = bad ? "bad" : ""; }
+
+  function rpc(method, params) {
+    if (!link) return Promise.reject(new Error(t.nolink));
+    return fetch("/mcp/" + encodeURIComponent(link), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: method, params: params || {} })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      // The relay's own "TV not open / did not answer" reads as ours.
+      if (j.error) {
+        var m = j.error.message || "";
+        throw new Error(!m || /^VesperTV is not open|did not answer/.test(m) ? t.offline : m);
+      }
+      return j.result || {};
+    });
+  }
+
+  function got(result) {
+    if (result.sources) sources = result.sources;
+    var on = sources.filter(function (s) { return s.enabled; }).length;
+    status(t.connected + " · " + f(t.sources, { n: sources.length, on: on }));
+    render();
+    return result;
+  }
+
+  function fail(e) { status((e && e.message) || t.offline, true); }
+
+  function load() { return rpc("hub/list").then(got).catch(fail); }
+
+  function logo(s) {
+    var box = el("div", "logo");
+    var initials = (s.name || "?").replace(/[^A-Za-z0-9]/g, " ").trim().split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 3).toUpperCase() || "?";
+    if (s.logo && /^https:\/\//.test(s.logo)) {
+      var img = el("img"); img.alt = ""; img.loading = "lazy"; img.referrerPolicy = "no-referrer"; img.src = s.logo;
+      img.onerror = function () { box.textContent = initials; };
+      box.appendChild(img);
+    } else {
+      box.textContent = initials;
+    }
+    return box;
+  }
+
+  function sw(label, checked, onchange) {
+    var l = el("label", "sw"); var i = el("input"); i.type = "checkbox"; i.checked = !!checked;
+    i.onchange = function () { i.disabled = true; onchange(i.checked).catch(function (e) { i.checked = !i.checked; fail(e); }).then(function () { i.disabled = false; }); };
+    l.appendChild(i); l.appendChild(document.createTextNode(label)); return l;
+  }
+
+  function set(s, field, value) { return rpc("hub/set", { key: s.key, field: field, value: value }).then(got); }
+
+  function copyLink(s, box) {
+    rpc("hub/url", { key: s.key }).then(function (r) {
+      var url = r.url || "";
+      var done = function () { status(t.copied); };
+      var fallback = function () {
+        var wrap = el("div", "confirm"); wrap.appendChild(el("div", null, t.selectCopy));
+        var input = el("input", "url"); input.readOnly = true; input.value = url; wrap.appendChild(input);
+        box.appendChild(wrap); input.focus(); input.select();
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, fallback);
+      } else { fallback(); }
+    }).catch(fail);
+  }
+
+  function card(s) {
+    var c = el("div", "src" + (s.enabled ? "" : " off"));
+    var top = el("div", "top"); top.appendChild(logo(s));
+    var nm = el("div", "nm"); nm.appendChild(el("b", null, s.name));
+    var sub = [s.version ? "v" + String(s.version).replace(/^v/i, "") : "",
+      s.cinemeta ? t.cinemeta : (s.movies || s.shows) ? f(t.catalogsN, { m: s.movies, s: s.shows }) : ""].filter(Boolean).join(" · ");
+    if (sub) nm.appendChild(el("small", null, sub));
+    top.appendChild(nm);
+    top.appendChild(sw("", s.enabled, function (v) { return set(s, "enabled", v); }));
+    c.appendChild(top);
+    if (s.description) c.appendChild(el("div", "ds", s.description));
+    var tags = el("div", "tags");
+    s.tags.forEach(function (k) { var tg = el("span", "tag" + (k === "builtin" ? " g" : k === "other" ? " o" : ""), t[TAGS[k]] || k); tags.appendChild(tg); });
+    c.appendChild(tags);
+    if (s.other != null || s.tv != null) {
+      var opts = el("div", "opts");
+      if (s.other != null) opts.appendChild(sw(t.other, s.other, function (v) { return set(s, "other", v); }));
+      if (s.tv != null) opts.appendChild(sw(t.tv, s.tv, function (v) { return set(s, "tv", v); }));
+      c.appendChild(opts);
+    }
+    var acts = el("div", "acts");
+    if (s.hasUrl) { var cp = el("button", "ghost", t.copy); cp.type = "button"; cp.onclick = function () { copyLink(s, c); }; acts.appendChild(cp); }
+    if (s.removable) { var rm = el("button", "ghost danger", t.remove); rm.type = "button"; rm.onclick = function () { confirmKey = s.key; render(); }; acts.appendChild(rm); }
+    if (acts.childNodes.length) c.appendChild(acts);
+    if (confirmKey === s.key) {
+      var box = el("div", "confirm"); box.appendChild(el("div", null, f(t.sure, { name: s.name })));
+      var row = el("div", "row");
+      var yes = el("button", "ghost danger", t.remove); yes.type = "button";
+      yes.onclick = function () { yes.disabled = true; rpc("hub/remove", { key: s.key }).then(function (r) { confirmKey = null; got(r); }).catch(fail); };
+      var no = el("button", "ghost", t.cancel); no.type = "button"; no.onclick = function () { confirmKey = null; render(); };
+      row.appendChild(yes); row.appendChild(no); box.appendChild(row); c.appendChild(box);
+    }
+    return c;
+  }
+
+  function render() {
+    var chips = $("chips"); chips.innerHTML = "";
+    FILTERS.forEach(function (fl) {
+      var n = sources.filter(fl[1]).length;
+      if (fl[0] !== "all" && n === 0) return;
+      var b = el("button", fl[0] === filter ? "on" : "", t[fl[0]]); b.type = "button";
+      var count = el("b", null, String(n)); b.appendChild(count);
+      b.onclick = function () { filter = fl[0]; render(); };
+      chips.appendChild(b);
+    });
+    var test = (FILTERS.filter(function (fl) { return fl[0] === filter; })[0] || FILTERS[0])[1];
+    var list = $("list"); list.innerHTML = "";
+    var shown = sources.filter(test);
+    if (!shown.length) list.appendChild(el("div", "empty", t.none));
+    shown.forEach(function (s) { list.appendChild(card(s)); });
+  }
+
+  $("addBtn").onclick = function () {
+    var text = $("links").value.trim();
+    if (!text || busy) return;
+    busy = true; $("addBtn").disabled = true; $("msg").textContent = t.adding;
+    rpc("hub/add", { links: text }).then(function (r) {
+      $("links").value = ""; $("msg").textContent = r.summary || ""; got(r);
+    }).catch(function (e) { $("msg").textContent = (e && e.message) || t.offline; })
+      .then(function () { busy = false; $("addBtn").disabled = false; });
+  };
+
+  if (!link) { status(t.nolink, true); return; }
+  status("…");
+  load();
+  // The TV may change too (OK on a row there): stay in step while open.
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>

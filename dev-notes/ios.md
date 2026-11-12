@@ -52,6 +52,28 @@ the old id is a separate app on the phone (its data doesn't carry over).
 - Not done: downloads (Windows' `DesktopRecorder` is Windows paths/SMB; iOS would only download
   while open) and notifications with the app closed.
 
+## Main +738 merged (2026-11-12, after TestFlight 710)
+
+Owner: build 710 lacked the Settings revamp and the rest of Android since 1.0.64. Merged local main
+(1.0.65 +732 release + the unpushed +733..+738 work: Interface size, Polish, Remote buttons, new logo).
+
+- **Settings revamp:** `general_settings_screen.dart` and the old menu are gone; the iOS rules now
+  live in `settings_catalog.dart`: no Debrid accounts / Check for Updates rows (`appStoreBuild`),
+  the mpv player's sections (Audio & subtitles, TV Shows, Live TV) on `usesMediaKit`, no "Hide the
+  picture behind other pages" / Multiview tip, Data pool and resume-pill texts as on a computer,
+  Sports Mode clears the mini player. The Catch-up group switch stays (the group exists on iOS).
+- **Picture modes on the iPhone player:** the touch top bar has Android's picture button (Fit,
+  Stretched, Crop, Fit height, Fit width, Slight zoom, Cinema zoom; same `vesper_video_fit` setting)
+  + the name pill. `_video` sizes the `Video` box with `VideoFit.sizeIn` from the controller's
+  `rect` (fill inside it) and draws the subtitles in a separate screen-level `SubtitleView`, so a crop
+  or zoom never pushes them off the bottom. Windows uses the same code with the default Fit.
+- Media Hub folder pages (`hub_folder_screen.dart`, collections): back arrow on iPhone
+  (`needsBackArrow`), no first-card focus on touch.
+- Main committed `desktop_multiview_screen.dart` / `desktop_player_screen.dart` with CRLF in the
+  blob (2f6d12a), so every merge showed them as whole-file conflicts: the multiview blob here is
+  main's CRLF one + the iOS lines (clean next time); the player stays LF (main's 3 lines applied).
+- iOS app icons come from main's new gold logo (RGB, no alpha: App Store-safe).
+
 ## Install from Windows (free Apple ID)
 
 1. Install iTunes and iCloud from Apple's site (not the Microsoft Store versions), then

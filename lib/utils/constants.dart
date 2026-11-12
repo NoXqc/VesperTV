@@ -460,6 +460,15 @@ class AppConstants {
   /// wallpaper while their card is highlighted. Not transferred (the
   /// wallpaper file never is).
   static const String keyWallpaperOnProfiles = 'vesper_wallpaper_on_profiles';
+
+  /// Per viewer, device only (remotes differ per device): Settings > Backup
+  /// & devices > Remote buttons, JSON {keyId: {s: action, h: action}}
+  /// ([RemoteButtons]).
+  static const String keyRemoteButtons = 'vesper_remote_buttons';
+
+  /// Per viewer, device only: the full-screen player's arrows on a live
+  /// channel, JSON {left|right|up|down: action}; missing = today's default.
+  static const String keyPlayerArrows = 'vesper_player_arrows';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';
@@ -513,6 +522,7 @@ class AppConstants {
   /// edges) instead of fitting it with black bars — the player's ⛶ button.
   /// This device only (a phone and a TV want different things).
   static const String keyVideoFill = 'vesper_video_fill';
+  static const String keyVideoFit = 'vesper_video_fit';
 
   /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
   static const String keyTime24h = 'vesper_time_24h';
@@ -539,6 +549,14 @@ class AppConstants {
   /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
   /// channel rows in the TV home (per viewer, like the guide layout).
   static const String keyCompactUi = 'vesper_compact_ui';
+
+  /// Settings > Appearance > Interface size: compact / normal / large (per
+  /// viewer). Supersedes [keyCompactUi], which still seeds it when unset.
+  static const String keyUiSize = 'vesper_ui_size';
+
+  /// Media Hub rows folded away with their eye (Continue watching,
+  /// Recently watched), per viewer.
+  static const String keyHubHiddenRows = 'vesper_hub_hidden_rows';
 
   /// Opt-in: the live channel the remote stops on plays in the preview.
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';

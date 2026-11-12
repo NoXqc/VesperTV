@@ -1,11 +1,13 @@
 import '../services/storage_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../services/archive_service.dart';
 import 'archive_playback_settings.dart';
 import 'tv_text_field_gate.dart';
+import 'glass_menu.dart';
 
 Future<void> renameArchiveRow(BuildContext context, ArchiveRow row) async {
   final service = context.read<ArchiveService>();
@@ -67,11 +69,74 @@ Future<void> showArchiveRowSettings(BuildContext context, ArchiveType type) =>
             maxHeight: MediaQuery.sizeOf(context).height * .85, maxWidth: 800),
         builder: (_) => _ArchiveRowSettings(type: type));
 
-class _ArchiveRowSettings extends StatelessWidget {
+class _ArchiveRowSettings extends StatefulWidget {
   const _ArchiveRowSettings({required this.type});
   final ArchiveType type;
+
+  @override
+  State<_ArchiveRowSettings> createState() => _ArchiveRowSettingsState();
+}
+
+/// Left / Right walk a row's buttons in order: hide, pin, up, down,
+/// rename. Flutter's own directional search jumped from hide straight to
+/// the pen and back, so pin / up / down were out of the remote's reach
+/// (owner photo, 2026-11-11). Up / Down stay Flutter's (row to row).
+class _ArchiveRowSettingsState extends State<_ArchiveRowSettings> {
+  final Map<String, List<FocusNode>> _nodes = {};
+
+  List<FocusNode> _rowNodes(String key) => _nodes.putIfAbsent(
+      key, () => List.generate(5, (_) => FocusNode(debugLabel: 'row-tool')));
+
+  @override
+  void dispose() {
+    for (final list in _nodes.values) {
+      for (final n in list) {
+        n.dispose();
+      }
+    }
+    super.dispose();
+  }
+
+  KeyEventResult _onRowKey(String key, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final step = event.logicalKey == LogicalKeyboardKey.arrowRight
+        ? 1
+        : event.logicalKey == LogicalKeyboardKey.arrowLeft
+            ? -1
+            : 0;
+    if (step == 0) return KeyEventResult.ignored;
+    final nodes = _rowNodes(key);
+    final at = nodes.indexWhere((n) => n.hasPrimaryFocus);
+    if (at < 0) return KeyEventResult.ignored;
+    // The next button that can take focus (a Continue watching row's pin
+    // and arrows are off); at either end the selector stays.
+    for (var k = at + step; k >= 0 && k < nodes.length; k += step) {
+      if (nodes[k].canRequestFocus && nodes[k].context != null) {
+        nodes[k].requestFocus();
+        break;
+      }
+    }
+    return KeyEventResult.handled;
+  }
+
+  /// Moves the row and keeps the pressed arrow focused and on screen.
+  void _move(String key, int step, FocusNode node) {
+    context.read<ArchiveService>().moveRow(widget.type, key, step);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || node.context == null) return;
+      if (!node.hasPrimaryFocus) node.requestFocus();
+      Scrollable.ensureVisible(node.context!,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      Scrollable.ensureVisible(node.context!,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final type = widget.type;
     final service = context.watch<ArchiveService>();
     final rows = service
         .rows(type, includeHidden: true)
@@ -91,13 +156,28 @@ class _ArchiveRowSettings extends StatelessWidget {
           child: ListView.builder(
               shrinkWrap: true,
               itemCount: rows.length,
+              // A moved row keeps its element (and the arrow's focus):
+              // without it the row was rebuilt at its new index and the
+              // focus highlight vanished until the next arrow key (owner,
+              // 2026-11-12).
+              findChildIndexCallback: (key) {
+                final i = rows.indexWhere((r) => ValueKey(r.key) == key);
+                return i < 0 ? null : i;
+              },
               itemBuilder: (_, i) {
                 final row = rows[i];
-                return ListTile(
+                final nodes = _rowNodes(row.key);
+                return GlassFocusFrame(
                     key: ValueKey(row.key),
+                    child: Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
+                    onKeyEvent: (_, e) => _onRowKey(row.key, e),
+                    child: ListTile(
                     title: Text(row.title),
                     subtitle: Text(row.sourceLabel ?? row.source.name),
                     leading: IconButton(
+                        focusNode: nodes[0],
                         autofocus: i == 0,
                         tooltip: service.rowHidden(row.key)
                             ? tr('Show row')
@@ -109,6 +189,7 @@ class _ArchiveRowSettings extends StatelessWidget {
                             row.key, 'hidden', !service.rowHidden(row.key))),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(
+                          focusNode: nodes[1],
                           tooltip: tr('Pin row'),
                           icon: Icon(service.rowPinned(row.key)
                               ? Icons.push_pin
@@ -118,22 +199,25 @@ class _ArchiveRowSettings extends StatelessWidget {
                               : () => service.setRowFlag(row.key, 'pinned',
                                   !service.rowPinned(row.key))),
                       IconButton(
+                          focusNode: nodes[2],
                           tooltip: tr('Move up'),
                           icon: const Icon(Icons.arrow_upward),
                           onPressed: row.continuations != null
                               ? null
-                              : () => service.moveRow(type, row.key, -1)),
+                              : () => _move(row.key, -1, nodes[2])),
                       IconButton(
+                          focusNode: nodes[3],
                           tooltip: tr('Move down'),
                           icon: const Icon(Icons.arrow_downward),
                           onPressed: row.continuations != null
                               ? null
-                              : () => service.moveRow(type, row.key, 1)),
+                              : () => _move(row.key, 1, nodes[3])),
                       IconButton(
+                          focusNode: nodes[4],
                           tooltip: tr('Rename row'),
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: () => renameArchiveRow(context, row)),
-                    ]));
+                    ]))));
               })),
     ]));
   }

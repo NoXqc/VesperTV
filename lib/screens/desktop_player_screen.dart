@@ -43,8 +43,10 @@ import '../widgets/watch_game_button.dart';
 import '../services/watch_game_offer.dart';
 import '../services/desktop_player_control.dart';
 import '../services/skip_segments.dart';
+import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
 import '../utils/desktop_platform.dart';
+import '../utils/video_fit.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -147,6 +149,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// The movie's length when PiP started (mpv's is gone once stopped).
   Duration _pipDuration = Duration.zero;
   Timer? _touchHide;
+
+  /// The picture mode's name over the video right after the touch bar's
+  /// picture button ([_cycleFit]); [_fitPill] keeps it while it fades out.
+  bool _fitPillVisible = false;
+  VideoFit _fitPill = VideoFit.fit;
+  Timer? _fitPillTimer;
 
   /// Touch seek bar: where the thumb is while a finger drags it (the seek
   /// happens on release, not on every move).
@@ -532,6 +540,77 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     });
   }
 
+  /// Touch: the next picture mode (Fit, Stretched, Crop, Fit height, Fit
+  /// width, Slight zoom, Cinema zoom: Android's button and setting), named
+  /// over the video for a moment.
+  void _cycleFit() {
+    final prefs = context.read<AppPreferences>();
+    final fit = prefs.videoFit.next;
+    prefs.setVideoFit(fit);
+    _armTouchHide();
+    _fitPillTimer?.cancel();
+    setState(() {
+      _fitPill = fit;
+      _fitPillVisible = true;
+    });
+    _fitPillTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (mounted) setState(() => _fitPillVisible = false);
+    });
+  }
+
+  /// The picture sized for the picture mode like Android's VideoPlayerPane
+  /// ([VideoFit.sizeIn]): the screen edge crops what overflows. Subtitles
+  /// are drawn over the screen, not the picture's box, so Crop or a zoom
+  /// never pushes them off the bottom. The same widgets in every mode, so
+  /// a new mode never recreates the video view.
+  Widget _video(AppPreferences prefs) {
+    final fit = prefs.videoFit;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRect(
+          child: LayoutBuilder(
+            builder: (context, c) => ValueListenableBuilder<Rect?>(
+              valueListenable: _videoController.rect,
+              builder: (context, rect, _) {
+                final pane = c.biggest;
+                // Size unknown yet (no frame): the whole screen, fitted.
+                final known = rect != null &&
+                    rect.width > 1 &&
+                    rect.height > 1 &&
+                    pane.width.isFinite &&
+                    pane.height.isFinite &&
+                    pane.height > 0;
+                return OverflowBox(
+                  maxWidth: double.infinity,
+                  maxHeight: double.infinity,
+                  child: SizedBox.fromSize(
+                    size: known
+                        ? fit.sizeIn(pane, rect.width / rect.height)
+                        : pane,
+                    child: Video(
+                        controller: _videoController,
+                        controls: NoVideoControls,
+                        fit: known ? BoxFit.fill : BoxFit.contain,
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground,
+                        subtitleViewConfiguration:
+                            const SubtitleViewConfiguration(visible: false)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        // Settings: the player's Subtitles menu > size.
+        SubtitleView(
+            controller: _videoController,
+            configuration: SubtitleViewConfiguration(
+                textScaler: TextScaler.linear(prefs.subtitleScale))),
+      ],
+    );
+  }
+
   /// Touch: landscape <-> portrait, whatever the rotation lock says (the
   /// Android phone player's Rotate button).
   Future<void> _toggleRotation() async {
@@ -708,6 +787,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   void dispose() {
     _touchHide?.cancel();
+    _fitPillTimer?.cancel();
     if (_touch) {
       if (_inPip || _pipStarting) unawaited(IosPip.stop());
       if (IosPip.onStopped == _onPipStopped) IosPip.onStopped = null;
@@ -931,7 +1011,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   ),
                 )
               else
-                ...history.map((c) => ListTile(
+                ...history.map((c) => GlassFocusFrame(
+                        child: ListTile(
                       dense: true,
                       leading:
                           const Icon(Icons.tv, color: Colors.white54, size: 20),
@@ -941,7 +1022,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                           style: const TextStyle(
                               color: Colors.white, fontSize: 14)),
                       onTap: () => Navigator.of(sheetContext).pop(c),
-                    )),
+                    ))),
             ],
           ),
         ),
@@ -1224,6 +1305,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// along the bottom. No volume slider: the phone has its own buttons.
   List<Widget> _touchControls(PlaylistManager playlist) {
     final seekable = !_isLive || _inCatchup;
+    final prefs = context.watch<AppPreferences>();
     final playlistName = _isLive
         ? playlist.playlistNameFor(_currentChannel.playlistId).trim()
         : '';
@@ -1295,6 +1377,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                         color: Colors.white),
                     onPressed: _startPip,
                   ),
+                IconButton(
+                  tooltip: tr(prefs.videoFit.label),
+                  icon: Icon(prefs.videoFit.icon, color: Colors.white),
+                  onPressed: _cycleFit,
+                ),
                 IconButton(
                   tooltip: tr('Rotate'),
                   icon: const Icon(Icons.screen_rotation, color: Colors.white),
@@ -1608,17 +1695,20 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 // button (which isn't part of that overlay at all) short of
                 // closing the app. This screen's own overlay below is the
                 // only controls surface.
-                Center(
-                    child: Video(
-                        controller: _videoController,
-                        controls: NoVideoControls,
-                        pauseUponEnteringBackgroundMode:
-                            mediaKitPausesInBackground,
-                        // Settings: the player's Subtitles menu > size.
-                        subtitleViewConfiguration: SubtitleViewConfiguration(
-                            textScaler: TextScaler.linear(context
-                                .watch<AppPreferences>()
-                                .subtitleScale)))),
+                _video(context.watch<AppPreferences>()),
+                if (!_inPip && !_pipStarting)
+                  Positioned(
+                    top: 64,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _fitPillVisible ? 1 : 0,
+                        duration: const Duration(milliseconds: 180),
+                        child: Center(child: _FitPill(fit: _fitPill)),
+                      ),
+                    ),
+                  ),
                 DesktopReconnectingBadge(
                     recovery: DesktopLiveRecovery.of(_player)),
                 if (_inPip || _pipStarting) _pipNotice(),
@@ -1874,6 +1964,43 @@ class _DesktopVolume extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// The picture mode's name over the video after the picture button (the
+/// look of PlayerScreen's: a round icon and the name, like Nuvio).
+class _FitPill extends StatelessWidget {
+  const _FitPill({required this.fit});
+
+  final VideoFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+                color: Colors.white24, shape: BoxShape.circle),
+            child: Icon(fit.icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            tr(fit.label),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -109,7 +109,7 @@ void main() {
     expect(LiveGroupSort.provider.sorted(names, (s) => s), names);
   });
 
-  test('sort persists across preferences and stays off transfers', () async {
+  test('sort persists, travels with a transfer, never syncs', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
     await storage.init();
@@ -121,6 +121,8 @@ void main() {
     expect(AppPreferences(reopened).liveGroupSort, LiveGroupSort.zToA);
     expect(
         storage.exportForTransfer().containsKey(AppConstants.keyLiveGroupSort),
+        isTrue);
+    expect(storage.exportForSync().containsKey(AppConstants.keyLiveGroupSort),
         isFalse);
     prefs.dispose();
   });

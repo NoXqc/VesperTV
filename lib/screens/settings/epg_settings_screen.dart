@@ -163,6 +163,8 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
               title: tr('EPG'),
               bottom: TabBar(
                 controller: _tabController,

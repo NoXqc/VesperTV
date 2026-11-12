@@ -18,6 +18,7 @@ import 'screens/desktop_player_screen.dart';
 import 'services/desktop_mini_player.dart';
 import 'services/desktop_window.dart';
 import 'screens/player_screen.dart';
+import 'screens/remote_button_actions.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
 import 'screens/home_screen.dart';
@@ -27,6 +28,7 @@ import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_exit.dart';
+import 'services/remote_buttons.dart';
 import 'services/startup_quiet.dart';
 import 'services/launcher_channels.dart';
 import 'screens/launcher_open.dart';
@@ -86,6 +88,7 @@ import 'services/desktop_live_recovery.dart';
 import 'services/desktop_audio.dart';
 import 'services/desktop_stream_setup.dart';
 import 'services/vesper_ai/mcp_bridge.dart';
+import 'services/hub_remote.dart';
 import 'services/vesper_ai/vesper_ai.dart';
 import 'services/vesper_ai/vesper_tools.dart';
 import 'services/vesper_ai/voice_input.dart';
@@ -276,6 +279,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// on, and Settings' "teach the button" listener first ([VoiceKey]).
   bool _onVoiceKey(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
+    // A learned remote button (Remote buttons) wins, and Settings' learn
+    // mode there takes every key.
+    if (RemoteButtons.instance.learning != null ||
+        RemoteButtons.instance.owns(event)) {
+      return false;
+    }
     final learn = VoiceKey.learning;
     if (learn != null && learn(event)) return true;
     if (!_ready || _profileSelection != null) return false;
@@ -294,10 +303,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   }
 
   /// The remote's Guide button, anywhere in the app ([GuideKey]).
-  bool _onGuideKey(KeyEvent event) => GuideKey.handle(event,
-      navigator: _ready && _profileSelection == null
-          ? _navigatorKey.currentState
-          : null);
+  bool _onGuideKey(KeyEvent event) {
+    final buttons = RemoteButtons.instance;
+    if (buttons.learning != null || buttons.owns(event)) return false;
+    return GuideKey.handle(event,
+        navigator: _ready && _profileSelection == null
+            ? _navigatorKey.currentState
+            : null);
+  }
 
   /// Back at the root with the startup selector on (see [ProfileGate]):
   /// the current viewer's playback stops and Who's watching replaces the
@@ -422,6 +435,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     super.initState();
     HardwareKeyboard.instance.addHandler(_onGuideKey);
     HardwareKeyboard.instance.addHandler(_onVoiceKey);
+    // Remote buttons: the viewer's own button actions (Settings > Backup &
+    // devices > Remote buttons), only once the app is up.
+    RemoteButtons.instance
+      ..isActive = (() => _ready && _profileSelection == null)
+      ..install();
     _bootstrap();
     // Windows only — a window can't be minimized while it's *in*
     // `fullScreen` mode at all (confirmed directly: the sidebar's
@@ -872,6 +890,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         clearHubHistory: _archiveService.clearHistory,
         hub:
             AppVesperHub(navigatorKey: _navigatorKey, archive: _archiveService),
+        archive: _archiveService,
         profiles: AppVesperProfiles(
             navigatorKey: _navigatorKey,
             viewers: _viewerProfileService,
@@ -881,6 +900,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             playback: _playbackService,
             prefs: _preferences),
       ));
+      RemoteButtons.instance
+        ..attach(_storage)
+        ..runner = RemoteButtonActions(
+          navigatorKey: _navigatorKey,
+          playback: _playbackService,
+          prefs: _preferences,
+          epg: _epgService,
+          toolbox: () => VesperAi.instance.toolbox,
+          openVesper: _openVesper,
+          toast: _showToast,
+        ).run;
       VesperAi.instance.openPanelHandler = (
               {bool listen = true, String? text}) =>
           _openVesper(listen: listen, text: text);
@@ -889,6 +919,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ..onAssist = _openVesper
         ..start();
       McpBridge.instance.attach(_storage);
+      // Manage from phone (Media Hub sources) answers through the same link.
+      HubRemote.instance.attach(_archiveService, _storage);
       _vesperLifecycle = AppLifecycleListener(
         onHide: McpBridge.instance.pause,
         onShow: McpBridge.instance.resume,

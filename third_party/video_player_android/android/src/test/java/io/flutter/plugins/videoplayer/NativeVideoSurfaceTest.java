@@ -313,7 +313,7 @@ public class NativeVideoSurfaceTest {
       verify(exo).setMediaSource(any());
       verify(exo).prepare();
       Map<?, ?> diagnostics = (Map<?, ?>) invoke("diagnostics", null);
-      assertEquals("no usable cached frame; logo + spinner", diagnostics.get("zapCapture"));
+      assertEquals("no usable cached frame; spinner", diagnostics.get("zapCapture"));
       assertEquals(true, diagnostics.get("zapCover"));
       assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
       // Listener was registered before clearInvocations; retrieve the retained field instead.

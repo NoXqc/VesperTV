@@ -37,10 +37,27 @@ class GlassMenuSurface extends StatelessWidget {
   static bool of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_GlassMenuScope>() != null;
 
+  /// Rows under a [GlassRowScope] (Settings pages): only the focused one
+  /// gets the glass, idle rows stay clear.
+  static bool quietRows(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_GlassMenuScope>()?.quiet ??
+      false;
+
+  /// [quiet]: an idle row draws nothing (long Settings lists), only the
+  /// focused / selected one gets the glass.
   static BoxDecoration rowDecoration(BuildContext context,
-      {required bool focused, bool selected = false, double radius = 10}) {
+      {required bool focused,
+      bool selected = false,
+      double radius = 10,
+      bool quiet = false}) {
     final accent = Theme.of(context).colorScheme.primary;
     final lit = focused || selected;
+    if (quiet && !lit) {
+      // Same border width as the lit row, so focus never shifts the text.
+      return BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: Colors.transparent, width: 2));
+    }
     return RefinedFinish.decorate(
         context,
         BoxDecoration(
@@ -147,9 +164,147 @@ class GlassMenuSurface extends StatelessWidget {
 }
 
 class _GlassMenuScope extends InheritedWidget {
-  const _GlassMenuScope({required super.child});
+  const _GlassMenuScope({required super.child, this.quiet = false});
+  final bool quiet;
   @override
-  bool updateShouldNotify(_GlassMenuScope oldWidget) => false;
+  bool updateShouldNotify(_GlassMenuScope oldWidget) =>
+      quiet != oldWidget.quiet;
+}
+
+/// Rows below take the glass row look ([GlassMenuSurface.of] is true)
+/// without a blurred panel of their own: Settings pages, which sit on
+/// [GlassPanel]s over an already blurred backdrop.
+class GlassRowScope extends StatelessWidget {
+  const GlassRowScope({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      _GlassMenuScope(quiet: true, child: child);
+}
+
+/// The glass focus outline around any focusable child that has no focus
+/// look of its own (a plain `ListTile`, a dropdown): Settings dropped the
+/// theme's gold focus wash (owner, 2026-11-10: "the pastel selector").
+/// The wrapper itself never takes focus (CLAUDE.md §10).
+class GlassFocusFrame extends StatefulWidget {
+  const GlassFocusFrame({super.key, required this.child, this.radius = 10});
+
+  final Widget child;
+  final double radius;
+
+  @override
+  State<GlassFocusFrame> createState() => _GlassFocusFrameState();
+}
+
+class _GlassFocusFrameState extends State<GlassFocusFrame> {
+  bool _focused = false;
+  final _node =
+      FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuilt around a child that already has focus (a list row moved to
+    // another index keeps its button's node): no focus change comes, so
+    // read it once laid out, or the outline stays off until the next key
+    // (Customize Media Hub, owner 2026-11-12).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _node.hasFocus != _focused) {
+        setState(() => _focused = _node.hasFocus);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        focusNode: _node,
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) {
+          if (f != _focused) setState(() => _focused = f);
+        },
+        child: Container(
+          decoration: GlassMenuSurface.rowDecoration(context,
+              focused: _focused, radius: widget.radius, quiet: true),
+          child: widget.child,
+        ),
+      );
+}
+
+/// A Settings pane: dark see-through glass with a light top edge, the same
+/// recipe as [GlassMenuSurface] minus the blur (its backdrop is already a
+/// blurred wallpaper or a flat glow, so a blur would cost GPU for nothing
+/// on a weak box).
+class GlassPanel extends StatelessWidget {
+  const GlassPanel(
+      {super.key,
+      required this.child,
+      this.radius = 20,
+      this.padding,
+      this.blur = false});
+
+  final Widget child;
+  final double radius;
+  final EdgeInsetsGeometry? padding;
+
+  /// Blur what is behind (a panel floating over another page). Off on a
+  /// panel over the Settings backdrop, which is already blurred.
+  final bool blur;
+
+  static const _base = Color(0xBF0D1016);
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final borderRadius = BorderRadius.circular(radius);
+    Widget glass = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: Border.all(color: Colors.white24),
+        // A gradient replaces BoxDecoration.color, so the dark base is
+        // blended into each stop.
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(Colors.white.withValues(alpha: 0.12), _base),
+            Color.alphaBlend(accent.withValues(alpha: 0.04), _base),
+            Color.alphaBlend(Colors.black.withValues(alpha: 0.10), _base),
+          ],
+          stops: const [0, 0.35, 1],
+        ),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: padding == null ? child : Padding(padding: padding!, child: child),
+      ),
+    );
+    if (blur) {
+      glass = BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), child: glass);
+    }
+    return RefinedFinishBackdrop(
+      translucent: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black45, blurRadius: 24, offset: Offset(0, 8)),
+          ],
+        ),
+        child: ClipRRect(borderRadius: borderRadius, child: glass),
+      ),
+    );
+  }
 }
 
 /// A context menu with a fixed title/actions and a bounded, scrollable body.

@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import '../models/archive_models.dart';
 import '../models/archive_library.dart';
 import '../models/channel.dart';
+import '../models/hub_collection.dart';
 import '../utils/title_search.dart';
 import 'archive_api_service.dart';
 import 'archive_cache.dart';
@@ -32,6 +33,8 @@ class ArchiveRow {
     this.continuations,
     this.upcoming = false,
     this.customTitle,
+    this.collection,
+    this.folders = const [],
   });
 
   final ArchiveSource source;
@@ -55,6 +58,12 @@ class ArchiveRow {
   final bool upcoming;
   final String? customTitle;
 
+  /// A row of collection tiles (the Media Hub tab only, see
+  /// [ArchiveService.collectionRows]): [folders] are its tiles, [items]
+  /// their pictures for the hero. [source] and [catalog] are placeholders.
+  final HubCollection? collection;
+  final List<HubFolder> folders;
+
   /// The source name shown for item [i] (hero chip, search row header).
   String labelAt(int i) =>
       itemSources != null ? sourceAt(i).name : sourceLabel ?? source.name;
@@ -65,7 +74,9 @@ class ArchiveRow {
   bool get isHistory =>
       itemSources != null && !isFavorites && continuations == null;
 
-  String get key => continuations != null
+  String get key => collection != null
+      ? 'collection|${collection!.id}'
+      : continuations != null
       ? '${upcoming ? 'upcoming' : 'continue'}|${catalog.type.wire}'
       : isFavorites
           ? 'favorites|${catalog.type.wire}'
@@ -625,6 +636,7 @@ class ArchiveService extends ChangeNotifier {
         if (_showCatalogs(s))
           for (final base in s.catalogs)
             if (base.type == type &&
+                !base.homeHidden &&
                 s.underOther == other &&
                 (includeSearchOnly || !base.searchOnly))
               if ((newest
@@ -665,7 +677,8 @@ class ArchiveService extends ChangeNotifier {
         extra: {...base.extra, 'genre': y},
         genres: base.genres,
         years: base.years,
-        wireType: base.wireType);
+        wireType: base.wireType,
+        requestType: base.requestType);
   }
 
   /// Whether some source offers a release-year catalog for [type] (the
@@ -675,6 +688,7 @@ class ArchiveService extends ChangeNotifier {
     for (final s in enabledSources) {
       if (!_showCatalogs(s) || s.underOther) continue;
       for (final c in s.catalogs) {
+        if (c.homeHidden) continue;
         if (c.type == type && _newestOf(c, year) != null) return true;
       }
     }
@@ -1595,6 +1609,391 @@ class ArchiveService extends ChangeNotifier {
     ];
   }
 
+  // ---- collections (Nuvio's tiles) ---------------------------------------
+
+  /// Saved per profile: `{list: [collections], hideRows: bool}`.
+  Map<String, dynamic> get _collectionPrefs {
+    try {
+      return Map<String, dynamic>.from(
+          jsonDecode(_storage.getArchiveOptionsJson('collections') ?? '{}')
+              as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Object? _collectionsRaw = '';
+  List<HubCollection> _collectionsParsed = const [];
+
+  /// This profile's imported collections, in their order (Settings > Media
+  /// Hub sources > Collections). Parsed once per change.
+  List<HubCollection> get collections {
+    final raw = _storage.getArchiveOptionsJson('collections');
+    if (!identical(raw, _collectionsRaw)) {
+      _collectionsRaw = raw;
+      final list = _collectionPrefs['list'];
+      _collectionsParsed = [
+        for (final c in list is List ? list : const [])
+          if (HubCollection.fromJson(c) case final collection?) collection,
+      ];
+    }
+    return _collectionsParsed;
+  }
+
+  /// Catalogs shown in a collection leave the tab's rows (on by default:
+  /// the point is less clutter).
+  bool get collectionsHideRows => _collectionPrefs['hideRows'] != false;
+
+  Future<void> setCollectionsHideRows(bool on) async {
+    final prefs = _collectionPrefs..['hideRows'] = on;
+    await _storage.setArchiveOptionsJson('collections', jsonEncode(prefs));
+    _notify();
+  }
+
+  Future<void> _saveCollections(List<HubCollection> list,
+      {Map<String, dynamic>? removed}) async {
+    final prefs = _collectionPrefs
+      ..['list'] = [for (final c in list) c.toJson()];
+    if (removed != null) prefs['removed'] = removed;
+    await _storage.setArchiveOptionsJson('collections', jsonEncode(prefs));
+    _notify();
+  }
+
+  /// Reads the collections file at [link] (Nuvio's export, a GitHub page
+  /// link works too) and adds its collections; one already imported (same
+  /// id) is updated in place and keeps its switch. Returns how many.
+  Future<int> importCollections(String link) async {
+    final url = HubCollection.rawLink(link);
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw ArchiveApiException('Not a link');
+    }
+    final found =
+        HubCollection.parseExport(await _api.fetchAnyJson(uri), link: url);
+    if (found.isEmpty) {
+      throw ArchiveApiException('No collections in this file');
+    }
+    final list = [...collections];
+    final removed = _removedCollections;
+    for (final c in found) {
+      final i = list.indexWhere((x) => x.id == c.id);
+      if (i >= 0) {
+        list[i] = c.copyWith(enabled: list[i].enabled, onHome: list[i].onHome);
+      } else if (removed.remove(c.id) case final Map was) {
+        list.add(c.copyWith(
+            enabled: was['on'] != false, onHome: was['home'] == true));
+      } else {
+        list.add(c);
+      }
+    }
+    await _saveCollections(list, removed: removed);
+    return found.length;
+  }
+
+  /// The switches of collections removed from this profile, by id (`on`,
+  /// `home`): importing one again brings them back (owner, 2026-11-11:
+  /// removing the pack and adding it again lost Streaming's Show on Home).
+  Map<String, dynamic> get _removedCollections => Map<String, dynamic>.from(
+      _collectionPrefs['removed'] as Map? ?? const {});
+
+  /// Ids of removed collections whose switches an import would bring back.
+  Set<String> get rememberedCollectionIds => _removedCollections.keys.toSet();
+
+  Future<void> setCollectionEnabled(String id, bool on) => _saveCollections([
+        for (final c in collections) c.id == id ? c.copyWith(enabled: on) : c,
+      ]);
+
+  Future<void> setCollectionOnHome(String id, bool on) => _saveCollections([
+        for (final c in collections) c.id == id ? c.copyWith(onHome: on) : c,
+      ]);
+
+  /// The collections shown on Home (on, "Show on Home") with their tiles
+  /// whose catalogs are installed; one with none is left out.
+  List<(HubCollection, List<HubFolder>)> homeCollections() => [
+        for (final c in collections)
+          if (c.enabled && c.onHome)
+            if ([
+              for (final f in c.folders)
+                if (folderCatalogs(f).isNotEmpty) f
+            ]
+                case final folders when folders.isNotEmpty)
+              (c, folders),
+      ];
+
+  Future<void> removeCollection(String id) async {
+    final gone = collections.where((c) => c.id == id).firstOrNull;
+    final removed = _removedCollections;
+    if (gone != null) {
+      removed.remove(id);
+      removed[id] = {'on': gone.enabled, 'home': gone.onHome};
+      // The newest 100 are enough.
+      while (removed.length > 100) {
+        removed.remove(removed.keys.first);
+      }
+    }
+    await _saveCollections([for (final c in collections) if (c.id != id) c],
+        removed: removed);
+  }
+
+  Future<void> moveCollection(String id, int direction) async {
+    final list = [...collections];
+    final i = list.indexWhere((c) => c.id == id);
+    final to = i + direction;
+    if (i < 0 || to < 0 || to >= list.length) return;
+    list.insert(to, list.removeAt(i));
+    await _saveCollections(list);
+  }
+
+  Object? _indexSources = '', _indexPrefs = '';
+  int _indexViewer = -1;
+  Map<String, List<(ArchiveSource, ArchiveCatalog)>> _byCatalogId = const {};
+
+  /// This profile's enabled add-on catalogs by `type|id`, rebuilt when the
+  /// sources or their switches change (tiles ask for it on every build).
+  Map<String, List<(ArchiveSource, ArchiveCatalog)>> get _catalogsById {
+    final raw = _storage.getArchiveSourcesJson();
+    final prefs = _storage.getArchiveSourcePrefsJson();
+    if (!identical(raw, _indexSources) ||
+        !identical(prefs, _indexPrefs) ||
+        _indexViewer != _storage.viewerGeneration) {
+      _indexSources = raw;
+      _indexPrefs = prefs;
+      _indexViewer = _storage.viewerGeneration;
+      final map = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
+      for (final s in enabledSources) {
+        if (s.server != null || s.tracker != null || s.isLiveTv) continue;
+        for (final c in s.catalogs) {
+          if (c.searchOnly) continue;
+          map.putIfAbsent('${c.wire}|${c.id}', () => []).add((s, c));
+        }
+      }
+      _byCatalogId = map;
+    }
+    return _byCatalogId;
+  }
+
+  /// The installed catalog [src] names: from the enabled add-on whose
+  /// manifest id is [HubCollectionSource.addonId], else from any add-on
+  /// with that catalog (sources saved before their manifest id was read),
+  /// narrowed to its genre. Null = not installed.
+  (ArchiveSource, ArchiveCatalog)? collectionCatalog(HubCollectionSource src) {
+    final found = _catalogsById['${src.type}|${src.catalogId}'];
+    if (found == null || found.isEmpty) return null;
+    final (s, c) = found.firstWhere((sc) => sc.$1.addonId == src.addonId,
+        orElse: () => found.first);
+    final genre = src.genre;
+    if (genre == null || c.extra.containsKey('genre')) return (s, c);
+    return (
+      s,
+      c.withGenre(genre) ??
+          ArchiveCatalog(
+              type: c.type,
+              id: c.id,
+              name: c.name,
+              extra: {...c.extra, 'genre': genre},
+              genres: c.genres,
+              years: c.years,
+              wireType: c.wireType,
+              homeHidden: c.homeHidden,
+              requestType: c.requestType),
+    );
+  }
+
+  /// Every catalog a collection tile can use: the enabled add-ons'
+  /// catalogs, rows and the ones kept off the home screen.
+  List<(ArchiveSource, ArchiveCatalog)> collectionCatalogs() => [
+        for (final list in _catalogsById.values) ...list,
+      ];
+
+  /// Saves [list] as this profile's collections (the Vesper AI
+  /// `collections` tool arranges them).
+  Future<void> saveCollections(List<HubCollection> list) =>
+      _saveCollections(list);
+
+  /// [folder]'s installed catalogs, in its order.
+  List<(ArchiveSource, ArchiveCatalog)> folderCatalogs(HubFolder folder) => [
+        for (final src in folder.sources)
+          if (collectionCatalog(src) case final sc?) sc,
+      ];
+
+  /// A name to compare: lowercase words, "+" read as "plus" (Disney+ =
+  /// Disney Plus), no emoji or punctuation.
+  static String _nameKey(String s) => s
+      .toLowerCase()
+      .replaceAll('+', ' plus')
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim();
+
+  /// Other catalogs of the same add-on named after [folder] ("Netflix Top
+  /// 10", "Latest on Netflix"): a tile's page lists them after its own, so
+  /// catalogs added to AIOMetadata later join the right tile (owner,
+  /// 2026-11-11: the video's Netflix page had Latest and Top 10 rows).
+  List<(ArchiveSource, ArchiveCatalog)> folderExtras(HubFolder folder) {
+    final own = folderCatalogs(folder);
+    final want = _nameKey(folder.title);
+    if (own.isEmpty || want.length < 3) return const [];
+    final addons = {for (final (s, _) in own) s.key};
+    final have = {for (final (s, c) in own) '${s.key}|${c.wire}|${c.id}'};
+    final word = RegExp('(^| )${RegExp.escape(want)}( |\$)');
+    return [
+      for (final list in _catalogsById.values)
+        for (final (s, c) in list)
+          if (addons.contains(s.key) &&
+              !have.contains('${s.key}|${c.wire}|${c.id}') &&
+              word.hasMatch(_nameKey(c.name)))
+            (s, c),
+    ];
+  }
+
+  /// Everything a tile's page lists: its own catalogs, then [folderExtras].
+  List<(ArchiveSource, ArchiveCatalog)> folderPageCatalogs(HubFolder folder) =>
+      [...folderCatalogs(folder), ...folderExtras(folder)];
+
+  (Object?, Object?, int, ArchiveType)? _tileRowsFor;
+  List<ArchiveRow> _tileRows = const [];
+
+  /// The Media Hub tab's tile rows: each enabled collection with the
+  /// folders whose catalogs are installed (none = no row). Not in [rows]:
+  /// they hold no titles. Hidden while searching or filtering.
+  List<ArchiveRow> collectionRows(ArchiveType type) {
+    if (searchQuery(type) != null || genre(type) != null || newest(type)) {
+      return const [];
+    }
+    final list = collections;
+    final index = _catalogsById;
+    final state = (_collectionsRaw, index, _storage.viewerGeneration, type);
+    if (_tileRowsFor == state) return _tileRows;
+    _tileRowsFor = state;
+    return _tileRows = [
+      for (final c in list)
+        if (c.enabled)
+          if ([
+            for (final f in c.folders)
+              if (folderCatalogs(f).isNotEmpty) f
+          ]
+              case final folders when folders.isNotEmpty)
+            ArchiveRow(
+              source: ArchiveSource(
+                  manifestUrl: 'collection://${c.id}', name: c.label),
+              catalog: ArchiveCatalog(type: type, id: c.id, name: c.label),
+              items: [
+                for (final f in folders)
+                  ArchiveMeta(
+                      id: 'collection:${f.id}',
+                      type: type,
+                      name: f.title,
+                      posterUrl: f.coverUrl,
+                      backgroundUrl: f.backdropUrl,
+                      logoUrl: f.logoUrl),
+              ],
+              collection: c,
+              folders: folders,
+              customTitle: c.label,
+            ),
+    ];
+  }
+
+  /// Row keys of the catalogs the enabled collections show (plain and
+  /// genre-narrowed): the tab leaves them out with [collectionsHideRows].
+  Set<String> collectionRowKeys() {
+    final state = (_collectionsRaw, _catalogsById, _storage.viewerGeneration);
+    if (_rowKeysFor == state) return _rowKeysCache;
+    final list = collections;
+    _rowKeysFor = (_collectionsRaw, _catalogsById, _storage.viewerGeneration);
+    return _rowKeysCache = {
+      for (final c in list)
+        if (c.enabled)
+          for (final f in c.folders) ...{
+            for (final src in f.sources)
+              if (collectionCatalog(src) case (final s, final cat)?) ...[
+                _rowKey(s, cat),
+                for (final (s2, base) in _catalogsById[
+                        '${src.type}|${src.catalogId}'] ??
+                    const <(ArchiveSource, ArchiveCatalog)>[])
+                  if (s2.key == s.key) _rowKey(s2, base),
+              ],
+            for (final (s, cat) in folderExtras(f)) _rowKey(s, cat),
+          },
+    };
+  }
+
+  (Object?, Object?, int)? _rowKeysFor;
+  Set<String> _rowKeysCache = const {};
+
+  /// The folder page's rows: its installed catalogs that have titles.
+  List<ArchiveRow> folderRows(HubFolder folder) {
+    final titles = rowPreferences['titles'] as Map? ?? const {};
+    return [
+      for (final (s, c) in folderPageCatalogs(folder))
+        if (_items[_rowKey(s, c)] case final items? when items.isNotEmpty)
+          ArchiveRow(
+              source: s,
+              catalog: c,
+              items: items,
+              customTitle: titles[_rowKey(s, c)] is String
+                  ? titles[_rowKey(s, c)] as String
+                  : null),
+    ];
+  }
+
+  final Set<String> _loadingFolders = {};
+
+  /// [folder]'s page is still reading its catalogs.
+  bool folderLoading(HubFolder folder) => _loadingFolders.contains(folder.id);
+
+  /// Reads [folder]'s catalogs: saved ones at once, then the network for
+  /// any missing or older than [_staleAfter] (the tab's refresh usually has
+  /// them already; genre-narrowed ones only load here).
+  Future<void> loadFolder(HubFolder folder) async {
+    if (!_loadingFolders.add(folder.id)) return;
+    final viewer = _storage.viewerGeneration;
+    _notify();
+    try {
+      final catalogs = folderPageCatalogs(folder);
+      for (final (s, c) in catalogs) {
+        final key = _rowKey(s, c);
+        if (_items.containsKey(key)) continue;
+        try {
+          _items[key] = await _cache.read(s.key, c);
+        } catch (e) {
+          debugPrint('ArchiveService: cache read failed: ${e.runtimeType}');
+        }
+      }
+      _notify();
+      for (final (s, c) in catalogs) {
+        if (_disposed || viewer != _storage.viewerGeneration) return;
+        final key = _rowKey(s, c);
+        final at = await _cache.fetchedAt(s.key, c);
+        if (at != null &&
+            DateTime.now().difference(at) < _staleAfter &&
+            (_items[key]?.isNotEmpty ?? false)) {
+          continue;
+        }
+        try {
+          final items = <ArchiveMeta>[];
+          final seen = <String>{};
+          for (var page = 0; page < _pagesPerCatalog; page++) {
+            final batch = await _page(s, c, skip: items.length);
+            final fresh = batch.where((m) => seen.add(m.id)).toList();
+            if (fresh.isEmpty) break;
+            items.addAll(fresh);
+            if (batch.length < 50) break;
+          }
+          if (_disposed || viewer != _storage.viewerGeneration) return;
+          _items[key] = items;
+          _exhausted.remove(key);
+          await _cache.write(s.key, c, items);
+          _notify();
+        } catch (e) {
+          debugPrint('ArchiveCollection: source=${s.key} failed=${e.runtimeType}');
+        }
+      }
+    } finally {
+      _loadingFolders.remove(folder.id);
+      _notify();
+    }
+  }
+
   final Set<String> _loadingMore = {};
   final Set<String> _exhausted = {};
 
@@ -1683,8 +2082,14 @@ class ArchiveService extends ChangeNotifier {
     try {
       if (force) await _recheckCustomSources(all: manifests);
       final config = _storage.getArchiveSourcesJson();
+      // Catalogs that live inside collection tiles (and out of the rows)
+      // load when their tile opens: a full Nuvio pack is ~170 catalogs.
+      final inTiles =
+          collectionsHideRows ? collectionRowKeys() : const <String>{};
       final pending = [
-        for (final type in ArchiveType.values) ..._catalogs(type)
+        for (final type in ArchiveType.values)
+          for (final (s, c) in _catalogs(type))
+            if (!inTiles.contains(_rowKey(s, c))) (s, c),
       ];
       Future<void> worker() async {
         while (pending.isNotEmpty &&

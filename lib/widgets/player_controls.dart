@@ -31,6 +31,7 @@ import 'player_bar_title.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 import '../utils/app_store.dart';
+import '../utils/video_fit.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
 ///
@@ -43,14 +44,14 @@ class VideoPlayerPane extends StatelessWidget {
       {super.key,
       this.showEpgBar = true,
       this.showControls = true,
-      this.fillScreen = false,
+      this.fit = VideoFit.fit,
       this.switchButtonFocusNode});
 
-  /// Zoom the picture to cover the whole pane (edges cropped, no black
-  /// bars) — the fullscreen player's ⛶ button. Not clipped here: the pane
-  /// is the whole screen there, the display edge does the cropping (a clip
-  /// on a platform view costs weak boxes a lot).
-  final bool fillScreen;
+  /// How the picture is sized in the pane — the fullscreen player's
+  /// picture button (fit, stretched, crop, zooms). Not clipped here: the
+  /// pane is the whole screen there, the display edge does the cropping (a
+  /// clip on a platform view costs weak boxes a lot).
+  final VideoFit fit;
 
   final bool showEpgBar;
 
@@ -73,17 +74,15 @@ class VideoPlayerPane extends StatelessWidget {
   /// steal focus for an errored preview tile anyway.
   final FocusNode? switchButtonFocusNode;
 
-  /// Sizes the video to fit the pane (black bars) or, with [fillScreen], to
-  /// cover it. The same widgets either way, so toggling never recreates the
+  /// Sizes the video for [fit] (black bars, stretched, cropped or zoomed).
+  /// The same widgets every time, so a new mode never recreates the
   /// platform view.
   Widget _fit(double ratio, Widget child) => LayoutBuilder(
         builder: (context, c) {
           final w = c.maxWidth;
           final h = c.maxHeight;
           if (!w.isFinite || !h.isFinite || h == 0) return child;
-          final paneWider = w / h > ratio;
-          final size =
-              paneWider != fillScreen ? Size(h * ratio, h) : Size(w, w / ratio);
+          final size = fit.sizeIn(Size(w, h), ratio);
           return OverflowBox(
             maxWidth: double.infinity,
             maxHeight: double.infinity,
@@ -759,6 +758,10 @@ class PlayerControls extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
+                          // Top-aligned: a tile with a value line (Buffer
+                          // "Off") is taller and, centred, sat higher than
+                          // the rest (owner photo, 2026-11-12).
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (final o in leadingOptions) option(o),
                             ..._actionButtons(context, playback),
@@ -2107,7 +2110,7 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               selected: false,
               icon: Icons.cloud_download_outlined,
               title: tr('Search online subtitles'),
-              subtitle: tr('From your add-ons (Settings > Add-ons)'),
+              subtitle: tr('From your add-ons (Settings > Playlists & sources > Online subtitles)'),
               result: 'online'),
         _option(sheet,
             selected: false,

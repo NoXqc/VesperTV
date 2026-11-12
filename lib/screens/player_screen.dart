@@ -15,6 +15,7 @@ import '../widgets/archive_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
+import '../services/remote_buttons.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
 import '../services/playlist_manager.dart';
@@ -22,6 +23,7 @@ import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
+import '../utils/video_fit.dart';
 import '../widgets/channel_schedule_panel.dart';
 import '../widgets/live_channel_info_card.dart';
 import '../widgets/native_video_hole.dart';
@@ -370,7 +372,7 @@ class _PlayerGlideState extends State<_PlayerGlide>
 /// so it never restarts playback that's already running.
 ///
 /// Also owns the actual "fullscreen" behavior other apps mean by that word:
-/// landscape orientation + hidden system bars ([_toggleImmersive]) — but
+/// landscape orientation + hidden system bars ([_cycleFit]) — but
 /// only the "hidden system bars" half of that on a TV-sized screen. A TV
 /// never physically rotates, so forcing an orientation there does nothing
 /// useful and can actively backfire: [AppPreferences.layoutMode] "auto"
@@ -411,7 +413,8 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen>
+    implements RemotePlayerTarget {
   bool _immersive = false;
   bool _topVisible = false;
   bool _bottomVisible = false;
@@ -476,6 +479,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// read than the info card's 4 s); OK again hides both.
   bool _dataPoolVisible = false;
   Timer? _dataPoolTimer;
+
+  /// The picture mode just picked, named at the top for a moment
+  /// ([_cycleFit]); [_fitPill] keeps the last one while it fades out.
+  bool _fitPillVisible = false;
+  VideoFit _fitPill = VideoFit.fit;
+  Timer? _fitPillTimer;
 
   /// Skip intro / recap / credits on episodes (IntroDB, Settings >
   /// Playback > Skip intro). OK skips while its button shows.
@@ -790,7 +799,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  /// Refreshed on every build (see [build]) and read from [_toggleImmersive]
+  /// Refreshed on every build (see [build]) and read from [_cycleFit]
   /// / [_restoreChrome] / [dispose] — those don't call [build] themselves,
   /// so this caches the last-known answer rather than doing a fresh
   /// `context.watch`/`MediaQuery.of` lookup from places where that's
@@ -859,6 +868,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _playback = context.read<PlaybackService>();
+    // Remote buttons' player actions (info, picture, last channel...).
+    RemoteButtons.instance.registerPlayer(this);
     // Vesper AI's media_hub tool switches streams through the same sources.
     _playback.hubSources = widget.sources;
     _playback.play(widget.channel);
@@ -980,7 +991,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_bottomVisible || _optionsVisible) {
       _focusBottomBar();
     } else if (_zappable) {
-      _zapChannel(-1);
+      _runArrow(PlayerArrow.up);
     } else {
       _openBar();
     }
@@ -1005,7 +1016,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_bottomVisible || _optionsVisible) {
       _focusBottomBar();
     } else if (_zappable) {
-      _zapChannel(1);
+      _runArrow(PlayerArrow.down);
     } else {
       _openBar();
     }
@@ -1371,6 +1382,66 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _zapTo(target);
   }
 
+  /// When the last non-zap arrow action ran: a held arrow repeats, and
+  /// the side drawer / last channel / bar must run once per press.
+  DateTime? _arrowAt;
+
+  /// An arrow on a live channel with nothing on screen: what Settings >
+  /// Backup & devices > Remote buttons > Player arrows says (default Left
+  /// = side drawer, Right = last channel, Up / Down = zap).
+  void _runArrow(PlayerArrow arrow) {
+    final action = RemoteButtons.instance.arrowAction(arrow);
+    if (action == 'channel_up') {
+      _zapChannel(-1);
+      return;
+    }
+    if (action == 'channel_down') {
+      _zapChannel(1);
+      return;
+    }
+    final now = DateTime.now();
+    final last = _arrowAt;
+    _arrowAt = now;
+    if (last != null && now.difference(last) < const Duration(milliseconds: 400)) {
+      return;
+    }
+    switch (action) {
+      case 'panel':
+        _openPanel();
+      case 'last':
+        _lastChannel();
+      case 'bar':
+        _openBar();
+    }
+  }
+
+  // RemotePlayerTarget (Remote buttons).
+  @override
+  void lastChannel() => _lastChannel();
+  @override
+  void zap(int step) => _zapChannel(step);
+  @override
+  void showInfo() => _toggleInfoCard();
+  @override
+  void cycleFit() => unawaited(_cycleFit());
+  @override
+  void openMultiview() {
+    final channel = _playback.currentChannel ?? widget.channel;
+    if (channel.isLive && !context.read<AppPreferences>().hideMultiview) {
+      unawaited(_openMultiview(channel));
+    }
+  }
+
+  @override
+  void close() {
+    final route = ModalRoute.of(context);
+    if (!mounted || route == null || !route.isActive) return;
+    // pop, not maybePop: the PopScope would only hide the bars.
+    final nav = Navigator.of(context);
+    nav.popUntil((r) => r == route);
+    nav.pop();
+  }
+
   /// Right on a live channel: back to the channel watched before this one
   /// (the side panel's Last channels list), so Right again flips back.
   void _lastChannel() {
@@ -1445,15 +1516,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  /// ⛶: the picture fills the whole screen (zoomed, edges cropped, no black
-  /// bars; remembered) and the system bars hide; again = fit + bars back.
-  /// Owner: on his phone this button used to look like it did nothing — it
-  /// only toggled the system bars.
-  Future<void> _toggleImmersive() async {
+  /// The picture button: the next way to size the picture (Fit,
+  /// Stretched, Crop, Fit height, Fit width, Slight zoom, Cinema zoom;
+  /// remembered), named at the top for a moment (owner, 2026-11-11, like
+  /// Nuvio). Leaving Fit hides the system bars (a phone also turns
+  /// sideways); back to Fit brings them back. Owner: on his phone the old
+  /// ⛶ looked like it did nothing — it only toggled the system bars.
+  Future<void> _cycleFit() async {
     final prefs = context.read<AppPreferences>();
-    final next = !prefs.videoFill;
-    prefs.setVideoFill(next);
+    final wasFill = prefs.videoFill;
+    final fit = prefs.videoFit.next;
+    prefs.setVideoFit(fit);
     _resetHideTimer();
+    _fitPillTimer?.cancel();
+    setState(() {
+      _fitPill = fit;
+      _fitPillVisible = true;
+    });
+    _fitPillTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (mounted) setState(() => _fitPillVisible = false);
+    });
+    final next = prefs.videoFill;
+    if (next == wasFill) return;
     setState(() => _immersive = next);
     _barsHidden = next;
     _barsFor = null;
@@ -1496,6 +1580,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    RemoteButtons.instance.unregisterPlayer(this);
+    _fitPillTimer?.cancel();
     _sourceBackGuard.dispose();
     if (identical(_playback.hubSources, widget.sources)) {
       _playback.hubSources = null;
@@ -1671,7 +1757,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // panel on a live channel (a no-op on movies/episodes).
                     const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
                       if (channel.isLive || playback.catchup != null) {
-                        _openPanel();
+                        _runArrow(PlayerArrow.left);
                       }
                     },
                     // Right never had any established purpose here — it simply had
@@ -1697,7 +1783,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const SingleActivator(LogicalKeyboardKey.arrowRight,
                         includeRepeats: false): () {
                       if (channel.isLive || playback.catchup != null) {
-                        _lastChannel();
+                        _runArrow(PlayerArrow.right);
                       } else {
                         _openSources();
                       }
@@ -1766,10 +1852,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             key: ValueKey(channel.id),
                             showControls: false,
                             showEpgBar: false,
-                            fillScreen: prefs.videoFill,
+                            fit: prefs.videoFit,
                             switchButtonFocusNode: _switchButtonFocus,
                           ),
                         ),
+                        if (!inPip)
+                          Positioned(
+                            top: 56,
+                            left: 0,
+                            right: 0,
+                            child: IgnorePointer(
+                              child: AnimatedOpacity(
+                                key: const ValueKey('video-fit-pill'),
+                                opacity: _fitPillVisible ? 1 : 0,
+                                duration: const Duration(milliseconds: 180),
+                                child: Center(child: _FitPill(fit: _fitPill)),
+                              ),
+                            ),
+                          ),
                         if (!inPip) ...[
                           // Top bar: back, current/next EPG line (live only), search,
                           // fullscreen toggle. Positioned has to be the outermost
@@ -1898,13 +1998,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                       _setTouchLocked(true),
                                                 ),
                                               _TopBarIconButton(
-                                                icon: prefs.videoFill
-                                                    ? Icons.fullscreen_exit
-                                                    : Icons.fullscreen,
-                                                tooltip: prefs.videoFill
-                                                    ? tr('Fit to screen')
-                                                    : tr('Fill screen'),
-                                                onPressed: _toggleImmersive,
+                                                icon: prefs.videoFit.icon,
+                                                tooltip:
+                                                    tr(prefs.videoFit.label),
+                                                onPressed: _cycleFit,
                                               ),
                                             ],
                                           ),
@@ -2130,13 +2227,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 onPressed: _openSources,
                                               ),
                                             PlayerOption(
-                                              icon: prefs.videoFill
-                                                  ? Icons.fullscreen_exit
-                                                  : Icons.fullscreen,
-                                              label: prefs.videoFill
-                                                  ? tr('Fit')
-                                                  : tr('Fill'),
-                                              onPressed: _toggleImmersive,
+                                              icon: prefs.videoFit.icon,
+                                              label: tr(prefs.videoFit.label),
+                                              onPressed: _cycleFit,
                                             ),
                                             PlayerOption(
                                               icon: Icons.search,
@@ -2603,6 +2696,43 @@ class _SkipCue extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The picture mode's name over the video right after the picture button
+/// (Nuvio's look: a round icon and the name).
+class _FitPill extends StatelessWidget {
+  const _FitPill({required this.fit});
+
+  final VideoFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+                color: Colors.white24, shape: BoxShape.circle),
+            child: Icon(fit.icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            tr(fit.label),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

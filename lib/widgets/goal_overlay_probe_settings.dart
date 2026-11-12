@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../services/goal_overlay_probe.dart';
-import 'tv_menu_tile.dart';
+import 'tv_menu_tile.dart';
+import 'glass_menu.dart';
 
 /// Android TV-only settings. Native owns both timers, even after this unmounts.
 class GoalOverlayProbeSettings extends StatefulWidget {
@@ -99,11 +100,11 @@ class _GoalOverlayProbeSettingsState extends State<GoalOverlayProbeSettings>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ListTile(
+        GlassFocusFrame(child: ListTile(
           leading: const Icon(Icons.picture_in_picture_alt),
           title: Text(tr('Alerts over other apps (beta)')),
           subtitle: Text(label),
-        ),
+        )),
         TvMenuTile(
           icon: Icons.settings_outlined,
           title: tr('Open overlay settings'),

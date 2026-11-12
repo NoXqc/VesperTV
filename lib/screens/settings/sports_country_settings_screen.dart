@@ -44,6 +44,8 @@ class _SportsCountrySettingsScreenState
   Widget build(BuildContext context) => SettingsScaffold(
       title: tr('Preferred channel countries'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(

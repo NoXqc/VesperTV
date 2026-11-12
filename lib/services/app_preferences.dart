@@ -7,6 +7,7 @@ import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
+import '../utils/video_fit.dart';
 import 'audio_delay.dart';
 import 'desktop_audio.dart';
 import 'display_match.dart';
@@ -26,6 +27,9 @@ import '../utils/desktop_platform.dart';
 class AppPreferences extends ChangeNotifier {
   AppPreferences(this._storage);
 
+  /// For Settings rows that save straight to storage.
+  StorageService get storage => _storage;
+
   final StorageService _storage;
 
   late bool showClock;
@@ -40,8 +44,12 @@ class AppPreferences extends ChangeNotifier {
   late bool guideExpanded;
   late bool guideCompact;
 
-  /// Smaller tabs, groups and channel rows in the TV home (per viewer).
-  late bool compactUi;
+  /// Interface size in the TV home (per viewer): 'compact' (smaller tabs,
+  /// groups and channel rows), 'normal' or 'large' (bigger text and rows,
+  /// for viewers who need it easier to read).
+  late String uiSize;
+  bool get compactUi => uiSize == 'compact';
+  bool get largeUi => uiSize == 'large';
 
   /// Live list / Timeline guide: the channel the remote stops on plays in
   /// the preview (opt-in, per viewer like the other guide settings).
@@ -93,8 +101,13 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fullscreen player zooms the picture to fill the screen (no black bars).
-  late bool videoFill;
+  /// How the full-screen player sizes the picture (the options row's
+  /// cycling button; device-only).
+  late VideoFit videoFit;
+
+  /// The picture fills the screen one way or another (anything but Fit):
+  /// the phone hides its system bars then.
+  bool get videoFill => videoFit != VideoFit.fit;
 
   /// Favourites (TV, Movies, TV Shows) mixed across playlists, A-Z,
   /// instead of one block per playlist (Settings > General > Favourites).
@@ -425,7 +438,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
-    compactUi = _storage.getCompactUi();
+    uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
     wideCards = _storage.getWideCards();
@@ -438,7 +451,7 @@ class AppPreferences extends ChangeNotifier {
     hideCatchupGroup = _storage.getHideCatchupGroup();
     recentChannelsGroup = _storage.getRecentChannelsGroup();
     hideMultiview = _storage.getHideMultiview();
-    videoFill = _storage.getVideoFill();
+    videoFit = VideoFit.byName(_storage.getVideoFit());
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
     showGroupCounts = _storage.getShowGroupCounts();
     dataPool = _storage.getDataPool();
@@ -478,7 +491,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
-    compactUi = _storage.getCompactUi();
+    uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
@@ -547,10 +560,19 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCompactUi(bool value) {
-    compactUi = value;
-    _storage.setCompactUi(value);
+  void setUiSize(String value) {
+    uiSize = value;
+    _storage.setUiSize(value);
     notifyListeners();
+  }
+
+  /// The old switch (Vesper AI's compact_ui): off leaves Large alone.
+  void setCompactUi(bool value) {
+    if (value) {
+      setUiSize('compact');
+    } else if (compactUi) {
+      setUiSize('normal');
+    }
   }
 
   void setGuideCompact(bool value) {
@@ -596,9 +618,13 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setVideoFill(bool value) {
-    videoFill = value;
-    _storage.setVideoFill(value);
+  /// On = Crop (the old Fill), off = Fit: Vesper AI's switch.
+  void setVideoFill(bool value) =>
+      setVideoFit(value ? VideoFit.crop : VideoFit.fit);
+
+  void setVideoFit(VideoFit value) {
+    videoFit = value;
+    _storage.setVideoFit(value.name);
     notifyListeners();
   }
 
