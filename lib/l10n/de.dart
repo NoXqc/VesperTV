@@ -3464,4 +3464,9 @@ const Map<String, String> kDe = {
       "{name} ist aus. Einstellungen > Media-Hub-Quellen > Sammlungen schaltet sie wieder ein.",
   "Streaming is on. Turn on the other collections here when you want them.":
       "Streaming ist an. Schalte die anderen Sammlungen hier ein, wenn du sie willst.",
+  // Interface size (2026-11-11).
+  "Interface size": "Größe der Oberfläche",
+  "Compact": "Kompakt",
+  "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
+      "Kompakt zeigt mehr auf dem Bildschirm. Groß vergrößert Text und Zeilen zum besseren Lesen. Nur für dieses Profil.",
 };

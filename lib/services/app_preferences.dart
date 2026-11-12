@@ -44,8 +44,12 @@ class AppPreferences extends ChangeNotifier {
   late bool guideExpanded;
   late bool guideCompact;
 
-  /// Smaller tabs, groups and channel rows in the TV home (per viewer).
-  late bool compactUi;
+  /// Interface size in the TV home (per viewer): 'compact' (smaller tabs,
+  /// groups and channel rows), 'normal' or 'large' (bigger text and rows,
+  /// for viewers who need it easier to read).
+  late String uiSize;
+  bool get compactUi => uiSize == 'compact';
+  bool get largeUi => uiSize == 'large';
 
   /// Live list / Timeline guide: the channel the remote stops on plays in
   /// the preview (opt-in, per viewer like the other guide settings).
@@ -434,7 +438,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
-    compactUi = _storage.getCompactUi();
+    uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
     wideCards = _storage.getWideCards();
@@ -487,7 +491,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
-    compactUi = _storage.getCompactUi();
+    uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
@@ -556,10 +560,19 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCompactUi(bool value) {
-    compactUi = value;
-    _storage.setCompactUi(value);
+  void setUiSize(String value) {
+    uiSize = value;
+    _storage.setUiSize(value);
     notifyListeners();
+  }
+
+  /// The old switch (Vesper AI's compact_ui): off leaves Large alone.
+  void setCompactUi(bool value) {
+    if (value) {
+      setUiSize('compact');
+    } else if (compactUi) {
+      setUiSize('normal');
+    }
   }
 
   void setGuideCompact(bool value) {

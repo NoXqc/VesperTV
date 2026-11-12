@@ -3561,4 +3561,9 @@ const Map<String, String> kEs = {
       "{name} está desactivada. Ajustes > Fuentes de Media Hub > Colecciones la vuelve a activar.",
   "Streaming is on. Turn on the other collections here when you want them.":
       "Streaming está activada. Activa las otras colecciones aquí cuando las quieras.",
+  // Interface size (2026-11-11).
+  "Interface size": "Tamaño de la interfaz",
+  "Compact": "Compacto",
+  "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
+      "Compacto muestra más en pantalla. Grande agranda el texto y las filas para leer mejor. Solo para este perfil.",
 };

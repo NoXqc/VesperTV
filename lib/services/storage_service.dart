@@ -1017,6 +1017,20 @@ class StorageService {
   Future<void> setCompactUi(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyCompactUi), value);
 
+  /// 'compact', 'normal' or 'large'. Before it existed Compact UI was a
+  /// switch: a viewer who turned it on reads 'compact'.
+  String getUiSize() {
+    final v = _prefs.getString(_vk(AppConstants.keyUiSize));
+    if (v == 'compact' || v == 'normal' || v == 'large') return v!;
+    return getCompactUi() ? 'compact' : 'normal';
+  }
+
+  Future<void> setUiSize(String value) => Future.wait([
+        _prefs.setString(_vk(AppConstants.keyUiSize), value),
+        // Kept in step so an older build still reads Compact.
+        setCompactUi(value == 'compact'),
+      ]);
+
   /// Media Hub rows hidden with their eye (row keys), per viewer.
   Set<String> getHubHiddenRows() =>
       (_prefs.getStringList(_vk(AppConstants.keyHubHiddenRows)) ?? const [])

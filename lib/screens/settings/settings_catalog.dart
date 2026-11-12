@@ -347,14 +347,19 @@ class SettingsCatalog {
                   'Glossy surfaces, reflections and blur. Uses more graphics resources.'),
               value: prefs.refinedFinish,
               onChanged: prefs.setRefinedFinish),
-          SettingsToggle(
-              id: 'compact_ui',
-              icon: Icons.density_small,
-              title: tr('Compact UI'),
+          SettingsChoice(
+              id: 'ui_size',
+              icon: Icons.format_size,
+              title: tr('Interface size'),
               help: tr(
-                  'Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.'),
-              value: prefs.compactUi,
-              onChanged: prefs.setCompactUi),
+                  'Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.'),
+              options: [
+                SettingsOption('compact', tr('Compact')),
+                SettingsOption('normal', tr('Normal')),
+                SettingsOption('large', tr('Large')),
+              ],
+              selected: prefs.uiSize,
+              onPick: prefs.setUiSize),
           SettingsChoice(
               id: 'layout',
               icon: Icons.devices_outlined,

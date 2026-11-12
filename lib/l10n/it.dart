@@ -3568,4 +3568,9 @@ const Map<String, String> kIt = {
       "{name} è disattivata. Impostazioni > Fonti Media Hub > Raccolte la riattiva.",
   "Streaming is on. Turn on the other collections here when you want them.":
       "Streaming è attiva. Attiva qui le altre raccolte quando le vuoi.",
+  // Interface size (2026-11-11).
+  "Interface size": "Dimensione dell'interfaccia",
+  "Compact": "Compatta",
+  "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
+      "Compatta mostra più righe sullo schermo. Grande ingrandisce testo e righe per leggere meglio. Solo per questo profilo.",
 };

@@ -81,7 +81,11 @@ One tool layer, three front ends:
   assistant). Many systems never pass ASSIST/VOICE_ASSIST to apps; Fire OS keeps
   its Alexa button — unfixable, phone path instead.
 - Advanced: `adb shell settings put secure assistant com.nox.nox_iptv/.MainActivity`
-  (untested on real boxes; Google TV may ignore it).
+  (untested on real boxes; Google TV may ignore it). **Works** (owner, 2026-11-11, Homatics Box R 4K Plus,
+  Android TV 14): `adb shell cmd role add-role-holder android.app.role.ASSISTANT com.nox.nox_iptv 0` - the
+  remote's mic/Assistant button opens VesperTV with the Vesper panel. It clears Google's voice interaction
+  service but leaves `voice_recognition_service` (Google TTS recognizer), so Talk still works. Undo: same
+  command with `com.google.android.katniss`.
 - Panel: `screens/vesper_ai/vesper_panel.dart` (route over the current screen;
   Talk / gated text field / Talk from my phone / Close). An action pops it (host
   popUntil first) and the reply goes to the bubble.

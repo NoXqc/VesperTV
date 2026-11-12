@@ -3574,4 +3574,9 @@ const Map<String, String> kFr = {
       "{name} est désactivée. Paramètres > Sources Media Hub > Collections la réactive.",
   "Streaming is on. Turn on the other collections here when you want them.":
       "Streaming est activée. Activez les autres collections ici quand vous les voulez.",
+  // Interface size (2026-11-11).
+  "Interface size": "Taille de l'interface",
+  "Compact": "Compacte",
+  "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
+      "Compacte affiche plus de lignes à l'écran. Grande agrandit le texte et les lignes pour mieux lire. Pour ce profil seulement.",
 };

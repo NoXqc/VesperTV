@@ -3523,4 +3523,9 @@ const Map<String, String> kEl = {
       "Η συλλογή {name} είναι απενεργοποιημένη. Ρυθμίσεις > Πηγές Media Hub > Συλλογές την ενεργοποιεί ξανά.",
   "Streaming is on. Turn on the other collections here when you want them.":
       "Το Streaming είναι ενεργό. Ενεργοποιήστε τις άλλες συλλογές εδώ όταν τις θέλετε.",
+  // Interface size (2026-11-11).
+  "Interface size": "Μέγεθος εμφάνισης",
+  "Compact": "Συμπαγές",
+  "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
+      "Το Συμπαγές χωράει περισσότερα στην οθόνη. Το Μεγάλο μεγαλώνει το κείμενο και τις γραμμές για ευκολότερη ανάγνωση. Μόνο για αυτό το προφίλ.",
 };
