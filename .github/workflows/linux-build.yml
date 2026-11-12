@@ -1,0 +1,52 @@
+# Linux desktop build: VesperTV as a .tar.gz of Flutter's release bundle, as a
+# workflow artifact. Same media_kit (mpv) player as Windows/macOS.
+#
+# Built on Ubuntu 24.04, so it needs a distro at least that new (glibc 2.39)
+# plus the system libmpv (Ubuntu/Mint: sudo apt install libmpv2). Not a
+# release asset: AppUpdateService offers nothing on Linux yet.
+name: Linux build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/linux-build]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux build tools + libmpv
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libmpv-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - name: Build Linux (release)
+        run: flutter build linux --release 2>&1 | tee build-linux.log; exit ${PIPESTATUS[0]}
+        shell: bash
+      - name: Package
+        # The binary needs its lib/ and data/ folders beside it: ship the
+        # whole bundle (like the Windows zip).
+        run: |
+          version="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          name="VesperTV-${version/+/-}-linux-x64"
+          cp -R build/linux/x64/release/bundle "$name"
+          tar -czf "$name.tar.gz" "$name"
+          ls -l "$name.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VesperTV-linux
+          path: VesperTV-*-linux-x64.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-linux-log
+          path: build-linux.log

@@ -402,10 +402,11 @@ class StorageService {
   Future<void> setDesktopVolume(double value) =>
       _prefs.setDouble(AppConstants.keyDesktopVolume, value);
 
-  /// Windows: draw video without the GPU path (Settings > Playback >
-  /// Software video). Device-only.
+  /// A computer: draw video without the GPU path (Settings > Playback >
+  /// Software video). Device-only. On by default on Linux, where the GPU
+  /// path shows wrong colours (see `desktopSoftwareVideo`).
   bool getDesktopSoftwareVideo() =>
-      _prefs.getBool('vesper_desktop_software_video') ?? false;
+      _prefs.getBool('vesper_desktop_software_video') ?? Platform.isLinux;
   Future<void> setDesktopSoftwareVideo(bool value) =>
       _prefs.setBool('vesper_desktop_software_video', value);
 

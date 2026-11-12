@@ -70,8 +70,8 @@ class AppUpdateService {
   /// `.apk` asset attached (shouldn't happen for a real release, but a
   /// malformed/source-only one shouldn't crash the check).
   Future<UpdateInfo?> checkForUpdate() async {
-    // No macOS release asset yet: never offer the Windows .zip to a Mac.
-    if (Platform.isMacOS) return null;
+    // No macOS or Linux release asset yet: never offer the Windows .zip.
+    if (Platform.isMacOS || Platform.isLinux) return null;
     final response = await http.get(
       Uri.parse(_apiUrl),
       headers: {

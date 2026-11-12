@@ -42,6 +42,9 @@ class _YouTubePlatformViewState extends State<YouTubePlatformView> {
 
   Future<void> _initialize() async {
     try {
+      // flutter_inappwebview has no Linux version: report an error so
+      // callers fall back (detail trailers keep the artwork).
+      if (Platform.isLinux) throw UnsupportedError('No web view on Linux');
       if (Platform.isWindows) {
         if (await WebViewEnvironment.getAvailableVersion() == null) {
           throw StateError('WebView2 unavailable');
