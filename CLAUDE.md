@@ -270,9 +270,11 @@ inaccurate. Recoverable from commit c18de49.)
   `_liveListFocused`) lives in a ValueNotifier, never a TvHomeScreen setState. (4) The transparent
   Flutter view of the native video surface stays `RenderMode.surface` (`MainActivity.getRenderMode`):
   Flutter's default texture mode drew every frame twice (Android's own frames 61 ms). (5) Side-column
-  scrolls jump (`_ensureVisible`); columns and the background are separate RepaintBoundaries. Still
-  open: Timeline guide row logos decode at full size (no memCacheWidth); the columns' width animation
-  re-lays out everything per frame.
+  scrolls jump (`_ensureVisible`); columns and the background are separate RepaintBoundaries.
+  (6) Channel logos decode at their box size (`memCacheWidth` only: with a height too, Flutter's exact
+  resize stretched wide logos into squares); full-size logos filled the image cache and re-decoded on
+  scroll. (7) `_SlideSteadyWidth` (TV): during a column slide the live list / guide keeps one width,
+  clipped, and takes the slot's width when it lands: one layout per slide, not one per frame (+746).
 - **Fire OS's on-screen keyboard swallows the physical Back button — known, unfixable limitation.**
   Confirmed via a raw `getevent` capture (clean `KEY_BACK`) plus Flutter-side logging of
   `logicalKey.keyId`: pressing Back on a Fire TV remote while the on-screen keyboard has D-pad
