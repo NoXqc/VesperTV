@@ -3336,4 +3336,10 @@ const Map<String, String> kPl = {
       "Oglądaj tutaj",
   "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
       "VesperTV nie ma dostępu do mikrofonu. Zezwól na Mikrofon i Rozpoznawanie mowy w Ustawienia > VesperTV lub pisz zamiast tego.",
+  "Goals alert delay":
+      "Opóźnienie alertu o golu",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Poczekaj przed pokazaniem gola, aby powiadomienie nie pojawiło się, zanim go zobaczysz. Strumienie HLS często mają 20-30 sekund opóźnienia. Zapisane dla tego profilu.",
+  "{n} seconds":
+      "{n} sekund",
 };

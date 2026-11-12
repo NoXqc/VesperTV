@@ -18,6 +18,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
   },
   ProfileCopy.sports: {
     AppConstants.keyGoalsAlert,
+    AppConstants.keyGoalAlertDelay,
     AppConstants.keySportsLeagues,
     AppConstants.keySportsAddedLeagues,
     AppConstants.keySportsFavoriteLeague,

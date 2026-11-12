@@ -3645,4 +3645,10 @@ const Map<String, String> kDe = {
       "Kein Sprachmodell heruntergeladen.",
   "Downloaded: {languages} ({size} MB).":
       "Heruntergeladen: {languages} ({size} MB).",
+  "Goals alert delay":
+      "Verzögerung der Toralarme",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Vor dem Anzeigen eines Tores warten, damit der Hinweis nicht kommt, bevor Sie es sehen. HLS-Streams laufen oft 20 bis 30 Sekunden hinterher. Für dieses Profil gespeichert.",
+  "{n} seconds":
+      "{n} Sekunden",
 };

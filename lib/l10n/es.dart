@@ -3742,4 +3742,10 @@ const Map<String, String> kEs = {
       "No hay ningún modelo de voz descargado.",
   "Downloaded: {languages} ({size} MB).":
       "Descargado: {languages} ({size} MB).",
+  "Goals alert delay":
+      "Retraso de la alerta de goles",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Esperar antes de mostrar un gol, para que el aviso no llegue antes de verlo. Las emisiones en HLS suelen ir de 20 a 30 segundos por detrás. Se guarda para este perfil.",
+  "{n} seconds":
+      "{n} segundos",
 };

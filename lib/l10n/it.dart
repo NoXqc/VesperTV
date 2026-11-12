@@ -3749,4 +3749,10 @@ const Map<String, String> kIt = {
       "Nessun modello vocale scaricato.",
   "Downloaded: {languages} ({size} MB).":
       "Scaricato: {languages} ({size} MB).",
+  "Goals alert delay":
+      "Ritardo dell'avviso gol",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Attendi prima di mostrare un gol, così l'avviso non arriva prima che tu lo veda. I flussi HLS sono spesso 20-30 secondi indietro. Salvato per questo profilo.",
+  "{n} seconds":
+      "{n} secondi",
 };

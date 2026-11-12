@@ -39,6 +39,10 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
   Timer? _poll;
   Timer? _hide;
   final _queue = <GoalAlertNotice>[];
+
+  /// Goals held back by the Goals alert delay setting, released into
+  /// [_queue] when due. Cancelled with everything else in [_clear].
+  final _delayed = <Timer>{};
   GoalAlertNotice? _notice;
   bool _preview = false;
 
@@ -90,6 +94,10 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
     _epoch++;
     _poll?.cancel();
     _hide?.cancel();
+    for (final t in _delayed) {
+      t.cancel();
+    }
+    _delayed.clear();
     _queue.clear();
     _notice = null;
     _waitingScorer = false;
@@ -103,20 +111,40 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
     try {
       final notices = await _service!.poll();
       if (!mounted || !_active || epoch != _epoch) return;
-      _queue.addAll(notices.where(_service!.isCurrent));
-      // Show the most recent scores if several leagues update together.
-      if (_queue.length > 8) _queue.removeRange(0, _queue.length - 8);
-      if (_notice != null && !_service!.isCurrent(_notice!)) {
-        _notice = null;
-      }
-      if (_notice == null ||
-          (_queue.isNotEmpty && _waitingScorer && _timeIsUp)) {
-        _showNext();
+      final current = notices.where(_service!.isCurrent).toList();
+      final delay = _service!.storage.getGoalAlertDelay();
+      if (delay > 0 && current.isNotEmpty) {
+        // Settings > Goals alert delay: the viewer's stream (HLS) runs
+        // behind the score feed. Counted from when the feed showed the goal.
+        final wait = current.first.observedAt
+            .add(Duration(seconds: delay))
+            .difference(_service!.now());
+        late final Timer release;
+        release = Timer(wait.isNegative ? Duration.zero : wait, () {
+          _delayed.remove(release);
+          if (!mounted || !_active || epoch != _epoch) return;
+          _enqueue(current);
+        });
+        _delayed.add(release);
+      } else {
+        _enqueue(current);
       }
     } finally {
       if (mounted && _active && _enabled && epoch == _epoch) {
         _poll = Timer(const Duration(seconds: 30), _refresh);
       }
+    }
+  }
+
+  void _enqueue(List<GoalAlertNotice> notices) {
+    _queue.addAll(notices.where(_service!.isCurrent));
+    // Show the most recent scores if several leagues update together.
+    if (_queue.length > 8) _queue.removeRange(0, _queue.length - 8);
+    if (_notice != null && !_service!.isCurrent(_notice!)) {
+      _notice = null;
+    }
+    if (_notice == null || (_queue.isNotEmpty && _waitingScorer && _timeIsUp)) {
+      _showNext();
     }
   }
 
@@ -283,6 +311,9 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
     _epoch++;
     _poll?.cancel();
     _hide?.cancel();
+    for (final t in _delayed) {
+      t.cancel();
+    }
     _service?.reset();
     GoalsAlertOverlay.previewRequests.removeListener(_showPreview);
     WidgetsBinding.instance.removeObserver(this);

@@ -3755,4 +3755,10 @@ const Map<String, String> kFr = {
       "Aucun modèle vocal n'est téléchargé.",
   "Downloaded: {languages} ({size} MB).":
       "Téléchargé : {languages} ({size} Mo).",
+  "Goals alert delay":
+      "Délai de l'alerte de buts",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Attendre avant d'afficher un but, pour que l'alerte n'arrive pas avant que vous le voyiez. Les flux en HLS ont souvent 20 à 30 secondes de retard. Enregistré pour ce profil.",
+  "{n} seconds":
+      "{n} secondes",
 };

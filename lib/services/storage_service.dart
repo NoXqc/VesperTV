@@ -1008,6 +1008,14 @@ class StorageService {
   Future<void> setGoalsAlert(bool value) =>
       _sportsChanged(_prefs.setBool(_vk(AppConstants.keyGoalsAlert), value));
 
+  /// Seconds the in-app goal popup waits after the score feed reports the
+  /// goal (0 = none): an HLS stream runs 20-30 s behind, so the popup
+  /// spoiled the goal before it was seen (user report, 2026-11-12). Per viewer.
+  int getGoalAlertDelay() =>
+      _prefs.getInt(_vk(AppConstants.keyGoalAlertDelay)) ?? 0;
+  Future<void> setGoalAlertDelay(int seconds) =>
+      _prefs.setInt(_vk(AppConstants.keyGoalAlertDelay), seconds);
+
   /// Reminder and goal-alert popups without their fill (outline only).
   bool getTransparentPopups() =>
       _prefs.getBool(AppConstants.keyTransparentPopups) ?? false;

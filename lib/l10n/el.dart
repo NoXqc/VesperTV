@@ -3704,4 +3704,10 @@ const Map<String, String> kEl = {
       "Δεν έχει γίνει λήψη μοντέλου ομιλίας.",
   "Downloaded: {languages} ({size} MB).":
       "Έγινε λήψη: {languages} ({size} MB).",
+  "Goals alert delay":
+      "Καθυστέρηση ειδοποίησης γκολ",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Αναμονή πριν εμφανιστεί ένα γκολ, ώστε η ειδοποίηση να μην έρθει πριν το δείτε. Οι ροές HLS συχνά καθυστερούν 20 έως 30 δευτερόλεπτα. Αποθηκεύεται για αυτό το προφίλ.",
+  "{n} seconds":
+      "{n} δευτερόλεπτα",
 };
