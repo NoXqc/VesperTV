@@ -1,0 +1,14 @@
+name: sherpa_onnx
+description: >
+  VesperTV copy of the sherpa-onnx 2.0.1 Dart FFI bindings (Apache-2.0,
+  https://github.com/k2-fsa/sherpa-onnx) without its platform packages: the
+  native libraries are downloaded on demand (services/auto_subtitles.dart),
+  so they never ship in the APK or the Windows zip.
+version: 2.0.1+vespertv
+publish_to: none
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  ffi: ^2.1.0

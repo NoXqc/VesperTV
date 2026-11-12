@@ -3704,4 +3704,38 @@ const Map<String, String> kFr = {
       "Oublier tous les boutons et remettre les flèches",
   "Forget every button you set and put the player's arrows back as they were?":
       "Oublier tous les boutons réglés et remettre les flèches du lecteur comme avant?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Une app d'IA veut ajouter un guide TV à {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Une app d'IA veut retirer un guide TV de {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Une app d'IA veut associer {count} chaînes au guide TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Une app d'IA veut dissocier {count} chaînes du guide TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Une app d'IA veut annuler sa modification du guide TV.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Sous-titres automatiques (bêta)",
+  "Written from what is said, on this TV":
+      "Écrits d'après ce qui est dit, sur ce téléviseur",
+  "Download {size} MB once":
+      "Télécharger {size} Mo une fois",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "Les sous-titres automatiques ont besoin du son décodé : désactivez Son surround direct (Paramètres > Lecture).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Sous-titres automatiques activés pour cette chaîne. Les mots s'affichent une ou deux secondes après avoir été dits.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Ce téléviseur écoute la chaîne et écrit ce qui est dit, avec une ou deux secondes de retard. Rien n'est envoyé nulle part. Un téléchargement unique de {size} Mo est nécessaire. Attendez-vous à des erreurs avec la musique, la foule et les débits rapides; les boîtiers moins puissants peuvent prendre du retard.",
+  "The download did not work. Check the connection and try again.":
+      "Le téléchargement n'a pas fonctionné. Vérifiez la connexion et réessayez.",
+  "Downloading…":
+      "Téléchargement…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Pour les chaînes en direct sans sous-titres : dans le lecteur, Sous-titres > Sous-titres automatiques. Ce téléviseur écrit ce qui est dit à partir du son; rien n'est envoyé nulle part. Ici : libérez l'espace pris par ses modèles vocaux.",
+  "No speech model is downloaded.":
+      "Aucun modèle vocal n'est téléchargé.",
+  "Downloaded: {languages} ({size} MB).":
+      "Téléchargé : {languages} ({size} Mo).",
 };

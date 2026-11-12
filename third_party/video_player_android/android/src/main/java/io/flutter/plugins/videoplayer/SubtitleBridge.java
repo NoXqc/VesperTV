@@ -6,11 +6,13 @@
 //  * EventChannel "vespertv/subtitles/cues": complete text/row snapshots, selected format and reset
 //    events. Flutter draws the text and briefly bridges empty CEA-608/708 updates.
 // Text tracks start disabled on every player (Multiview tiles and live channels never want them);
-// selecting one enables the text renderer. Image subtitles (PGS/VobSub) are not listed: their
-// cues are bitmaps, which this text-only bridge can't carry.
+// selecting one enables the text renderer. Image subtitles (DVB on European live channels,
+// PGS/VobSub in Blu-ray/DVD rips) are listed too: their bitmap cues go to Flutter as PNG bytes
+// with their size and place ("images" in the event, owner 2026-11-12).
 
 package io.flutter.plugins.videoplayer;
 
+import android.graphics.Bitmap;
 import android.util.LongSparseArray;
 import android.util.Log;
 import androidx.annotation.NonNull;
@@ -30,6 +32,7 @@ import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,6 +47,9 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
   private final EventChannel events;
   @Nullable private EventChannel.EventSink sink;
   private final Map<VideoPlayer, Selection> selections = new WeakHashMap<>();
+
+  /** A cue group is re-sent while it shows: each bitmap is encoded once. */
+  private final Map<Bitmap, byte[]> pngs = new WeakHashMap<>();
 
   private static final class Selection {
     boolean enabled;
@@ -94,8 +100,13 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
     if (s == null) return;
     StringBuilder text = new StringBuilder();
     List<Map<String, Object>> rows = new ArrayList<>();
+    List<Map<String, Object>> images = new ArrayList<>();
     if (selection.enabled && !reset) {
       for (Cue cue : cues) {
+        if (cue.bitmap != null) {
+          images.add(image(cue));
+          continue;
+        }
         if (cue.text == null) continue;
         if (text.length() > 0) text.append('\n');
         text.append(cue.text);
@@ -113,6 +124,7 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
     event.put("playerId", id);
     event.put("text", text.toString());
     event.put("cues", rows);
+    event.put("images", images);
     event.put("enabled", selection.enabled);
     event.put("cc", selection.isClosedCaption());
     event.put("mime", selection.mime);
@@ -120,11 +132,43 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
     s.success(event);
   }
 
-  private static boolean isTextFormat(@Nullable String mime) {
-    return mime != null
-        && !MimeTypes.APPLICATION_PGS.equals(mime)
-        && !MimeTypes.APPLICATION_VOBSUB.equals(mime)
-        && !MimeTypes.APPLICATION_DVBSUBS.equals(mime);
+  /** A bitmap cue: PNG bytes, pixel size and its place as fractions of the video. */
+  private Map<String, Object> image(Cue cue) {
+    Bitmap bitmap = cue.bitmap;
+    byte[] png = pngs.get(bitmap);
+    if (png == null) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+      png = out.toByteArray();
+      pngs.put(bitmap, png);
+    }
+    Map<String, Object> m = new HashMap<>();
+    m.put("png", png);
+    m.put("w", bitmap.getWidth());
+    m.put("h", bitmap.getHeight());
+    if (cue.position != Cue.DIMEN_UNSET) m.put("position", (double) cue.position);
+    if (cue.line != Cue.DIMEN_UNSET) m.put("line", (double) cue.line);
+    if (cue.size != Cue.DIMEN_UNSET) m.put("size", (double) cue.size);
+    if (cue.bitmapHeight != Cue.DIMEN_UNSET) m.put("height", (double) cue.bitmapHeight);
+    return m;
+  }
+
+  /**
+   * The track's own format: subtitles parsed while extracting (MKV/MP4 since media3 1.4) say
+   * {@code application/x-media3-cues} and keep the original in {@code codecs}.
+   */
+  @Nullable
+  private static String mimeOf(Format f) {
+    if (MimeTypes.APPLICATION_MEDIA3_CUES.equals(f.sampleMimeType) && f.codecs != null) {
+      return f.codecs;
+    }
+    return f.sampleMimeType != null ? f.sampleMimeType : f.codecs;
+  }
+
+  private static boolean isImageFormat(@Nullable String mime) {
+    return MimeTypes.APPLICATION_PGS.equals(mime)
+        || MimeTypes.APPLICATION_VOBSUB.equals(mime)
+        || MimeTypes.APPLICATION_DVBSUBS.equals(mime);
   }
 
   @Override
@@ -166,8 +210,8 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
       if (group.getType() != C.TRACK_TYPE_TEXT) continue;
       for (int t = 0; t < group.length; t++) {
         Format f = group.getTrackFormat(t);
-        String mime = f.sampleMimeType != null ? f.sampleMimeType : f.codecs;
-        if (!isTextFormat(mime)) continue;
+        String mime = mimeOf(f);
+        if (mime == null) continue;
         Map<String, Object> m = new HashMap<>();
         m.put("group", g);
         m.put("track", t);
@@ -175,6 +219,7 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
         m.put("label", f.label);
         m.put("mime", mime);
         m.put("forced", (f.selectionFlags & C.SELECTION_FLAG_FORCED) != 0);
+        m.put("image", isImageFormat(mime));
         // Live closed captions (see HttpVideoAsset.liveCaptionExtractors).
         m.put(
             "cc",
@@ -219,7 +264,7 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
             .build());
     Format format = group.getTrackFormat(trackIndex);
     selection.enabled = true;
-    selection.mime = format.sampleMimeType != null ? format.sampleMimeType : format.codecs;
+    selection.mime = mimeOf(format);
     // Format only: never log caption text, stream URLs or user credentials.
     Log.i(
         "VesperSubtitles",

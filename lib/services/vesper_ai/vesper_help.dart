@@ -29,6 +29,9 @@ VesperTV tools act on the viewer's TV right now.
   Read topic "profiles" first.
 - playlist_editor: finer playlist clean-up (single channels, rules, renames,
   fallbacks), every change undoable. Read topic "playlist_editor" first.
+- epg_matching: fill in missing TV guide data: add an XMLTV guide link (or
+  another playlist's guide) to a playlist, then link the channels without
+  guide data to it, every change undoable. Read topic "epg_matching" first.
 - settings: read or change the app's settings (playback, startup, look and
   language, guide, tabs, Sports Trak); clear histories (searches and
   channels, Continue Watching, Media Hub, the watch list); update_guide
@@ -125,6 +128,77 @@ groups tool vs playlist_editor: groups hides whole groups once (Settings >
 Playlists list); playlist_editor rules keep working on new content and
 work on single channels. A new group of hand-picked channels (from any
 playlist) is my_groups, not a rename here.''',
+  'epg_matching': '''
+EPG MATCHING (tool epg_matching)
+
+What it does: fills in TV guide (EPG) data for live channels that have
+none. A channel shows the programmes of the guide channel (XMLTV
+<channel id>) it is linked to; normally that is the provider's own id,
+which is missing or spelled differently on many channels. A link here is
+the same as Settings > EPG > channel matching on the TV (per playlist, the
+same for every viewer). The provider's playlist is never changed.
+
+Guides: each playlist has its own guide (n 1, "Main guide") and up to five
+extra guides ("Extra guide 1".."5"). An XMLTV link the viewer pastes (EPG
+providers give one, .xml or .xml.gz) is added with add_guide. Links can
+only point at a channel of the playlist's guides; link adds another
+playlist's guide by itself when a link needs it.
+
+Typical request: "here is my EPG link, fill in the missing guide on
+playlist XYZ":
+1. status playlist "XYZ": its guides, live_channels, without_guide.
+2. add_guide playlist "XYZ" url "<link>" (the viewer may need to press OK
+   on the TV). It waits up to about 30 s for the download. If
+   guide_updated is false, call status until guide_updating is false.
+   Or from_playlist "ABC" instead of url: borrow playlist ABC's guide(s).
+3. suggest playlist "XYZ": counts (without_guide, sure, unsure, no_match)
+   and the unsure channels with up to 3 suggestions each (guide_id, name,
+   guide, score 0..1, now = what that guide channel airs right now).
+4. link playlist "XYZ" sure true preview true -> tell the viewer the count
+   and a few examples -> link playlist "XYZ" sure true.
+5. Go through the unsure ones (suggest offset/next_offset): pick the
+   suggestion that is really the same channel (same network, same region,
+   same number: TSN 1 is not TSN 2, ESPN is not ESPN 2 or ESPN+, East is
+   not West). Use what you know (FS1 = Fox Sports 1, Nat Geo = National
+   Geographic) and find_guide query "<words>" for names the suggestions
+   missed. Skip a channel when nothing is really it; a wrong link shows the
+   wrong programmes. Then link links [{channel_id, guide_id}, ...] (up to
+   3000 per call; preview true first for many).
+6. Tell the viewer how many were linked, that the guide reloads in the
+   background (a few minutes on a big guide), and that it can be undone.
+
+Actions
+- status [playlist]: guide_updating, guide_updated, per playlist: guides
+  (n, name, host, channels = how many channels that guide lists; 0 = not
+  loaded in this app run yet), live_channels, without_guide, linked,
+  linked_automatically; ai_changes (latest 10, with ids).
+- suggest playlist [from_playlist] [group] [query] [show] [offset] [limit]:
+  channels shown in Live TV with no guide data now (dividers and dated
+  event channels left out). show = unsure (default) | sure | none | all.
+  linked_now = the channel's current link (it gives no data now).
+  from_playlist adds that playlist's guides and the names of its channels
+  that have guide data. Refused while the guide updates.
+- find_guide playlist query [from_playlist]: guide channels whose name or
+  id has the words (up to 30), with now.
+- add_guide playlist (url | from_playlist): adds extra guide(s) and
+  updates the guide. At most five extra guides per playlist.
+- remove_guide playlist guide: removes extra guide n (from status). The
+  playlist's own guide (n 1) can't be removed here.
+- link playlist sure true [group] [query] [from_playlist]: links every sure
+  suggestion. link links [{channel_id, guide_id}]: those (guide_id from
+  suggest / find_guide of that playlist, or of from_playlist). Channels
+  already linked that way are skipped; skipped lists refused ones.
+- unlink channel_ids[]: back to the provider's own guide id.
+- undo [change_id]: takes back one AI guide change (default: the latest):
+  links and the guides it added or removed. Links changed again since are
+  kept. preview: true works on every change.
+
+Notes
+- A link shows data only after the next guide update (it starts by itself
+  about 20 s after the last change).
+- channel ids are the same as playlist_editor's ("playlistId::rawId").
+- has_guide in playlist_editor find_channels and hide_no_guide use the same
+  guide data: link first, hide what is still empty after.''',
   'sports': '''
 SPORTS TRAK (tools sports_today, play_game, game_channel)
 
@@ -230,8 +304,9 @@ final _vesperHelpTool = VesperTool(
   name: 'vesper_help',
   description: 'The manual for VesperTV\'s tools: what they can do, their '
       'rules and limits, with examples. Topics: "overview", '
-      '"playlist_editor", "sports", "profiles". Read the topic before '
-      'playlist_editor, game_channel, profiles or parental.',
+      '"playlist_editor", "epg_matching", "sports", "profiles". Read the '
+      'topic before playlist_editor, epg_matching, game_channel, profiles '
+      'or parental.',
   schema: {
     'type': 'object',
     'properties': {

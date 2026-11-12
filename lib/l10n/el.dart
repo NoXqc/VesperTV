@@ -3653,4 +3653,38 @@ const Map<String, String> kEl = {
       "Ξεχάστε όλα τα κουμπιά και επαναφέρετε τα βέλη",
   "Forget every button you set and put the player's arrows back as they were?":
       "Να ξεχαστούν όλα τα κουμπιά και να επανέλθουν τα βέλη της αναπαραγωγής όπως ήταν;",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Μια εφαρμογή AI θέλει να προσθέσει έναν οδηγό TV στο {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Μια εφαρμογή AI θέλει να αφαιρέσει έναν οδηγό TV από το {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Μια εφαρμογή AI θέλει να συνδέσει {count} κανάλια με τον οδηγό TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Μια εφαρμογή AI θέλει να αποσυνδέσει {count} κανάλια από τον οδηγό TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Μια εφαρμογή AI θέλει να αναιρέσει την αλλαγή της στον οδηγό TV.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Αυτόματοι υπότιτλοι (beta)",
+  "Written from what is said, on this TV":
+      "Γράφονται από όσα λέγονται, σε αυτή την τηλεόραση",
+  "Download {size} MB once":
+      "Λήψη {size} MB μία φορά",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "Οι αυτόματοι υπότιτλοι χρειάζονται αποκωδικοποιημένο ήχο: απενεργοποιήστε το Surround passthrough (Ρυθμίσεις > Αναπαραγωγή).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Οι αυτόματοι υπότιτλοι είναι ενεργοί για αυτό το κανάλι. Οι λέξεις εμφανίζονται ένα-δύο δευτερόλεπτα αφού ειπωθούν.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Αυτή η τηλεόραση ακούει το κανάλι και γράφει όσα λέγονται, με ένα-δύο δευτερόλεπτα καθυστέρηση. Τίποτα δεν αποστέλλεται πουθενά. Χρειάζεται μία λήψη {size} MB. Αναμένονται λάθη με μουσική, πλήθος και γρήγορη ομιλία· οι πιο αδύναμες συσκευές μπορεί να καθυστερούν.",
+  "The download did not work. Check the connection and try again.":
+      "Η λήψη δεν πέτυχε. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+  "Downloading…":
+      "Λήψη…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Για ζωντανά κανάλια χωρίς υπότιτλους: στο πρόγραμμα αναπαραγωγής, Υπότιτλοι > Αυτόματοι υπότιτλοι. Η τηλεόραση γράφει όσα λέγονται από τον ήχο· τίποτα δεν αποστέλλεται πουθενά. Εδώ: ελευθερώστε τον χώρο των μοντέλων ομιλίας.",
+  "No speech model is downloaded.":
+      "Δεν έχει γίνει λήψη μοντέλου ομιλίας.",
+  "Downloaded: {languages} ({size} MB).":
+      "Έγινε λήψη: {languages} ({size} MB).",
 };

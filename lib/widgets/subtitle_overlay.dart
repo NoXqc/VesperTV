@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../services/app_preferences.dart';
+import '../services/auto_subtitles.dart';
 import '../services/playback_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
@@ -26,6 +27,7 @@ class SubtitleOverlay extends StatefulWidget {
 class _SubtitleOverlayState extends State<SubtitleOverlay> {
   StreamSubscription<SubtitleCueEvent>? _sub;
   String _cue = '';
+  List<SubtitleImage> _images = const [];
   bool _closedCaptions = false;
   Timer? _pendingClear;
 
@@ -35,12 +37,39 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
 
   int get _playerId => SubtitleTracks.playerIdOf(widget.controller);
 
+  /// The channel automatic subtitles were set up for ([_followAuto]).
+  String? _autoFor;
+  PlaybackService? _playback;
+
   @override
   void initState() {
     super.initState();
     _sub = SubtitleTracks.cues.listen(_onCue);
     SubtitleTracks.externalFor.addListener(_onExternalChanged);
     _applySeriesChoice();
+    // A live zap can keep the same controller: follow the channel itself.
+    _playback = context.read<PlaybackService>()..addListener(_followAuto);
+    _followAuto();
+  }
+
+  /// Automatic subtitles (live channels): on for this channel if the viewer
+  /// turned them on for it before and the language is downloaded.
+  void _followAuto() {
+    final channel = _playback?.currentChannel;
+    if (channel?.id == _autoFor) return;
+    _autoFor = channel?.id;
+    final auto = AutoSubtitles.instance;
+    final language = channel != null && channel.isLive
+        ? context.read<StorageService>().getAutoSubtitles(channel.id)
+        : null;
+    if (language == null || !AutoSubtitles.supported) {
+      unawaited(auto.stop());
+      return;
+    }
+    unawaited(() async {
+      if (await auto.downloadSize(language) > 0) return;
+      if (mounted && _autoFor == channel!.id) await auto.start(language);
+    }());
   }
 
   @override
@@ -50,6 +79,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
       _pendingClear?.cancel();
       _pendingClear = null;
       _cue = '';
+      _images = const [];
       _closedCaptions = false;
       _applySeriesChoice();
     }
@@ -66,6 +96,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     if (mounted) {
       setState(() {
         _cue = '';
+        _images = const [];
         _closedCaptions = false;
       });
     }
@@ -78,6 +109,16 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
       return;
     }
     if (SubtitleTracks.externalFor.value == _playerId) return;
+    if (event.images.isNotEmpty || _images.isNotEmpty) {
+      // Picture subtitles (DVB / PGS / VobSub): each event is the whole set.
+      _pendingClear?.cancel();
+      _pendingClear = null;
+      setState(() {
+        _images = event.images;
+        _cue = '';
+      });
+      if (event.images.isNotEmpty) return;
+    }
     final text = event.text.replaceAll(_tags, '').trim();
     if (text.isEmpty &&
         event.closedCaptions &&
@@ -121,6 +162,8 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
 
   @override
   void dispose() {
+    _playback?.removeListener(_followAuto);
+    unawaited(AutoSubtitles.instance.stop());
     _sub?.cancel();
     _pendingClear?.cancel();
     SubtitleTracks.externalFor.removeListener(_onExternalChanged);
@@ -135,12 +178,43 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     return ValueListenableBuilder<int?>(
       valueListenable: SubtitleTracks.externalFor,
       builder: (context, external, _) {
-        if (external != _playerId) return _box(context, _cue);
+        if (external != _playerId) {
+          if (_images.isNotEmpty) return _pictures(context);
+          if (_cue.isNotEmpty) return _box(context, _cue);
+          return ValueListenableBuilder<String>(
+            valueListenable: AutoSubtitles.instance.text,
+            builder: (context, words, _) => _box(context, words),
+          );
+        }
         return ValueListenableBuilder<VideoPlayerHdrValue>(
           valueListenable: widget.controller,
           builder: (context, value, _) => _box(context, value.caption.text),
         );
       },
+    );
+  }
+
+  /// Picture subtitles, centred where the video puts them, at their width
+  /// in the video (the Subtitle size setting scales them too). Drawn at the
+  /// bottom like text: nearly every DVB / PGS cue sits there.
+  Widget _pictures(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final scale = context.watch<AppPreferences>().subtitleScale;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final image in _images)
+          Align(
+            alignment: Alignment(image.centre * 2 - 1, 0),
+            child: Image.memory(
+              image.png,
+              width: (width * (image.size ?? image.width / 1920) * scale)
+                  .clamp(1.0, width),
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+      ],
     );
   }
 
