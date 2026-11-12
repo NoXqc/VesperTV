@@ -544,7 +544,7 @@ class SportsBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isDesktop) return const SizedBox.shrink();
+    if (!needsBackArrow) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ExcludeFocus(

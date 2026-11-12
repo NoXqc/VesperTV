@@ -81,6 +81,7 @@ import '../l10n/l10n.dart';
 import '../services/vesper_ai/vesper_ai.dart';
 import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
+import '../utils/app_store.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -1886,8 +1887,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool get _showRecentGroup =>
       context.read<AppPreferences>().recentChannelsGroup;
 
+  // iPhone: its player has catch-up (DesktopCatchup); Windows keeps the
+  // group off until it's tested there.
   bool get _showCatchupGroup =>
-      !isDesktopTarget && !context.read<AppPreferences>().hideCatchupGroup;
+      (!usesMediaKitTarget || isIosTarget) &&
+      !context.read<AppPreferences>().hideCatchupGroup;
 
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
@@ -2417,7 +2421,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _phonePage = 1;
     }
     _startupSportsCovered = widget.startupSportsCovered &&
-        !isDesktopTarget &&
+        !usesMediaKitTarget &&
         context.read<AppPreferences>().hideVideoOnSports;
     _videoHiddenForSports = _startupSportsCovered;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2455,7 +2459,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// Launch update check: quietly does nothing when offline, rate-limited
   /// or up to date, or when the user skipped this exact version.
   Future<void> _checkForUpdateOnLaunch() async {
-    if (_updateChecked) return;
+    // Apple installs App Store updates itself.
+    if (_updateChecked || appStoreBuild) return;
     _updateChecked = true;
     // After the launch quiet period (StartupQuiet): the remote first.
     await StartupQuiet.after(const Duration(seconds: 3));
@@ -2907,7 +2912,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // standalone screen/player instance, bypassing PlaybackService (and
     // therefore Continue Watching/resume/backup-server retry) entirely
     // rather than routing through the shared mobile player architecture.
-    if (isDesktop) {
+    if (usesMediaKit) {
       // Abandon whatever's minimized first — reported directly as two
       // channels' audio playing at once otherwise: picking a channel
       // here is an unrelated, fresh selection, not a resume, so any
@@ -2964,7 +2969,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (!channel.hasCatchup) return _previewOrOpenChannel(channel);
     // The target platform (not dart:io), so Android tests on a Windows PC
     // take the Android path.
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       // One stream at a time: the preview's connection goes first.
       DesktopMiniPlayer.instance.clear();
       _catchupPreview = null;
@@ -2994,7 +2999,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _catchupPreview = null;
     // The target platform (not dart:io), so Android tests on a Windows PC
     // take the Android path, like _previewOrOpenCatchup.
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
         final session = mini.take();
@@ -3144,7 +3149,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Browsing History itself: recording the channel again would only move
     // it to the top of the list under the cursor.
     final inHistory = _effectiveLiveGroup(playlist) == _recentGroupSentinel;
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) return;
       _catchupPreview = null;
@@ -3267,7 +3272,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// controller, and the picture comes back on return.
   Future<void> _pushOverLiveVideo(Route<void> route) async {
     final hideVideo =
-        !isDesktop && context.read<AppPreferences>().hideVideoOnSports;
+        !usesMediaKit && context.read<AppPreferences>().hideVideoOnSports;
     if (hideVideo) setState(() => _videoHiddenForSports = true);
     await Navigator.of(context).push(route);
     if (mounted && hideVideo) setState(() => _videoHiddenForSports = false);
@@ -4438,7 +4443,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             selected: false,
             collapsed: collapsed,
             onTap: () {
-              if (isDesktop) {
+              if (usesMediaKit) {
                 DesktopMiniPlayer.instance.clear();
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const DesktopMultiviewScreen()));
@@ -4562,14 +4567,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         ],
         // Deliberately at the very bottom, one row on its own — this kills
         // the app, so it shouldn't be one accidental press away from the
-        // tab list above it.
-        _SelectableRow(
-          icon: Icons.power_settings_new,
-          label: tr('Exit {appName}', {'appName': AppConstants.appName}),
-          selected: false,
-          collapsed: collapsed,
-          onTap: _fullExit,
-        ),
+        // tab list above it. Not on an iPhone: iOS apps never quit
+        // themselves (App Review rejects it; the app switcher does that).
+        if (!Platform.isIOS)
+          _SelectableRow(
+            icon: Icons.power_settings_new,
+            label: tr('Exit {appName}', {'appName': AppConstants.appName}),
+            selected: false,
+            collapsed: collapsed,
+            onTap: _fullExit,
+          ),
       ],
     );
   }
@@ -5246,7 +5253,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// separately — this exact box, sitting right next to a working resume
   /// pill saying otherwise, reading as "the mini player doesn't work").
   Widget _buildTimelinePreviewBox(Channel? channel) {
-    if (isDesktop) {
+    if (usesMediaKit) {
       // A real video feed, unlike the first pass at this box — unlike
       // `video_player_hdr`'s platform views (see `LiveResumeHint`'s own
       // doc comment for the real multi-consumer rendering bug that caused
@@ -5290,7 +5297,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 fit: StackFit.expand,
                 children: [
                   if (controller != null)
-                    Video(controller: controller, controls: NoVideoControls)
+                    Video(
+                        controller: controller,
+                        controls: NoVideoControls,
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground)
                   else
                     const ColoredBox(color: Colors.black),
                   if (controller != null)
@@ -9911,6 +9922,10 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       controller: _gridHScroll,
+                      // iOS bounces by default, and a bounce sends no
+                      // OverscrollNotification: dragging past the left edge
+                      // never reached the catch-up past.
+                      physics: const ClampingScrollPhysics(),
                       child: SizedBox(
                         width: _totalWidth,
                         height: widget.channels.length * _rowHeight,

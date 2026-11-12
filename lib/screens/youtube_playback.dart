@@ -11,12 +11,12 @@ import '../utils/desktop_platform.dart';
 
 Future<void> playYouTubeVideo(BuildContext context, String id, String title,
     {MediaFileInfo? mediaFileInfo}) async {
-  if (!Platform.isAndroid && !isDesktop) {
+  if (!Platform.isAndroid && !usesMediaKit) {
     await launchUrl(YouTubeEmbedDocument(id).externalUrl,
         mode: LaunchMode.externalApplication);
     return;
   }
-  if (isDesktop) {
+  if (usesMediaKit) {
     await DesktopMiniPlayer.instance.controller?.player.pause();
   } else {
     await context.read<PlaybackService?>()?.controller?.pause();

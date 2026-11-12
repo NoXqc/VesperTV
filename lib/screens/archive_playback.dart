@@ -352,7 +352,7 @@ Future<void> playArchiveTitle(
 
   final hasQueue = queue != null && queue.isNotEmpty;
   // Same split as MovieDetailScreen._play: Windows has its own player.
-  if (isDesktop) {
+  if (usesMediaKit) {
     DesktopMiniPlayer.instance.clear();
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DesktopPlayerScreen(

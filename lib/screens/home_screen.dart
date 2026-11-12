@@ -870,7 +870,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// The mini player's stream goes full screen as it is (no reconnect) and
   /// Back returns it there.
   static Future<void> _playChannel(BuildContext context, Channel c) async {
-    if (isDesktop) {
+    if (usesMediaKit) {
       final mini = DesktopMiniPlayer.instance;
       final session = mini.channel.value?.id == c.id ? mini.take() : null;
       if (session == null) mini.clear();
@@ -1005,7 +1005,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final route = ModalRoute.of(context);
     if (route != null && !route.isCurrent) return false;
     final playback = context.read<PlaybackService>();
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) return true;
       mini.play(channel);
@@ -1078,7 +1078,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// The live channel the mini player shows, if any.
   String? _miniChannelId() {
-    if (isDesktopTarget) return DesktopMiniPlayer.instance.channel.value?.id;
+    if (usesMediaKitTarget) return DesktopMiniPlayer.instance.channel.value?.id;
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
     if (channel == null || (!channel.isLive && playback.catchup == null)) {
@@ -1094,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _miniHistory?.cancel();
     _miniHistory = null;
     if (_miniChannelId() == null) return;
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       DesktopMiniPlayer.instance.clear();
       return;
     }
@@ -1107,7 +1107,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// channel stops, as on entering Movies / TV Shows, and stays resumable
   /// (see TvHomeScreen._parkLiveChannel). Android only.
   Future<void> _parkMini() async {
-    if (isDesktopTarget) return;
+    if (usesMediaKitTarget) return;
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
     final resumeTo = playback.catchup?.live ?? channel;
@@ -1559,7 +1559,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 6),
                         child: Row(children: [
-                          if (isDesktop)
+                          if (needsBackArrow)
                             ExcludeFocus(
                                 child: IconButton(
                               tooltip: tr('Back'),
@@ -2143,7 +2143,7 @@ class _MiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isDesktopTarget) {
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       return ValueListenableBuilder<Channel?>(
         valueListenable: mini.channel,
@@ -2155,7 +2155,10 @@ class _MiniPlayer extends StatelessWidget {
             name: channel.name,
             live: true,
             showName: channel.id != focusedChannelId,
-            video: Video(controller: controller, controls: NoVideoControls),
+            video: Video(
+                controller: controller,
+                controls: NoVideoControls,
+                pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
             onTap: () => _HomeScreenState._playChannel(context, channel),
           );
         },
@@ -2636,7 +2639,7 @@ class _ProfilesStrip extends StatelessWidget {
         child: Padding(
             padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
             child: Row(children: [
-              if (isDesktop)
+              if (needsBackArrow)
                 ExcludeFocus(
                   child: IconButton(
                     tooltip: tr('Back'),

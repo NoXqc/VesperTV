@@ -242,7 +242,7 @@ Future<(HubTitle, ArchiveVideo?)> _hubTarget(
 /// Media Hub.
 Future<(Channel, ArchivePlaybackSources, List<ArchiveStreamOption>)>
     _playingHub(VesperToolbox box) async {
-  if (isDesktop) return _desktopPlayingHub();
+  if (usesMediaKit) return _desktopPlayingHub();
   final playing = box.playback.currentChannel;
   final sources = box.playback.hubSources;
   if (playing == null) throw VesperToolError('Nothing is playing.');
@@ -261,7 +261,7 @@ Future<(Channel, ArchivePlaybackSources, List<ArchiveStreamOption>)>
 /// [before], the one playing when asked); a short answer for the model.
 Future<Map<String, Object?>> _awaitStart(
     VesperToolbox box, String id, Object? before) async {
-  if (isDesktop) return _desktopAwaitStart(id);
+  if (usesMediaKit) return _desktopAwaitStart(id);
   final until = DateTime.now().add(mediaHubStartWait);
   while (DateTime.now().isBefore(until)) {
     final playback = box.playback;
@@ -583,9 +583,9 @@ Future<Map<String, Object?>> _switchStream(
   await _confirmRemote(
       box, caller, 'An AI app wants to play {title}.', {'title': playing.name});
   final replacement = await sources.select(playing.id, target);
-  final desktop = isDesktop ? DesktopPlayerControl.current : null;
+  final desktop = usesMediaKit ? DesktopPlayerControl.current : null;
   if (replacement == null ||
-      (isDesktop
+      (usesMediaKit
           ? desktop?.playingId != playing.id
           : box.playback.currentChannel?.id != playing.id)) {
     throw VesperToolError('Could not switch stream. Try another source.');

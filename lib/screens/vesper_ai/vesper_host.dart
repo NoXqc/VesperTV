@@ -50,7 +50,7 @@ class AppVesperHost implements VesperHost {
     final nav = _nav;
     // Over whatever is open (the panel included), like a fresh pick.
     nav.popUntil((r) => r.isFirst);
-    if (isDesktop) {
+    if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
       unawaited(nav.push(MaterialPageRoute(
           builder: (_) => DesktopPlayerScreen(channel: channel))));

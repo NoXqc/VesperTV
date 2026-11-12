@@ -1836,6 +1836,8 @@ const Map<String, String> kDe = {
       "Deine Quelle hat statt des Videos eine Nachricht gesendet:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Prüfe deine Quelle oder dein Debrid-Konto (Tarifgrenzen, aktive Downloads) oder wähle einen anderen Stream.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Prüfe deine Quelle (Tarifgrenzen, aktive Downloads) oder wähle einen anderen Stream.",
   "Added to the Media Hub: {names}": "Zum Media Hub hinzugefügt: {names}",
   "Added to subtitle add-ons: {names}":
       "Zu den Untertitel-Add-ons hinzugefügt: {names}",
@@ -2973,6 +2975,21 @@ const Map<String, String> kDe = {
       "Weiterschauen und deine Merkliste in der Watch-Next-Reihe des Launchers, dazu eine Reihe mit deinen Lieblingssendern. Für Android-TV-Launcher wie Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Weiterschauen und Favoriten im TV-Launcher",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Bild-in-Bild",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Bild-in-Bild ist für diesen Stream nicht verfügbar. Es funktioniert mit Live-Sendern aus Xtream-Playlists und MP4-Dateien.",
+  "Picture-in-picture couldn't open this stream.":
+      "Bild-in-Bild konnte diesen Stream nicht öffnen.",
+  "Opening picture-in-picture…":
+      "Bild-in-Bild wird geöffnet…",
+  "Playing in picture-in-picture":
+      "Wird im Bild-in-Bild abgespielt",
+  "Watch here":
+      "Hier ansehen",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV darf das Mikrofon nicht verwenden. Erlaube Mikrofon und Spracherkennung unter Einstellungen > VesperTV oder tippe stattdessen.",
   // Downloads and the network folder (recording_service.dart).
   "Like watching":
       "Wie beim Ansehen",

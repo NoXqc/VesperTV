@@ -217,7 +217,8 @@ class _DownloadSheetState extends State<_DownloadSheet> {
                           fontSize: 14, fontWeight: FontWeight.w700)),
                   // A computer has no background service: the app runs it.
                   if (!RecordingService.supported)
-                    Text(tr('VesperTV has to be open then (minimized is fine).'),
+                    Text(
+                        tr('VesperTV has to be open then (minimized is fine).'),
                         style: const TextStyle(
                             fontSize: 12.5, color: Colors.white70)),
                   const SizedBox(height: 6),
@@ -467,7 +468,7 @@ Future<void> playDownload(BuildContext context, RecordingEntry r) =>
 /// A download / network folder file full screen: Android's player, or
 /// the computer's own (Windows).
 Future<void> playDownloadChannel(BuildContext context, Channel channel) async {
-  if (isDesktop) {
+  if (usesMediaKit) {
     DesktopMiniPlayer.instance.clear();
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DesktopPlayerScreen(channel: channel)));

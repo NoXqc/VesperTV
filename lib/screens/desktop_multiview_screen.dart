@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/desktop_platform.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
@@ -508,7 +509,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                         // A swap moves the controller to another screen.
                         key: ObjectKey(cell.controller),
                         controller: cell.controller!,
-                        controls: NoVideoControls),
+                        controls: NoVideoControls,
+                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
                   ),
                 )
               : const ColoredBox(

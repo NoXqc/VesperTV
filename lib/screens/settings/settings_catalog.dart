@@ -21,6 +21,7 @@ import '../../services/remote_buttons.dart';
 import '../../services/storage_service.dart';
 import '../../services/subtitle_tracks.dart';
 import '../../services/vod_buffering.dart';
+import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 import '../../widgets/audio_delay_adjuster.dart';
@@ -711,7 +712,7 @@ class SettingsCatalog {
   // --------------------------------------------------------------- playback
 
   SettingsCategory _playback(AppPreferences prefs) {
-    final player = Platform.isAndroid || isDesktop;
+    final player = Platform.isAndroid || usesMediaKit;
     final audio = _storage.getPreferredAudioLanguage();
     final subtitles = _storage.getPreferredSubtitleLanguage();
     final archive = context.watch<ArchiveService?>();
@@ -1090,7 +1091,7 @@ class SettingsCatalog {
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       await context.read<PlaybackService>().stop();
-      if (isDesktop) DesktopMiniPlayer.instance.clear();
+      if (usesMediaKit) DesktopMiniPlayer.instance.clear();
       await prefs.setSportsMode(value);
       if (navigator.mounted) navigator.popUntil((route) => route.isFirst);
     } catch (_) {
@@ -1455,13 +1456,15 @@ class SettingsCatalog {
                   title: tr('Backup & restore'),
                   subtitle: tr('Save everything to a file on this device'),
                   page: (_) => const BackupScreen()),
-            SettingsLink(
-                id: 'updates',
-                floating: true,
-                icon: Icons.system_update_outlined,
-                title: tr('Check for Updates'),
-                subtitle: tr('Download and install the latest release'),
-                page: (_) => const CheckUpdatesScreen()),
+            // App Store rules: Apple installs the updates.
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'updates',
+                  floating: true,
+                  icon: Icons.system_update_outlined,
+                  title: tr('Check for Updates'),
+                  subtitle: tr('Download and install the latest release'),
+                  page: (_) => const CheckUpdatesScreen()),
           ]),
           if (_prefs.isTelevision) _remote(),
         ],
@@ -1592,7 +1595,7 @@ class SettingsCatalog {
         advanced: true,
         sections: [
           SettingsSection(title: tr('Device fixes'), [
-            if (!isDesktop)
+            if (!usesMediaKit)
               SettingsToggle(
                   id: 'hide_video_behind_pages',
                   icon: Icons.picture_in_picture_alt,
@@ -1644,17 +1647,17 @@ class SettingsCatalog {
                 id: 'data_pool',
                 icon: Icons.analytics_outlined,
                 title: tr('Data pool display'),
-                subtitle: isDesktop
+                subtitle: usesMediaKit
                     ? tr('Stream details from a button in the player bar')
                     : tr('Stream details when you press OK while watching'),
-                help: isDesktop
+                help: usesMediaKit
                     ? tr(
                         'Adds a Data pool button to the player bar (or press I) that opens a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.')
                     : tr(
                         'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.'),
                 value: prefs.dataPool,
                 onChanged: prefs.setDataPool),
-            if (!isDesktop)
+            if (!usesMediaKit)
               SettingsToggle(
                   id: 'multiview_tip',
                   icon: Icons.grid_view,
@@ -1668,7 +1671,7 @@ class SettingsCatalog {
                 id: 'resume_pill',
                 icon: Icons.touch_app_outlined,
                 title: tr('Show the "Hold > to resume" reminder'),
-                help: isDesktop
+                help: usesMediaKit
                     ? tr(
                         'The pill at the bottom while a channel plays in the background. Off: hidden.')
                     : tr(
@@ -1687,13 +1690,15 @@ class SettingsCatalog {
                 title: tr('TMDB (Release Dates)'),
                 subtitle: tr('Optional key for sorting by real release date'),
                 page: (_) => const TmdbSettingsScreen()),
-            SettingsLink(
-                id: 'debrid',
-                floating: true,
-                icon: Icons.cloud_done_outlined,
-                title: tr('Debrid accounts'),
-                subtitle: tr('Optional keys for the "Ready" tag'),
-                page: (_) => const DebridSettingsScreen()),
+            // App Store rules: no debrid keys (add-ons keep their own).
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'debrid',
+                  floating: true,
+                  icon: Icons.cloud_done_outlined,
+                  title: tr('Debrid accounts'),
+                  subtitle: tr('Optional keys for the "Ready" tag'),
+                  page: (_) => const DebridSettingsScreen()),
             SettingsLink(
                 id: 'custom_posters',
                 floating: true,

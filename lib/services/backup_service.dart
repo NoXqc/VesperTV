@@ -53,7 +53,8 @@ class BackupService {
   static const keepAuto = 5;
   static const autoInterval = Duration(days: 7);
 
-  static bool get supported => Platform.isAndroid || isDesktop;
+  static bool get supported =>
+      Platform.isAndroid || isDesktop || Platform.isIOS;
 
   /// Where the files go, as the user would look for it. macOS keeps them in
   /// the sandbox container (hidden from Finder): Export saves a copy.
@@ -61,7 +62,11 @@ class BackupService {
       ? r'Documents\VesperTV'
       : Platform.isMacOS
           ? tr('the app\'s own storage')
-          : 'Download/VesperTV';
+          // iOS: Documents is shared with the Files app
+          // (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
+          : Platform.isIOS
+              ? 'Files > On My iPhone > VesperTV > VesperTV'
+              : 'Download/VesperTV';
 
   static const _jsonFiles = XTypeGroup(
       label: 'VesperTV backup',
@@ -155,7 +160,7 @@ class BackupService {
           size: (m['size'] as num).toInt(),
         ));
       }
-    } else if (isDesktop) {
+    } else {
       await for (final f in (await _windowsDir()).list()) {
         final name = p.basename(f.path);
         if (f is! File ||
@@ -186,8 +191,9 @@ class BackupService {
   /// when cancelled; a [PlatformException] `NO_PICKER` when the device has
   /// no picker (Fire TV).
   /// macOS: the open panel (the only way past the sandbox to a file).
+  /// iOS: the Files picker (iCloud Drive, another app's folder…).
   Future<Map<String, Object?>?> pickAndLoad() async {
-    if (Platform.isMacOS) {
+    if (Platform.isMacOS || Platform.isIOS) {
       final file = await openFile(acceptedTypeGroups: const [_jsonFiles]);
       return file == null ? null : decode(await file.readAsString());
     }

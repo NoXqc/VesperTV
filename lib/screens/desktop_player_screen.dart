@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
+import '../widgets/channel_schedule_panel.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
@@ -41,8 +42,11 @@ import '../widgets/skip_segment_button.dart';
 import '../widgets/watch_game_button.dart';
 import '../services/watch_game_offer.dart';
 import '../services/desktop_player_control.dart';
-import '../services/skip_segments.dart';
+import '../services/skip_segments.dart';
 import '../widgets/glass_menu.dart';
+import '../services/ios_pip.dart';
+import '../utils/desktop_platform.dart';
+import '../utils/video_fit.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -132,6 +136,29 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   late final VideoController _videoController;
   late Channel _currentChannel;
   bool _controlsVisible = true;
+
+  /// iPhone / iPad: the touch layout ([_touchControls]), landscape on a
+  /// phone, controls that hide by themselves.
+  bool get _touch => isIosTarget;
+
+  /// iOS picture-in-picture is on: mpv is stopped and Apple's player has
+  /// the stream (see [_startPip]).
+  bool _inPip = false;
+  bool _pipStarting = false;
+
+  /// The movie's length when PiP started (mpv's is gone once stopped).
+  Duration _pipDuration = Duration.zero;
+  Timer? _touchHide;
+
+  /// The picture mode's name over the video right after the touch bar's
+  /// picture button ([_cycleFit]); [_fitPill] keeps it while it fades out.
+  bool _fitPillVisible = false;
+  VideoFit _fitPill = VideoFit.fit;
+  Timer? _fitPillTimer;
+
+  /// Touch seek bar: where the thumb is while a finger drags it (the seek
+  /// happens on release, not on every move).
+  double? _dragMs;
   final _fileInfoRequests = ValueNotifier<int>(0);
 
   /// [PlayerSidePanel] (Last channels / My Teams / Live now) on a live
@@ -178,6 +205,26 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void _closePanel() {
     if (!_panelOpen) return;
     setState(() => _panelOpen = false);
+    _rootFocus.requestFocus();
+  }
+
+  /// iPhone: the live channel's schedule over the video (Android's info
+  /// card "Channel schedule"): past programmes replay through catch-up,
+  /// the one on now goes back to live, a later one opens its actions.
+  bool _scheduleOpen = false;
+
+  void _openSchedule() {
+    if (!_isLive) return;
+    setState(() {
+      _scheduleOpen = true;
+      _panelOpen = false;
+      _controlsVisible = false;
+    });
+  }
+
+  void _closeSchedule() {
+    if (!_scheduleOpen) return;
+    setState(() => _scheduleOpen = false);
     _rootFocus.requestFocus();
   }
 
@@ -334,8 +381,244 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     // Live: DesktopLiveRecovery (waits, retries, copies). A movie or
     // episode that ends early was a cut stream: continue at the position.
     _completedSubscription = _player.stream.completed.listen((completed) {
-      if (completed && mounted && !_isLive) _resumeAfterCut();
+      // mpv is stopped on purpose while Apple's player has the stream.
+      if (completed && mounted && !_isLive && !_inPip) _resumeAfterCut();
     });
+    if (_touch) {
+      IosPip.onStopped = _onPipStopped;
+      // Full screen: no status bar. A phone turns sideways, also with its
+      // rotation lock on (owner's iPhone 8: the player stayed portrait);
+      // Rotate in the top bar goes back. Released in dispose.
+      unawaited(
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || MediaQuery.sizeOf(context).shortestSide >= 600) return;
+        unawaited(SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight
+        ]));
+      });
+      _armTouchHide();
+    }
+  }
+
+  /// iOS picture-in-picture. iOS only floats Apple's own player, so the
+  /// stream moves there: mpv stops first (one provider connection), then
+  /// [IosPip] opens the same link in an AVPlayer and floats it. MKV and
+  /// raw TS can't go there ([IosPip.urlFor] is null): a message instead.
+  /// If Apple's player can't open it, mpv comes back at the same spot.
+  Future<void> _startPip() async {
+    if (_inPip || _pipStarting) return;
+    final channel = _currentChannel;
+    final url = IosPip.urlFor(channel);
+    if (url == null) {
+      _pipMessage(tr(
+          "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files."));
+      return;
+    }
+    final live = _isLive;
+    final position = live ? Duration.zero : _player.state.position;
+    _pipDuration = _player.state.duration;
+    _saveProgress();
+    setState(() {
+      _pipStarting = true;
+      _controlsVisible = false;
+    });
+    // No reconnects, no progress saves at 0 while mpv is stopped.
+    ++_openGeneration;
+    _progressReady = false;
+    DesktopLiveRecovery.of(_player).stop();
+    await _player.stop();
+    final error = await IosPip.start(
+      url: url,
+      live: live,
+      position: position.inMilliseconds / 1000,
+      // A source's own headers (Media Hub) win over our User-Agent.
+      headers: {'User-Agent': kDesktopStreamUserAgent, ...channel.httpHeaders},
+    );
+    if (!mounted) return;
+    if (error == null) {
+      debugPrint('IosPip: started (${live ? 'live' : 'vod'})');
+      setState(() {
+        _pipStarting = false;
+        _inPip = true;
+      });
+      return;
+    }
+    debugPrint('IosPip: start failed: $error');
+    setState(() => _pipStarting = false);
+    _pipMessage(tr("Picture-in-picture couldn't open this stream."));
+    unawaited(_openMedia(channel, start: live ? null : position));
+  }
+
+  /// The PiP window closed. Restore (its "back to the app" button): mpv
+  /// takes over again where Apple's player got to. X: stop watching.
+  void _onPipStopped(bool restore, double seconds) {
+    if (!mounted || !_inPip) return;
+    setState(() => _inPip = false);
+    final at =
+        _isLive ? null : Duration(milliseconds: (seconds * 1000).round());
+    debugPrint('IosPip: stopped (${restore ? 'restore' : 'closed'})');
+    if (restore) {
+      unawaited(_openMedia(_currentChannel, start: at));
+      _armTouchHide();
+      return;
+    }
+    if (at != null && _pipDuration > Duration.zero) {
+      unawaited(_progress.save(_currentChannel, at, _pipDuration));
+    }
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// "Watch here" on the player while PiP floats: back to mpv.
+  Future<void> _endPip() async {
+    if (!_inPip) return;
+    final seconds = await IosPip.stop();
+    if (!mounted || !_inPip) return;
+    _onPipStopped(true, seconds);
+  }
+
+  void _pipMessage(String text) {
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  /// What the player shows while PiP has the stream.
+  Widget _pipNotice() {
+    return Stack(children: [
+      Positioned(
+        top: 0,
+        left: 0,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: IconButton(
+              tooltip: tr('Back'),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: _handleBack,
+            ),
+          ),
+        ),
+      ),
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.picture_in_picture_alt,
+                color: Colors.white70, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              _pipStarting
+                  ? tr('Opening picture-in-picture…')
+                  : tr('Playing in picture-in-picture'),
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            if (_inPip) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _endPip,
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                child: Text(tr('Watch here')),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  /// Touch: the controls hide 4 s after the last touch while playing.
+  void _armTouchHide() {
+    _touchHide?.cancel();
+    if (!_touch || !_controlsVisible) return;
+    _touchHide = Timer(const Duration(seconds: 4), () {
+      if (!mounted || !_player.state.playing || _sourceDrawerOpen) return;
+      if (_dragMs != null) return;
+      setState(() => _controlsVisible = false);
+    });
+  }
+
+  /// Touch: the next picture mode (Fit, Stretched, Crop, Fit height, Fit
+  /// width, Slight zoom, Cinema zoom: Android's button and setting), named
+  /// over the video for a moment.
+  void _cycleFit() {
+    final prefs = context.read<AppPreferences>();
+    final fit = prefs.videoFit.next;
+    prefs.setVideoFit(fit);
+    _armTouchHide();
+    _fitPillTimer?.cancel();
+    setState(() {
+      _fitPill = fit;
+      _fitPillVisible = true;
+    });
+    _fitPillTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (mounted) setState(() => _fitPillVisible = false);
+    });
+  }
+
+  /// The picture sized for the picture mode like Android's VideoPlayerPane
+  /// ([VideoFit.sizeIn]): the screen edge crops what overflows. Subtitles
+  /// are drawn over the screen, not the picture's box, so Crop or a zoom
+  /// never pushes them off the bottom. The same widgets in every mode, so
+  /// a new mode never recreates the video view.
+  Widget _video(AppPreferences prefs) {
+    final fit = prefs.videoFit;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRect(
+          child: LayoutBuilder(
+            builder: (context, c) => ValueListenableBuilder<Rect?>(
+              valueListenable: _videoController.rect,
+              builder: (context, rect, _) {
+                final pane = c.biggest;
+                // Size unknown yet (no frame): the whole screen, fitted.
+                final known = rect != null &&
+                    rect.width > 1 &&
+                    rect.height > 1 &&
+                    pane.width.isFinite &&
+                    pane.height.isFinite &&
+                    pane.height > 0;
+                return OverflowBox(
+                  maxWidth: double.infinity,
+                  maxHeight: double.infinity,
+                  child: SizedBox.fromSize(
+                    size: known
+                        ? fit.sizeIn(pane, rect.width / rect.height)
+                        : pane,
+                    child: Video(
+                        controller: _videoController,
+                        controls: NoVideoControls,
+                        fit: known ? BoxFit.fill : BoxFit.contain,
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground,
+                        subtitleViewConfiguration:
+                            const SubtitleViewConfiguration(visible: false)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        // Settings: the player's Subtitles menu > size.
+        SubtitleView(
+            controller: _videoController,
+            configuration: SubtitleViewConfiguration(
+                textScaler: TextScaler.linear(prefs.subtitleScale))),
+      ],
+    );
+  }
+
+  /// Touch: landscape <-> portrait, whatever the rotation lock says (the
+  /// Android phone player's Rotate button).
+  Future<void> _toggleRotation() async {
+    final toLandscape =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    await SystemChrome.setPreferredOrientations(toLandscape
+        ? [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+        : [DeviceOrientation.portraitUp]);
   }
 
   int _cutRetries = 0;
@@ -355,8 +638,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     final offer = WatchGameOffer.current.value;
     if (offer == null || offer.expired) return null;
     if (offer.channel.id == _currentChannel.id) return null;
-    final fresh = _watchShownUntil != null &&
-        DateTime.now().isBefore(_watchShownUntil!);
+    final fresh =
+        _watchShownUntil != null && DateTime.now().isBefore(_watchShownUntil!);
     return fresh || _controlsVisible ? offer : null;
   }
 
@@ -503,6 +786,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    _touchHide?.cancel();
+    _fitPillTimer?.cancel();
+    if (_touch) {
+      if (_inPip || _pipStarting) unawaited(IosPip.stop());
+      if (IosPip.onStopped == _onPipStopped) IosPip.onStopped = null;
+      // The rest of the app turns freely again (with the lock on: portrait).
+      unawaited(SystemChrome.setPreferredOrientations([]));
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     _sourceBackGuard.dispose();
     _fileInfoRequests.dispose();
     _progressTimer?.cancel();
@@ -532,6 +824,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// [dispose] tears its `Player` down the same way it always has.
   void _handleBack() {
     if (_sourceBackGuard.blocksBack) return;
+    // Apple's player has the stream: mpv is stopped, nothing to hand to
+    // the mini player. Closing the screen ends PiP (dispose).
+    if (_inPip || _pipStarting) {
+      Navigator.of(context).pop();
+      return;
+    }
     // A catch-up stream isn't the live channel: never minimized as it.
     if (_inCatchup) {
       _catchupPlayer?.dispose();
@@ -713,7 +1011,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   ),
                 )
               else
-                ...history.map((c) => GlassFocusFrame(child: ListTile(
+                ...history.map((c) => GlassFocusFrame(
+                        child: ListTile(
                       dense: true,
                       leading:
                           const Icon(Icons.tv, color: Colors.white54, size: 20),
@@ -998,15 +1297,330 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     );
   }
 
+  /// iPhone / iPad. The computer bar squeezed into a portrait phone was a
+  /// strip of tiny overlapping buttons (owner's iPhone 8, 2026-11-09), and
+  /// Sources only opened with the Right key. Touch gets a phone layout:
+  /// back, title, Sources and Rotate on top; big play/pause and +-10 s in
+  /// the middle; seek bar, badges and the other buttons at full touch size
+  /// along the bottom. No volume slider: the phone has its own buttons.
+  List<Widget> _touchControls(PlaylistManager playlist) {
+    final seekable = !_isLive || _inCatchup;
+    final prefs = context.watch<AppPreferences>();
+    final playlistName = _isLive
+        ? playlist.playlistNameFor(_currentChannel.playlistId).trim()
+        : '';
+    // Any touch on the controls keeps them up another 4 s.
+    Widget keepUp(Widget child) =>
+        Listener(onPointerDown: (_) => _armTouchHide(), child: child);
+    final info = Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        DesktopQualityBadges(
+            key: ValueKey('badges-${_currentChannel.id}'), player: _player),
+        if (playlistName.isNotEmpty) GoldTag(label: playlistName),
+        // Its Align would take a whole line of the Wrap.
+        if (_isLive && !_inCatchup)
+          IntrinsicWidth(
+              child: _LiveRemainingLabel(channelId: _currentChannel.epgId)),
+      ],
+    );
+    final buttons = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      child: Row(
+          mainAxisSize: MainAxisSize.min, children: _touchButtons(playlist)),
+    );
+    return [
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: keepUp(Container(
+          padding: const EdgeInsets.fromLTRB(4, 4, 8, 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent],
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: tr('Back'),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _handleBack,
+                ),
+                Expanded(
+                  child: PlayerBarTitle(
+                    title: _currentChannel.name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (widget.sources != null)
+                  IconButton(
+                    tooltip: tr('Sources'),
+                    icon: const Icon(Icons.swap_horiz, color: Colors.white),
+                    onPressed: _openSources,
+                  ),
+                if (IosPip.available && !_inCatchup)
+                  IconButton(
+                    tooltip: tr('Picture-in-picture'),
+                    icon: const Icon(Icons.picture_in_picture_alt,
+                        color: Colors.white),
+                    onPressed: _startPip,
+                  ),
+                IconButton(
+                  tooltip: tr(prefs.videoFit.label),
+                  icon: Icon(prefs.videoFit.icon, color: Colors.white),
+                  onPressed: _cycleFit,
+                ),
+                IconButton(
+                  tooltip: tr('Rotate'),
+                  icon: const Icon(Icons.screen_rotation, color: Colors.white),
+                  onPressed: _toggleRotation,
+                ),
+              ],
+            ),
+          ),
+        )),
+      ),
+      Center(
+        child: keepUp(StreamBuilder<bool>(
+          stream: _player.stream.playing,
+          initialData: _player.state.playing,
+          builder: (context, snapshot) {
+            final playing = snapshot.data ?? false;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (seekable) ...[
+                  _TouchRoundButton(
+                    icon: Icons.replay_10,
+                    size: 32,
+                    tooltip: tr('Back 10 seconds'),
+                    onPressed: () => _skip(const Duration(seconds: -10)),
+                  ),
+                  const SizedBox(width: 40),
+                ],
+                _TouchRoundButton(
+                  icon: playing ? Icons.pause : Icons.play_arrow,
+                  size: 48,
+                  tooltip: playing ? tr('Pause') : tr('Play'),
+                  onPressed: () => _togglePlay(playing),
+                ),
+                if (seekable) ...[
+                  const SizedBox(width: 40),
+                  _TouchRoundButton(
+                    icon: Icons.forward_10,
+                    size: 32,
+                    tooltip: tr('Forward 10 seconds'),
+                    onPressed: () => _skip(const Duration(seconds: 10)),
+                  ),
+                ],
+              ],
+            );
+          },
+        )),
+      ),
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: keepUp(Container(
+          padding: const EdgeInsets.fromLTRB(12, 32, 8, 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_inCatchup) _catchupBar(),
+                if (!_isLive) _touchSeekBar(),
+                LayoutBuilder(
+                  // Landscape: badges and buttons share a row. Portrait:
+                  // the buttons get their own row.
+                  builder: (context, box) => box.maxWidth >= 560
+                      ? Row(children: [
+                          Expanded(child: info),
+                          Flexible(child: buttons),
+                        ])
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            info,
+                            Align(
+                                alignment: Alignment.centerRight,
+                                child: buttons),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        )),
+      ),
+      if (_isLive && !_inCatchup && !_panelOpen)
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          child: Center(child: PlayerSidePanelTab(onTap: _openPanel)),
+        ),
+    ];
+  }
+
+  /// Touch: the bottom row's buttons (play/pause and +-10 s are in the
+  /// middle of the screen).
+  List<Widget> _touchButtons(PlaylistManager playlist) => [
+        if (_isLive && !_inCatchup)
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.white),
+            tooltip: tr('Recall — go back to a recent channel'),
+            onPressed: _openRecallPicker,
+          ),
+        IconButton(
+          icon: Icon(
+            _currentChannel.isFavorite ? Icons.star : Icons.star_border,
+            color: _currentChannel.isFavorite ? Colors.amber : Colors.white,
+          ),
+          tooltip: _currentChannel.isFavorite
+              ? tr('Remove from favorites')
+              : tr('Add to favorites'),
+          onPressed: () {
+            playlist.toggleFavorite(_currentChannel);
+            setState(() {});
+          },
+        ),
+        if (_isLive)
+          IconButton(
+            icon: const Icon(Icons.event_note, color: Colors.white),
+            tooltip: tr('Channel schedule'),
+            onPressed: _openSchedule,
+          ),
+        if (_inCatchup)
+          TextButton.icon(
+            icon: const Icon(Icons.fiber_manual_record,
+                color: Colors.redAccent, size: 14),
+            label:
+                Text(tr('LIVE'), style: const TextStyle(color: Colors.white)),
+            onPressed: () => unawaited(_catchupCtl.backToLive()),
+          ),
+        if (_isLive && !_inCatchup)
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: tr('Reload channel'),
+            onPressed: _reload,
+          ),
+        if (_previousEpisode != null)
+          IconButton(
+            icon: const Icon(Icons.skip_previous, color: Colors.white),
+            tooltip: tr('Previous episode'),
+            onPressed: () => _switchTo(_previousEpisode!),
+          ),
+        if (_nextEpisode != null)
+          IconButton(
+            icon: const Icon(Icons.skip_next, color: Colors.white),
+            tooltip: tr('Next episode'),
+            onPressed: () => _switchTo(_nextEpisode!),
+          ),
+        if (context.watch<AppPreferences>().dataPool)
+          IconButton(
+            icon: Icon(Icons.analytics_outlined,
+                color: _dataPoolOpen ? Colors.amber : Colors.white),
+            tooltip: tr('Data pool'),
+            onPressed: _toggleDataPool,
+          ),
+        DesktopAudioButton(
+            key: ValueKey('audio-${_currentChannel.id}'),
+            player: _player,
+            channel: _currentChannel),
+        if (!_isLive)
+          DesktopSubtitleButton(
+              key: ValueKey(_currentChannel.id),
+              player: _player,
+              channel: _currentChannel),
+      ];
+
+  /// Touch: elapsed | seek bar | length. Dragging moves the thumb; the
+  /// seek happens on release (one seek, not one per finger move).
+  Widget _touchSeekBar() {
+    return StreamBuilder<Duration>(
+      stream: _player.stream.position,
+      initialData: _player.state.position,
+      builder: (context, snapshot) {
+        final position = snapshot.data ?? Duration.zero;
+        final duration = _player.state.duration;
+        final known = duration.inMilliseconds > 0;
+        final max = known ? duration.inMilliseconds.toDouble() : 1.0;
+        final value = (_dragMs ?? position.inMilliseconds.toDouble())
+            .clamp(0.0, max)
+            .toDouble();
+        const time = TextStyle(color: Colors.white70, fontSize: 13);
+        return Row(
+          children: [
+            Text(_formatDuration(Duration(milliseconds: value.round())),
+                style: time),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 8),
+                  overlayShape:
+                      const RoundSliderOverlayShape(overlayRadius: 18),
+                ),
+                child: Slider(
+                  value: value,
+                  max: max,
+                  onChanged: known ? (v) => setState(() => _dragMs = v) : null,
+                  onChangeEnd: known
+                      ? (v) {
+                          setState(() => _dragMs = null);
+                          unawaited(
+                              _player.seek(Duration(milliseconds: v.round())));
+                          _armTouchHide();
+                        }
+                      : null,
+                ),
+              ),
+            ),
+            Text(_formatDuration(duration), style: time),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
     final size = MediaQuery.sizeOf(context);
     return PopScope(
       // Back with the side panel open closes it first.
-      canPop: !_panelOpen && !_sourceBackGuard.blocksBack,
+      canPop: !_panelOpen && !_scheduleOpen && !_sourceBackGuard.blocksBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !_sourceBackGuard.blocksBack) _closePanel();
+        if (didPop || _sourceBackGuard.blocksBack) return;
+        if (_scheduleOpen) {
+          _closeSchedule();
+        } else {
+          _closePanel();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -1067,6 +1681,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 _fileInfoRequests.value++;
               }
               setState(() => _controlsVisible = !_controlsVisible);
+              _armTouchHide();
             },
             child: Stack(
               fit: StackFit.expand,
@@ -1080,17 +1695,23 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 // button (which isn't part of that overlay at all) short of
                 // closing the app. This screen's own overlay below is the
                 // only controls surface.
-                Center(
-                    child: Video(
-                        controller: _videoController,
-                        controls: NoVideoControls,
-                        // Settings: the player's Subtitles menu > size.
-                        subtitleViewConfiguration: SubtitleViewConfiguration(
-                            textScaler: TextScaler.linear(context
-                                .watch<AppPreferences>()
-                                .subtitleScale)))),
+                _video(context.watch<AppPreferences>()),
+                if (!_inPip && !_pipStarting)
+                  Positioned(
+                    top: 64,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _fitPillVisible ? 1 : 0,
+                        duration: const Duration(milliseconds: 180),
+                        child: Center(child: _FitPill(fit: _fitPill)),
+                      ),
+                    ),
+                  ),
                 DesktopReconnectingBadge(
                     recovery: DesktopLiveRecovery.of(_player)),
+                if (_inPip || _pipStarting) _pipNotice(),
                 Builder(builder: (context) {
                   final storage = context.read<StorageService>();
                   _segments.attachDesktop(_player, _currentChannel.id,
@@ -1106,15 +1727,21 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     onSkip: _skipSegment,
                   );
                 }),
-                WatchGameButton(
-                  offer: _watchOffer,
-                  // Above the player bar while it shows.
-                  bottom: _controlsVisible ? 120 : 28,
-                  showUpHint: false,
-                  onWatch: _watchGame,
-                  focusNode: _watchFocus,
-                ),
-                if (_controlsVisible) ...[
+                if (!_inPip && !_pipStarting)
+                  WatchGameButton(
+                    offer: _watchOffer,
+                    // Above the player bar while it shows (the touch
+                    // layout's bottom bar is taller).
+                    bottom: _controlsVisible ? (_touch ? 150 : 120) : 28,
+                    showUpHint: false,
+                    onWatch: _watchGame,
+                    focusNode: _watchFocus,
+                  ),
+                // While PiP has the stream, mpv is stopped: its controls
+                // would do nothing ([_pipNotice] has Back and Watch here).
+                if (_controlsVisible && _touch && !_inPip && !_pipStarting)
+                  ..._touchControls(playlist),
+                if (_controlsVisible && !_touch) ...[
                   Positioned(
                     top: 0,
                     left: 0,
@@ -1176,7 +1803,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     left: 16,
                     right: 16,
                     // Above the player bar while it shows.
-                    bottom: _controlsVisible ? 120 : 16,
+                    bottom: _controlsVisible ? (_touch ? 170 : 120) : 16,
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 980),
@@ -1196,7 +1823,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),
                       info: info,
-                      requests: _fileInfoRequests),
+                      requests: _fileInfoRequests,
+                      // Touch: below the top bar's Sources / Rotate.
+                      top: _touch ? 64 : 16),
                 if (_panelOpen)
                   Positioned(
                     left: 0,
@@ -1212,6 +1841,18 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                         onClose: _closePanel,
                         onPlay: _switchTo,
                       ),
+                    ),
+                  ),
+                if (_scheduleOpen)
+                  Positioned.fill(
+                    child: ChannelSchedulePanel(
+                      channel: _currentChannel,
+                      at: _inCatchup ? _catchupCtl.playhead : null,
+                      onClose: _closeSchedule,
+                      onCatchup: (start) => unawaited(_startCatchup(start)),
+                      onLive: () {
+                        if (_inCatchup) unawaited(_catchupCtl.backToLive());
+                      },
                     ),
                   ),
               ],
@@ -1327,6 +1968,76 @@ class _DesktopVolume extends StatelessWidget {
   }
 }
 
+/// The picture mode's name over the video after the picture button (the
+/// look of PlayerScreen's: a round icon and the name, like Nuvio).
+class _FitPill extends StatelessWidget {
+  const _FitPill({required this.fit});
+
+  final VideoFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+                color: Colors.white24, shape: BoxShape.circle),
+            child: Icon(fit.icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            tr(fit.label),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Touch: a big round button in the middle of the video (play/pause,
+/// +-10 s), on a dark disc so it reads on bright pictures.
+class _TouchRoundButton extends StatelessWidget {
+  const _TouchRoundButton({
+    required this.icon,
+    required this.size,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final double size;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.35),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: IconButton(
+        tooltip: tooltip,
+        iconSize: size,
+        padding: EdgeInsets.all(size * 0.3),
+        color: Colors.white,
+        icon: Icon(icon),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
 /// [DesktopPlayerControl] for the full-screen player: the same steps as its
 /// own buttons (pause keeps the live timeshift rule, seek and Back to live
 /// work inside catch-up, a stream switch keeps the position).
@@ -1383,7 +2094,6 @@ class _ScreenControl extends DesktopPlayerControl {
   @override
   Future<void> replaceStream(Channel replacement) {
     final state = s._player.state;
-    return s._switchTo(replacement,
-        start: state.position, play: state.playing);
+    return s._switchTo(replacement, start: state.position, play: state.playing);
   }
 }

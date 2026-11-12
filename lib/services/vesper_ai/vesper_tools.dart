@@ -705,7 +705,7 @@ final List<VesperTool> vesperTools = [
       },
     },
     run: (box, args, caller) async {
-      if (isDesktop) return _desktopNowPlaying(box, args);
+      if (usesMediaKit) return _desktopNowPlaying(box, args);
       final c = box.playback.liveChannel;
       if (c == null) return {'playing': null};
       final controller = box.playback.controller;
@@ -797,7 +797,7 @@ final List<VesperTool> vesperTools = [
       'required': ['action'],
     },
     run: (box, args, caller) async {
-      if (isDesktop) return _desktopPlayer(box, args);
+      if (usesMediaKit) return _desktopPlayer(box, args);
       final playback = box.playback;
       final c = playback.controller;
       final action = _str(args, 'action');

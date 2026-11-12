@@ -19,8 +19,10 @@ class VoiceEvent {
   final String? code;
 }
 
-/// Android's speech recognizer and text-to-speech (VoiceBridge.kt). On Fire
-/// TV and Windows there is none: the viewer types or talks from the phone.
+/// Android's speech recognizer and text-to-speech (VoiceBridge.kt), and the
+/// iPhone's (VesperVoice in ios/Runner/AppDelegate.swift, same channel). On
+/// Fire TV and computers there is none: the viewer types or talks from the
+/// phone.
 class VoiceInput {
   VoiceInput._();
   static final instance = VoiceInput._();
@@ -36,6 +38,9 @@ class VoiceInput {
 
   /// The assistant launch ([VoiceBridge.onIntent]): called while running.
   VoidCallback? onAssist;
+
+  /// A platform with the voice bridge.
+  static bool get _native => Platform.isAndroid || Platform.isIOS;
 
   bool _handlerSet = false;
   void _ensureHandler() {
@@ -61,7 +66,7 @@ class VoiceInput {
   void start() => _ensureHandler();
 
   Future<bool> get available async {
-    if (!Platform.isAndroid) return false;
+    if (!_native) return false;
     if (_available != null) return _available!;
     try {
       _available = await _channel.invokeMethod<bool>('available') ?? false;
@@ -72,7 +77,7 @@ class VoiceInput {
   }
 
   Future<bool> ensurePermission() async {
-    if (!Platform.isAndroid) return false;
+    if (!_native) return false;
     try {
       if (await _channel.invokeMethod<bool>('hasPermission') ?? false) {
         return true;
@@ -130,21 +135,21 @@ class VoiceInput {
   }
 
   Future<void> stop() async {
-    if (!Platform.isAndroid) return;
+    if (!_native) return;
     try {
       await _channel.invokeMethod<void>('stop');
     } catch (_) {}
   }
 
   Future<void> cancel() async {
-    if (!Platform.isAndroid) return;
+    if (!_native) return;
     try {
       await _channel.invokeMethod<void>('cancel');
     } catch (_) {}
   }
 
   Future<void> speak(String text) async {
-    if (!Platform.isAndroid || text.trim().isEmpty) return;
+    if (!_native || text.trim().isEmpty) return;
     try {
       await _channel
           .invokeMethod<void>('speak', {'text': text, 'lang': language});
@@ -158,7 +163,7 @@ class VoiceInput {
   }
 
   Future<void> stopSpeaking() async {
-    if (!Platform.isAndroid) return;
+    if (!_native) return;
     try {
       await _channel.invokeMethod<void>('stopSpeaking');
     } catch (_) {}

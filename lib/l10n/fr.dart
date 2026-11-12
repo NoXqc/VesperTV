@@ -1928,6 +1928,8 @@ const Map<String, String> kFr = {
       "Votre source a envoyé un message au lieu de la vidéo :",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Vérifiez votre source ou votre compte debrid (limites du forfait, téléchargements actifs), ou choisissez un autre flux.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Vérifiez votre source (limites du forfait, téléchargements actifs), ou choisissez un autre flux.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Ajouté au Media Hub : {names}",
   "Added to subtitle add-ons: {names}":
@@ -3083,6 +3085,21 @@ const Map<String, String> kFr = {
       "Reprendre l'écoute et votre liste à regarder dans la rangée Watch Next du lanceur, plus une rangée de vos chaînes favorites. Pour les lanceurs Android TV comme Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Reprendre l'écoute et favoris sur le lanceur de la TV",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Image dans l'image",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "L'image dans l'image n'est pas disponible pour ce flux. Elle fonctionne avec les chaînes en direct des listes Xtream et les fichiers MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "L'image dans l'image n'a pas pu ouvrir ce flux.",
+  "Opening picture-in-picture…":
+      "Ouverture de l'image dans l'image…",
+  "Playing in picture-in-picture":
+      "Lecture en image dans l'image",
+  "Watch here":
+      "Regarder ici",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV n'a pas accès au micro. Autorisez Micro et Reconnaissance vocale dans Réglages > VesperTV, ou tapez plutôt.",
   // Downloads and the network folder (recording_service.dart).
   "Like watching":
       "Comme en visionnement",

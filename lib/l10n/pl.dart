@@ -3318,4 +3318,22 @@ const Map<String, String> kPl = {
       "Nie pobrano żadnego modelu mowy.",
   "Downloaded: {languages} ({size} MB).":
       "Pobrano: {languages} ({size} MB).",
+  // iPhone build (claude/appstore-build): App Store error text,
+  // picture-in-picture, microphone permission.
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Sprawdź źródło (limity planu, aktywne pobierania) albo wybierz inny strumień.",
+  "Picture-in-picture":
+      "Obraz w obrazie",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Obraz w obrazie nie jest dostępny dla tego strumienia. Działa z kanałami na żywo z playlist Xtream i plikami MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "Obraz w obrazie nie mógł otworzyć tego strumienia.",
+  "Opening picture-in-picture…":
+      "Otwieranie obrazu w obrazie…",
+  "Playing in picture-in-picture":
+      "Odtwarzanie w obrazie w obrazie",
+  "Watch here":
+      "Oglądaj tutaj",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV nie ma dostępu do mikrofonu. Zezwól na Mikrofon i Rozpoznawanie mowy w Ustawienia > VesperTV lub pisz zamiast tego.",
 };

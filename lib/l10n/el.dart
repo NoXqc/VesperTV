@@ -1872,6 +1872,8 @@ const Map<String, String> kEl = {
       "Η πηγή σας έστειλε μήνυμα αντί για το βίντεο:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Ελέγξτε την πηγή ή τον λογαριασμό debrid (όρια πακέτου, ενεργές λήψεις) ή επιλέξτε άλλη ροή.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Ελέγξτε την πηγή (όρια πακέτου, ενεργές λήψεις) ή επιλέξτε άλλη ροή.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Προστέθηκε στο Media Hub: {names}",
   "Added to subtitle add-ons: {names}":
@@ -3032,6 +3034,21 @@ const Map<String, String> kEl = {
       "Συνέχεια παρακολούθησης και η λίστα παρακολούθησής σας στη σειρά Watch Next του launcher, μαζί με μια σειρά με τα αγαπημένα σας κανάλια. Για launcher Android TV όπως το Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Συνέχεια παρακολούθησης και αγαπημένα στο launcher της τηλεόρασης",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Εικόνα σε εικόνα",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Η εικόνα σε εικόνα δεν είναι διαθέσιμη για αυτή τη ροή. Λειτουργεί με ζωντανά κανάλια από λίστες Xtream και αρχεία MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "Η εικόνα σε εικόνα δεν μπόρεσε να ανοίξει αυτή τη ροή.",
+  "Opening picture-in-picture…":
+      "Άνοιγμα εικόνας σε εικόνα…",
+  "Playing in picture-in-picture":
+      "Αναπαραγωγή σε εικόνα σε εικόνα",
+  "Watch here":
+      "Παρακολούθηση εδώ",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "Το VesperTV δεν μπορεί να χρησιμοποιήσει το μικρόφωνο. Επιτρέψτε Μικρόφωνο και Αναγνώριση ομιλίας στις Ρυθμίσεις > VesperTV ή πληκτρολογήστε.",
   // Downloads and the network folder (recording_service.dart).
   "Like watching":
       "Όπως στην προβολή",

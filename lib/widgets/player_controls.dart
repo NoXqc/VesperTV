@@ -31,6 +31,7 @@ import 'rec_cue.dart';
 import 'player_bar_title.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
+import '../utils/app_store.dart';
 import '../utils/video_fit.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
@@ -381,7 +382,9 @@ String _friendlyPlaybackError(String raw) {
     return [
       tr('Your source sent a message instead of the video:'),
       if (said.isNotEmpty) '"$said"',
-      tr('Check your source or debrid account (plan limits, active downloads), or pick another stream.'),
+      appStoreBuild
+          ? tr('Check your source (plan limits, active downloads), or pick another stream.')
+          : tr('Check your source or debrid account (plan limits, active downloads), or pick another stream.'),
     ].join('\n');
   }
   final status = httpStatusFromPlaybackError(raw);

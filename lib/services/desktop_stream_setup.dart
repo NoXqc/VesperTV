@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart'
+    show AppLifecycleState, WidgetsBinding, WidgetsBindingObserver;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -20,7 +22,71 @@ final Set<Player> _openPlayers = {};
 Player newDesktopPlayer() {
   final player = Player();
   _openPlayers.add(player);
+  _IosBackgroundVideo.ensure();
   return player;
+}
+
+/// iPhone / iPad: media_kit draws video with OpenGL ES, which iOS forbids
+/// in the background. Home or the lock screen froze the video output, the
+/// sound stopped with it (mpv waits for video), and back in the app a 4K
+/// remux stuttered until restarted: the hardware decoder had been dropped
+/// (owner's iPhone 8, 2026-11-09). Off screen, every open player turns its
+/// video track off and keeps the sound going (UIBackgroundModes audio);
+/// back on screen the same track comes back with a fresh decoder (mpv
+/// refreshes the picture at the current position).
+class _IosBackgroundVideo with WidgetsBindingObserver {
+  static _IosBackgroundVideo? _instance;
+
+  static void ensure() {
+    if (!Platform.isIOS || _instance != null) return;
+    WidgetsBinding.instance.addObserver(_instance = _IosBackgroundVideo());
+  }
+
+  /// Players whose video is off for the background, with the track to
+  /// give back.
+  final Map<Player, VideoTrack> _parked = {};
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        _park();
+      case AppLifecycleState.resumed:
+        _restore();
+      default:
+        break;
+    }
+  }
+
+  void _park() {
+    for (final player in _openPlayers) {
+      if (_parked.containsKey(player)) continue;
+      final track = player.state.track.video;
+      if (track.id == 'no') continue;
+      _parked[player] = track;
+      unawaited(player
+          .setVideoTrack(VideoTrack.no())
+          .catchError((Object e) => debugPrint('IosBackground: park $e')));
+    }
+    if (_parked.isNotEmpty) {
+      debugPrint('IosBackground: video off for ${_parked.length} player(s)');
+    }
+  }
+
+  void _restore() {
+    if (_parked.isEmpty) return;
+    final parked = Map.of(_parked);
+    _parked.clear();
+    for (final MapEntry(key: player, value: track) in parked.entries) {
+      // Closed while the app was away.
+      if (!_openPlayers.contains(player)) continue;
+      unawaited(player
+          .setVideoTrack(track)
+          .catchError((Object e) => debugPrint('IosBackground: restore $e')));
+    }
+    debugPrint('IosBackground: video back for ${parked.length} player(s)');
+  }
 }
 
 /// Every player streaming from the network, by provider account: a
@@ -93,9 +159,12 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // Windows), then reconnected or ended every 30-40 s. Same 30 s.
   native.setProperty('network-timeout', '30');
   // media_kit turns on cache-on-disk; inside the macOS sandbox mpv can't
-  // create its cache folder ("Failed to create file cache"). The demuxer
-  // cache stays in memory (demuxer-max-bytes).
-  if (Platform.isMacOS) native.setProperty('cache-on-disk', 'no');
+  // create its cache folder ("Failed to create file cache"). iPhone apps are
+  // sandboxed the same way. The demuxer cache stays in memory
+  // (demuxer-max-bytes).
+  if (Platform.isMacOS || Platform.isIOS) {
+    native.setProperty('cache-on-disk', 'no');
+  }
   native.setProperty('user-agent', kDesktopStreamUserAgent);
   // Broadcast closed captions (EIA-608 inside the video, like Android's CC
   // track): listed in the Subtitles menu from the start. mpv marks the

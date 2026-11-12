@@ -454,4 +454,4 @@ class _Bits {
 typedef ProbeGate = ({int? maxConnections, int? activeConnections});
 
 /// Where the probe can't run (a Windows desktop works too: plain HTTP).
-bool get streamProbeSupported => !kIsWeb && (Platform.isAndroid || isDesktop);
+bool get streamProbeSupported => !kIsWeb && (Platform.isAndroid || usesMediaKit);

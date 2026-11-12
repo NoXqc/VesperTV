@@ -1916,6 +1916,8 @@ const Map<String, String> kEs = {
       "Tu fuente envió un mensaje en lugar del video:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Revisa tu fuente o tu cuenta debrid (límites del plan, descargas activas) o elige otra transmisión.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Revisa tu fuente (límites del plan, descargas activas) o elige otra transmisión.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Añadido al Media Hub: {names}",
   "Added to subtitle add-ons: {names}":
@@ -3070,6 +3072,21 @@ const Map<String, String> kEs = {
       "Seguir viendo y Mi lista en la fila Watch Next del launcher, más una fila con tus canales favoritos. Para launchers de Android TV como Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Seguir viendo y favoritos en el launcher de la TV",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Imagen en imagen",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "La imagen en imagen no está disponible para esta transmisión. Funciona con los canales en directo de listas Xtream y los archivos MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "La imagen en imagen no pudo abrir esta transmisión.",
+  "Opening picture-in-picture…":
+      "Abriendo imagen en imagen…",
+  "Playing in picture-in-picture":
+      "Reproduciendo en imagen en imagen",
+  "Watch here":
+      "Ver aquí",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV no puede usar el micrófono. Permite Micrófono y Reconocimiento de voz en Ajustes > VesperTV, o escribe.",
   // Downloads and the network folder (recording_service.dart).
   "Like watching":
       "Como al ver",

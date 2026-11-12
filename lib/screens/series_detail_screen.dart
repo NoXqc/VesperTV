@@ -429,7 +429,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player at all, so this bypasses it via a
     // standalone screen; the queue is passed so Previous/Next still works.
-    if (isDesktop) {
+    if (usesMediaKit) {
       // Abandons any minimized live channel first, so it can't keep
       // playing audio behind this unrelated episode.
       DesktopMiniPlayer.instance.clear();

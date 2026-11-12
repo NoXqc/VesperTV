@@ -276,8 +276,8 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
     final narrow = size.width < 700;
     final short = size.height < 520;
     // The first row in: focus its first title once (the remote needs a
-    // target; touch doesn't).
-    if (!_entered && rows.isNotEmpty && !_touch) {
+    // target; touch doesn't, an iPhone neither).
+    if (!_entered && rows.isNotEmpty && !_touch && !isIosTarget) {
       _entered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -335,7 +335,7 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                         collection: widget.collection,
                         focused: focused,
                         compact: narrow || short,
-                        onBack: isDesktop || _touch
+                        onBack: needsBackArrow || _touch
                             ? () => Navigator.of(context).maybePop()
                             : null,
                       ),

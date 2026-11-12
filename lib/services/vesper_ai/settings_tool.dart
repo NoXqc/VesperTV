@@ -113,7 +113,7 @@ final List<_AiSetting> _aiSettings = [
           'channels start later and play that much behind live.',
       choices: [
         for (final (key, ms, name) in _liveBuffers)
-          if (ms >= 0 || !isDesktopTarget) (key, name)
+          if (ms >= 0 || !usesMediaKitTarget) (key, name)
       ],
       read: (b) => _liveBuffers
           .firstWhere((c) => c.$2 == b.storage.getLiveBufferMs(),
@@ -637,7 +637,7 @@ String _subtitleSizeKey(double scale) => _subtitleScales.entries
 /// The settings this device has (Android-only ones left out on a computer).
 List<_AiSetting> get _visibleSettings => [
       for (final s in _aiSettings)
-        if (!s.androidOnly || !isDesktopTarget) s
+        if (!s.androidOnly || !usesMediaKitTarget) s
     ];
 
 _AiSetting _settingFor(String key) {
