@@ -386,6 +386,13 @@ final List<_AiSetting> _aiSettings = [
       (b, on) => b.prefs.setRefinedFinish(on)),
   _switch('show_clock', 'look', 'Show clock', 'The clock on screen.',
       (b) => b.prefs.showClock, (b, on) => b.prefs.setShowClock(on)),
+  _switch(
+      'player_clock',
+      'look',
+      'Clock in full screen',
+      'A small clock in the full-screen player\'s top-right corner.',
+      (b) => b.prefs.playerClock,
+      (b, on) => b.prefs.setPlayerClock(on)),
   _switch('clock_24h', 'look', '24-hour clock', 'Times as 24-hour.',
       (b) => b.prefs.use24h, (b, on) => b.prefs.setUse24h(on)),
   // ---- guide

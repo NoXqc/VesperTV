@@ -395,6 +395,14 @@ class SettingsCatalog {
               subtitle: tr('Displays the current time in the top bar'),
               value: prefs.showClock,
               onChanged: prefs.setShowClock),
+          SettingsToggle(
+              id: 'player_clock',
+              icon: Icons.more_time,
+              title: tr('Clock in full screen'),
+              subtitle: tr(
+                  'A small clock in the top-right corner of the full-screen player'),
+              value: prefs.playerClock,
+              onChanged: prefs.setPlayerClock),
         ]),
         SettingsSection(title: tr('Home'), [
           SettingsLink(

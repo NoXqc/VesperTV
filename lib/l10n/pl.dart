@@ -1141,6 +1141,9 @@ const Map<String, String> kPl = {
   "Show clock": "Pokaż zegar",
   "Displays the current time in the top bar":
       "Wyświetla bieżącą godzinę na górnym pasku",
+  "Clock in full screen": "Zegar na pełnym ekranie",
+  "A small clock in the top-right corner of the full-screen player":
+      "Mały zegar w prawym górnym rogu odtwarzacza na pełnym ekranie",
   "Theme color": "Kolor motywu",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Automatycznie wybiera układ telefonu lub TV według rozmiaru ekranu — wymuś jeden, jeśli przystawka nie jest wykrywana poprawnie.",

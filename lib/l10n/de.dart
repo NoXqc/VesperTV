@@ -1129,6 +1129,9 @@ const Map<String, String> kDe = {
   "Show clock": "Uhr anzeigen",
   "Displays the current time in the top bar":
       "Zeigt die aktuelle Uhrzeit in der oberen Leiste an",
+  "Clock in full screen": "Uhr im Vollbild",
+  "A small clock in the top-right corner of the full-screen player":
+      "Eine kleine Uhr oben rechts im Vollbild-Player",
   "Theme color": "Designfarbe",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Auto wählt das Handy- oder TV-Layout nach Bildschirmgröße – erzwinge eines, falls dein Gerät nicht richtig erkannt wird.",

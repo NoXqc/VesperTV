@@ -1182,6 +1182,9 @@ const Map<String, String> kIt = {
   'Show clock': "Mostra orologio",
   'Displays the current time in the top bar':
       "Mostra l'ora nella barra in alto",
+  "Clock in full screen": "Orologio a schermo intero",
+  "A small clock in the top-right corner of the full-screen player":
+      "Un piccolo orologio nell'angolo in alto a destra del lettore a schermo intero",
   'Theme color': "Colore del tema",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "«Auto» sceglie il layout telefono o TV in base allo schermo; forzane uno se il tuo box non viene riconosciuto bene.",

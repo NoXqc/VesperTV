@@ -1182,6 +1182,9 @@ const Map<String, String> kEs = {
   'Show clock': "Mostrar reloj",
   'Displays the current time in the top bar':
       "Muestra la hora en la barra superior",
+  "Clock in full screen": "Reloj en pantalla completa",
+  "A small clock in the top-right corner of the full-screen player":
+      "Un pequeño reloj en la esquina superior derecha del reproductor a pantalla completa",
   'Theme color': "Color del tema",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "«Auto» elige el diseño de teléfono o TV según la pantalla; fuerza uno si tu equipo no se detecta bien.",

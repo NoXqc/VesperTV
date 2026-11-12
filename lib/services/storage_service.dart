@@ -518,6 +518,10 @@ class StorageService {
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
 
+  bool getPlayerClock() => _prefs.getBool(AppConstants.keyPlayerClock) ?? false;
+  Future<void> setPlayerClock(bool value) =>
+      _prefs.setBool(AppConstants.keyPlayerClock, value);
+
   /// "Don't show this again" on the Multiview connections tip.
   bool getMultiviewHideTips() =>
       _prefs.getBool(AppConstants.keyMultiviewHideTips) ?? false;

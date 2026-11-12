@@ -1188,6 +1188,9 @@ const Map<String, String> kFr = {
   'Show clock': "Afficher l'horloge",
   'Displays the current time in the top bar':
       "Affiche l'heure dans la barre du haut",
+  "Clock in full screen": "Horloge en plein écran",
+  "A small clock in the top-right corner of the full-screen player":
+      "Une petite horloge en haut à droite du lecteur plein écran",
   'Theme color': "Couleur du thème",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "« Auto » choisit la disposition téléphone ou télé selon l'écran — forcez-en une si votre boîtier est mal détecté.",

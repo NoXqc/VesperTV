@@ -271,6 +271,7 @@ class AppConstants {
   static const String keyXtreamPassword = 'nox_xtream_password';
 
   static const String keyShowClock = 'nox_show_clock';
+  static const String keyPlayerClock = 'vesper_player_clock';
   static const String keyMultiviewHideTips = 'vesper_multiview_hide_tips';
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
   static const String keyMultiviewMain = 'vesper_multiview_main';

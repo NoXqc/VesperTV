@@ -1150,6 +1150,9 @@ const Map<String, String> kEl = {
   "Show clock": "Εμφάνιση ρολογιού",
   "Displays the current time in the top bar":
       "Δείχνει την τρέχουσα ώρα στην πάνω μπάρα",
+  "Clock in full screen": "Ρολόι σε πλήρη οθόνη",
+  "A small clock in the top-right corner of the full-screen player":
+      "Ένα μικρό ρολόι στην πάνω δεξιά γωνία της αναπαραγωγής σε πλήρη οθόνη",
   "Theme color": "Χρώμα θέματος",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Το Αυτόματο επιλέγει διάταξη κινητού ή TV ανάλογα με την οθόνη — επιβάλετε μία αν η συσκευή σας δεν αναγνωρίζεται σωστά.",
