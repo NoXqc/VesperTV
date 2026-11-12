@@ -134,7 +134,7 @@ void main() {
             (_) async => const StandardMessageCodec().encodeMessage([null]));
   });
   test(
-      'selector defaults off, persists per device, backups keep it and transfers do not',
+      'selector defaults off, persists, travels with backups / transfers, never syncs',
       () async {
     final f = StartupFixture();
     await f.init();
@@ -148,11 +148,15 @@ void main() {
     expect(reopened.getLaunchWithProfiles(), isTrue);
     expect(reopened.exportForBackup(),
         contains(AppConstants.keyLaunchWithProfiles));
+    // Owner, 2026-11-12: a new box should start like the old one.
     expect(reopened.exportForTransfer(),
+        contains(AppConstants.keyLaunchWithProfiles));
+    expect(reopened.exportForSync(),
         isNot(contains(AppConstants.keyLaunchWithProfiles)));
-    await reopened
-        .importForTransfer({AppConstants.keyLaunchWithProfiles: false});
-    expect(reopened.getLaunchWithProfiles(), isTrue);
+    await reopened.importForTransfer({
+      AppConstants.keyLaunchWithProfiles: {'t': 'b', 'v': false}
+    });
+    expect(reopened.getLaunchWithProfiles(), isFalse);
   });
 
   testWidgets('Profiles settings toggle is opt-in and persists on tap',

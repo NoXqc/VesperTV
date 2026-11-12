@@ -15,6 +15,7 @@ import '../widgets/archive_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
+import '../services/remote_buttons.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
 import '../services/playlist_manager.dart';
@@ -412,7 +413,8 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen>
+    implements RemotePlayerTarget {
   bool _immersive = false;
   bool _topVisible = false;
   bool _bottomVisible = false;
@@ -866,6 +868,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _playback = context.read<PlaybackService>();
+    // Remote buttons' player actions (info, picture, last channel...).
+    RemoteButtons.instance.registerPlayer(this);
     // Vesper AI's media_hub tool switches streams through the same sources.
     _playback.hubSources = widget.sources;
     _playback.play(widget.channel);
@@ -987,7 +991,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_bottomVisible || _optionsVisible) {
       _focusBottomBar();
     } else if (_zappable) {
-      _zapChannel(-1);
+      _runArrow(PlayerArrow.up);
     } else {
       _openBar();
     }
@@ -1012,7 +1016,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_bottomVisible || _optionsVisible) {
       _focusBottomBar();
     } else if (_zappable) {
-      _zapChannel(1);
+      _runArrow(PlayerArrow.down);
     } else {
       _openBar();
     }
@@ -1378,6 +1382,66 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _zapTo(target);
   }
 
+  /// When the last non-zap arrow action ran: a held arrow repeats, and
+  /// the side drawer / last channel / bar must run once per press.
+  DateTime? _arrowAt;
+
+  /// An arrow on a live channel with nothing on screen: what Settings >
+  /// Backup & devices > Remote buttons > Player arrows says (default Left
+  /// = side drawer, Right = last channel, Up / Down = zap).
+  void _runArrow(PlayerArrow arrow) {
+    final action = RemoteButtons.instance.arrowAction(arrow);
+    if (action == 'channel_up') {
+      _zapChannel(-1);
+      return;
+    }
+    if (action == 'channel_down') {
+      _zapChannel(1);
+      return;
+    }
+    final now = DateTime.now();
+    final last = _arrowAt;
+    _arrowAt = now;
+    if (last != null && now.difference(last) < const Duration(milliseconds: 400)) {
+      return;
+    }
+    switch (action) {
+      case 'panel':
+        _openPanel();
+      case 'last':
+        _lastChannel();
+      case 'bar':
+        _openBar();
+    }
+  }
+
+  // RemotePlayerTarget (Remote buttons).
+  @override
+  void lastChannel() => _lastChannel();
+  @override
+  void zap(int step) => _zapChannel(step);
+  @override
+  void showInfo() => _toggleInfoCard();
+  @override
+  void cycleFit() => unawaited(_cycleFit());
+  @override
+  void openMultiview() {
+    final channel = _playback.currentChannel ?? widget.channel;
+    if (channel.isLive && !context.read<AppPreferences>().hideMultiview) {
+      unawaited(_openMultiview(channel));
+    }
+  }
+
+  @override
+  void close() {
+    final route = ModalRoute.of(context);
+    if (!mounted || route == null || !route.isActive) return;
+    // pop, not maybePop: the PopScope would only hide the bars.
+    final nav = Navigator.of(context);
+    nav.popUntil((r) => r == route);
+    nav.pop();
+  }
+
   /// Right on a live channel: back to the channel watched before this one
   /// (the side panel's Last channels list), so Right again flips back.
   void _lastChannel() {
@@ -1516,6 +1580,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    RemoteButtons.instance.unregisterPlayer(this);
     _fitPillTimer?.cancel();
     _sourceBackGuard.dispose();
     if (identical(_playback.hubSources, widget.sources)) {
@@ -1692,7 +1757,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // panel on a live channel (a no-op on movies/episodes).
                     const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
                       if (channel.isLive || playback.catchup != null) {
-                        _openPanel();
+                        _runArrow(PlayerArrow.left);
                       }
                     },
                     // Right never had any established purpose here — it simply had
@@ -1718,7 +1783,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const SingleActivator(LogicalKeyboardKey.arrowRight,
                         includeRepeats: false): () {
                       if (channel.isLive || playback.catchup != null) {
-                        _lastChannel();
+                        _runArrow(PlayerArrow.right);
                       } else {
                         _openSources();
                       }

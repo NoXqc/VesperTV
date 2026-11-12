@@ -60,7 +60,69 @@ class StorageService {
           .where((p) => p.photoVersion > 0)
           .map((p) => p.id)),
       if (snapshots.isNotEmpty) 'vesper_imported_playlists': snapshots,
+      // Every viewer's Continue Watching / channel history: cache files, not
+      // prefs, so a transfer used to arrive with empty History rows (owner,
+      // Formuler -> Homatics, 2026-11-12). Cloud sync already carried them.
+      _historyFilesKey: await recentlyPlayedFiles(),
+      if (await _recordingSettings() case final Map<String, dynamic> r)
+        _recordingSettingsKey: r,
     };
+  }
+
+  static const _historyFilesKey = 'vesper_history_files';
+
+  /// Settings > Recordings (network folder + its login, download speed and
+  /// start time, margins, size cap): saved with the recordings list in
+  /// `recordings.json` (RecordingService), which never travels, so the SMB
+  /// share was missing after a transfer (owner, 2026-11-12). Only the
+  /// settings go; the recordings and their files stay on their device.
+  static const _recordingSettingsKey = 'vesper_recording_settings';
+
+  Future<File> _recordingsFile() async =>
+      File('${(await getApplicationSupportDirectory()).path}/recordings.json');
+
+  Future<Map<String, dynamic>?> _recordingSettings() async {
+    try {
+      final f = await _recordingsFile();
+      if (!await f.exists()) return null;
+      final m = jsonDecode(await f.readAsString());
+      final settings = m is Map ? m['settings'] : null;
+      if (settings is! Map) return null;
+      return Map<String, dynamic>.from(settings);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Writes [incoming] into this device's `recordings.json`, keeping its
+  /// recordings. A device folder (USB / SD path) means nothing on another
+  /// box: this device's own choice is kept unless the folder is the
+  /// network share.
+  Future<void> _restoreRecordingSettings(Map incoming) async {
+    try {
+      final f = await _recordingsFile();
+      Map<String, dynamic> file = {};
+      if (await f.exists()) {
+        final m = jsonDecode(await f.readAsString());
+        if (m is Map) file = Map<String, dynamic>.from(m);
+      }
+      final mine = file['settings'] is Map
+          ? Map<String, dynamic>.from(file['settings'] as Map)
+          : <String, dynamic>{};
+      final next = Map<String, dynamic>.from(incoming)..remove('folder');
+      final folder = incoming['folder'];
+      if (folder is String && folder.startsWith('smb://')) {
+        next['folder'] = folder;
+      } else if (mine['folder'] is String) {
+        next['folder'] = mine['folder'];
+      }
+      file['settings'] = next;
+      file['items'] ??= <Object>[];
+      await f.parent.create(recursive: true);
+      await f.writeAsString(jsonEncode(file));
+    } catch (_) {
+      // Recording isn't available here (no support folder): nothing to keep.
+    }
   }
 
   /// Only a newly created viewer is a valid destination. Main is read-only.
@@ -778,6 +840,18 @@ class StorageService {
       false;
   Future<void> setWallpaperOnProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyWallpaperOnProfiles), value);
+
+  /// Remote buttons ([RemoteButtons]): raw JSON, per viewer, device only.
+  String? getRemoteButtons() =>
+      _prefs.getString(_vk(AppConstants.keyRemoteButtons));
+  Future<void> setRemoteButtons(String? json) => json == null
+      ? _prefs.remove(_vk(AppConstants.keyRemoteButtons))
+      : _prefs.setString(_vk(AppConstants.keyRemoteButtons), json);
+  String? getPlayerArrows() =>
+      _prefs.getString(_vk(AppConstants.keyPlayerArrows));
+  Future<void> setPlayerArrows(String? json) => json == null
+      ? _prefs.remove(_vk(AppConstants.keyPlayerArrows))
+      : _prefs.setString(_vk(AppConstants.keyPlayerArrows), json);
 
   bool getHomeMiniPlayer() =>
       _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
@@ -1569,9 +1643,6 @@ class StorageService {
     AppConstants.keyWindowsBounds,
     AppConstants.keyDesktopVolume,
     AppConstants.keyDesktopMuted,
-    AppConstants.keyVideoFill,
-    AppConstants.keyVideoFit,
-    AppConstants.keyAutoTrailers,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
     AppConstants.keyDeviceDefaults,
@@ -1582,15 +1653,9 @@ class StorageService {
     AppConstants.keyMatchFrameRate,
     AppConstants.keyMatch5060Only,
     AppConstants.keyMatchResolution,
-    AppConstants.keySubtitleScale,
-    AppConstants.keyLiveGroupSort,
-    AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
-    AppConstants.keyLauncherRows,
     AppConstants.keyLauncherState,
-    AppConstants.keyBackgroundSync,
-    AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,
@@ -1626,9 +1691,17 @@ class StorageService {
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';
 
+  /// Device-only but kept by a backup (it goes back onto the same device):
+  /// the remote's buttons differ from one device to the next.
+  static const _transferOnlySkipPrefixes = [
+    AppConstants.keyRemoteButtons,
+    AppConstants.keyPlayerArrows,
+  ];
+
   static bool _transferable(String key) =>
       !_transferSkipExact.contains(key) &&
-      !_transferSkipPrefixes.any(key.startsWith);
+      !_transferSkipPrefixes.any(key.startsWith) &&
+      !_transferOnlySkipPrefixes.any(key.startsWith);
 
   /// A backup goes back onto the same device, so unlike a transfer it keeps
   /// the device settings (layout, picture fit, enabled playlists, window
@@ -1689,7 +1762,9 @@ class StorageService {
     }
     for (final entry in values.entries) {
       if (entry.key == 'vesper_profile_photos' ||
-          entry.key == 'vesper_imported_playlists') {
+          entry.key == 'vesper_imported_playlists' ||
+          entry.key == _historyFilesKey ||
+          entry.key == _recordingSettingsKey) {
         continue;
       }
       if (!include(entry.key)) continue;
@@ -1713,6 +1788,18 @@ class StorageService {
               if (s is String) s
           ]);
       }
+    }
+    final history = values[_historyFilesKey];
+    if (history is Map) {
+      for (final e in history.entries) {
+        final name = e.key, text = e.value;
+        if (name is String && text is String && isRecentlyPlayedFile(name)) {
+          await writeCacheFile(name, text);
+        }
+      }
+    }
+    if (values[_recordingSettingsKey] case final Map r) {
+      await _restoreRecordingSettings(r);
     }
     final snapshots = values['vesper_imported_playlists'];
     if (snapshots is Map && snapshots.isNotEmpty) {
@@ -1786,10 +1873,23 @@ class StorageService {
 
   /// Kept per device even when syncing, on top of what Transfer leaves
   /// out: each box has its own current viewer and its own backup timer.
+  /// The viewer's own choices below go with a transfer / backup (a new box
+  /// should start like the old one: owner, 2026-11-12, Open on Home and
+  /// Who's watching were missing) but never sync, so two boxes in sync
+  /// don't keep changing each other's start page or picture.
   static const _syncSkipExact = {
     AppConstants.keyActiveViewerId,
     AppConstants.keyAutoBackup,
     AppConstants.keyLastAutoBackup,
+    AppConstants.keyVideoFill,
+    AppConstants.keyVideoFit,
+    AppConstants.keyAutoTrailers,
+    AppConstants.keySubtitleScale,
+    AppConstants.keyLiveGroupSort,
+    AppConstants.keyStartSection,
+    AppConstants.keyLauncherRows,
+    AppConstants.keyBackgroundSync,
+    AppConstants.keyLaunchWithProfiles,
   };
 
   static bool _syncable(String key) =>

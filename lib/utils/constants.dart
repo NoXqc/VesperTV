@@ -460,6 +460,15 @@ class AppConstants {
   /// wallpaper while their card is highlighted. Not transferred (the
   /// wallpaper file never is).
   static const String keyWallpaperOnProfiles = 'vesper_wallpaper_on_profiles';
+
+  /// Per viewer, device only (remotes differ per device): Settings > Backup
+  /// & devices > Remote buttons, JSON {keyId: {s: action, h: action}}
+  /// ([RemoteButtons]).
+  static const String keyRemoteButtons = 'vesper_remote_buttons';
+
+  /// Per viewer, device only: the full-screen player's arrows on a live
+  /// channel, JSON {left|right|up|down: action}; missing = today's default.
+  static const String keyPlayerArrows = 'vesper_player_arrows';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';

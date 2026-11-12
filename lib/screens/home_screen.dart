@@ -30,6 +30,7 @@ import '../services/multiview_sports.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/recording_service.dart';
+import '../services/remote_buttons.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../utils/image_urls.dart';
@@ -256,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _rowsConfig = HomeRows.load(context.read<StorageService>());
     HardwareKeyboard.instance.addHandler(_noteKey);
+    RemoteButtons.instance.home = _onRemoteAction;
     _playback = context.read<PlaybackService>()..addListener(_historyChanged);
     _historyLoads = _playback.historyLoads;
     WatchList.instance.changes.addListener(_watchListChanged);
@@ -295,6 +297,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_noteKey);
+    if (RemoteButtons.instance.home == _onRemoteAction) {
+      RemoteButtons.instance.home = null;
+    }
     _playback.removeListener(_historyChanged);
     // _miniHistory keeps running: the channel plays on behind TV (Back).
     _miniTimer?.cancel();
@@ -1057,6 +1062,18 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       unawaited(_stopMini());
     }
+  }
+
+  /// A remote button set to Play/Pause or Stop (Settings > Remote
+  /// buttons) does what the remote's own key does on Home.
+  bool _onRemoteAction(String action) {
+    if (!mounted || !HomeScreen.showsMiniPlayer(context)) return false;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+    _onPlayKey(action == 'stop'
+        ? LogicalKeyboardKey.mediaStop
+        : LogicalKeyboardKey.mediaPlayPause);
+    return true;
   }
 
   /// The live channel the mini player shows, if any.

@@ -121,6 +121,19 @@ class _ArchiveRowSettingsState extends State<_ArchiveRowSettings> {
     return KeyEventResult.handled;
   }
 
+  /// Moves the row and keeps the pressed arrow focused and on screen.
+  void _move(String key, int step, FocusNode node) {
+    context.read<ArchiveService>().moveRow(widget.type, key, step);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || node.context == null) return;
+      if (!node.hasPrimaryFocus) node.requestFocus();
+      Scrollable.ensureVisible(node.context!,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      Scrollable.ensureVisible(node.context!,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final type = widget.type;
@@ -143,6 +156,14 @@ class _ArchiveRowSettingsState extends State<_ArchiveRowSettings> {
           child: ListView.builder(
               shrinkWrap: true,
               itemCount: rows.length,
+              // A moved row keeps its element (and the arrow's focus):
+              // without it the row was rebuilt at its new index and the
+              // focus highlight vanished until the next arrow key (owner,
+              // 2026-11-12).
+              findChildIndexCallback: (key) {
+                final i = rows.indexWhere((r) => ValueKey(r.key) == key);
+                return i < 0 ? null : i;
+              },
               itemBuilder: (_, i) {
                 final row = rows[i];
                 final nodes = _rowNodes(row.key);
@@ -183,14 +204,14 @@ class _ArchiveRowSettingsState extends State<_ArchiveRowSettings> {
                           icon: const Icon(Icons.arrow_upward),
                           onPressed: row.continuations != null
                               ? null
-                              : () => service.moveRow(type, row.key, -1)),
+                              : () => _move(row.key, -1, nodes[2])),
                       IconButton(
                           focusNode: nodes[3],
                           tooltip: tr('Move down'),
                           icon: const Icon(Icons.arrow_downward),
                           onPressed: row.continuations != null
                               ? null
-                              : () => service.moveRow(type, row.key, 1)),
+                              : () => _move(row.key, 1, nodes[3])),
                       IconButton(
                           focusNode: nodes[4],
                           tooltip: tr('Rename row'),

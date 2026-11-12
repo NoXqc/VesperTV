@@ -3566,4 +3566,129 @@ const Map<String, String> kEs = {
   "Compact": "Compacto",
   "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
       "Compacto muestra más en pantalla. Grande agranda el texto y las filas para leer mejor. Solo para este perfil.",
+  // Remote buttons (Settings > Backup & devices > Remote)
+  "Play / Pause":
+      "Reproducir / Pausa",
+  "Stop playback":
+      "Detener la reproducción",
+  "Full screen on the playing channel":
+      "Pantalla completa en el canal actual",
+  "Previous channel":
+      "Canal anterior",
+  "Channel up":
+      "Canal +",
+  "Channel down":
+      "Canal -",
+  "Channel info":
+      "Información del canal",
+  "Live guide":
+      "Guía en directo",
+  "Next audio track":
+      "Siguiente pista de audio",
+  "Subtitles on / off":
+      "Subtítulos sí / no",
+  "Picture mode":
+      "Modo de imagen",
+  "Record this channel":
+      "Grabar este canal",
+  "Player options":
+      "Opciones del reproductor",
+  "Side drawer":
+      "Panel lateral",
+  "Last channel":
+      "Último canal",
+  "Player bar":
+      "Barra del reproductor",
+  "Nothing":
+      "Nada",
+  "Fast forward":
+      "Avance rápido",
+  "Rewind":
+      "Retroceso",
+  "Last":
+      "Último",
+  "Info":
+      "Info",
+  "Bookmark":
+      "Marcador",
+  "Assistant":
+      "Asistente",
+  "Green":
+      "Verde",
+  "Yellow":
+      "Amarillo",
+  "Input":
+      "Entrada",
+  "Not available here":
+      "No disponible aquí",
+  "This stream has one audio track.":
+      "Esta emisión solo tiene una pista de audio.",
+  "Audio: {name}":
+      "Audio: {name}",
+  "Subtitles off":
+      "Subtítulos desactivados",
+  "Subtitles on":
+      "Subtítulos activados",
+  "No subtitles in this stream":
+      "No hay subtítulos en esta emisión",
+  "Subtitles: {name}":
+      "Subtítulos: {name}",
+  "No live channel is playing.":
+      "No se está reproduciendo ningún canal en directo.",
+  "Button {key}":
+      "Botón {key}",
+  "Nothing arrived. If you pressed a button, your device keeps it for itself.":
+      "No llegó nada. Si pulsaste un botón, tu dispositivo se lo reserva.",
+  "{button}: short press":
+      "{button}: pulsación corta",
+  "{button} set. Hold it too? Open the button below.":
+      "{button} configurado. ¿También mantenerlo pulsado? Abre el botón abajo.",
+  "{button}: hold":
+      "{button}: mantener pulsado",
+  "Short press: {action}":
+      "Pulsación corta: {action}",
+  "Hold: {action}":
+      "Mantener: {action}",
+  "Forget this button":
+      "Olvidar este botón",
+  "Remote buttons":
+      "Botones del mando",
+  "Give your remote's spare buttons a job in {app}: a short press and a hold each. They work while {app} is open, for this profile on this device.":
+      "Da una función en {app} a los botones libres de tu mando: una pulsación corta y una larga cada uno. Funcionan mientras {app} está abierto, para este perfil en este dispositivo.",
+  "Press the button on your remote now...":
+      "Pulsa ahora el botón del mando...",
+  "Add a button":
+      "Añadir un botón",
+  "OK cancels":
+      "OK cancela",
+  "Then choose what it does":
+      "Después elige lo que hace",
+  "Press: {action}":
+      "Pulsar: {action}",
+  "OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.":
+      "OK, Atrás y las flechas mantienen su función. Un botón configurado aquí solo hace lo que elijas: una pulsación larga en Nada no hace nada.",
+  "Move your whole setup to another device, keep a backup of it, update VesperTV and set up your remote.":
+      "Copia toda tu configuración a otro dispositivo, guarda una copia de seguridad, actualiza VesperTV y configura tu mando.",
+  "Remote":
+      "Mando",
+  "Give spare buttons a job":
+      "Da una función a los botones libres",
+  "Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.":
+      "Pulsa un botón del mando y elige qué hacen una pulsación corta y una larga: abrir Favoritos o la guía, cambiar la pista de audio, grabar... Para este perfil en este dispositivo.",
+  "Left in the player":
+      "Izquierda en el reproductor",
+  "Right in the player":
+      "Derecha en el reproductor",
+  "Up in the player":
+      "Arriba en el reproductor",
+  "Down in the player":
+      "Abajo en el reproductor",
+  "In the full-screen player on a live channel, with nothing on screen.":
+      "En el reproductor a pantalla completa en un canal en directo, sin nada en pantalla.",
+  "Reset remote buttons":
+      "Restablecer los botones del mando",
+  "Forget every button and put the arrows back":
+      "Olvidar todos los botones y restaurar las flechas",
+  "Forget every button you set and put the player's arrows back as they were?":
+      "¿Olvidar todos los botones configurados y devolver las flechas del reproductor a como estaban?",
 };

@@ -3528,4 +3528,129 @@ const Map<String, String> kEl = {
   "Compact": "Συμπαγές",
   "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
       "Το Συμπαγές χωράει περισσότερα στην οθόνη. Το Μεγάλο μεγαλώνει το κείμενο και τις γραμμές για ευκολότερη ανάγνωση. Μόνο για αυτό το προφίλ.",
+  // Remote buttons (Settings > Backup & devices > Remote)
+  "Play / Pause":
+      "Αναπαραγωγή / Παύση",
+  "Stop playback":
+      "Διακοπή αναπαραγωγής",
+  "Full screen on the playing channel":
+      "Πλήρης οθόνη στο κανάλι που παίζει",
+  "Previous channel":
+      "Προηγούμενο κανάλι",
+  "Channel up":
+      "Κανάλι +",
+  "Channel down":
+      "Κανάλι -",
+  "Channel info":
+      "Πληροφορίες καναλιού",
+  "Live guide":
+      "Οδηγός προγράμματος",
+  "Next audio track":
+      "Επόμενο κομμάτι ήχου",
+  "Subtitles on / off":
+      "Υπότιτλοι ναι / όχι",
+  "Picture mode":
+      "Λειτουργία εικόνας",
+  "Record this channel":
+      "Εγγραφή αυτού του καναλιού",
+  "Player options":
+      "Επιλογές αναπαραγωγής",
+  "Side drawer":
+      "Πλαϊνό πάνελ",
+  "Last channel":
+      "Τελευταίο κανάλι",
+  "Player bar":
+      "Γραμμή αναπαραγωγής",
+  "Nothing":
+      "Τίποτα",
+  "Fast forward":
+      "Γρήγορη προώθηση",
+  "Rewind":
+      "Γρήγορη επιστροφή",
+  "Last":
+      "Τελευταίο",
+  "Info":
+      "Πληροφορίες",
+  "Bookmark":
+      "Σελιδοδείκτης",
+  "Assistant":
+      "Βοηθός",
+  "Green":
+      "Πράσινο",
+  "Yellow":
+      "Κίτρινο",
+  "Input":
+      "Είσοδος",
+  "Not available here":
+      "Δεν είναι διαθέσιμο εδώ",
+  "This stream has one audio track.":
+      "Αυτή η ροή έχει μόνο ένα κομμάτι ήχου.",
+  "Audio: {name}":
+      "Ήχος: {name}",
+  "Subtitles off":
+      "Υπότιτλοι ανενεργοί",
+  "Subtitles on":
+      "Υπότιτλοι ενεργοί",
+  "No subtitles in this stream":
+      "Δεν υπάρχουν υπότιτλοι σε αυτή τη ροή",
+  "Subtitles: {name}":
+      "Υπότιτλοι: {name}",
+  "No live channel is playing.":
+      "Δεν παίζει κανένα ζωντανό κανάλι.",
+  "Button {key}":
+      "Κουμπί {key}",
+  "Nothing arrived. If you pressed a button, your device keeps it for itself.":
+      "Δεν έφτασε τίποτα. Αν πατήσατε κάποιο κουμπί, η συσκευή σας το κρατά για τον εαυτό της.",
+  "{button}: short press":
+      "{button}: σύντομο πάτημα",
+  "{button} set. Hold it too? Open the button below.":
+      "Το {button} ορίστηκε. Και παρατεταμένο πάτημα; Ανοίξτε το κουμπί παρακάτω.",
+  "{button}: hold":
+      "{button}: παρατεταμένο πάτημα",
+  "Short press: {action}":
+      "Σύντομο πάτημα: {action}",
+  "Hold: {action}":
+      "Παρατεταμένο: {action}",
+  "Forget this button":
+      "Ξεχάστε αυτό το κουμπί",
+  "Remote buttons":
+      "Κουμπιά τηλεχειριστηρίου",
+  "Give your remote's spare buttons a job in {app}: a short press and a hold each. They work while {app} is open, for this profile on this device.":
+      "Δώστε μια δουλειά στο {app} στα ελεύθερα κουμπιά του τηλεχειριστηρίου: ένα σύντομο και ένα παρατεταμένο πάτημα το καθένα. Λειτουργούν όσο το {app} είναι ανοιχτό, για αυτό το προφίλ σε αυτή τη συσκευή.",
+  "Press the button on your remote now...":
+      "Πατήστε τώρα το κουμπί στο τηλεχειριστήριο...",
+  "Add a button":
+      "Προσθήκη κουμπιού",
+  "OK cancels":
+      "Το OK ακυρώνει",
+  "Then choose what it does":
+      "Μετά επιλέξτε τι κάνει",
+  "Press: {action}":
+      "Πάτημα: {action}",
+  "OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.":
+      "Το OK, το Πίσω και τα βέλη κρατούν τη δουλειά τους. Ένα κουμπί που ορίζεται εδώ κάνει μόνο ό,τι επιλέξατε: ένα παρατεταμένο πάτημα στο Τίποτα δεν κάνει τίποτα.",
+  "Move your whole setup to another device, keep a backup of it, update VesperTV and set up your remote.":
+      "Μεταφέρετε όλη τη ρύθμισή σας σε άλλη συσκευή, κρατήστε αντίγραφο ασφαλείας, ενημερώστε το VesperTV και ρυθμίστε το τηλεχειριστήριό σας.",
+  "Remote":
+      "Τηλεχειριστήριο",
+  "Give spare buttons a job":
+      "Δώστε δουλειά στα ελεύθερα κουμπιά",
+  "Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.":
+      "Πατήστε ένα κουμπί στο τηλεχειριστήριο και επιλέξτε τι κάνουν ένα σύντομο και ένα παρατεταμένο πάτημα: άνοιγμα Αγαπημένων ή οδηγού, αλλαγή κομματιού ήχου, εγγραφή... Για αυτό το προφίλ σε αυτή τη συσκευή.",
+  "Left in the player":
+      "Αριστερά στην αναπαραγωγή",
+  "Right in the player":
+      "Δεξιά στην αναπαραγωγή",
+  "Up in the player":
+      "Πάνω στην αναπαραγωγή",
+  "Down in the player":
+      "Κάτω στην αναπαραγωγή",
+  "In the full-screen player on a live channel, with nothing on screen.":
+      "Στην αναπαραγωγή πλήρους οθόνης σε ζωντανό κανάλι, χωρίς τίποτα στην οθόνη.",
+  "Reset remote buttons":
+      "Επαναφορά κουμπιών τηλεχειριστηρίου",
+  "Forget every button and put the arrows back":
+      "Ξεχάστε όλα τα κουμπιά και επαναφέρετε τα βέλη",
+  "Forget every button you set and put the player's arrows back as they were?":
+      "Να ξεχαστούν όλα τα κουμπιά και να επανέλθουν τα βέλη της αναπαραγωγής όπως ήταν;",
 };

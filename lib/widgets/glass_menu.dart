@@ -200,9 +200,32 @@ class GlassFocusFrame extends StatefulWidget {
 
 class _GlassFocusFrameState extends State<GlassFocusFrame> {
   bool _focused = false;
+  final _node =
+      FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuilt around a child that already has focus (a list row moved to
+    // another index keeps its button's node): no focus change comes, so
+    // read it once laid out, or the outline stays off until the next key
+    // (Customize Media Hub, owner 2026-11-12).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _node.hasFocus != _focused) {
+        setState(() => _focused = _node.hasFocus);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Focus(
+        focusNode: _node,
         canRequestFocus: false,
         skipTraversal: true,
         onFocusChange: (f) {

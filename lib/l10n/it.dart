@@ -3573,4 +3573,129 @@ const Map<String, String> kIt = {
   "Compact": "Compatta",
   "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
       "Compatta mostra più righe sullo schermo. Grande ingrandisce testo e righe per leggere meglio. Solo per questo profilo.",
+  // Remote buttons (Settings > Backup & devices > Remote)
+  "Play / Pause":
+      "Riproduci / Pausa",
+  "Stop playback":
+      "Interrompi la riproduzione",
+  "Full screen on the playing channel":
+      "Schermo intero sul canale in riproduzione",
+  "Previous channel":
+      "Canale precedente",
+  "Channel up":
+      "Canale +",
+  "Channel down":
+      "Canale -",
+  "Channel info":
+      "Info canale",
+  "Live guide":
+      "Guida TV",
+  "Next audio track":
+      "Traccia audio successiva",
+  "Subtitles on / off":
+      "Sottotitoli sì / no",
+  "Picture mode":
+      "Modalità immagine",
+  "Record this channel":
+      "Registra questo canale",
+  "Player options":
+      "Opzioni del lettore",
+  "Side drawer":
+      "Pannello laterale",
+  "Last channel":
+      "Ultimo canale",
+  "Player bar":
+      "Barra del lettore",
+  "Nothing":
+      "Niente",
+  "Fast forward":
+      "Avanti veloce",
+  "Rewind":
+      "Indietro veloce",
+  "Last":
+      "Ultimo",
+  "Info":
+      "Info",
+  "Bookmark":
+      "Segnalibro",
+  "Assistant":
+      "Assistente",
+  "Green":
+      "Verde",
+  "Yellow":
+      "Giallo",
+  "Input":
+      "Ingresso",
+  "Not available here":
+      "Non disponibile qui",
+  "This stream has one audio track.":
+      "Questo flusso ha una sola traccia audio.",
+  "Audio: {name}":
+      "Audio: {name}",
+  "Subtitles off":
+      "Sottotitoli disattivati",
+  "Subtitles on":
+      "Sottotitoli attivati",
+  "No subtitles in this stream":
+      "Nessun sottotitolo in questo flusso",
+  "Subtitles: {name}":
+      "Sottotitoli: {name}",
+  "No live channel is playing.":
+      "Nessun canale in diretta in riproduzione.",
+  "Button {key}":
+      "Tasto {key}",
+  "Nothing arrived. If you pressed a button, your device keeps it for itself.":
+      "Non è arrivato nulla. Se hai premuto un tasto, il tuo dispositivo lo tiene per sé.",
+  "{button}: short press":
+      "{button}: pressione breve",
+  "{button} set. Hold it too? Open the button below.":
+      "{button} impostato. Anche la pressione lunga? Apri il tasto qui sotto.",
+  "{button}: hold":
+      "{button}: pressione lunga",
+  "Short press: {action}":
+      "Pressione breve: {action}",
+  "Hold: {action}":
+      "Pressione lunga: {action}",
+  "Forget this button":
+      "Dimentica questo tasto",
+  "Remote buttons":
+      "Tasti del telecomando",
+  "Give your remote's spare buttons a job in {app}: a short press and a hold each. They work while {app} is open, for this profile on this device.":
+      "Dai un compito in {app} ai tasti liberi del telecomando: una pressione breve e una lunga ciascuno. Funzionano mentre {app} è aperto, per questo profilo su questo dispositivo.",
+  "Press the button on your remote now...":
+      "Premi ora il tasto sul telecomando...",
+  "Add a button":
+      "Aggiungi un tasto",
+  "OK cancels":
+      "OK annulla",
+  "Then choose what it does":
+      "Poi scegli cosa fa",
+  "Press: {action}":
+      "Pressione: {action}",
+  "OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.":
+      "OK, Indietro e le frecce mantengono il loro compito. Un tasto impostato qui fa solo ciò che scegli: una pressione lunga lasciata su Niente non fa nulla.",
+  "Move your whole setup to another device, keep a backup of it, update VesperTV and set up your remote.":
+      "Copia l’intera configurazione su un altro dispositivo, conservane un backup, aggiorna VesperTV e configura il telecomando.",
+  "Remote":
+      "Telecomando",
+  "Give spare buttons a job":
+      "Dai un compito ai tasti liberi",
+  "Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.":
+      "Premi un tasto del telecomando, poi scegli cosa fanno una pressione breve e una lunga: aprire i Preferiti o la guida, cambiare traccia audio, registrare... Per questo profilo su questo dispositivo.",
+  "Left in the player":
+      "Sinistra nel lettore",
+  "Right in the player":
+      "Destra nel lettore",
+  "Up in the player":
+      "Su nel lettore",
+  "Down in the player":
+      "Giù nel lettore",
+  "In the full-screen player on a live channel, with nothing on screen.":
+      "Nel lettore a schermo intero su un canale in diretta, senza nulla sullo schermo.",
+  "Reset remote buttons":
+      "Ripristina i tasti del telecomando",
+  "Forget every button and put the arrows back":
+      "Dimentica tutti i tasti e ripristina le frecce",
+  "Forget every button you set and put the player's arrows back as they were?":
+      "Dimenticare tutti i tasti impostati e riportare le frecce del lettore come prima?",
 };

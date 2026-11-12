@@ -755,6 +755,10 @@ class PlayerControls extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
+                          // Top-aligned: a tile with a value line (Buffer
+                          // "Off") is taller and, centred, sat higher than
+                          // the rest (owner photo, 2026-11-12).
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             for (final o in leadingOptions) option(o),
                             ..._actionButtons(context, playback),

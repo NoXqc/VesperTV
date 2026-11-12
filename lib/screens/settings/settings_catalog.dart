@@ -16,6 +16,7 @@ import '../../services/device_defaults.dart';
 import '../../services/launcher_channels.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
+import '../../services/remote_buttons.dart';
 import '../../services/storage_service.dart';
 import '../../services/subtitle_tracks.dart';
 import '../../services/vod_buffering.dart';
@@ -44,6 +45,7 @@ import 'playlist_editor_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
 import 'add_playlist_screen.dart';
+import 'remote_buttons_screen.dart';
 import 'remote_tips_screen.dart';
 import 'send_log_screen.dart';
 import 'sports_country_settings_screen.dart';
@@ -233,6 +235,7 @@ class SettingsCatalog {
     ('it', 'Italiano'),
     ('el', 'Ελληνικά'),
     ('de', 'Deutsch'),
+    ('pl', 'Polski'),
   ];
 
   static String languageLabel(String setting) => setting == 'auto'
@@ -1380,8 +1383,11 @@ class SettingsCatalog {
         id: 'devices',
         icon: Icons.devices,
         title: tr('Backup & devices'),
-        description: tr(
-            'Move your whole setup to another device, keep a backup of it, and update VesperTV.'),
+        description: _prefs.isTelevision
+            ? tr(
+                'Move your whole setup to another device, keep a backup of it, update VesperTV and set up your remote.')
+            : tr(
+                'Move your whole setup to another device, keep a backup of it, and update VesperTV.'),
         sections: [
           SettingsSection([
             SettingsLink(
@@ -1412,8 +1418,80 @@ class SettingsCatalog {
                 subtitle: tr('Download and install the latest release'),
                 page: (_) => const CheckUpdatesScreen()),
           ]),
+          if (_prefs.isTelevision) _remote(),
         ],
       );
+
+  /// A TV box's remote (owner, 2026-11-11: a remote is a device): its spare
+  /// buttons and the full-screen player's arrows ([RemoteButtons]).
+  SettingsSection _remote() {
+    final buttons = RemoteButtons.instance;
+    final count = buttons.bindings.length;
+    return SettingsSection(title: tr('Remote'), [
+      SettingsLink(
+          id: 'remote_buttons',
+          floating: true,
+          icon: Icons.settings_remote_outlined,
+          title: tr('Remote buttons'),
+          subtitle: tr('Give spare buttons a job'),
+          help: tr(
+              'Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.'),
+          value: count == 0 ? null : '$count',
+          page: (_) => const RemoteButtonsScreen()),
+      for (final arrow in PlayerArrow.values)
+        SettingsChoice(
+            id: 'player_arrow_${arrow.name}',
+            icon: switch (arrow) {
+              PlayerArrow.left => Icons.arrow_back,
+              PlayerArrow.right => Icons.arrow_forward,
+              PlayerArrow.up => Icons.arrow_upward,
+              PlayerArrow.down => Icons.arrow_downward,
+            },
+            title: tr(switch (arrow) {
+              PlayerArrow.left => 'Left in the player',
+              PlayerArrow.right => 'Right in the player',
+              PlayerArrow.up => 'Up in the player',
+              PlayerArrow.down => 'Down in the player',
+            }),
+            help: tr(
+                'In the full-screen player on a live channel, with nothing on screen.'),
+            options: [
+              for (final (id, _) in PlayerArrow.actions)
+                SettingsOption(id, playerArrowLabel(id),
+                    subtitle: id == arrow.defaultAction ? tr('Default') : null),
+            ],
+            selected: buttons.arrowAction(arrow),
+            onPick: (v) => _saveViewer(() => buttons.setArrow(arrow, v))),
+      if (buttons.isCustomised)
+        SettingsAction(
+            id: 'remote_reset',
+            icon: Icons.restart_alt,
+            title: tr('Reset remote buttons'),
+            subtitle: tr('Forget every button and put the arrows back'),
+            run: (c) async {
+              final ok = await showDialog<bool>(
+                context: c,
+                builder: (dialogContext) => AlertDialog(
+                  title: Text(tr('Reset remote buttons')),
+                  content: Text(tr(
+                      "Forget every button you set and put the player's arrows back as they were?")),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      child: Text(tr('Reset')),
+                    ),
+                    TextButton(
+                      autofocus: true,
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: Text(tr('Cancel')),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) await _saveViewer(buttons.reset);
+            }),
+    ]);
+  }
 
   // -------------------------------------------------------------------- help
 

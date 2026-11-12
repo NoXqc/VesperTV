@@ -186,6 +186,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (prefs.hideLiveTv || query == null) return false;
         unawaited(_openLiveGroup(query));
         return true;
+      case 'favourites':
+        // Remote buttons: the TV tab's Favourites row.
+        if (prefs.hideLiveTv) return false;
+        unawaited(_openLiveGroup(_favoritesGroupSentinel));
+        return true;
       case 'search':
         unawaited(_pushOverLiveVideo(MaterialPageRoute(
             builder: (_) =>

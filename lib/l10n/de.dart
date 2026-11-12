@@ -3469,4 +3469,129 @@ const Map<String, String> kDe = {
   "Compact": "Kompakt",
   "Compact fits more on screen. Large has bigger text and rows, easier to read. Just for this profile.":
       "Kompakt zeigt mehr auf dem Bildschirm. Groß vergrößert Text und Zeilen zum besseren Lesen. Nur für dieses Profil.",
+  // Remote buttons (Settings > Backup & devices > Remote)
+  "Play / Pause":
+      "Wiedergabe / Pause",
+  "Stop playback":
+      "Wiedergabe stoppen",
+  "Full screen on the playing channel":
+      "Vollbild auf dem laufenden Sender",
+  "Previous channel":
+      "Vorheriger Sender",
+  "Channel up":
+      "Sender +",
+  "Channel down":
+      "Sender -",
+  "Channel info":
+      "Senderinfo",
+  "Live guide":
+      "TV-Guide",
+  "Next audio track":
+      "Nächste Tonspur",
+  "Subtitles on / off":
+      "Untertitel an / aus",
+  "Picture mode":
+      "Bildmodus",
+  "Record this channel":
+      "Diesen Sender aufnehmen",
+  "Player options":
+      "Player-Optionen",
+  "Side drawer":
+      "Seitenleiste",
+  "Last channel":
+      "Letzter Sender",
+  "Player bar":
+      "Player-Leiste",
+  "Nothing":
+      "Nichts",
+  "Fast forward":
+      "Vorspulen",
+  "Rewind":
+      "Zurückspulen",
+  "Last":
+      "Letzter",
+  "Info":
+      "Info",
+  "Bookmark":
+      "Lesezeichen",
+  "Assistant":
+      "Assistent",
+  "Green":
+      "Grün",
+  "Yellow":
+      "Gelb",
+  "Input":
+      "Eingang",
+  "Not available here":
+      "Hier nicht verfügbar",
+  "This stream has one audio track.":
+      "Dieser Stream hat nur eine Tonspur.",
+  "Audio: {name}":
+      "Ton: {name}",
+  "Subtitles off":
+      "Untertitel aus",
+  "Subtitles on":
+      "Untertitel an",
+  "No subtitles in this stream":
+      "Keine Untertitel in diesem Stream",
+  "Subtitles: {name}":
+      "Untertitel: {name}",
+  "No live channel is playing.":
+      "Es läuft kein Live-Sender.",
+  "Button {key}":
+      "Taste {key}",
+  "Nothing arrived. If you pressed a button, your device keeps it for itself.":
+      "Nichts angekommen. Wenn du eine Taste gedrückt hast, behält dein Gerät sie für sich.",
+  "{button}: short press":
+      "{button}: kurz drücken",
+  "{button} set. Hold it too? Open the button below.":
+      "{button} eingestellt. Auch langes Drücken? Öffne die Taste unten.",
+  "{button}: hold":
+      "{button}: lang drücken",
+  "Short press: {action}":
+      "Kurz drücken: {action}",
+  "Hold: {action}":
+      "Lang drücken: {action}",
+  "Forget this button":
+      "Diese Taste vergessen",
+  "Remote buttons":
+      "Fernbedienungstasten",
+  "Give your remote's spare buttons a job in {app}: a short press and a hold each. They work while {app} is open, for this profile on this device.":
+      "Gib den freien Tasten deiner Fernbedienung eine Aufgabe in {app}: je ein kurzes und ein langes Drücken. Sie funktionieren, solange {app} geöffnet ist, für dieses Profil auf diesem Gerät.",
+  "Press the button on your remote now...":
+      "Drücke jetzt die Taste auf der Fernbedienung...",
+  "Add a button":
+      "Taste hinzufügen",
+  "OK cancels":
+      "OK bricht ab",
+  "Then choose what it does":
+      "Dann wähle, was sie tut",
+  "Press: {action}":
+      "Drücken: {action}",
+  "OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.":
+      "OK, Zurück und die Pfeile behalten ihre Aufgabe. Eine hier eingestellte Taste tut nur, was du wählst: langes Drücken auf Nichts tut nichts.",
+  "Move your whole setup to another device, keep a backup of it, update VesperTV and set up your remote.":
+      "Verschiebe dein gesamtes Setup auf ein anderes Gerät, sichere es, aktualisiere VesperTV und richte deine Fernbedienung ein.",
+  "Remote":
+      "Fernbedienung",
+  "Give spare buttons a job":
+      "Freien Tasten eine Aufgabe geben",
+  "Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.":
+      "Drücke eine Taste auf der Fernbedienung und wähle, was kurzes und langes Drücken tun: Favoriten oder den Guide öffnen, die Tonspur wechseln, aufnehmen... Für dieses Profil auf diesem Gerät.",
+  "Left in the player":
+      "Links im Player",
+  "Right in the player":
+      "Rechts im Player",
+  "Up in the player":
+      "Hoch im Player",
+  "Down in the player":
+      "Runter im Player",
+  "In the full-screen player on a live channel, with nothing on screen.":
+      "Im Vollbild-Player auf einem Live-Sender, wenn nichts eingeblendet ist.",
+  "Reset remote buttons":
+      "Fernbedienungstasten zurücksetzen",
+  "Forget every button and put the arrows back":
+      "Alle Tasten vergessen und die Pfeile zurücksetzen",
+  "Forget every button you set and put the player's arrows back as they were?":
+      "Alle eingestellten Tasten vergessen und die Pfeile des Players wie vorher einstellen?",
 };

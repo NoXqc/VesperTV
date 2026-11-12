@@ -145,7 +145,7 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
 Formuler Z11 Pro MAX `10.0.0.46:5555` (IP changes; was `192.168.1.46`), Fire Stick 4K Max (AFTKM) `10.0.0.26:5555` (2026-10-27; was `192.168.1.33`, USB `G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. The sidebar's bottom row is "Exit VesperTV" since 2026-11-05 (a plain full exit; it was "Disable and exit", which disabled every playlist); Back > Exit is a warm exit (`services/app_exit.dart`, moveTaskToBack). Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
 
 ## 8. Branding & website (details in `dev-notes/branding-and-site.md`)
-Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets/icon/gen_icon.py` then `dart run flutter_launcher_icons`. Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
+Brand = black + gold, gold "V" + star logo. Launcher icons + TV banner come from the rendered gold logo `assets/icon/logo_source.png` (owner, 2026-11-12): `python assets/icon/gen_from_logo.py` then `dart run flutter_launcher_icons` (`gen_icon.py` = the old drawn mark). Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
 
 ## 9. Vendored ExoPlayer plugin
 `third_party/video_player_android` is a patched copy of `video_player_android` **2.12.2** (matches
@@ -383,6 +383,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-11 - Remote buttons (main, uncommitted, test +735 on the Homatics only):** owner: assign VesperTV actions
+  to spare remote buttons + remap the full-screen player's arrows. Settings > **Backup & devices** > Remote
+  (owner: a remote is a device), TV boxes only: learn mode (press a button, pick a short press + a hold),
+  Left/Right/Up/Down in the player (drawer / last channel / CH+ / CH- / bar / nothing; defaults unchanged),
+  Reset. Per viewer, never transferred, kept by a backup. Keys are taken with
+  `FocusManager.addEarlyKeyEventHandler` (a HardwareKeyboard handler can't stop the player also acting).
+  20 actions reuse the TV home openers and Vesper AI's player tool. Analyze 16, 1901 tests. Owner tests 2026-11-12.
+  `dev-notes/remote-buttons.md`. Next build > 735.
 - **Claude, 2026-11-11 - release 1.0.65 (beta), +732 (latest):** owner said "check all branches, merge and /cutr".
   Android only; Windows stays 1.0.61, Linux 1.0.63 (+702). Merged into main: `claude/hub-collections` (Media Hub
   collections + the Settings revamp it stacks on: glass Settings rows, Media Hub sources list + Manage from phone (relay
