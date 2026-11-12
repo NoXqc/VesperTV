@@ -1417,8 +1417,29 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     );
   }
 
+  /// The splash pulse runs only while the splash shows. Left repeating, its
+  /// ticker asked for a frame at every vsync for as long as the app ran, so
+  /// every screen was redrawn ~60 times a second with nothing changing: the
+  /// Homatics' GPU stayed busy and the guide scrolled choppily (2026-11-12).
+  void _syncSplashPulse(bool splash) {
+    if (splash == _splashController.isAnimating) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (splash && !_splashController.isAnimating) {
+        _splashController.repeat(reverse: true);
+      } else if (!splash && _splashController.isAnimating) {
+        _splashController.stop();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _syncSplashPulse(_bootstrapError == null &&
+        !_ready &&
+        !_newUserPromptPending &&
+        !_syncPromptPending &&
+        !_syncing);
     if (_bootstrapError != null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,

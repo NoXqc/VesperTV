@@ -92,9 +92,12 @@ import '../utils/app_store.dart';
 /// reading as "doesn't exist"). Called from every row's `onFocusChange`
 /// rather than added once at the list level, since a `ListView` has no
 /// single hook for "one of my descendants just got focused."
+///
+/// A jump, not an animation (§10 rule): a held arrow restarted the 150 ms
+/// scroll on every row, and the groups column stuttered on the Homatics
+/// (owner, 2026-11-12).
 void _ensureVisible(BuildContext context) {
-  Scrollable.ensureVisible(context,
-      duration: const Duration(milliseconds: 150), alignment: 0.5);
+  Scrollable.ensureVisible(context, alignment: 0.5);
 }
 
 /// A 10-foot, remote-friendly alternate to [HomeScreen] for TV boxes/
@@ -371,8 +374,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (resetFavorites) {
         _selectedGroup = _favoritesGroupSentinel;
         _focusGroupKeyOnBuild = null;
-        _guideFocusedChannel = null;
-        _guideFocusedProgram = null;
+        _guideFocus.value = (null, null);
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -438,8 +440,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// sibling, not inside it. Null until the guide is first navigated,
   /// which is when [_GuideNowPanel] falls back to the playing channel's
   /// own live programme instead.
-  Channel? _guideFocusedChannel;
-  EpgProgram? _guideFocusedProgram;
+  /// The Timeline guide's highlighted channel and programme. A notifier,
+  /// not State fields: only the programme card listens. A setState here
+  /// rebuilt the whole TV home on every D-pad step in the guide (250-420 ms
+  /// frames on the Homatics, 2026-11-12).
+  final _guideFocus = ValueNotifier<(Channel?, EpgProgram?)>((null, null));
+  Channel? get _guideFocusedChannel => _guideFocus.value.$1;
+  EpgProgram? get _guideFocusedProgram => _guideFocus.value.$2;
 
   /// The "double ← for groups" hint's floating overlay — anchored to
   /// whichever poster is actually focused at the moment [_handleBrowseLeft]
@@ -1907,8 +1914,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // Otherwise the Timeline Guide's header keeps describing a program
       // from whichever group was focused before this switch, until the
       // D-pad happens to land on something in the new one.
-      _guideFocusedChannel = null;
-      _guideFocusedProgram = null;
+      _guideFocus.value = (null, null);
     });
     if (group == null) return;
     if (group == _catchupGroupSentinel || group == _recentGroupSentinel) {
@@ -2547,6 +2553,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _groupSortFocusNode.dispose();
     _playlistsRowFocusNode.dispose();
     _groupsScroll.dispose();
+    _guideFocus.dispose();
     _timelineFilterButtonFocusNode.dispose();
     _guideHoldFocus.dispose();
     _timelineFilterFieldFocusNode.dispose();
@@ -3651,7 +3658,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               // Settings redesign. Reusing the shared widget instead of a
               // second copy of the same gradient math keeps both screens in
               // sync automatically if the recipe ever changes again.
-              const Positioned.fill(child: SettingsGradientBackground()),
+              const Positioned.fill(
+                  child: RepaintBoundary(child: SettingsGradientBackground())),
               if (_fullVideo)
                 Positioned.fill(
                   child: ColoredBox(
@@ -3996,12 +4004,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               alpha: context.read<AppPreferences>().guideOverlayOpacity),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: _GuideNowPanel(
-          focusedChannel: _guideFocusedChannel,
-          focusedProgram: _guideFocusedProgram,
-          playingChannel: channel,
-          epg: epg,
-          compact: true,
+        child: ValueListenableBuilder<(Channel?, EpgProgram?)>(
+          valueListenable: _guideFocus,
+          builder: (context, focus, _) => _GuideNowPanel(
+            focusedChannel: focus.$1,
+            focusedProgram: focus.$2,
+            playingChannel: channel,
+            epg: epg,
+            compact: true,
+          ),
         ),
       );
 
@@ -4041,9 +4052,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(1);
           },
-          child: _uiText(isBrowseTab
-              ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
-              : _buildGroupsColumn(playlist, collapsed: collapsed)),
+          // Own layer: a step in the groups repaints only this column, not
+          // the guide and background beside it (choppy groups on the
+          // Homatics' small GPU, 2026-11-12). Same for the content column.
+          child: RepaintBoundary(
+            child: _uiText(isBrowseTab
+                ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
+                : _buildGroupsColumn(playlist, collapsed: collapsed)),
+          ),
         ),
       );
 
@@ -4065,9 +4081,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             if (has) _onColumnFocus(2);
           },
           // Movies / TV Shows posters keep their size: fixed cards.
-          child: isBrowseTab
-              ? _buildMainArea(playlist, epg)
-              : _uiText(_buildLiveRegion(playlist, epg)),
+          child: RepaintBoundary(
+            child: isBrowseTab
+                ? _buildMainArea(playlist, epg)
+                : _uiText(_buildLiveRegion(playlist, epg)),
+          ),
         ),
       );
 
@@ -5231,10 +5249,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   // this app has spent this whole session getting stable.
 
   void _onGuideFocusChanged(Channel channel, EpgProgram? program) {
-    setState(() {
-      _guideFocusedChannel = channel;
-      _guideFocusedProgram = program;
-    });
+    _guideFocus.value = (channel, program);
     _scheduleFocusPreview(
         channel, () => _guideFocusedChannel?.id == channel.id);
   }
@@ -5678,11 +5693,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         // empty so the picture shows.
                         child: _fullVideo
                             ? const SizedBox.shrink()
-                            : _GuideNowPanel(
-                                focusedChannel: _guideFocusedChannel,
-                                focusedProgram: _guideFocusedProgram,
-                                playingChannel: channel,
-                                epg: epg,
+                            : ValueListenableBuilder<(Channel?, EpgProgram?)>(
+                                valueListenable: _guideFocus,
+                                builder: (context, focus, _) => _GuideNowPanel(
+                                  focusedChannel: focus.$1,
+                                  focusedProgram: focus.$2,
+                                  playingChannel: channel,
+                                  epg: epg,
+                                ),
                               ),
                       ),
                     ],

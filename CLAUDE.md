@@ -261,6 +261,18 @@ inaccurate. Recoverable from commit c18de49.)
   scroll uses `jumpTo`, never `animateTo` (caused an ANR-length freeze on a big list). Pause periodic
   timers when covered (`RouteAware`). Remote "hold Select" = `HoldToActivate`; `InkWell.onLongPress`
   is touch-only.
+- **Frame cost on weak boxes (2026-11-12, Homatics +740..+745, measured with the `Frames:` Send-log
+  line: 100+ frames or 5+ frames of 33 ms in 10 s).** (1) Never leave a repeating AnimationController
+  running when its widget is gone: the splash pulse ticked for the app's whole life and redrew every
+  screen ~60 times a second with nothing changing. (2) A Theme built in `build` must come back equal:
+  `RefinedFinish.apply` memoizes (its button styles hold closures), or `Theme` rebuilds everything under
+  it (a 1.2 s frame per group change). (3) Per-D-pad-step state (guide focus `_guideFocus`, live list
+  `_liveListFocused`) lives in a ValueNotifier, never a TvHomeScreen setState. (4) The transparent
+  Flutter view of the native video surface stays `RenderMode.surface` (`MainActivity.getRenderMode`):
+  Flutter's default texture mode drew every frame twice (Android's own frames 61 ms). (5) Side-column
+  scrolls jump (`_ensureVisible`); columns and the background are separate RepaintBoundaries. Still
+  open: Timeline guide row logos decode at full size (no memCacheWidth); the columns' width animation
+  re-lays out everything per frame.
 - **Fire OS's on-screen keyboard swallows the physical Back button — known, unfixable limitation.**
   Confirmed via a raw `getevent` capture (clean `KEY_BACK`) plus Flutter-side logging of
   `logicalKey.keyId`: pressing Back on a Fire TV remote while the on-screen keyboard has D-pad

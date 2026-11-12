@@ -1686,43 +1686,90 @@ class PlaylistManager extends ChangeNotifier {
   Map<String, ChannelNameEvent> channelNameEventsByEpgId() {
     final key = _liveListsKey();
     final at = _nameEventsAt;
-    if (key == _nameEventsKey &&
-        at != null &&
-        DateTime.now().difference(at) < const Duration(minutes: 5)) {
+    if (key == _nameEventsKey && at != null) {
+      // Older than 5 minutes: keep answering with it while the names are
+      // read again in the background, a slice at a time. Read here, on the
+      // main thread, the pass took 339 ms and stalled a group change on the
+      // Homatics (2026-11-12).
+      if (DateTime.now().difference(at) >= const Duration(minutes: 5)) {
+        unawaited(_refreshNameEvents(key));
+      }
       return _nameEvents;
     }
+    final out = <String, ChannelNameEvent>{};
     final idle = <String>{};
-    _nameEvents = PerfDiagnostics.timedSync('nameEvents', () {
+    PerfDiagnostics.timedSync('nameEvents', () {
       final now = DateTime.now();
-      final out = <String, ChannelNameEvent>{};
       for (final session in _sessions) {
         if (!session.profile.enabled) continue;
-        for (final c
-            in (session.isXtream ? session.liveChannels : session.channels)) {
-          final name = c.name;
-          final hasAt = name.contains('@');
-          if (!hasAt && !mayBeIdleEventChannelName(name)) continue;
-          if (!c.isLive ||
-              session.hiddenGroups.contains(session.liveGroupOf(c)) ||
-              session.isLiveHidden(c.rawId)) {
-            continue;
-          }
-          final event = hasAt ? parseChannelNameEvent(name, now: now) : null;
-          if (event != null) {
-            out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
-          } else if (isIdleEventChannelName(name)) {
-            idle.add(normalizeEpgId(c.epgId));
-          }
+        final channels =
+            session.isXtream ? session.liveChannels : session.channels;
+        for (var i = 0; i < channels.length; i++) {
+          _readNameEvent(session, channels[i], now, out, idle);
         }
       }
-      return out;
     });
+    _setNameEvents(key, out, idle);
+    return _nameEvents;
+  }
+
+  bool _nameEventsRefreshing = false;
+
+  /// [channelNameEventsByEpgId]'s pass, yielding every 2000 channels so
+  /// frames keep coming. Dropped if a live list changes meanwhile (the next
+  /// read then does a fresh pass).
+  Future<void> _refreshNameEvents(String key) async {
+    if (_nameEventsRefreshing) return;
+    _nameEventsRefreshing = true;
+    try {
+      final now = DateTime.now();
+      final out = <String, ChannelNameEvent>{};
+      final idle = <String>{};
+      var n = 0;
+      for (final session in List.of(_sessions)) {
+        if (!session.profile.enabled) continue;
+        final channels =
+            session.isXtream ? session.liveChannels : session.channels;
+        for (var i = 0; i < channels.length; i++) {
+          if (++n % 2000 == 0) {
+            await Future<void>.delayed(Duration.zero);
+            if (_liveListsKey() != key) return;
+          }
+          _readNameEvent(session, channels[i], now, out, idle);
+        }
+      }
+      if (_liveListsKey() == key) _setNameEvents(key, out, idle);
+    } finally {
+      _nameEventsRefreshing = false;
+    }
+  }
+
+  void _readNameEvent(PlaylistSession session, Channel c, DateTime now,
+      Map<String, ChannelNameEvent> out, Set<String> idle) {
+    final name = c.name;
+    final hasAt = name.contains('@');
+    if (!hasAt && !mayBeIdleEventChannelName(name)) return;
+    if (!c.isLive ||
+        session.hiddenGroups.contains(session.liveGroupOf(c)) ||
+        session.isLiveHidden(c.rawId)) {
+      return;
+    }
+    final event = hasAt ? parseChannelNameEvent(name, now: now) : null;
+    if (event != null) {
+      out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+    } else if (isIdleEventChannelName(name)) {
+      idle.add(normalizeEpgId(c.epgId));
+    }
+  }
+
+  void _setNameEvents(
+      String key, Map<String, ChannelNameEvent> events, Set<String> idle) {
+    _nameEvents = events;
     // Kept identical while unchanged: EpgService drops its merged rows
     // whenever a new set comes back.
     if (!setEquals(idle, _idleEventIds)) _idleEventIds = idle;
     _nameEventsKey = key;
     _nameEventsAt = DateTime.now();
-    return _nameEvents;
   }
 
   /// Normalized EPG ids of visible idle event slots (`TSN+ 07: NO EVENT`):
