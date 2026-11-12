@@ -3691,4 +3691,15 @@ const Map<String, String> kEs = {
       "Olvidar todos los botones y restaurar las flechas",
   "Forget every button you set and put the player's arrows back as they were?":
       "¿Olvidar todos los botones configurados y devolver las flechas del reproductor a como estaban?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Una app de IA quiere añadir una guía de TV a {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Una app de IA quiere quitar una guía de TV de {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Una app de IA quiere vincular {count} canales a la guía de TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Una app de IA quiere desvincular {count} canales de la guía de TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Una app de IA quiere deshacer su cambio en la guía de TV.",
 };

@@ -248,7 +248,8 @@ class VesperAi {
       'viewer quality, country and language preferences); when they then pick one '
       '("play it on RDS"), play the ref of that channel. Spoken numbers '
       'are fine in searches ("TSN one" finds TSN 1). Before editing a '
-      'playlist, read vesper_help topic "playlist_editor".';
+      'playlist, read vesper_help topic "playlist_editor"; before filling '
+      'in missing TV guide data, topic "epg_matching".';
 
   /// The words for a built-in command's result.
   @visibleForTesting

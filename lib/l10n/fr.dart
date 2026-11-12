@@ -3704,4 +3704,15 @@ const Map<String, String> kFr = {
       "Oublier tous les boutons et remettre les flèches",
   "Forget every button you set and put the player's arrows back as they were?":
       "Oublier tous les boutons réglés et remettre les flèches du lecteur comme avant?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Une app d'IA veut ajouter un guide TV à {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Une app d'IA veut retirer un guide TV de {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Une app d'IA veut associer {count} chaînes au guide TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Une app d'IA veut dissocier {count} chaînes du guide TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Une app d'IA veut annuler sa modification du guide TV.",
 };

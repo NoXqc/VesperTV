@@ -3698,4 +3698,15 @@ const Map<String, String> kIt = {
       "Dimentica tutti i tasti e ripristina le frecce",
   "Forget every button you set and put the player's arrows back as they were?":
       "Dimenticare tutti i tasti impostati e riportare le frecce del lettore come prima?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Un'app di IA vuole aggiungere una guida TV a {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Un'app di IA vuole rimuovere una guida TV da {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Un'app di IA vuole collegare {count} canali alla guida TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Un'app di IA vuole scollegare {count} canali dalla guida TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Un'app di IA vuole annullare la sua modifica alla guida TV.",
 };

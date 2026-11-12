@@ -714,6 +714,11 @@ class StorageService {
   Future<void> setAiEditorUndo(String json) =>
       _prefs.setString(_vk(AppConstants.keyAiEditorUndo), json);
 
+  /// See [AppConstants.keyAiGuideUndo].
+  String? getAiGuideUndo() => _prefs.getString(AppConstants.keyAiGuideUndo);
+  Future<void> setAiGuideUndo(String json) =>
+      _prefs.setString(AppConstants.keyAiGuideUndo, json);
+
   bool getAiConfirmRemotePlay() =>
       _prefs.getBool(AppConstants.keyAiConfirmRemotePlay) ?? true;
   Future<void> setAiConfirmRemotePlay(bool value) =>

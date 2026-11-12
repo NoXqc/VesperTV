@@ -3594,4 +3594,15 @@ const Map<String, String> kDe = {
       "Alle Tasten vergessen und die Pfeile zurücksetzen",
   "Forget every button you set and put the player's arrows back as they were?":
       "Alle eingestellten Tasten vergessen und die Pfeile des Players wie vorher einstellen?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Eine KI-App möchte {playlist} einen TV-Guide hinzufügen.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Eine KI-App möchte einen TV-Guide aus {playlist} entfernen.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Eine KI-App möchte {count} Sender mit dem TV-Guide verknüpfen.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Eine KI-App möchte die Verknüpfung von {count} Sendern mit dem TV-Guide lösen.",
+  "An AI app wants to undo its TV guide change.":
+      "Eine KI-App möchte ihre Änderung am TV-Guide rückgängig machen.",
 };

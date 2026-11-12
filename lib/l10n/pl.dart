@@ -3284,4 +3284,15 @@ const Map<String, String> kPl = {
       "{n} profile",
   "{n} favorites#few":
       "{n} ulubione",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Aplikacja AI chce dodać przewodnik TV do {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Aplikacja AI chce usunąć przewodnik TV z {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Aplikacja AI chce połączyć kanały z przewodnikiem TV ({count}).",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Aplikacja AI chce odłączyć kanały od przewodnika TV ({count}).",
+  "An AI app wants to undo its TV guide change.":
+      "Aplikacja AI chce cofnąć swoją zmianę w przewodniku TV.",
 };

@@ -3653,4 +3653,15 @@ const Map<String, String> kEl = {
       "Ξεχάστε όλα τα κουμπιά και επαναφέρετε τα βέλη",
   "Forget every button you set and put the player's arrows back as they were?":
       "Να ξεχαστούν όλα τα κουμπιά και να επανέλθουν τα βέλη της αναπαραγωγής όπως ήταν;",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Μια εφαρμογή AI θέλει να προσθέσει έναν οδηγό TV στο {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Μια εφαρμογή AI θέλει να αφαιρέσει έναν οδηγό TV από το {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Μια εφαρμογή AI θέλει να συνδέσει {count} κανάλια με τον οδηγό TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Μια εφαρμογή AI θέλει να αποσυνδέσει {count} κανάλια από τον οδηγό TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Μια εφαρμογή AI θέλει να αναιρέσει την αλλαγή της στον οδηγό TV.",
 };
