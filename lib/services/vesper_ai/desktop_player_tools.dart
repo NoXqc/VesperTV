@@ -314,7 +314,7 @@ Future<Map<String, Object?>> _desktopSetSubtitles(VesperToolbox box,
         kind: track == null ? null : 'embedded',
         lang: track?.language,
         label: track?.title);
-    await player.setSubtitleTrack(track ?? mk.SubtitleTrack.no());
+    await setDesktopSubtitle(player, track);
     return {
       'done': track == null
           ? 'subtitles off'

@@ -24,6 +24,7 @@ import '../audio_track_preferences.dart';
 import '../channel_copy_fallback.dart';
 import '../desktop_audio.dart';
 import '../desktop_player_control.dart';
+import '../desktop_stream_setup.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
 import '../playlist_edits.dart';

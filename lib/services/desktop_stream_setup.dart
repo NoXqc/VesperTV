@@ -166,12 +166,37 @@ void configureDesktopStreamPlayer(Player player, String tag) {
     native.setProperty('cache-on-disk', 'no');
   }
   native.setProperty('user-agent', kDesktopStreamUserAgent);
+  // Broadcast closed captions (EIA-608 inside the video, like Android's CC
+  // track): listed in the Subtitles menu from the start. mpv marks the
+  // track default and would show it by itself; it stays off until the
+  // viewer picks it ([desktopCaptionsWanted]), then follows them on zaps.
+  native.setProperty('sub-create-cc-track', 'yes');
+  player.stream.track.listen((t) {
+    if (isClosedCaptionTrack(t.subtitle) &&
+        desktopCaptionsWanted[player] != true) {
+      unawaited(player.setSubtitleTrack(SubtitleTrack.no()));
+    }
+  });
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
   player.stream.log.listen((log) {
     if (log.level == 'error' || log.level == 'fatal') {
       debugPrint('DesktopPlayer[$tag] mpv ${log.prefix}: ${log.text.trim()}');
     }
   });
+}
+
+/// The viewer picked the closed captions track on this player (set by the
+/// Subtitles menu and Vesper's subtitle command).
+final desktopCaptionsWanted = Expando<bool>('desktopCaptionsWanted');
+
+/// mpv's closed captions track ([configureDesktopStreamPlayer]).
+bool isClosedCaptionTrack(SubtitleTrack? t) =>
+    t?.codec?.toLowerCase() == 'eia_608';
+
+/// Shows [track] (null = off) and remembers whether captions were wanted.
+Future<void> setDesktopSubtitle(Player player, SubtitleTrack? track) {
+  desktopCaptionsWanted[player] = isClosedCaptionTrack(track);
+  return player.setSubtitleTrack(track ?? SubtitleTrack.no());
 }
 
 /// Opens [channel] on [player] the way every Windows player does: the
