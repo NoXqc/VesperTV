@@ -25,6 +25,7 @@ import '../channel_copy_fallback.dart';
 import '../channel_name_events.dart';
 import '../desktop_audio.dart';
 import '../desktop_player_control.dart';
+import '../desktop_stream_setup.dart';
 import '../epg_service.dart';
 import '../guide_link_log.dart';
 import '../guide_matching.dart';

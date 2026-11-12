@@ -213,6 +213,13 @@ reads it). The format waits for that frame like the TS reader's. The wrapper mus
 factory's subtitle setters or MKV subtitles break. TrueHD too (owner, 2026-11-09): the first frame's
 major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as MediaInfo reads it)
 = codecs `truehd-atmos`, which `VideoPlayer.audioCodec` passes to Dart. `MatroskaAtmosTest` (12).
+Unreleased (2026-11-12, `claude/live-subtitles`): **`SubtitleBridge` picture subtitles** — DVB (European live
+channels), PGS and VobSub tracks are listed (`image`) and their bitmap cues go to Flutter as PNG bytes + place
+(`images` in the cue event; `SubtitleOverlay._pictures`). `mimeOf`: subtitles parsed during extraction say
+`application/x-media3-cues` with the real format in `codecs`. **`AudioTap.java`** (EventChannel
+`vespertv/audio_tap`): a `TeeAudioProcessor` in the platform-view player's `DefaultAudioSink` (both builders)
+sends the decoded sound as 16 kHz mono 16-bit chunks while Flutter listens (automatic live subtitles,
+`dev-notes/auto-subtitles.md`); passthrough sound never reaches it, texture players have none.
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 

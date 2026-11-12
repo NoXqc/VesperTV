@@ -3702,4 +3702,27 @@ const Map<String, String> kEs = {
       "Una app de IA quiere desvincular {count} canales de la guía de TV.",
   "An AI app wants to undo its TV guide change.":
       "Una app de IA quiere deshacer su cambio en la guía de TV.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Subtítulos automáticos (beta)",
+  "Written from what is said, on this TV":
+      "Escritos a partir de lo que se dice, en este televisor",
+  "Download {size} MB once":
+      "Descargar {size} MB una vez",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "Los subtítulos automáticos necesitan el sonido decodificado: desactiva el sonido envolvente directo (Ajustes > Reproducción).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Subtítulos automáticos activados para este canal. Las palabras aparecen uno o dos segundos después de decirse.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Este televisor escucha el canal y escribe lo que se dice, con uno o dos segundos de retraso. No se envía nada a ningún sitio. Necesita una descarga única de {size} MB. Habrá errores con música, multitudes y habla rápida; los aparatos menos potentes pueden retrasarse.",
+  "The download did not work. Check the connection and try again.":
+      "La descarga no funcionó. Comprueba la conexión e inténtalo de nuevo.",
+  "Downloading…":
+      "Descargando…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Para canales en directo sin subtítulos: en el reproductor, Subtítulos > Subtítulos automáticos. Este televisor escribe lo que se dice a partir del sonido; no se envía nada a ningún sitio. Aquí: libera el espacio de sus modelos de voz.",
+  "No speech model is downloaded.":
+      "No hay ningún modelo de voz descargado.",
+  "Downloaded: {languages} ({size} MB).":
+      "Descargado: {languages} ({size} MB).",
 };

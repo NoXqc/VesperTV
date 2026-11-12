@@ -3295,4 +3295,27 @@ const Map<String, String> kPl = {
       "Aplikacja AI chce odłączyć kanały od przewodnika TV ({count}).",
   "An AI app wants to undo its TV guide change.":
       "Aplikacja AI chce cofnąć swoją zmianę w przewodniku TV.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Napisy automatyczne (beta)",
+  "Written from what is said, on this TV":
+      "Tworzone z tego, co mówią, na tym telewizorze",
+  "Download {size} MB once":
+      "Pobierz {size} MB jednorazowo",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "Napisy automatyczne wymagają zdekodowanego dźwięku: wyłącz przekazywanie dźwięku przestrzennego (Ustawienia > Odtwarzanie).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Napisy automatyczne są włączone dla tego kanału. Słowa pojawiają się sekundę lub dwie po ich wypowiedzeniu.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Ten telewizor słucha kanału i zapisuje to, co mówią, z sekundą lub dwiema opóźnienia. Nic nie jest nigdzie wysyłane. Potrzebne jest jednorazowe pobranie {size} MB. Spodziewaj się błędów przy muzyce, tłumie i szybkiej mowie; słabsze urządzenia mogą nie nadążać.",
+  "The download did not work. Check the connection and try again.":
+      "Pobieranie się nie powiodło. Sprawdź połączenie i spróbuj ponownie.",
+  "Downloading…":
+      "Pobieranie…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Dla kanałów na żywo bez napisów: w odtwarzaczu Napisy > Napisy automatyczne. Telewizor zapisuje z dźwięku to, co mówią; nic nie jest wysyłane. Tutaj: zwolnij miejsce zajmowane przez modele mowy.",
+  "No speech model is downloaded.":
+      "Nie pobrano żadnego modelu mowy.",
+  "Downloaded: {languages} ({size} MB).":
+      "Pobrano: {languages} ({size} MB).",
 };

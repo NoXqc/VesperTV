@@ -860,6 +860,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
+  sherpa_onnx:
+    dependency: "direct main"
+    description:
+      path: "third_party/sherpa_onnx_dart"
+      relative: true
+    source: path
+    version: "2.0.1+vespertv"
   sky_engine:
     dependency: transitive
     description: flutter

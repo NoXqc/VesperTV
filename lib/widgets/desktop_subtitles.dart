@@ -10,6 +10,7 @@ import '../models/channel.dart';
 import '../services/addon_service.dart';
 import '../services/app_preferences.dart';
 import '../services/storage_service.dart';
+import '../services/desktop_stream_setup.dart';
 import '../services/subtitle_tracks.dart';
 import 'tv_menu_tile.dart';
 
@@ -167,6 +168,9 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
   }
 
   String _trackLabel(mk.SubtitleTrack t, int i) {
+    if (isClosedCaptionTrack(t)) {
+      return tr('Closed captions (CC) — if the channel broadcasts them');
+    }
     final label = t.title?.trim() ?? '';
     final name = languageName(t.language);
     return label.isNotEmpty
@@ -301,7 +305,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
         kind: track == null ? null : 'embedded',
         lang: track?.language,
         label: track?.title));
-    await _player.setSubtitleTrack(track ?? mk.SubtitleTrack.no());
+    await setDesktopSubtitle(_player, track);
     if (mounted) setState(() {});
   }
 

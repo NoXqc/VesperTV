@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.65+739
+version: 1.0.65+740
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -87,6 +87,10 @@ dependencies:
   cryptography: ^2.9.0
   flutter_localizations:
     sdk: flutter
+  # Automatic live subtitles: sherpa-onnx's Dart bindings only; the native
+  # libraries are downloaded on demand (third_party/sherpa_onnx_dart).
+  sherpa_onnx:
+    path: third_party/sherpa_onnx_dart
 
 dev_dependencies:
   flutter_test:

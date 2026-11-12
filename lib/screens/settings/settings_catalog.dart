@@ -9,6 +9,7 @@ import '../../l10n/l10n.dart';
 import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/audio_delay.dart';
+import '../../services/auto_subtitles.dart';
 import '../../services/backup_service.dart';
 import '../../services/desktop_mini_player.dart';
 import '../../services/desktop_stream_setup.dart';
@@ -662,6 +663,42 @@ class SettingsCatalog {
   bool _isPhone(AppPreferences prefs) =>
       !prefs.isTelevision && !isDesktopTarget;
 
+  /// What the automatic subtitles' speech models take, and Delete.
+  Future<void> _autoSubtitlesStorage(BuildContext context) async {
+    final (languages, bytes) = await AutoSubtitles.instance.downloaded();
+    if (!context.mounted) return;
+    final delete = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(tr('Automatic subtitles (beta)'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(
+          languages.isEmpty && bytes == 0
+              ? tr('No speech model is downloaded.')
+              : tr('Downloaded: {languages} ({size} MB).', {
+                  'languages': languages.isEmpty
+                      ? '-'
+                      : languages.map(languageName).join(', '),
+                  'size': (bytes / 1000000).ceil(),
+                }),
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          if (bytes > 0)
+            TextButton(
+                onPressed: () => Navigator.of(dialog).pop(true),
+                child: Text(tr('Delete'))),
+          TextButton(
+              autofocus: true,
+              onPressed: () => Navigator.of(dialog).pop(false),
+              child: Text(tr('Close'))),
+        ],
+      ),
+    );
+    if (delete == true) await AutoSubtitles.instance.deleteAll();
+  }
+
   /// Back to home first: main.dart remounts home on a language change, but
   /// routes already pushed above it would keep their old-language strings.
   Future<void> _setLanguage(String value) async {
@@ -716,6 +753,14 @@ class SettingsCatalog {
                 selected: subtitles,
                 onPick: (v) => _saveViewer(
                     () => _storage.setPreferredSubtitleLanguage(v))),
+            if (AutoSubtitles.supported)
+              SettingsAction(
+                  id: 'auto_subtitles',
+                  icon: Icons.hearing,
+                  title: tr('Automatic subtitles (beta)'),
+                  help: tr(
+                      'For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.'),
+                  run: _autoSubtitlesStorage),
             SettingsAction(
                 id: 'audio_delay',
                 icon: Icons.av_timer,

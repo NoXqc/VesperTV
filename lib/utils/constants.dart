@@ -359,6 +359,10 @@ class AppConstants {
   /// undo (`GuideLinkLog`). Device-wide like the links themselves.
   static const String keyAiGuideUndo = 'vesper_ai_dev_guide_undo';
 
+  /// Automatic live subtitles turned on per channel (composite channel id ->
+  /// language, `AutoSubtitles`). Device-only: the speech models are too.
+  static const String keyAutoSubtitles = 'vesper_auto_subtitles';
+
   /// The viewer's watch list (per profile; Vesper / AI apps fill it).
   static const String keyVesperWatchList = 'vesper_watchlist';
 

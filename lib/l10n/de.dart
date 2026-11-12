@@ -3605,4 +3605,27 @@ const Map<String, String> kDe = {
       "Eine KI-App möchte die Verknüpfung von {count} Sendern mit dem TV-Guide lösen.",
   "An AI app wants to undo its TV guide change.":
       "Eine KI-App möchte ihre Änderung am TV-Guide rückgängig machen.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Automatische Untertitel (Beta)",
+  "Written from what is said, on this TV":
+      "Aus dem Gesprochenen geschrieben, auf diesem Fernseher",
+  "Download {size} MB once":
+      "Einmalig {size} MB herunterladen",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "Automatische Untertitel brauchen dekodierten Ton: Surround-Passthrough ausschalten (Einstellungen > Wiedergabe).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Automatische Untertitel sind für diesen Sender an. Die Wörter erscheinen ein bis zwei Sekunden nach dem Sprechen.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Dieser Fernseher hört den Sender ab und schreibt mit, was gesagt wird, ein bis zwei Sekunden verzögert. Nichts wird irgendwohin gesendet. Einmaliger Download von {size} MB nötig. Fehler sind bei Musik, Publikum und schnellem Sprechen zu erwarten; schwächere Boxen können zurückfallen.",
+  "The download did not work. Check the connection and try again.":
+      "Der Download hat nicht geklappt. Verbindung prüfen und erneut versuchen.",
+  "Downloading…":
+      "Wird heruntergeladen…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Für Live-Sender ohne Untertitel: im Player Untertitel > Automatische Untertitel. Dieser Fernseher schreibt aus dem Ton mit, was gesagt wird; nichts wird gesendet. Hier: den Platz der Sprachmodelle freigeben.",
+  "No speech model is downloaded.":
+      "Kein Sprachmodell heruntergeladen.",
+  "Downloaded: {languages} ({size} MB).":
+      "Heruntergeladen: {languages} ({size} MB).",
 };

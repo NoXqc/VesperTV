@@ -719,6 +719,30 @@ class StorageService {
   Future<void> setAiGuideUndo(String json) =>
       _prefs.setString(AppConstants.keyAiGuideUndo, json);
 
+  Map<String, dynamic> _autoSubtitles() {
+    try {
+      final raw = _prefs.getString(AppConstants.keyAutoSubtitles);
+      final map = raw == null ? null : jsonDecode(raw);
+      return map is Map<String, dynamic> ? map : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// The automatic subtitles language turned on for [channelId], or null.
+  String? getAutoSubtitles(String channelId) =>
+      _autoSubtitles()[channelId] as String?;
+
+  /// [language] null = off for that channel. Keeps the latest 300 channels.
+  Future<void> setAutoSubtitles(String channelId, String? language) async {
+    final map = _autoSubtitles()..remove(channelId);
+    if (language != null) map[channelId] = language;
+    while (map.length > 300) {
+      map.remove(map.keys.first);
+    }
+    await _prefs.setString(AppConstants.keyAutoSubtitles, jsonEncode(map));
+  }
+
   bool getAiConfirmRemotePlay() =>
       _prefs.getBool(AppConstants.keyAiConfirmRemotePlay) ?? true;
   Future<void> setAiConfirmRemotePlay(bool value) =>

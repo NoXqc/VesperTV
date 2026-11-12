@@ -9,6 +9,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
+import '../services/auto_subtitles.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
@@ -1945,6 +1946,9 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
 
   AddonService get _addons => AddonService(context.read<StorageService>());
 
+  /// Live channels can get automatic subtitles from their sound.
+  bool get _canAuto => AutoSubtitles.supported && (_channel?.isLive ?? false);
+
   /// Movies/episodes can get subtitles from an add-on (Settings > Add-ons).
   bool get _canSearchOnline {
     final c = _channel;
@@ -2061,11 +2065,15 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     if (!mounted) return;
     setState(() => _tracks = tracks);
     final online = _canSearchOnline;
-    if (tracks.isEmpty && !online) return;
+    final auto = _canAuto;
+    if (tracks.isEmpty && !online && !auto) return;
+    final autoLanguage = AutoSubtitles.instance.active.value;
     final external = SubtitleTracks.externalFor.value == id
         ? SubtitleTracks.externalLabel[id]
         : null;
-    final anySelected = external != null || tracks.any((t) => t.selected);
+    final anySelected = external != null ||
+        autoLanguage != null ||
+        tracks.any((t) => t.selected);
     final remembered = online
         ? context.read<StorageService>().getOnlineSubtitleLangs()
         : const <String>[];
@@ -2088,9 +2096,18 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               result: 'keep'),
         for (final t in tracks)
           _option(sheet,
-              selected: external == null && t.selected,
+              selected: external == null && autoLanguage == null && t.selected,
               title: _trackLabel(t),
               result: t),
+        if (auto)
+          _option(sheet,
+              selected: autoLanguage != null,
+              icon: Icons.hearing,
+              title: tr('Automatic subtitles (beta)'),
+              subtitle: autoLanguage == null
+                  ? tr('Written from what is said, on this TV')
+                  : languageName(autoLanguage),
+              result: 'auto'),
         // Languages picked online before, one press each (owner,
         // 2026-10-18): the first match in that language for this title.
         if (online)
@@ -2107,7 +2124,8 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               selected: false,
               icon: Icons.cloud_download_outlined,
               title: tr('Search online subtitles'),
-              subtitle: tr('From your add-ons (Settings > Playlists & sources > Online subtitles)'),
+              subtitle: tr(
+                  'From your add-ons (Settings > Playlists & sources > Online subtitles)'),
               result: 'online'),
         _option(sheet,
             selected: false,
@@ -2122,8 +2140,12 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     if (chosen == 'size') return _pickSize();
     if (chosen == 'preferred') return _pickPreferred();
     if (chosen == 'online') return _searchOnline();
+    if (chosen == 'auto') return _pickAuto();
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is SubtitleTrack ? chosen : null;
+    // A track or Off replaces automatic subtitles on this channel.
+    if (auto) await _setAuto(null);
+    if (!mounted) return;
     // An episode: the choice carries on to the rest of the series; Off
     // forgets it (SubtitleTracks.rememberForSeries).
     unawaited(SubtitleTracks.rememberForSeries(
@@ -2138,6 +2160,137 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     } catch (_) {
       // The stream changed underneath: nothing to select any more.
     }
+  }
+
+  /// Automatic subtitles for this live channel: Off or a language. A
+  /// language not on the TV yet is downloaded first (asked, with its size).
+  Future<void> _pickAuto() async {
+    final channel = _channel;
+    if (channel == null) return;
+    final current = AutoSubtitles.instance.active.value;
+    final sizes = {
+      for (final m in autoSubtitleModels)
+        m.language: await AutoSubtitles.instance.downloadSize(m.language)
+    };
+    if (!mounted) return;
+    final picked = await _sheet<String>(
+      tr('Automatic subtitles (beta)'),
+      (sheet) => [
+        _option(sheet,
+            selected: current == null, title: tr('Off'), result: 'off'),
+        for (final m in autoSubtitleModels)
+          _option(sheet,
+              selected: current == m.language,
+              title: languageName(m.language),
+              subtitle: sizes[m.language]! > 0
+                  ? tr('Download {size} MB once', {'size': sizes[m.language]})
+                  : null,
+              result: m.language),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    if (picked == 'off') return _setAuto(null);
+    final messenger = ScaffoldMessenger.of(context);
+    if (context.read<AppPreferences>().audioPassthrough) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(tr(
+              'Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).'))));
+      return;
+    }
+    final size = sizes[picked]!;
+    if (size > 0) {
+      final ok = await _confirmAutoDownload(size);
+      if (ok != true || !mounted) return;
+      final done = await _downloadAuto(picked);
+      if (done != true || !mounted) return;
+    }
+    await _setAuto(picked);
+    messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text(tr(
+            'Automatic subtitles are on for this channel. Words show a second or two after they are said.'))));
+  }
+
+  /// Turns automatic subtitles on ([language]) or off (null) for this
+  /// channel, remembered; an embedded track or a downloaded file goes off.
+  Future<void> _setAuto(String? language) async {
+    final channel = _channel;
+    if (channel == null) return;
+    final storage = context.read<StorageService>();
+    await storage.setAutoSubtitles(channel.id, language);
+    if (language == null) {
+      await AutoSubtitles.instance.stop();
+      return;
+    }
+    try {
+      await SubtitleTracks.clearExternal(widget.controller);
+      await SubtitleTracks.select(_playerId, null);
+    } catch (_) {}
+    await AutoSubtitles.instance.start(language);
+  }
+
+  Future<bool?> _confirmAutoDownload(int size) => showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(tr('Automatic subtitles (beta)'),
+              style: const TextStyle(color: Colors.white)),
+          content: Text(
+            tr('This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.',
+                {'size': size}),
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(dialog).pop(false),
+                child: Text(tr('Cancel'))),
+            TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(dialog).pop(true),
+                child: Text(tr('Download'))),
+          ],
+        ),
+      );
+
+  /// The download with its progress; true = done.
+  Future<bool?> _downloadAuto(String language) {
+    final auto = AutoSubtitles.instance;
+    final messenger = ScaffoldMessenger.of(context);
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialog) {
+        unawaited(() async {
+          bool ok;
+          try {
+            ok = await auto.install(language);
+          } catch (e) {
+            debugPrint('AutoSubs: download failed: $e');
+            ok = false;
+            messenger.showSnackBar(SnackBar(
+                content: Text(tr(
+                    'The download did not work. Check the connection and try again.'))));
+          }
+          if (dialog.mounted) Navigator.of(dialog).pop(ok);
+        }());
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(tr('Downloading…'),
+              style: const TextStyle(color: Colors.white)),
+          content: ValueListenableBuilder<double?>(
+            valueListenable: auto.progress,
+            builder: (context, value, _) =>
+                LinearProgressIndicator(value: value),
+          ),
+          actions: [
+            TextButton(
+                autofocus: true,
+                onPressed: auto.cancelDownload,
+                child: Text(tr('Cancel'))),
+          ],
+        );
+      },
+    );
   }
 
   String _preferredName() {
@@ -2293,7 +2446,9 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (_tracks.isEmpty && !_canSearchOnline) return const SizedBox.shrink();
+    if (_tracks.isEmpty && !_canSearchOnline && !_canAuto) {
+      return const SizedBox.shrink();
+    }
     return _LabeledIconButton(
       icon: Icons.subtitles,
       label: tr('Subtitles'),

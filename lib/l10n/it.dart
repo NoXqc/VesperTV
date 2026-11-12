@@ -3709,4 +3709,27 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole scollegare {count} canali dalla guida TV.",
   "An AI app wants to undo its TV guide change.":
       "Un'app di IA vuole annullare la sua modifica alla guida TV.",
+  // Automatic live subtitles.
+  "Automatic subtitles (beta)":
+      "Sottotitoli automatici (beta)",
+  "Written from what is said, on this TV":
+      "Scritti da ciò che viene detto, su questa TV",
+  "Download {size} MB once":
+      "Scarica {size} MB una volta",
+  "Automatic subtitles need the sound decoded: turn off Surround passthrough (Settings > Playback).":
+      "I sottotitoli automatici richiedono l'audio decodificato: disattiva il passthrough surround (Impostazioni > Riproduzione).",
+  "Automatic subtitles are on for this channel. Words show a second or two after they are said.":
+      "Sottotitoli automatici attivi per questo canale. Le parole appaiono uno o due secondi dopo essere state dette.",
+  "This TV listens to the channel and writes what is said, a second or two late. Nothing is sent anywhere. It needs a one-time download of {size} MB. Expect mistakes with music, crowds and fast talk; weaker boxes may fall behind.":
+      "Questa TV ascolta il canale e scrive ciò che viene detto, con uno o due secondi di ritardo. Non viene inviato nulla. Serve un download unico di {size} MB. Aspettati errori con musica, folla e parlato veloce; i dispositivi meno potenti potrebbero restare indietro.",
+  "The download did not work. Check the connection and try again.":
+      "Il download non è riuscito. Controlla la connessione e riprova.",
+  "Downloading…":
+      "Download in corso…",
+  "For live channels without subtitles: in the player, Subtitles > Automatic subtitles. This TV writes what is said from the sound; nothing is sent anywhere. Here: free the space its speech models take.":
+      "Per i canali in diretta senza sottotitoli: nel lettore, Sottotitoli > Sottotitoli automatici. Questa TV scrive ciò che viene detto dall'audio; non viene inviato nulla. Qui: libera lo spazio occupato dai modelli vocali.",
+  "No speech model is downloaded.":
+      "Nessun modello vocale scaricato.",
+  "Downloaded: {languages} ({size} MB).":
+      "Scaricato: {languages} ({size} MB).",
 };
