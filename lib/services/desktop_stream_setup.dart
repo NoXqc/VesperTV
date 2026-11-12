@@ -13,14 +13,35 @@ import 'recording_service.dart';
 import 'live_stream_format.dart';
 import 'vod_buffering.dart';
 
+/// mpv's forward cache (`demuxer-max-bytes`) for the full-screen and mini
+/// players. See [newDesktopPlayer].
+const kDesktopMainCacheBytes = 256 * 1024 * 1024;
+
 /// Every media_kit player open in this process: full screen, the mini
 /// player, Multiview tiles, automatic trailers.
 final Set<Player> _openPlayers = {};
 
 /// A new media_kit [Player] that [disposeAllDesktopPlayers] closes when the
 /// app quits. Release it with [disposeDesktopPlayer], never `dispose()`.
-Player newDesktopPlayer() {
-  final player = Player();
+///
+/// [bigCache] (full screen and the mini player, never Multiview tiles or
+/// trailers) lifts mpv's read-ahead from media_kit's 32 MiB to
+/// [kDesktopMainCacheBytes]: 32 MiB is 3-6 s of a 40-80 Mbps 4K stream, so a
+/// Wi-Fi dip stalled it (Steam Deck user, "lots of buffering", 2026-11-12).
+/// Computers only: an iPhone could not spare it.
+Player newDesktopPlayer({bool bigCache = false}) {
+  final big = bigCache && !Platform.isIOS && !Platform.isAndroid;
+  final player = big
+      ? Player(
+          configuration:
+              const PlayerConfiguration(bufferSize: kDesktopMainCacheBytes))
+      : Player();
+  if (big) {
+    // media_kit gives the rewind cache the same size; nothing here rewinds
+    // far, so keep it at the old 32 MiB.
+    unawaited((player.platform as NativePlayer)
+        .setProperty('demuxer-max-back-bytes', '${32 * 1024 * 1024}'));
+  }
   _openPlayers.add(player);
   _IosBackgroundVideo.ensure();
   return player;
