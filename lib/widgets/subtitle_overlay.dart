@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../services/app_preferences.dart';
-import '../services/auto_subtitles.dart';
 import '../services/playback_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
@@ -37,39 +36,12 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
 
   int get _playerId => SubtitleTracks.playerIdOf(widget.controller);
 
-  /// The channel automatic subtitles were set up for ([_followAuto]).
-  String? _autoFor;
-  PlaybackService? _playback;
-
   @override
   void initState() {
     super.initState();
     _sub = SubtitleTracks.cues.listen(_onCue);
     SubtitleTracks.externalFor.addListener(_onExternalChanged);
     _applySeriesChoice();
-    // A live zap can keep the same controller: follow the channel itself.
-    _playback = context.read<PlaybackService>()..addListener(_followAuto);
-    _followAuto();
-  }
-
-  /// Automatic subtitles (live channels): on for this channel if the viewer
-  /// turned them on for it before and the language is downloaded.
-  void _followAuto() {
-    final channel = _playback?.currentChannel;
-    if (channel?.id == _autoFor) return;
-    _autoFor = channel?.id;
-    final auto = AutoSubtitles.instance;
-    final language = channel != null && channel.isLive
-        ? context.read<StorageService>().getAutoSubtitles(channel.id)
-        : null;
-    if (language == null || !AutoSubtitles.supported) {
-      unawaited(auto.stop());
-      return;
-    }
-    unawaited(() async {
-      if (await auto.downloadSize(language) > 0) return;
-      if (mounted && _autoFor == channel!.id) await auto.start(language);
-    }());
   }
 
   @override
@@ -162,8 +134,6 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
 
   @override
   void dispose() {
-    _playback?.removeListener(_followAuto);
-    unawaited(AutoSubtitles.instance.stop());
     _sub?.cancel();
     _pendingClear?.cancel();
     SubtitleTracks.externalFor.removeListener(_onExternalChanged);
@@ -180,11 +150,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
       builder: (context, external, _) {
         if (external != _playerId) {
           if (_images.isNotEmpty) return _pictures(context);
-          if (_cue.isNotEmpty) return _box(context, _cue);
-          return ValueListenableBuilder<String>(
-            valueListenable: AutoSubtitles.instance.text,
-            builder: (context, words, _) => _box(context, words),
-          );
+          return _box(context, _cue);
         }
         return ValueListenableBuilder<VideoPlayerHdrValue>(
           valueListenable: widget.controller,

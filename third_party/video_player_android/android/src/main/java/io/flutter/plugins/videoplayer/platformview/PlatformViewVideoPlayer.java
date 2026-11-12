@@ -148,22 +148,16 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
                     Context context,
                     boolean enableFloatOutput,
                     boolean enableAudioOutputPlaybackParams) {
-                  // AudioTap: the decoded sound for automatic live subtitles.
-                  androidx.media3.common.audio.AudioProcessor[] tap = {
-                    io.flutter.plugins.videoplayer.AudioTap.processor()
-                  };
                   if (passthrough) {
                     return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder(context)
                         .setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                        .setAudioProcessors(tap)
                         .build());
                   }
                   //noinspection deprecation — deliberate: see the comment above.
                   return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder()
                       .setEnableFloatOutput(enableFloatOutput)
                       .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                      .setAudioProcessors(tap)
                       .build());
                 }
               };

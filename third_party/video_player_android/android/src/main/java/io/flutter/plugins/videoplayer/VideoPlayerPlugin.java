@@ -34,8 +34,6 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
   @Nullable private StatsBridge statsBridge;
   // VesperTV patch: opt-in HDMI audio passthrough, see AudioPassthrough.
   @Nullable private AudioPassthrough audioPassthrough;
-  // VesperTV patch: the main player's sound for automatic live subtitles, see AudioTap.
-  @Nullable private AudioTap audioTap;
   // VesperTV patch: opt-in Shield green-flicker fix, see VideoLayering.
   @Nullable private VideoLayering videoLayering;
   // VesperTV patch: Native video surface (beta), see NativeVideoSurface.
@@ -59,7 +57,6 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     flutterState.startListening(this, binding.getBinaryMessenger());
     subtitleBridge = new SubtitleBridge(binding.getBinaryMessenger(), videoPlayers);
     statsBridge = new StatsBridge(binding.getBinaryMessenger(), videoPlayers);
-    audioTap = new AudioTap(binding.getBinaryMessenger());
     audioPassthrough = new AudioPassthrough(binding.getBinaryMessenger());
     videoLayering = new VideoLayering(binding.getBinaryMessenger());
     nativeVideoSurface = new NativeVideoSurface(binding.getBinaryMessenger(), videoPlayers);
@@ -95,10 +92,6 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     if (audioPassthrough != null) {
       audioPassthrough.dispose();
       audioPassthrough = null;
-    }
-    if (audioTap != null) {
-      audioTap.dispose();
-      audioTap = null;
     }
     if (nativeVideoSurface != null) {
       nativeVideoSurface.dispose();

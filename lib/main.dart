@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -773,6 +774,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       unawaited(Future<void>.delayed(const Duration(seconds: 90), () {
         unawaited(_playlistManager.logCatalogSize().catchError((_) {}));
       }));
+      // Automatic subtitles were tried in test +740 and scrapped (owner,
+      // 2026-11-12): free the speech models that build downloaded (~140 MB
+      // in the app's private folder, out of adb's reach on a release build).
+      unawaited(Future<void>.delayed(const Duration(seconds: 60), () async {
+        final dir = Directory(
+            '${(await getApplicationSupportDirectory()).path}/auto_subtitles');
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+          debugPrint('AutoSubs: removed the old speech models');
+        }
+      }).catchError((Object _) {}));
       _playbackService = PlaybackService(_storage, _playlistManager)
         ..catchupGuide = ((live) => _epgService.getPrograms(live.epgId));
       if (RecordingService.supported) {
