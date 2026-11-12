@@ -9,10 +9,11 @@ import 'el.dart';
 import 'es.dart';
 import 'fr.dart';
 import 'it.dart';
+import 'pl.dart';
 
 /// App-wide UI language. English strings in the code are the keys
 /// (`tr('Settings')`); [_dictionaries] maps them to each other language
-/// ([kFr], [kEs], [kIt], [kEl], [kDe]). A missing entry falls back to the English text, so
+/// ([kFr], [kEs], [kIt], [kEl], [kDe], [kPl]). A missing entry falls back to the English text, so
 /// a forgotten string shows in English, never blank.
 ///
 /// Deliberately not Flutter's gen-l10n: many strings live in services and
@@ -29,7 +30,8 @@ class L10n {
   /// The setting: 'auto' (follow the device) or a language code.
   static String setting = 'auto';
 
-  /// The resolved language actually in use: 'en', 'fr', 'es', 'it', 'el' or 'de'.
+  /// The resolved language actually in use: 'en', 'fr', 'es', 'it', 'el', 'de'
+  /// or 'pl'.
   static String code = 'en';
 
   static Locale get locale => Locale(code);
@@ -41,6 +43,7 @@ class L10n {
     Locale('it'),
     Locale('el'),
     Locale('de'),
+    Locale('pl'),
   ];
 
   static bool _supported(String c) => c == 'en' || _dictionaries.containsKey(c);
@@ -62,6 +65,7 @@ const Map<String, Map<String, String>> _dictionaries = {
   'it': kIt,
   'el': kEl,
   'de': kDe,
+  'pl': kPl,
 };
 
 /// Translate [en] into the current language. `{name}` placeholders are filled
@@ -97,6 +101,7 @@ String _itOrdinal(String n) => '$nº';
 // Neuter ("1ο ημίχρονο", "7ο – …"); the status words below are neuter too.
 String _elOrdinal(String n) => '$nο';
 String _deOrdinal(String n) => '$n.';
+String _plOrdinal(String n) => '$n.';
 
 const Map<String, _SportsLanguage> _sportsLanguages = {
   'fr': _SportsLanguage(
@@ -314,6 +319,49 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Lap': 'Runde',
     },
   ),
+  'pl': _SportsLanguage(
+    ordinal: _plOrdinal,
+    overtime: 'dogr.',
+    shootout: 'karne',
+    words: {
+      'Final': 'Koniec',
+      'Halftime': 'Przerwa',
+      'Half': 'połowa',
+      'Delayed': 'Opóźniony',
+      'Rain Delay': 'Opóźnienie (deszcz)',
+      'Postponed': 'Przełożony',
+      'Canceled': 'Odwołany',
+      'Cancelled': 'Odwołany',
+      'Suspended': 'Przerwany',
+      'Forfeit': 'Walkower',
+      'End of': 'Koniec',
+      'End': 'Koniec',
+      'Top': 'Góra',
+      'Bot': 'Dół',
+      'Bottom': 'Dół',
+      'Mid': 'Środek',
+      'Middle': 'Środek',
+      'OT': 'Dogr.',
+      'SO': 'Karne',
+      'FT': 'Koniec',
+      'HT': 'Przerwa',
+      'AET': 'po dogr.',
+      'Pens': 'Karne',
+      'Intermission': 'Przerwa',
+      'Quarter': 'kwarta',
+      'Period': 'tercja',
+      'Inning': 'inning',
+      // Golf / racing.
+      'Round': 'Runda',
+      'Race': 'Wyścig',
+      'Qualifying': 'Kwalifikacje',
+      'Complete': 'Zakończone',
+      'In Progress': 'W trakcie',
+      'Play Complete': 'Runda zakończona',
+      'Scheduled': 'Zaplanowany',
+      'Lap': 'Okrążenie',
+    },
+  ),
 };
 
 /// ESPN's English game statuses and standing lines ("Final/OT", "End of 2nd",
@@ -344,9 +392,20 @@ String trSports(String s) {
 
 /// Picks the singular or plural English form by [n] (French treats 0 as
 /// singular; Spanish and Italian, like English, only 1), then translates it.
-/// `{n}` is filled with [n].
+/// `{n}` is filled with [n]. Polish has a third form for 2-4 (also 22-24 ...,
+/// not 12-14): a Polish dictionary may hold it under `"$other#few"`.
 String trPlural(int n, String one, String other,
     [Map<String, Object?> args = const {}]) {
   final singular = L10n.code == 'fr' ? n.abs() < 2 : n == 1;
-  return tr(singular ? one : other, {'n': n, ...args});
+  var key = singular ? one : other;
+  if (!singular && L10n.code == 'pl' && _isPolishFew(n)) {
+    final few = '$other#few';
+    if (_dictionaries['pl']?.containsKey(few) ?? false) key = few;
+  }
+  return tr(key, {'n': n, ...args});
+}
+
+bool _isPolishFew(int n) {
+  final last = n.abs() % 10, last2 = n.abs() % 100;
+  return last >= 2 && last <= 4 && (last2 < 12 || last2 > 14);
 }

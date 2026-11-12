@@ -134,6 +134,14 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   labels) — translate those at the display site (`Text(tr(tab))`). Québec French, short forms on
   narrow TV labels (MAJ, PJ/V/D/DP, NIP). Data from providers/ESPN (channel, team, league names)
   stays as-is.
+- **Polish (2026-11-12, unreleased):** `lib/l10n/pl.dart` (`kPl`, machine-authored, not native-reviewed) mirrors the 2,466 keys of the other
+  dictionaries; `test/l10n_polish_test.dart` checks key coverage, placeholders and plurals. Wired in `l10n.dart` (locale, `_dictionaries`,
+  `_plOrdinal`, `_sportsLanguages['pl']`), the General-settings picker (`settings_catalog.dart` `languages`), the Vesper AI `language` setting
+  and `VoiceInput.language` (`pl-PL`). **Plurals:** Polish has three forms (1 / 2-4 / 5+), so `trPlural` looks up `"$other#few"` in `kPl` for
+  2-4 (22-24 ... but not 12-14); the plain `other` key is the 5+ form. Most count strings are written as `"Groups: {n}"` to dodge declension, and
+  the English `{s}` plural marker is dropped (the Polish test ignores `{s}` after a letter). **Not Polish:** the built-in voice commands
+  (`vesper_commands.dart` understands EN/FR/ES/IT/DE/EL only, so the example commands stay English in the texts) and the Media Hub stream-language
+  list (`stream_languages.dart`, `archive_playback_settings.dart`). README / site still say six languages: update them when it ships.
 - **Phone mode (1.0.6+232, 2026-10-14):** one APK for everything — no separate phone build
   (same `applicationId`, one updater asset, one Downloader code). `TvHomeScreen` adapts:
   portrait + width < 600 (`_compact`) shows one column at a time via an `IndexedStack`

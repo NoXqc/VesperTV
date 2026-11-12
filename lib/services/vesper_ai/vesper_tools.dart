@@ -1714,6 +1714,7 @@ String? vesperChannelLanguage(Channel c) {
     'DE' || 'AT' => 'de',
     'PT' || 'BR' => 'pt',
     'GR' || 'CY' => 'el',
+    'PL' => 'pl',
     'NL' => 'nl',
     _ => has('en|eng|english') ? 'en' : null,
   };
