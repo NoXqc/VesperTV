@@ -24,6 +24,9 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
    and `curl -sL http://go.aftvnews.com/1760256 | grep -o 'https://github[^"'"'"' ]*'` resolves
    (AFTVnews still stores the **old** `NoXqc/NoXPlayer/...` URL — it works only through GitHub's
    redirect, so that redirect is load-bearing).
+   Since 2026-11 go.aftvnews.com often answers curl with a Cloudflare "Just a moment..." page (403):
+   try it once, and if it's blocked note it and carry on (owner: don't stall on it); the old NoXPlayer
+   link check covers the same path.
 7. **Updater semantics (changed in 3.53.0):** `AppUpdateService` offers a release when its
    `tag_name` is **different** from the installed version (`_isDifferent`), no longer only when
    newer. Reason: versioning is meant to restart at 1.0.0, which is numerically lower than the old
