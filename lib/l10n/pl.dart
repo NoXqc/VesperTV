@@ -3339,4 +3339,19 @@ const Map<String, String> kPl = {
       "Poczekaj przed pokazaniem gola, aby powiadomienie nie pojawiło się, zanim go zobaczysz. Strumienie HLS często mają 20-30 sekund opóźnienia. Zapisane dla tego profilu.",
   "{n} seconds":
       "{n} sekund",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Oznacz wszystkie odcinki jako obejrzane",
+  "Mark every episode unwatched":
+      "Oznacz wszystkie odcinki jako nieobejrzane",
+  "Mark as watched":
+      "Oznacz jako obejrzane",
+  "Mark as unwatched":
+      "Oznacz jako nieobejrzane",
+  "Couldn't load the episodes":
+      "Nie udało się wczytać odcinków",
+  "{count} episodes marked as watched":
+      "Odcinki oznaczone jako obejrzane: {count}",
+  "{count} episodes marked as unwatched":
+      "Odcinki oznaczone jako nieobejrzane: {count}",
 };

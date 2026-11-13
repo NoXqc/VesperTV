@@ -3648,4 +3648,19 @@ const Map<String, String> kDe = {
       "Vor dem Anzeigen eines Tores warten, damit der Hinweis nicht kommt, bevor Sie es sehen. HLS-Streams laufen oft 20 bis 30 Sekunden hinterher. Für dieses Profil gespeichert.",
   "{n} seconds":
       "{n} Sekunden",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Alle Folgen als gesehen markieren",
+  "Mark every episode unwatched":
+      "Alle Folgen als ungesehen markieren",
+  "Mark as watched":
+      "Als gesehen markieren",
+  "Mark as unwatched":
+      "Als ungesehen markieren",
+  "Couldn't load the episodes":
+      "Die Folgen konnten nicht geladen werden",
+  "{count} episodes marked as watched":
+      "{count} Folgen als gesehen markiert",
+  "{count} episodes marked as unwatched":
+      "{count} Folgen als ungesehen markiert",
 };

@@ -46,6 +46,7 @@ import '../utils/display_title.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../utils/image_urls.dart';
+import '../widgets/title_hold_menu.dart';
 import '../widgets/tv_dialog_option.dart';
 import '../widgets/video_tap_layer.dart';
 import '../widgets/catalog_warmup_banner.dart';
@@ -3591,30 +3592,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   Widget build(BuildContext context) {
     final hidden = !TickerMode.valuesOf(context).enabled;
     final last = _lastBuilt;
-    if (hidden && last != null) {
-      // The build that hides the screen is the TickerMode change itself;
-      // any later one while hidden means something changed under the page.
-      if (_builtHidden) _changedWhileHidden = true;
-      _builtHidden = true;
-      return last;
-    }
-    // Shown again with nothing changed while covered (a player opened and
-    // closed): the last build is still right. Rebuilding cost ~80 ms in the
-    // first frame after Back on the Homatics (2026-11-13 trace), the frame
-    // the glide back waits for. A change (or didPopNext's setState) builds.
-    final unchanged = _builtHidden && !_changedWhileHidden;
-    _builtHidden = false;
-    _changedWhileHidden = false;
-    if (unchanged && last != null) return last;
+    if (hidden && last != null) return last;
     final built = PerfDiagnostics.timedSync('homeBuild', () => _build(context));
     _lastBuilt = built;
     return built;
   }
-
-  /// See [build]: whether the last build ran hidden, and whether another
-  /// build was asked for while hidden.
-  bool _builtHidden = false;
-  bool _changedWhileHidden = false;
 
   Widget _build(BuildContext context) {
     PerfDiagnostics.homeBuilds++;
@@ -6142,6 +6124,36 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     ));
   }
 
+  /// Hold OK on a movie poster: favourite, or mark watched / unwatched.
+  Future<void> _holdMovie(Channel movie) async {
+    final watched = context.read<StorageService>().isFullyWatched(movie.id);
+    final action = await showTitleHoldMenu(context,
+        title: movie.name, isFavorite: movie.isFavorite, watched: watched);
+    if (!mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      _toggleFavoriteWithFeedback(context, movie);
+      return;
+    }
+    await setMovieWatched(context, movie,
+        watched: action == TitleHoldAction.watched);
+    if (mounted) setState(() {});
+  }
+
+  /// Hold OK on a show poster: favourite, or every episode watched /
+  /// unwatched.
+  Future<void> _holdSeries(XtreamSeries series) async {
+    final action = await showTitleHoldMenu(context,
+        title: series.name, isFavorite: series.isFavorite);
+    if (!mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      _toggleSeriesFavoriteWithFeedback(context, series);
+      return;
+    }
+    await setSeriesWatched(context, series,
+        watched: action == TitleHoldAction.watched);
+    if (mounted) setState(() {});
+  }
+
   void _toggleSeriesFavoriteWithFeedback(
       BuildContext context, XtreamSeries series) {
     context.read<PlaylistManager>().toggleSeriesFavorite(series);
@@ -6700,7 +6712,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         tapToPreview: _touchPreview,
         focusNode: x.focusNode,
         isFavorite: true,
-        onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
+        onToggleFavorite: () => _holdMovie(c),
         onTap: () => _openMovie(c),
         onFocusGained: () {
           _updateBrowseFocus(
@@ -6761,7 +6773,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         group.playlistId, group.title)
                     : null,
                 isFavorite: c.isFavorite,
-                onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
+                onToggleFavorite: () => _holdMovie(c),
                 onTap: () => _openMovie(c,
                     groupPlaylistId: group.playlistId, groupTitle: group.title),
                 onFocusGained: () {
@@ -6898,8 +6910,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
-              onToggleFavorite: () =>
-                  _toggleSeriesFavoriteWithFeedback(context, s),
+              onToggleFavorite: () => _holdSeries(s),
               onTap: () => _openSeries(s),
               onFocusGained: () {
                 _updateBrowseFocus(
@@ -6932,7 +6943,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
-              onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
+              onToggleFavorite: () => _holdMovie(c),
               onTap: () => _openMovie(c),
               onFocusGained: () {
                 _updateBrowseFocus(
@@ -7013,8 +7024,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 ? _firstPosterFocusNodeForGroup(group.playlistId, group.title)
                 : null,
             isFavorite: s.isFavorite,
-            onToggleFavorite: () =>
-                _toggleSeriesFavoriteWithFeedback(context, s),
+            onToggleFavorite: () => _holdSeries(s),
             onTap: () => _openSeries(s,
                 groupPlaylistId: group.playlistId, groupTitle: group.title),
             onFocusGained: () {

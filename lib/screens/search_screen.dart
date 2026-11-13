@@ -18,6 +18,7 @@ import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../utils/tv_theme.dart';
 import '../utils/title_search.dart';
+import '../widgets/title_hold_menu.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/tv_text_field_gate.dart';
@@ -440,11 +441,41 @@ class _SearchScreenState extends State<SearchScreen> {
     _favoriteFeedback(playlist.isChannelFavorited(channel.id));
   }
 
-  Future<void> _toggleHubFavorite(
-      ArchiveSource source, ArchiveMeta meta) async {
-    final added =
-        await context.read<ArchiveService>().toggleFavorite(source, meta);
-    _favoriteFeedback(added);
+  /// Hold OK on a movie / show / Media Hub result: favourite or watched
+  /// (title_hold_menu).
+  Future<void> _holdMovie(Channel movie) async {
+    final playlist = context.read<PlaylistManager>();
+    final action = await showTitleHoldMenu(context,
+        title: movie.name,
+        isFavorite: playlist.isChannelFavorited(movie.id),
+        watched: context.read<StorageService>().isFullyWatched(movie.id));
+    if (!mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      await _toggleChannelFavorite(movie);
+      return;
+    }
+    await setMovieWatched(context, movie,
+        watched: action == TitleHoldAction.watched);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _holdSeries(XtreamSeries series) async {
+    final action = await showTitleHoldMenu(context,
+        title: series.name,
+        isFavorite:
+            context.read<PlaylistManager>().isSeriesFavorited(series.id));
+    if (!mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      _toggleSeriesFavorite(series);
+      return;
+    }
+    await setSeriesWatched(context, series,
+        watched: action == TitleHoldAction.watched);
+  }
+
+  Future<void> _holdHub(ArchiveSource source, ArchiveMeta meta) async {
+    await holdHubTitleMenu(context, source, meta);
+    if (mounted) setState(() {});
   }
 
   void _favoriteFeedback(bool added) {
@@ -802,8 +833,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ready: watch.isReady(items[i].$2.id),
               fetching: watch.fetching.value.contains(items[i].$2.id),
               isFavorite: hub.isFavorite(items[i].$1, items[i].$2),
-              onToggleFavorite: () =>
-                  _toggleHubFavorite(items[i].$1, items[i].$2),
+              onToggleFavorite: () => _holdHub(items[i].$1, items[i].$2),
               onTap: () => _openHubTitle(items[i].$1, items[i].$2),
               onFocusGained: () {
                 _focusedZone = rowIndex;
@@ -843,7 +873,9 @@ class _SearchScreenState extends State<SearchScreen> {
           fit: isPoster ? BoxFit.cover : BoxFit.contain,
           isFavorite:
               context.read<PlaylistManager>().isChannelFavorited(items[i].id),
-          onToggleFavorite: () => _toggleChannelFavorite(items[i]),
+          onToggleFavorite: () => isPoster
+              ? _holdMovie(items[i])
+              : _toggleChannelFavorite(items[i]),
           onTap: () => isPoster ? _openTitle(items[i]) : _openChannel(items[i]),
           onFocusGained: () {
             _focusedZone = rowIndex;
@@ -868,7 +900,7 @@ class _SearchScreenState extends State<SearchScreen> {
           imageUrl: items[i].coverUrl,
           isFavorite:
               context.read<PlaylistManager>().isSeriesFavorited(items[i].id),
-          onToggleFavorite: () => _toggleSeriesFavorite(items[i]),
+          onToggleFavorite: () => _holdSeries(items[i]),
           onTap: () => _openSeries(items[i]),
           onFocusGained: () {
             _focusedZone = rowIndex;

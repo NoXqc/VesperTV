@@ -3758,4 +3758,19 @@ const Map<String, String> kFr = {
       "Attendre avant d'afficher un but, pour que l'alerte n'arrive pas avant que vous le voyiez. Les flux en HLS ont souvent 20 à 30 secondes de retard. Enregistré pour ce profil.",
   "{n} seconds":
       "{n} secondes",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Marquer tous les épisodes comme vus",
+  "Mark every episode unwatched":
+      "Marquer tous les épisodes comme non vus",
+  "Mark as watched":
+      "Marquer comme vu",
+  "Mark as unwatched":
+      "Marquer comme non vu",
+  "Couldn't load the episodes":
+      "Impossible de charger les épisodes",
+  "{count} episodes marked as watched":
+      "{count} épisodes marqués comme vus",
+  "{count} episodes marked as unwatched":
+      "{count} épisodes marqués comme non vus",
 };

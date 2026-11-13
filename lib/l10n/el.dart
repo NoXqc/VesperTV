@@ -3707,4 +3707,19 @@ const Map<String, String> kEl = {
       "Αναμονή πριν εμφανιστεί ένα γκολ, ώστε η ειδοποίηση να μην έρθει πριν το δείτε. Οι ροές HLS συχνά καθυστερούν 20 έως 30 δευτερόλεπτα. Αποθηκεύεται για αυτό το προφίλ.",
   "{n} seconds":
       "{n} δευτερόλεπτα",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Σήμανση όλων των επεισοδίων ως προβληθέντων",
+  "Mark every episode unwatched":
+      "Σήμανση όλων των επεισοδίων ως μη προβληθέντων",
+  "Mark as watched":
+      "Σήμανση ως προβληθέν",
+  "Mark as unwatched":
+      "Σήμανση ως μη προβληθέν",
+  "Couldn't load the episodes":
+      "Δεν ήταν δυνατή η φόρτωση των επεισοδίων",
+  "{count} episodes marked as watched":
+      "{count} επεισόδια σημειώθηκαν ως προβληθέντα",
+  "{count} episodes marked as unwatched":
+      "{count} επεισόδια σημειώθηκαν ως μη προβληθέντα",
 };

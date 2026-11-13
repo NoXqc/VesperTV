@@ -1,3 +1,4 @@
+import '../widgets/title_hold_menu.dart';
 import '../widgets/archive_discovery_panel.dart';
 import 'dart:async';
 
@@ -629,11 +630,6 @@ Future<void> holdArchiveTitle(BuildContext context, ArchiveRow row,
     }
     return;
   }
-  final messenger = ScaffoldMessenger.of(context);
-  final added = await service.toggleFavorite(source, meta);
-  messenger.showSnackBar(SnackBar(
-    content:
-        Text(added ? tr('Added to Favorites') : tr('Removed from Favorites')),
-    duration: const Duration(seconds: 2),
-  ));
+  // Favourite, or mark watched / unwatched (title_hold_menu).
+  await holdHubTitleMenu(context, source, meta);
 }

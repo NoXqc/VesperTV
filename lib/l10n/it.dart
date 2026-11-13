@@ -3752,4 +3752,19 @@ const Map<String, String> kIt = {
       "Attendi prima di mostrare un gol, così l'avviso non arriva prima che tu lo veda. I flussi HLS sono spesso 20-30 secondi indietro. Salvato per questo profilo.",
   "{n} seconds":
       "{n} secondi",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Segna tutti gli episodi come visti",
+  "Mark every episode unwatched":
+      "Segna tutti gli episodi come non visti",
+  "Mark as watched":
+      "Segna come visto",
+  "Mark as unwatched":
+      "Segna come non visto",
+  "Couldn't load the episodes":
+      "Impossibile caricare gli episodi",
+  "{count} episodes marked as watched":
+      "{count} episodi segnati come visti",
+  "{count} episodes marked as unwatched":
+      "{count} episodi segnati come non visti",
 };

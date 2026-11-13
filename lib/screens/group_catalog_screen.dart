@@ -11,6 +11,7 @@ import '../services/tmdb_enrichment_service.dart';
 import '../utils/catalog_sort.dart';
 import '../utils/tv_theme.dart';
 import '../utils/display_title.dart';
+import '../widgets/title_hold_menu.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/poster_card.dart';
 import 'movie_detail_screen.dart';
@@ -399,8 +400,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         watched: storage.isFullyWatched(c.id),
         progressFraction: storage.getWatchedFraction(c.id),
         isFavorite: playlist.isChannelFavorited(c.id),
-        onToggleFavorite: () =>
-            _toggleFavoriteWithFeedback(context, playlist, c),
+        onToggleFavorite: () => _holdMovie(context, playlist, storage, c),
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c))),
         onFocusGained: () => _spot.value = _Spot.vod(c),
@@ -432,7 +432,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
               }
             : null,
         isFavorite: playlist.isSeriesFavorited(s.id),
-        onToggleFavorite: () => _toggleSeriesFavoriteWithFeedback(playlist, s),
+        onToggleFavorite: () => _holdSeries(context, playlist, s),
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => SeriesDetailScreen(series: s))),
         onFocusGained: () => _spot.value = _Spot.series(s),
@@ -462,6 +462,36 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
           : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
+  }
+
+  /// Hold OK: favourite, or mark watched / unwatched (title_hold_menu).
+  Future<void> _holdMovie(BuildContext context, PlaylistManager playlist,
+      StorageService storage, Channel movie) async {
+    final action = await showTitleHoldMenu(context,
+        title: movie.name,
+        isFavorite: playlist.isChannelFavorited(movie.id),
+        watched: storage.isFullyWatched(movie.id));
+    if (!context.mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      _toggleFavoriteWithFeedback(context, playlist, movie);
+      return;
+    }
+    await setMovieWatched(context, movie,
+        watched: action == TitleHoldAction.watched);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _holdSeries(BuildContext context, PlaylistManager playlist,
+      XtreamSeries series) async {
+    final action = await showTitleHoldMenu(context,
+        title: series.name, isFavorite: playlist.isSeriesFavorited(series.id));
+    if (!context.mounted || action == null) return;
+    if (action == TitleHoldAction.favorite) {
+      _toggleSeriesFavoriteWithFeedback(playlist, series);
+      return;
+    }
+    await setSeriesWatched(context, series,
+        watched: action == TitleHoldAction.watched);
   }
 
   void _toggleSeriesFavoriteWithFeedback(

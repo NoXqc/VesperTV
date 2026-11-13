@@ -3745,4 +3745,19 @@ const Map<String, String> kEs = {
       "Esperar antes de mostrar un gol, para que el aviso no llegue antes de verlo. Las emisiones en HLS suelen ir de 20 a 30 segundos por detrás. Se guarda para este perfil.",
   "{n} seconds":
       "{n} segundos",
+  // Hold menu on movie / show posters (2026-11-13).
+  "Mark every episode watched":
+      "Marcar todos los episodios como vistos",
+  "Mark every episode unwatched":
+      "Marcar todos los episodios como no vistos",
+  "Mark as watched":
+      "Marcar como visto",
+  "Mark as unwatched":
+      "Marcar como no visto",
+  "Couldn't load the episodes":
+      "No se pudieron cargar los episodios",
+  "{count} episodes marked as watched":
+      "{count} episodios marcados como vistos",
+  "{count} episodes marked as unwatched":
+      "{count} episodios marcados como no vistos",
 };
