@@ -1109,6 +1109,11 @@ class PlaybackService extends ChangeNotifier {
       playingSince = DateTime.now();
       _autoAdvanceDismissed = false;
       _watchRestartLoop(c, channel);
+      // What a launch or warm return resumes, as after a fresh player
+      // (_playChannel): this path skipped it, so the app came back on the
+      // channel played before the zaps (RDS -> Sky Sports F1, owner
+      // 2026-11-12).
+      unawaited(_storage.setLastChannelId(channel.id));
       if (recordHistory) unawaited(_recordRecentlyPlayed(channel));
       unawaited(_recordRealResolution(c, channel));
       unawaited(DisplayMatch.start(_storage, c,

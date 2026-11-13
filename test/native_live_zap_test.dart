@@ -92,6 +92,8 @@ void main() {
     expect(playback.currentChannel!.rawId, 'next');
     expect(controller.value.size, const Size(3840, 2160));
     expect(playback.recentlyPlayed.first.rawId, 'next');
+    // A launch resumes the channel zapped to, not the one before.
+    expect(storage.getLastChannelId(), channel('next').id);
     expect(calls.where((c) => c.method == 'replaceLive'), hasLength(1));
     await playback.play(channel('next'));
     expect(calls.where((c) => c.method == 'replaceLive'), hasLength(1));
