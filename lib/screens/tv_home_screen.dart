@@ -3591,11 +3591,30 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   Widget build(BuildContext context) {
     final hidden = !TickerMode.valuesOf(context).enabled;
     final last = _lastBuilt;
-    if (hidden && last != null) return last;
+    if (hidden && last != null) {
+      // The build that hides the screen is the TickerMode change itself;
+      // any later one while hidden means something changed under the page.
+      if (_builtHidden) _changedWhileHidden = true;
+      _builtHidden = true;
+      return last;
+    }
+    // Shown again with nothing changed while covered (a player opened and
+    // closed): the last build is still right. Rebuilding cost ~80 ms in the
+    // first frame after Back on the Homatics (2026-11-13 trace), the frame
+    // the glide back waits for. A change (or didPopNext's setState) builds.
+    final unchanged = _builtHidden && !_changedWhileHidden;
+    _builtHidden = false;
+    _changedWhileHidden = false;
+    if (unchanged && last != null) return last;
     final built = PerfDiagnostics.timedSync('homeBuild', () => _build(context));
     _lastBuilt = built;
     return built;
   }
+
+  /// See [build]: whether the last build ran hidden, and whether another
+  /// build was asked for while hidden.
+  bool _builtHidden = false;
+  bool _changedWhileHidden = false;
 
   Widget _build(BuildContext context) {
     PerfDiagnostics.homeBuilds++;

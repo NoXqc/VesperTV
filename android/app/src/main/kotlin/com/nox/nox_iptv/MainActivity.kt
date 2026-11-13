@@ -57,7 +57,11 @@ class MainActivity : FlutterActivity() {
             }
         }
         super.onCreate(savedInstanceState)
+        semanticsGate.start()
     }
+
+    /** No accessibility tree for services that only filter keys (SemanticsGate). */
+    private val semanticsGate by lazy { SemanticsGate(this) { flutterEngine } }
 
     private val MEMORY_CHANNEL = "com.nox.nox_iptv/device_memory"
     private val UPDATE_CHANNEL = "com.nox.nox_iptv/app_update"
@@ -135,6 +139,7 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume()
         RemoteKeyService.onScreen = WeakReference(this)
+        semanticsGate.schedule()
     }
 
     override fun onPause() {
@@ -162,6 +167,7 @@ class MainActivity : FlutterActivity() {
         DownloadPolicy.clearStreams()
         localImportStore.close()
         voiceBridge.dispose()
+        semanticsGate.stop()
         super.onDestroy()
     }
 

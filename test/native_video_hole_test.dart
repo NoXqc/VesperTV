@@ -198,8 +198,11 @@ void main() {
     await tester.pumpAndSettle();
     NativeVideoSurface.gliding = route;
     addTearDown(() => NativeVideoSurface.gliding = null);
-    tester.binding.scheduleFrame();
-    await tester.pump();
+    // The native surface trails the glide by two frames.
+    for (var i = 0; i < 3; i++) {
+      tester.binding.scheduleFrame();
+      await tester.pump();
+    }
     final dpr = tester.view.devicePixelRatio;
     final rect = calls.lastWhere((c) => c.method == 'setRect').arguments as Map;
     expect(rect['width'], (400 * dpr).round());

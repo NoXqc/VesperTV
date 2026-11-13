@@ -72,9 +72,11 @@ class PlayerGlideRoute<T> extends PageRoute<T> {
   /// Completes once the picture is full screen.
   final glided = Completer<void>();
 
-  /// Multiview's glide (owner: as smooth as TiviMate's).
-  static const glide = Duration(milliseconds: 280);
-  static const curve = Curves.easeInOutCubic;
+  /// Into full screen, like TiviMate's (screen recordings on the Homatics,
+  /// 2026-11-13): a big first step that settles into full screen in ~200 ms.
+  /// Ours eased in over 280 ms and felt slow (~415 ms on the box).
+  static const glide = Duration(milliseconds: 220);
+  static const curve = Curves.easeOutCubic;
 
   /// The way back, measured on TiviMate (owner's clip, 2026-11-05, 30 fps):
   /// the shrink starts at full speed (a quarter of the way in its first

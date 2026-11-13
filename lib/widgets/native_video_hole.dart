@@ -53,8 +53,16 @@ class NativeVideoSurface {
   /// The full-screen player route gliding out of (or back into) the guide's
   /// preview (`PlayerGlideRoute`): its hole wins, even over a preview hole
   /// rebuilt after it (zapped to a new player meanwhile), and its scaled
-  /// rect is followed.
-  static ModalRoute<dynamic>? gliding;
+  /// rect is followed. A change draws one more frame: the native surface
+  /// trails the glide by two frames and must still reach its last rect.
+  static ModalRoute<dynamic>? get gliding => _gliding;
+  static set gliding(ModalRoute<dynamic>? route) {
+    if (identical(route, _gliding)) return;
+    _gliding = route;
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  static ModalRoute<dynamic>? _gliding;
 
   /// Where the topmost visible hole of player [playerId] is (logical
   /// pixels): the preview a full-screen player glides out of. [skip]: the
@@ -164,6 +172,22 @@ class NativeVideoSurface {
       (at.width * dpr).roundToDouble(),
       (at.height * dpr).roundToDouble(),
     );
+    // Gliding, the native surface follows two Flutter frames behind: the
+    // rect is sent after layout, before Flutter has drawn the frame, and a
+    // guide frame took 50-170 ms to draw on the Homatics. The video moved
+    // first and the hole Flutter cuts for it lagged: plain black around the
+    // shrinking picture instead of the guide (screen recording vs TiviMate,
+    // 2026-11-13). Behind, the video is a bit bigger than its hole and the
+    // guide covers its edge; growing, the page around it is black anyway.
+    if (glide != null && top._route == glide) {
+      _glideRects.add(rect);
+      if (_glideRects.length <= 2 && _shown) return;
+      final behind = _glideRects.removeAt(0);
+      if (behind == _sentRect) return;
+      _send(behind);
+      return;
+    }
+    _glideRects.clear();
     if (rect == _sentRect && _shown) return;
     // The glide logs its own summary line (`PlayerGlide:`), not every frame.
     if ((_sentRect?.size != rect.size && glide == null) || !_shown) {
@@ -171,6 +195,13 @@ class NativeVideoSurface {
           '${rect.height.toInt()} at ${rect.left.toInt()},${rect.top.toInt()}'
           ' (dpr $dpr)');
     }
+    _send(rect);
+  }
+
+  /// The glide's last rects, sent two frames late (see [_afterFrame]).
+  static final List<Rect> _glideRects = [];
+
+  static void _send(Rect rect) {
     _sentRect = rect;
     _shown = true;
     _invoke('setRect', {
