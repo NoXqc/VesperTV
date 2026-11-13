@@ -77,14 +77,14 @@ class ArchiveRow {
   String get key => collection != null
       ? 'collection|${collection!.id}'
       : continuations != null
-      ? '${upcoming ? 'upcoming' : 'continue'}|${catalog.type.wire}'
-      : isFavorites
-          ? 'favorites|${catalog.type.wire}'
-          : isHistory
-              ? 'history|${catalog.type.wire}'
-              : isSearch
-                  ? 'search|${ArchiveService._rowKey(source, catalog)}'
-                  : ArchiveService._rowKey(source, catalog);
+          ? '${upcoming ? 'upcoming' : 'continue'}|${catalog.type.wire}'
+          : isFavorites
+              ? 'favorites|${catalog.type.wire}'
+              : isHistory
+                  ? 'history|${catalog.type.wire}'
+                  : isSearch
+                      ? 'search|${ArchiveService._rowKey(source, catalog)}'
+                      : ArchiveService._rowKey(source, catalog);
 
   /// The row header: the catalog's own name, or the source name when the
   /// catalog has none. Provider row names ("Popular") and search rows are
@@ -379,8 +379,7 @@ class ArchiveService extends ChangeNotifier {
   /// ([Channel.isLiveId]); transient = no history, resume or tracking.
   Channel liveChannelFor(ArchiveSource source, ArchiveMeta meta,
       {String group = ''}) {
-    final hash =
-        sha1.convert(utf8.encode(meta.id)).toString().substring(0, 16);
+    final hash = sha1.convert(utf8.encode(meta.id)).toString().substring(0, 16);
     final rawId = 'hublive_${source.key}_$hash';
     final channel = Channel(
       id: '$playlistId::$rawId',
@@ -417,9 +416,8 @@ class ArchiveService extends ChangeNotifier {
         headers: option.stream.requestHeaders);
     return channel.copyWith(
         url: link.url,
-        httpHeaders: link.headers.isEmpty
-            ? option.stream.requestHeaders
-            : link.headers);
+        httpHeaders:
+            link.headers.isEmpty ? option.stream.requestHeaders : link.headers);
   }
 
   /// Zapping (Up/Down, CH+/CH-) onto a channel without an address: its
@@ -590,8 +588,9 @@ class ArchiveService extends ChangeNotifier {
       _setSourcePref(source, 'enabled', on);
 
   Future<void> removeSource(ArchiveSource source) async {
-    await _saveSources(
-        _storedSources.where((s) => s.manifestUrl != source.manifestUrl).toList());
+    await _saveSources(_storedSources
+        .where((s) => s.manifestUrl != source.manifestUrl)
+        .toList());
     _items.removeWhere((k, _) => k.startsWith('${source.key}|'));
     await _cache.deleteSource(source.key);
     _notify();
@@ -1074,8 +1073,16 @@ class ArchiveService extends ChangeNotifier {
   /// Titles kept in Favourites (both categories together).
   static const _favoritesMax = 200;
 
-  List<Map<String, dynamic>> _favoriteEntries() =>
-      _decodeEntries(_storage.getArchiveFavoritesJson());
+  String? _favoritesRaw;
+  List<Map<String, dynamic>> _decodedFavorites = const [];
+  List<Map<String, dynamic>> _favoriteEntries() {
+    final raw = _storage.getArchiveFavoritesJson();
+    if (raw != _favoritesRaw) {
+      _favoritesRaw = raw;
+      _decodedFavorites = _decodeEntries(raw);
+    }
+    return List.of(_decodedFavorites);
+  }
 
   String _titleIdentity(ArchiveSource source, ArchiveMeta meta) =>
       _storage.archiveMappedIdentity(
@@ -1214,7 +1221,45 @@ class ArchiveService extends ChangeNotifier {
       ..._historyEntries().where((e) => !_sameTitle(e, source, meta)),
     ].take(_historyMax).toList();
     await _storage.setArchiveHistoryJson(jsonEncode(entries));
+    debugPrint('ArchiveHistory: record title=${_logHash(meta.id)} '
+        'type=${meta.type.wire} src=${_logHash(source.manifestUrl)} '
+        'known=${enabledSources.any((s) => s.manifestUrl == source.manifestUrl)} '
+        'other=${source.underOther} entries=${entries.length}');
     _notify();
+  }
+
+  static String _logHash(String value) =>
+      sha256.convert(utf8.encode(value)).toString().substring(0, 10);
+
+  String? _historyTrace;
+
+  /// Why each Recently watched entry shows or not (Send log), once per change.
+  void _traceHistory(ArchiveType type, List<Map<String, dynamic>> entries,
+      Map<String, ArchiveSource> byUrl) {
+    final parts = <String>[];
+    final seen = <String>{};
+    for (final e in entries) {
+      final source = _historySource(byUrl, e['src']);
+      final m = e['meta'];
+      final meta = m is Map ? _historyMeta(e) : null;
+      final id = _logHash('${meta?.id ?? e['meta']}');
+      final why = source == null
+          ? 'unknownSrc:${_logHash('${e['src']}')}'
+          : meta == null
+              ? 'badMeta'
+              : meta.type != type
+                  ? null
+                  : !seen.add(_titleIdentity(source, meta))
+                      ? 'dupIdentity'
+                      : source.underOther != (_genre[type] == otherGenre)
+                          ? 'other'
+                          : 'shown';
+      if (why != null) parts.add('$id=$why');
+    }
+    final line = 'ArchiveHistory: ${type.wire} ${parts.join(' ')}';
+    if (line == _historyTrace) return;
+    _historyTrace = line;
+    debugPrint(line);
   }
 
   /// Cloud sync wrote another device's Recently watched into storage; the
@@ -1288,13 +1333,31 @@ class ArchiveService extends ChangeNotifier {
     }));
   }
 
+  /// The enabled source a history entry belongs to. An add-on reconfigured
+  /// in its web page gets a new install link (its settings are in the link),
+  /// which left every title played before it out of Recently watched and
+  /// Continue watching (owner, 2026-11-13: half of the history). An entry
+  /// whose link is gone goes to the one enabled add-on on the same host.
+  ArchiveSource? _historySource(Map<String, ArchiveSource> byUrl, Object? src) {
+    if (src is! String) return null;
+    final exact = byUrl[src];
+    if (exact != null) return exact;
+    final host = Uri.tryParse(src)?.host ?? '';
+    if (host.isEmpty) return null;
+    final same = byUrl.values
+        .where((s) =>
+            s.server == null && Uri.tryParse(s.manifestUrl)?.host == host)
+        .toList();
+    return same.length == 1 ? same.single : null;
+  }
+
   List<ArchiveContinueItem> continueWatching(ArchiveType type,
       {bool upcoming = false, DateTime? now}) {
     final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
     final seen = <String>{};
     final result = <ArchiveContinueItem>[];
     for (final entry in _historyEntries()) {
-      final source = byUrl[entry['src']];
+      final source = _historySource(byUrl, entry['src']);
       final raw = entry['meta'];
       if (source == null || source.underOther || raw is! Map) continue;
       final meta = _historyMeta(entry);
@@ -1430,20 +1493,22 @@ class ArchiveService extends ChangeNotifier {
     final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
     return [
       for (final e in _historyEntries())
-        if (byUrl[e['src']] case final source? when !source.underOther)
-          if (e['meta'] case final Map m)
-            if (ArchiveMeta.fromJson(Map<String, dynamic>.from(m))
-                case final meta?)
-              (source: source, meta: meta),
+        if (_historySource(byUrl, e['src']) case final source?
+            when !source.underOther)
+          if (e['meta'] is Map)
+            if (_historyMeta(e) case final meta?) (source: source, meta: meta),
     ];
   }
 
   /// "Recently watched" for [type]: played titles whose source is still
   /// enabled, newest first. Not narrowed by the genre filter.
-  ArchiveRow? _historyRow(ArchiveType type) => _savedRow(
-      type,
-      _historyEntries(),
-      ArchiveCatalog(type: type, id: 'history', name: 'Recently watched'));
+  ArchiveRow? _historyRow(ArchiveType type) {
+    final entries = _historyEntries();
+    _traceHistory(
+        type, entries, {for (final s in enabledSources) s.manifestUrl: s});
+    return _savedRow(type, entries,
+        ArchiveCatalog(type: type, id: 'history', name: 'Recently watched'));
+  }
 
   /// "Favourites" for [type], newest first — like [_historyRow].
   ArchiveRow? _favoritesRow(ArchiveType type) => _savedRow(
@@ -1460,10 +1525,12 @@ class ArchiveService extends ChangeNotifier {
     final sources = <ArchiveSource>[];
     final seen = <String>{};
     for (final e in entries) {
-      final source = byUrl[e['src']];
+      final source = _historySource(byUrl, e['src']);
       final m = e['meta'];
       if (source == null || m is! Map) continue;
-      final meta = ArchiveMeta.fromJson(Map<String, dynamic>.from(m));
+      // Cached per entry: every Media Hub build parsed every saved title
+      // (whole episode lists) again, ~330 ms a build on the Homatics.
+      final meta = _historyMeta(e);
       if (meta == null ||
           meta.type != type ||
           !seen.add(_titleIdentity(source, meta))) {
@@ -1731,8 +1798,10 @@ class ArchiveService extends ChangeNotifier {
         removed.remove(removed.keys.first);
       }
     }
-    await _saveCollections([for (final c in collections) if (c.id != id) c],
-        removed: removed);
+    await _saveCollections([
+      for (final c in collections)
+        if (c.id != id) c
+    ], removed: removed);
   }
 
   Future<void> moveCollection(String id, int direction) async {
@@ -1907,9 +1976,9 @@ class ArchiveService extends ChangeNotifier {
             for (final src in f.sources)
               if (collectionCatalog(src) case (final s, final cat)?) ...[
                 _rowKey(s, cat),
-                for (final (s2, base) in _catalogsById[
-                        '${src.type}|${src.catalogId}'] ??
-                    const <(ArchiveSource, ArchiveCatalog)>[])
+                for (final (s2, base)
+                    in _catalogsById['${src.type}|${src.catalogId}'] ??
+                        const <(ArchiveSource, ArchiveCatalog)>[])
                   if (s2.key == s.key) _rowKey(s2, base),
               ],
             for (final (s, cat) in folderExtras(f)) _rowKey(s, cat),
@@ -1985,7 +2054,8 @@ class ArchiveService extends ChangeNotifier {
           await _cache.write(s.key, c, items);
           _notify();
         } catch (e) {
-          debugPrint('ArchiveCollection: source=${s.key} failed=${e.runtimeType}');
+          debugPrint(
+              'ArchiveCollection: source=${s.key} failed=${e.runtimeType}');
         }
       }
     } finally {

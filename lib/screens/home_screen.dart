@@ -595,10 +595,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ...hub.continueWatching(ArchiveType.series)
     ]) {
       final source = entry.source, meta = entry.meta;
+      // Matched by the played episode's own id: a show opened from "More
+      // like this" has a tmdb: id while its episodes keep IMDb ids
+      // (tt…:1:2), so a show-id prefix never matched and the show sank to
+      // the end of the row, past the 20 cards shown (owner, 2026-11-13).
       final vod = 'arc_vod_${source.key}_${meta.id}';
-      final ep = 'arc_ep_${source.key}_${meta.id}';
-      var at =
-          played.indexWhere((c) => c.rawId == vod || c.rawId.startsWith(ep));
+      final ep = 'arc_ep_${source.key}_';
+      final episodes = {
+        for (final v in meta.videos) '$ep${v.id}',
+        if (entry.episode case final v?) '$ep${v.id}',
+      };
+      var at = played.indexWhere((c) =>
+          c.rawId == vod ||
+          episodes.contains(c.rawId) ||
+          c.rawId.startsWith('$ep${meta.id}'));
       if (at < 0) at = played.length;
       items.add((
         at: at,

@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../models/hub_collection.dart';
+import '../services/perf_diagnostics.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_session.dart';
@@ -237,6 +238,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.05);
     _focusWhenBuilt(_eyeNode(row.key));
   }
+
   final Map<String, GlobalKey> _rowKeys = {};
   final Map<String, ScrollController> _rowScrolls = {};
 
@@ -248,6 +250,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   bool _previewRouteVisible = true;
   String? _focusedRowKey;
   int _focusedRow = 0;
+
+  /// Bumped on every remote step between cards: the hero, the backdrop and
+  /// the row titles listen to it. A setState per step rebuilt the whole
+  /// screen (every row): 380 ms per Up/Down on the Homatics (2026-11-13).
+  final _focusTick = ValueNotifier<int>(0);
+  void _focusChanged() => _focusTick.value++;
   ArchiveMeta? _focused;
   String? _focusedLabel;
 
@@ -376,6 +384,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   @override
   void dispose() {
+    _focusTick.dispose();
     WidgetsBinding.instance.removeObserver(this);
     appRouteObserver.unsubscribe(this);
     _widePreviewTimer?.cancel();
@@ -512,7 +521,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   }
 
   void _armWidePreview(ArchiveRow row, int i) {
-    _clearWidePreview();
+    // The step itself no longer rebuilds the screen ([_focusTick]): a card
+    // that had gone wide needs one to shrink back.
+    if (_clearWidePreview() && mounted) setState(() {});
     final type = _type;
     final id = row.items[i].id;
     final node = _node(row.key, i);
@@ -806,19 +817,21 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             animation: service,
             builder: (_, child) =>
                 SimpleDialog(title: Text(tr('Search sources')), children: [
-                  GlassFocusFrame(child: SimpleDialogOption(
-                      onPressed: () => Navigator.pop(ctx, ''),
-                      child: Text(tr('All sources')))),
+                  GlassFocusFrame(
+                      child: SimpleDialogOption(
+                          onPressed: () => Navigator.pop(ctx, ''),
+                          child: Text(tr('All sources')))),
                   for (final entry in service.searchStates(_type).entries)
-                    GlassFocusFrame(child: SimpleDialogOption(
-                        onPressed: () => Navigator.pop(ctx, entry.key),
-                        child: Text(
-                            '${service.searchSourceNames(_type)[entry.key] ?? ''} · ${switch (entry.value) {
-                          ArchiveSourceStatus.loading => tr('Loading'),
-                          ArchiveSourceStatus.ready => tr('Results'),
-                          ArchiveSourceStatus.empty => tr('No results'),
-                          ArchiveSourceStatus.failed => tr('Unavailable'),
-                        }}')))
+                    GlassFocusFrame(
+                        child: SimpleDialogOption(
+                            onPressed: () => Navigator.pop(ctx, entry.key),
+                            child: Text(
+                                '${service.searchSourceNames(_type)[entry.key] ?? ''} · ${switch (entry.value) {
+                              ArchiveSourceStatus.loading => tr('Loading'),
+                              ArchiveSourceStatus.ready => tr('Results'),
+                              ArchiveSourceStatus.empty => tr('No results'),
+                              ArchiveSourceStatus.failed => tr('Unavailable'),
+                            }}')))
                 ])));
     if (!mounted || picked == null) return;
     service.selectSearchSource(_type, picked.isEmpty ? null : picked);
@@ -961,15 +974,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   @override
   Widget build(BuildContext context) {
+    PerfDiagnostics.hubBuilds++;
     final service = context.watch<ArchiveService>();
     final rows = _rowsOf(service);
     final keptRow = rows.indexWhere((row) => row.key == _focusedRowKey);
     if (keptRow >= 0 && _contentScope.hasFocus) _focusedRow = keptRow;
     final narrow = MediaQuery.sizeOf(context).width < 700;
     final scheme = Theme.of(context).colorScheme;
-
-    final focused = _focused;
-    final backdrop = focused?.backgroundUrl ?? focused?.posterUrl;
 
     return PopScope(
       // Back from the rows (or the bar) goes to the rail first, then leaves.
@@ -996,34 +1007,47 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           backgroundColor: Colors.black,
           body: Stack(
             children: [
-              if (backdrop != null)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  // Nuvio-style: the backdrop runs behind the posters all
-                  // the way down (it stopped in a hard edge above the first
-                  // row, owner 2026-11-02), darkened lower down so the rows
-                  // stay readable.
-                  left: narrow ? 0 : MediaQuery.sizeOf(context).width * 0.2,
-                  child: Stack(fit: StackFit.expand, children: [
-                    DetailBackdrop(url: backdrop, fadeLeft: true),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Color(0x99000000),
-                            Color(0xE6000000),
-                          ],
-                          stops: [0.35, 0.65, 1.0],
-                        ),
+              Positioned.fill(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _focusTick,
+                  builder: (context, _, __) {
+                    final focused = _focused;
+                    final backdrop =
+                        focused?.backgroundUrl ?? focused?.posterUrl;
+                    if (backdrop == null) return const SizedBox.shrink();
+                    return Stack(children: [
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        // Nuvio-style: the backdrop runs behind the posters all
+                        // the way down (it stopped in a hard edge above the first
+                        // row, owner 2026-11-02), darkened lower down so the rows
+                        // stay readable.
+                        left:
+                            narrow ? 0 : MediaQuery.sizeOf(context).width * 0.2,
+                        child: Stack(fit: StackFit.expand, children: [
+                          DetailBackdrop(url: backdrop, fadeLeft: true),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Color(0x99000000),
+                                  Color(0xE6000000),
+                                ],
+                                stops: [0.35, 0.65, 1.0],
+                              ),
+                            ),
+                          ),
+                        ]),
                       ),
-                    ),
-                  ]),
+                    ]);
+                  },
                 ),
+              ),
               SafeArea(
                 child: narrow
                     ? Column(children: [
@@ -1260,8 +1284,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   void _openLiveTv() => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => const ArchiveLiveTvScreen()));
 
-  void _openWatchList() => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ArchiveWatchListScreen()));
+  void _openWatchList() => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => const ArchiveWatchListScreen()));
 
   Future<void> _openTypeMenu() async {
     final picked = await showRollDownMenu<ArchiveType>(
@@ -1612,7 +1636,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             shrinkWrap: true,
             children: [
               for (var i = 0; i < items.length; i++)
-                GlassFocusFrame(child: ListTile(
+                GlassFocusFrame(
+                    child: ListTile(
                   leading: Icon(items[i].$1),
                   title: Text(items[i].$2),
                   trailing: items[i].$3 ? const Icon(Icons.check) : null,
@@ -1844,7 +1869,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       );
     }
 
-    final focused = _focused;
     final narrow = MediaQuery.sizeOf(context).width < 700;
     // A phone on its side: wide enough for the TV layout, too short for its
     // hero (rows were pushed to the bottom edge, owner 2026-11-02).
@@ -1864,65 +1888,72 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               height: narrow ? 150 : (short ? 96 : 200),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                child: focused == null
-                    ? const SizedBox.shrink()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_focusedFolder?.logoUrl case final logo?)
-                            SizedBox(
-                              height: narrow || short ? 36 : 64,
-                              child: Align(
-                                alignment: Alignment.bottomLeft,
-                                child: TrimmedLogo(
-                                  key: ValueKey(logo),
-                                  url: logo,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _focusTick,
+                  builder: (context, _, __) {
+                    final focused = _focused;
+                    return focused == null
+                        ? const SizedBox.shrink()
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_focusedFolder?.logoUrl case final logo?)
+                                SizedBox(
                                   height: narrow || short ? 36 : 64,
-                                  maxWidth: 360,
-                                  tint: TrimmedLogo.brandColor(focused.name),
-                                  fallback: Text(focused.name,
-                                      style: const TextStyle(
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.w700)),
-                                ),
-                              ),
-                            )
-                          else
-                            _HeroTitle(
-                                key: ValueKey(focused.id),
-                                meta: focused,
-                                height: narrow || short ? 36 : 64),
-                          const SizedBox(height: 8),
-                          if (_focusedFolder case final folder?)
-                            Text(
-                                '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
-                                      'n': folder.sources.length
-                                    })}',
-                                style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white))
-                          else
-                            _HeroInfoLine(
-                                meta: focused,
-                                sourceLabel: _focusedLabel,
-                                imdbRating: !_focusedFromServer),
-                          const SizedBox(height: 8),
-                          if (focused.description != null && !short)
-                            Flexible(
-                              child: SizedBox(
-                                width: 520,
-                                child: Text(focused.description!,
-                                    maxLines: narrow ? 2 : 4,
-                                    overflow: TextOverflow.ellipsis,
+                                  child: Align(
+                                    alignment: Alignment.bottomLeft,
+                                    child: TrimmedLogo(
+                                      key: ValueKey(logo),
+                                      url: logo,
+                                      height: narrow || short ? 36 : 64,
+                                      maxWidth: 360,
+                                      tint:
+                                          TrimmedLogo.brandColor(focused.name),
+                                      fallback: Text(focused.name,
+                                          style: const TextStyle(
+                                              fontSize: 30,
+                                              fontWeight: FontWeight.w700)),
+                                    ),
+                                  ),
+                                )
+                              else
+                                _HeroTitle(
+                                    key: ValueKey(focused.id),
+                                    meta: focused,
+                                    height: narrow || short ? 36 : 64),
+                              const SizedBox(height: 8),
+                              if (_focusedFolder case final folder?)
+                                Text(
+                                    '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
+                                          'n': folder.sources.length
+                                        })}',
                                     style: const TextStyle(
-                                        fontSize: 13,
-                                        height: 1.35,
-                                        color: Colors.white70)),
-                              ),
-                            ),
-                        ],
-                      ),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white))
+                              else
+                                _HeroInfoLine(
+                                    meta: focused,
+                                    sourceLabel: _focusedLabel,
+                                    imdbRating: !_focusedFromServer),
+                              const SizedBox(height: 8),
+                              if (focused.description != null && !short)
+                                Flexible(
+                                  child: SizedBox(
+                                    width: 520,
+                                    child: Text(focused.description!,
+                                        maxLines: narrow ? 2 : 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            height: 1.35,
+                                            color: Colors.white70)),
+                                  ),
+                                ),
+                            ],
+                          );
+                  },
+                ),
               ),
             ),
             Expanded(
@@ -1949,6 +1980,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   Widget _buildRow(ArchiveService service, List<ArchiveRow> rows, int r,
       ColorScheme scheme) {
+    PerfDiagnostics.hubRowBuilds++;
     final row = rows[r];
     final wideAt = _wideIndex(row);
     return Column(
@@ -1967,15 +1999,18 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                 Flexible(
                   child: Padding(
                     padding: EdgeInsets.only(bottom: _hasEye(row) ? 4 : 0),
-                    child: Text(_rowTitle(service, row),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: r == _focusedRow && _contentScope.hasFocus
-                                ? scheme.primary
-                                : Colors.white)),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _focusTick,
+                      builder: (context, _, __) => Text(_rowTitle(service, row),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: r == _focusedRow && _contentScope.hasFocus
+                                  ? scheme.primary
+                                  : Colors.white)),
+                    ),
                   ),
                 ),
                 if (_hasEye(row)) ...[
@@ -1985,25 +2020,26 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     node: _eyeNode(row.key),
                     hidden: _rowHidden(row),
                     onTap: () => _toggleRowHidden(row),
-                    onFocus: () => setState(() {
+                    onFocus: () {
                       _focusedRow = r;
                       _focusedRowKey = row.key;
-                    }),
+                      _focusChanged();
+                    },
                   ),
                   if (_rowHidden(row)) ...[
                     const SizedBox(width: 10),
                     Flexible(
                       child: Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                          key: ValueKey('archive-hidden-${row.key}'),
-                          '${tr('{n} titles', {'n': row.items.length})} · '
-                          '${context.read<AppPreferences?>()?.isTelevision ?? false ? tr('OK shows them') : tr('Tap to show them')}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.white60)),
-                    ),
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                            key: ValueKey('archive-hidden-${row.key}'),
+                            '${tr('{n} titles', {'n': row.items.length})} · '
+                            '${context.read<AppPreferences?>()?.isTelevision ?? false ? tr('OK shows them') : tr('Tap to show them')}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.white60)),
+                      ),
                     ),
                   ],
                 ],
@@ -2019,9 +2055,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               scrollDirection: Axis.horizontal,
               // Room above: the focused tile grows and its top edge was cut
               // by the row (owner photo, 2026-11-11).
-              padding: const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
+              padding:
+                  const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
               itemExtentBuilder: _tileExtentBuilder(row),
-              scrollCacheExtent: const ScrollCacheExtent.pixels(_cardExtent * 5),
+              scrollCacheExtent:
+                  const ScrollCacheExtent.pixels(_cardExtent * 5),
               itemCount: row.folders.length,
               itemBuilder: (_, i) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -2038,13 +2076,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                   onFocusGained: () {
                     _focusedRowKey = row.key;
                     _lastIndex[row.key] = i;
-                    setState(() {
-                      _focusedRow = r;
-                      _focused = row.items[i];
-                      _focusedFolder = row.folders[i];
-                      _focusedLabel = row.collection!.label;
-                      _focusedFromServer = false;
-                    });
+                    _focusedRow = r;
+                    _focused = row.items[i];
+                    _focusedFolder = row.folders[i];
+                    _focusedLabel = row.collection!.label;
+                    _focusedFromServer = false;
+                    _focusChanged();
                     _revealFocusedAfterLayout(row, i);
                   },
                 ),
@@ -2052,99 +2089,99 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             ),
           )
         else if (!_rowHidden(row))
-        SizedBox(
-          height: PosterCard.height + 16,
-          child: ListView.builder(
-            controller: _rowScroll(row.key),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
-            // Exact slot width: [_focusCard]'s jump lands where the card
-            // really is, even far past the built ones (the TV tab's rows
-            // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
-            // built early, so Right always finds the next one ready. Always
-            // a builder (never switching to itemExtent): another sliver type
-            // would rebuild the cards and drop the focus.
-            itemExtentBuilder: _extentBuilder(row.key, wideAt),
-            scrollCacheExtent: const ScrollCacheExtent.pixels(_cardExtent * 5),
-            itemCount: row.items.length,
-            itemBuilder: (_, i) {
-              final meta = row.items[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: ValueListenableBuilder<Set<String>>(
-                  valueListenable: ArchiveReadyWatch.instance.tags,
-                  builder: (context, ready, _) => PosterCard(
-                    ready: ready.contains(meta.id),
-                    fetching: ArchiveReadyWatch.instance.fetching.value
-                        .contains(meta.id),
-                    focusNode: _node(row.key, i),
-                    title: meta.name,
-                    imageUrl: meta.posterUrl,
-                    wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
-                    wideImageUrl: meta.backgroundUrl,
-                    wideLogoUrl: meta.logo,
-                    rating: row.continuations != null
-                        ? (row.continuations![i].episodeLabel.isNotEmpty
-                            ? row.continuations![i].episodeLabel
-                            : meta.year)
-                        : meta.year,
-                    progressFraction: row.continuations?[i].progress,
-                    sourceLabel: row.continuations != null
-                        ? (row.upcoming
-                            ? tr('Airs {date}', {
-                                'date':
-                                    (row.continuations![i].episode?.released ??
-                                            '')
-                                        .split('T')
-                                        .first
-                              })
-                            : row.continuations![i].resume
-                                ? tr('Resume')
-                                : meta.type == ArchiveType.movie
-                                    ? tr('Play')
-                                    : row.continuations![i].episode == null
-                                        ? tr('Continue series')
-                                        : tr('Next episode'))
-                        : null,
-                    // Touch: first tap shows the title in the hero, a second
-                    // opens it, in both orientations (a phone on its side is
-                    // over 700 wide and opened at once, owner 2026-11-02).
-                    tapToPreview:
-                        Theme.of(context).platform == TargetPlatform.android &&
-                            !(context.read<AppPreferences?>()?.isTelevision ??
-                                false),
-                    onTap: () => row.continuations != null
-                        ? _openContinuation(row.continuations![i])
-                        : _open(row.sourceAt(i), meta),
-                    isFavorite: context
-                        .read<ArchiveService>()
-                        .isFavorite(row.sourceAt(i), meta),
-                    onToggleFavorite: () =>
-                        holdArchiveTitle(context, row, row.sourceAt(i), meta),
-                    onFocusGained: () {
-                      service.prioritizeRow(row);
-                      service.retainSearchFocus(row);
-                      _focusedRowKey = row.key;
-                      _lastIndex[row.key] = i;
-                      if (i >= row.items.length - 12) {
-                        context.read<ArchiveService>().loadMore(row);
-                      }
-                      _armWidePreview(row, i);
-                      setState(() {
+          SizedBox(
+            height: PosterCard.height + 16,
+            child: ListView.builder(
+              controller: _rowScroll(row.key),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
+              // Exact slot width: [_focusCard]'s jump lands where the card
+              // really is, even far past the built ones (the TV tab's rows
+              // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
+              // built early, so Right always finds the next one ready. Always
+              // a builder (never switching to itemExtent): another sliver type
+              // would rebuild the cards and drop the focus.
+              itemExtentBuilder: _extentBuilder(row.key, wideAt),
+              scrollCacheExtent:
+                  const ScrollCacheExtent.pixels(_cardExtent * 5),
+              itemCount: row.items.length,
+              itemBuilder: (_, i) {
+                final meta = row.items[i];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ValueListenableBuilder<Set<String>>(
+                    valueListenable: ArchiveReadyWatch.instance.tags,
+                    builder: (context, ready, _) => PosterCard(
+                      ready: ready.contains(meta.id),
+                      fetching: ArchiveReadyWatch.instance.fetching.value
+                          .contains(meta.id),
+                      focusNode: _node(row.key, i),
+                      title: meta.name,
+                      imageUrl: meta.posterUrl,
+                      wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
+                      wideImageUrl: meta.backgroundUrl,
+                      wideLogoUrl: meta.logo,
+                      rating: row.continuations != null
+                          ? (row.continuations![i].episodeLabel.isNotEmpty
+                              ? row.continuations![i].episodeLabel
+                              : meta.year)
+                          : meta.year,
+                      progressFraction: row.continuations?[i].progress,
+                      sourceLabel: row.continuations != null
+                          ? (row.upcoming
+                              ? tr('Airs {date}', {
+                                  'date': (row.continuations![i].episode
+                                              ?.released ??
+                                          '')
+                                      .split('T')
+                                      .first
+                                })
+                              : row.continuations![i].resume
+                                  ? tr('Resume')
+                                  : meta.type == ArchiveType.movie
+                                      ? tr('Play')
+                                      : row.continuations![i].episode == null
+                                          ? tr('Continue series')
+                                          : tr('Next episode'))
+                          : null,
+                      // Touch: first tap shows the title in the hero, a second
+                      // opens it, in both orientations (a phone on its side is
+                      // over 700 wide and opened at once, owner 2026-11-02).
+                      tapToPreview: Theme.of(context).platform ==
+                              TargetPlatform.android &&
+                          !(context.read<AppPreferences?>()?.isTelevision ??
+                              false),
+                      onTap: () => row.continuations != null
+                          ? _openContinuation(row.continuations![i])
+                          : _open(row.sourceAt(i), meta),
+                      isFavorite: context
+                          .read<ArchiveService>()
+                          .isFavorite(row.sourceAt(i), meta),
+                      onToggleFavorite: () =>
+                          holdArchiveTitle(context, row, row.sourceAt(i), meta),
+                      onFocusGained: () {
+                        service.prioritizeRow(row);
+                        service.retainSearchFocus(row);
+                        _focusedRowKey = row.key;
+                        _lastIndex[row.key] = i;
+                        if (i >= row.items.length - 12) {
+                          context.read<ArchiveService>().loadMore(row);
+                        }
+                        _armWidePreview(row, i);
                         _focusedRow = r;
                         _focused = meta;
                         _focusedFolder = null;
                         _focusedLabel = row.labelAt(i);
                         _focusedFromServer = row.sourceAt(i).server != null;
-                      });
-                      _revealFocusedAfterLayout(row, i);
-                    },
+                        _focusChanged();
+                        _revealFocusedAfterLayout(row, i);
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }

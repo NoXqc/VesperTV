@@ -30,6 +30,12 @@ class PerfDiagnostics {
   static int notifies = 0;
   static int homeBuilds = 0;
 
+  /// Media Hub screen builds (whole screen) in the window.
+  static int hubBuilds = 0;
+
+  /// Media Hub row widgets built in the window (lazy rows scrolled in).
+  static int hubRowBuilds = 0;
+
   static Timer? _tick;
   static final Stopwatch _clock = Stopwatch();
   static int _lastTickMs = 0;
@@ -100,6 +106,8 @@ class PerfDiagnostics {
     Timer.periodic(const Duration(seconds: 10), (_) async {
       final stalls = _stalls, max = _maxStallMs, total = _stallTotalMs;
       final n = notifies, builds = homeBuilds, maxBuild = _windowMaxBuildMs;
+      final hub = hubBuilds, hubRows = hubRowBuilds;
+      hubBuilds = hubRowBuilds = 0;
       final jobs = {..._active, ..._windowJobs};
       _stalls = _maxStallMs = _stallTotalMs = notifies = homeBuilds = 0;
       _windowMaxBuildMs = 0;
@@ -110,7 +118,8 @@ class PerfDiagnostics {
         // with nothing to change (a forgotten repeating animation).
         debugPrint('Frames: n=$_frames slow=$_jankFrames '
             'maxBuild=${maxBuild}ms maxRaster=${_windowMaxRasterMs}ms '
-            'avgRaster=${_rasterTotalMs ~/ _frames}ms homeBuilds=$builds');
+            'avgRaster=${_rasterTotalMs ~/ _frames}ms homeBuilds=$builds'
+            '${hub + hubRows > 0 ? ' hubBuilds=$hub hubRows=$hubRows' : ''}');
       }
       _frames = _jankFrames = _rasterTotalMs = _windowMaxRasterMs = 0;
       final waits = <String>[];
