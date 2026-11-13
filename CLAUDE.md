@@ -32,14 +32,11 @@ up on real boxes (weak CPUs, D-pad remotes, Fire OS quirks) — emulators/tests 
 Keep replies short; make routine calls yourself; **confirm before anything destructive or
 outward-facing** (deleting releases, force-pushes, posting). Only commit/release when asked.
 
-## 1b. Codex scoping only when asked (owner, 2026-11-07)
-**Don't mention Codex or offer to hand a task to it** - the owner says when he wants something
-scoped for Codex (replaces the 2026-11-04 "offer Codex first" rule). When asked, write a
-ready-to-paste Codex prompt (rules: `AGENTS.md`, `codex/<task>` branch, a HANDOFF block). Good for Codex: well-scoped features with a clear spec,
-translations, docs/site/remote-guide updates, tests, reviews of a diff, diagnostics from a Send log
-when the area is known, mechanical refactors, building/checking a branch. Keep for Claude: releases,
-signing, VPS, Discord, native player/vendored plugin, cloud sync/relay design, root-causing an
-unknown bug across many files, and reviewing/merging Codex branches. When in doubt, ask.
+## 1b. No more Codex (owner, 2026-11-12)
+The owner upgraded his Claude plan and dropped Codex: Claude does all the work, so don't offer to
+hand tasks to Codex or write Codex prompts. All 157 `codex/*` branches were merged and deleted locally
+that day. `AGENTS.md`, the `cdx` / `cdx-do` tags and the "cdx, …" entries in this file and HANDOFF are
+history: read them as notes about past work, and treat any open `cdx-do` item as Claude's.
 
 ## 2. Start-here checklist for a clean session
 1. `git pull`, then `git status` (ignore the untracked `*-windows-x64.zip` and
@@ -275,6 +272,18 @@ inaccurate. Recoverable from commit c18de49.)
   resize stretched wide logos into squares); full-size logos filled the image cache and re-decoded on
   scroll. (7) `_SlideSteadyWidth` (TV): during a column slide the live list / guide keeps one width,
   clipped, and takes the slot's width when it lands: one layout per slide, not one per frame (+746).
+- **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
+  keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
+  (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;
+  Netflix is handled inside WindowManager and can never be caught. `RemoteKeyService` (an accessibility
+  service the viewer turns on, Settings > Remote buttons links to it) sees keys first and, while VesperTV is
+  on screen, hands it GUIDE, the viewer's learned buttons (`RemoteKeys` sends their Android key codes) and
+  any button while Settings learns. It takes the release of every press it took (the firmware acts on the
+  release) and makes its own key repeats (a taken key gets none, holds need them). A sideloaded app's
+  service is an Android 13+ "restricted setting": App info > allow restricted settings, or
+  `adb shell appops set com.nox.nox_iptv ACCESS_RESTRICTED_SETTINGS allow`. From Git Bash,
+  `settings put secure enabled_accessibility_services a/b:c/d` needs `MSYS_NO_PATHCONV=1` (the mangled value
+  dropped the Homatics' Monet launcher service once); keep other apps' entries in the list.
 - **Fire OS's on-screen keyboard swallows the physical Back button — known, unfixable limitation.**
   Confirmed via a raw `getevent` capture (clean `KEY_BACK`) plus Flutter-side logging of
   `logicalKey.keyId`: pressing Back on a Fire TV remote while the on-screen keyboard has D-pad
