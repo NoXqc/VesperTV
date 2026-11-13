@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
@@ -72,9 +73,21 @@ class RemoteButtonActions {
       case 'channel_down':
         _player?.zap(1);
       case 'fast_forward':
-        _player?.skip(1);
+        final player = _player;
+        if (player != null) {
+          player.skip(1);
+        } else {
+          _sendMediaKey(LogicalKeyboardKey.mediaFastForward,
+              PhysicalKeyboardKey.mediaFastForward);
+        }
       case 'rewind':
-        _player?.skip(-1);
+        final player = _player;
+        if (player != null) {
+          player.skip(-1);
+        } else {
+          _sendMediaKey(
+              LogicalKeyboardKey.mediaRewind, PhysicalKeyboardKey.mediaRewind);
+        }
       case 'info':
         _player?.showInfo();
       case 'favourites' ||
@@ -99,6 +112,29 @@ class RemoteButtonActions {
         _player?.cycleFit();
       case 'record':
         await _record();
+    }
+  }
+
+  /// Outside the player, a button set to Fast forward / Rewind does what
+  /// the remote's own FF / RW keys do there (10-row jumps in the groups and
+  /// channel lists, schedule pages): the key goes up the focus tree from
+  /// the focused widget, like a real key press. The button itself was taken
+  /// before the focus tree, so nothing else sees it.
+  static void _sendMediaKey(
+      LogicalKeyboardKey logical, PhysicalKeyboardKey physical) {
+    final event = KeyDownEvent(
+        physicalKey: physical,
+        logicalKey: logical,
+        timeStamp:
+            Duration(microseconds: DateTime.now().microsecondsSinceEpoch));
+    for (FocusNode? node = FocusManager.instance.primaryFocus;
+        node != null;
+        node = node.parent) {
+      final result = node.onKeyEvent?.call(node, event);
+      if (result == KeyEventResult.handled ||
+          result == KeyEventResult.skipRemainingHandlers) {
+        return;
+      }
     }
   }
 
