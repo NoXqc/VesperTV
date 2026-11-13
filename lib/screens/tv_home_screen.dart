@@ -3298,6 +3298,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _col1Scope.requestFocus();
       return;
     }
+    // Portrait phone: Home is the bottom pill's first tab, shown in place
+    // so the pill stays under it (owner, 2026-11-13).
+    if (_compact) {
+      _onTabChanged('Home');
+      return;
+    }
     _returnToTv = true;
     _returnHomeToFavorites = true;
     final route = MaterialPageRoute<void>(builder: (_) => const HomeScreen());
@@ -4071,7 +4077,32 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         onFocusChange: (has) {
           if (has) _onColumnFocus(1);
         },
-        child: const HomeScreen(),
+        child: HomeScreen(
+            embedded: true,
+            phoneHeader: _compact ? _phoneHeaderActions() : null),
+      );
+
+  /// Portrait phone: the title row's buttons (Vesper, Search, ☰ More).
+  Widget _phoneHeaderActions() => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Search without going back to the tabs page first.
+          if (context.watch<AppPreferences>().vesperShortcut)
+            IconButton(
+              icon: const Icon(Icons.mic_none, color: Colors.white),
+              tooltip: 'Vesper AI',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => VesperAi.instance.openPanel(),
+            ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            tooltip: tr('Search'),
+            visualDensity: VisualDensity.compact,
+            onPressed: _openSearch,
+          ),
+          const SizedBox(width: 4),
+          _phoneGear(),
+        ],
       );
 
   Widget _contentScope(
@@ -4163,7 +4194,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (title != null)
+        // Home draws this row itself, with the profiles beside its title
+        // (HomeScreen.phoneHeader).
+        if (title != null && _tab != 'Home')
           InkWell(
             canRequestFocus: false,
             // Groups is the top level now (the bottom bar switches tabs).
@@ -4187,20 +4220,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             fontSize: 18,
                             fontWeight: FontWeight.w600)),
                   ),
-                  // Search without going back to the tabs page first.
-                  if (context.watch<AppPreferences>().vesperShortcut)
-                    IconButton(
-                      icon: const Icon(Icons.mic_none, color: Colors.white),
-                      tooltip: 'Vesper AI',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => VesperAi.instance.openPanel(),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.white),
-                    tooltip: tr('Search'),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _openSearch,
-                  ),
+                  _phoneHeaderActions(),
                 ],
               ),
             ),
@@ -4248,9 +4268,77 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     );
   }
 
+  /// Portrait phone: a floating round ☰ "More" button at the top right
+  /// (owner, 2026-11-13: it replaced the pill's More slot so Home fits).
+  /// Settings first, then what the old More page held that has no other
+  /// home on a phone.
+  Widget _phoneGear() => Builder(
+        builder: (gearContext) => Tooltip(
+          message: tr('More'),
+          child: GestureDetector(
+            onTap: () => _openPhoneGearMenu(gearContext),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.12),
+                border: Border.all(color: Colors.white24),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black45, blurRadius: 10),
+                ],
+              ),
+              child: const Icon(Icons.menu, color: Colors.white, size: 22),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> _openPhoneGearMenu(BuildContext gearContext) async {
+    final prefs = context.read<AppPreferences>();
+    final picked = await showRollDownMenu<String>(
+      gearContext,
+      anchor: rollDownAnchorOf(gearContext),
+      title: tr('More'),
+      centered: false,
+      width: 240,
+      items: [
+        RollDownMenuItem(
+            value: 'settings', icon: Icons.settings, label: tr('Settings')),
+        if (!prefs.hideMultiview)
+          RollDownMenuItem(
+              value: 'multiview',
+              icon: Icons.grid_view,
+              label: tr('Multiview')),
+        RollDownMenuItem(
+            value: 'update',
+            icon: Icons.playlist_add_check,
+            label: tr('Update Content')),
+        // iOS apps never quit themselves (see the tabs column's Exit row).
+        if (!Platform.isIOS)
+          RollDownMenuItem(
+              value: 'exit',
+              icon: Icons.power_settings_new,
+              label: tr('Exit {appName}', {'appName': AppConstants.appName})),
+      ],
+    );
+    if (!mounted || picked == null) return;
+    switch (picked) {
+      case 'settings':
+        unawaited(_openSettings());
+      case 'multiview':
+        _openMultiview();
+      case 'update':
+        unawaited(_refreshPlaylist(context));
+      case 'exit':
+        _fullExit();
+    }
+  }
+
   /// Portrait phone: floating tab bar under the pages (streaming-app
-  /// style). Sports opens its own screen like the tabs column's row;
-  /// "More" is the old tabs page (Search, Multiview, Settings, Exit...).
+  /// style), Home first. Sports opens its own screen like the tabs
+  /// column's row. The old "More" slot (the tabs page) became the ☰ button
+  /// at the top right ([_phoneGear]); page 0 is no longer reachable.
   Widget _buildPhoneTabBar() {
     final scheme = Theme.of(context).colorScheme;
     Widget item(
@@ -4321,6 +4409,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ),
           child: Row(
             children: [
+              item(Icons.home_outlined, tr('Home'), _tab == 'Home', _openHome),
               for (final tab in _visibleTabs)
                 item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
                   if (_tab == tab) {
@@ -4341,8 +4430,6 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               if (!context.watch<AppPreferences>().hideSportsTrak)
                 item(Icons.sports_hockey, AppConstants.sportsTabName, false,
                     _openSports),
-              item(Icons.menu, tr('More'), !onTabs,
-                  () => setState(() => _phonePage = 0)),
             ],
           ),
         ),
@@ -4429,6 +4516,29 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         },
       );
 
+  /// Multiview from the tabs column or the phone's gear menu.
+  void _openMultiview() {
+    if (usesMediaKit) {
+      DesktopMiniPlayer.instance.clear();
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DesktopMultiviewScreen()));
+      return;
+    }
+    // PlaybackService's own background-kept-alive live channel
+    // (the mobile "island"/resume hint — deliberately still
+    // playing after backing out of fullscreen, and almost
+    // always populated anyway since the app auto-resumes the
+    // last channel on launch) is a separate player system from
+    // this screen's own controllers, same as DesktopMiniPlayer
+    // is on Windows. Reported directly as its audio bleeding
+    // through on top of whichever multiview cell has audio
+    // focus — stopping it here is the same fix as the Windows
+    // branch above, just a different background player.
+    unawaited(context.read<PlaybackService>().stop());
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MultiviewScreen()));
+  }
+
   Widget _buildTabsColumn({required bool collapsed}) {
     return ListView(
       children: [
@@ -4469,27 +4579,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             label: tr('Multiview'),
             selected: false,
             collapsed: collapsed,
-            onTap: () {
-              if (usesMediaKit) {
-                DesktopMiniPlayer.instance.clear();
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const DesktopMultiviewScreen()));
-              } else {
-                // PlaybackService's own background-kept-alive live channel
-                // (the mobile "island"/resume hint — deliberately still
-                // playing after backing out of fullscreen, and almost
-                // always populated anyway since the app auto-resumes the
-                // last channel on launch) is a separate player system from
-                // this screen's own controllers, same as DesktopMiniPlayer
-                // is on Windows. Reported directly as its audio bleeding
-                // through on top of whichever multiview cell has audio
-                // focus — stopping it here is the same fix as the Windows
-                // branch above, just a different background player.
-                unawaited(context.read<PlaybackService>().stop());
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MultiviewScreen()));
-              }
-            },
+            onTap: _openMultiview,
           ),
         // Its own full-screen page (like Search), not a tab in these
         // columns: league/day/game rows don't fit the groups -> content

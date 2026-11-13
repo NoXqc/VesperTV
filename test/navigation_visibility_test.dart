@@ -173,10 +173,16 @@ void main() {
       if (size.width > 1000) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       } else {
-        await tester.tap(find.text('More'));
+        // Portrait phone: the floating ☰ More button's menu (Settings
+        // first); Home stays the bottom pill's first slot.
+        await tester.tap(find.byTooltip('More'));
       }
       await tester.pumpAndSettle();
       expect(find.text('Settings').hitTestable(), findsOneWidget);
+      if (size.width <= 1000) {
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.text('Home').hitTestable().first);
       await tester.pumpAndSettle();
       expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
@@ -184,4 +190,29 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   }
+
+  testWidgets('portrait phone: Home is the first pill tab, shown in place',
+      (tester) async {
+    await pumpHome(tester, const Size(420, 900));
+    // The old More slot is gone; More is the floating ☰ button now.
+    expect(find.byTooltip('More'), findsOneWidget);
+    await tester.tap(find.text('Home').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
+    // Home draws the title row itself: profiles beside "Home", then the
+    // ☰ More button (one title row, not two).
+    expect(
+        find.descendant(
+            of: find.byType(HomeScreen), matching: find.byTooltip('More')),
+        findsOneWidget);
+    expect(find.byTooltip('More'), findsOneWidget);
+    // In place, not a pushed page: the pill (and its TV slot) stays.
+    expect(find.text('TV').hitTestable(), findsWidgets);
+    expect(find.byTooltip('Back'), findsNothing);
+    await tester.tap(find.text('TV').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

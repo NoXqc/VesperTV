@@ -412,6 +412,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-13 - phone Home in the pill (main, +757, owner-tested on his phone, not released):** portrait
+  phone only (`_compact`). Bottom pill = Home | TV | Movies | TV Shows | Media Hub | Sports Trak; the More slot
+  became a floating round ☰ (`_phoneGear`, roll-down menu: Settings, Multiview, Update Content, Exit not on iOS).
+  Home is the root's own tab there (`_openHome` -> `_onTabChanged('Home')`, `HomeScreen(embedded, phoneHeader)`:
+  Home draws the title row with the profiles beside "Home"), **no hero** and no focused-card backdrop (wallpaper
+  only). Open on Home starts as that root tab (`StartupRoutes.homeInRoot`, `portraitPhone`), not a page over it
+  (it hid the pill). Tablets / landscape / TV unchanged. iOS branch: `TARGETED_DEVICE_FAMILY = "1,2"` (iPad tester
+  saw the iPhone-only window). Next build > 757.
 - **Claude, 2026-11-12 - release 1.0.66 (beta), +753 (latest):** owner said "Commit and /cutr". Android only;
   Windows stays 1.0.61, Linux 1.0.63 (+702). Since 1.0.65: Remote buttons (+738) with Fast forward / Rewind and
   "Buttons your box keeps" (RemoteKeyService, §10), Interface size Compact / Normal / Large + passed columns hide

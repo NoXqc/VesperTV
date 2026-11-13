@@ -1661,6 +1661,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           onGenerateInitialRoutes: (_) => _startupRoutes.generate(
             preferences: prefs,
             storage: _storage,
+            portraitPhone: _isPortraitPhone(context),
             rootBuilder: _buildTvRoot,
             destinations: {
               'home': (_) => const HomeScreen(),
@@ -1712,6 +1713,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     );
   }
 
+  /// Same rule as TvHomeScreen's one-column phone layout (`_compact`).
+  static bool _isPortraitPhone(BuildContext context) {
+    final size = MediaQueryData.fromView(View.of(context)).size;
+    return size.width < 600 && size.height > size.width;
+  }
+
   Widget _buildTvRoot(BuildContext context) {
     // TvHomeScreen is the regular home; Sports Mode selects the sports root.
     // The regular layout adapts to phones itself
@@ -1743,14 +1750,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return TvHomeScreen(
           key: key,
           initialTab: switch (section) {
-            'home' when prefs.hideLiveTv => 'Home',
+            'home' when prefs.hideLiveTv || _startupRoutes.homeInRoot => 'Home',
             'movies' => 'Movies',
             'series' => 'TV Shows',
             _ => 'TV',
           },
           startupSportsCovered: section == 'sports',
-          startupBrowseCovered:
-              (section == 'home' && !prefs.hideLiveTv) || section == 'hub',
+          startupBrowseCovered: (section == 'home' &&
+                  !prefs.hideLiveTv &&
+                  !_startupRoutes.homeInRoot) ||
+              section == 'hub',
         );
       },
     );

@@ -65,7 +65,17 @@ import '../utils/desktop_platform.dart';
 /// D-pad: explicit dispatch like the Media Hub rows (one handler for the
 /// page, exact card slots, `jumpTo` only — CLAUDE.md §10).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.embedded = false, this.phoneHeader});
+
+  /// Shown inside the TV home's columns (the portrait phone's Home tab, or
+  /// every content tab hidden), not as a pushed page: no Back arrow, Back
+  /// is the TV home's own.
+  final bool embedded;
+
+  /// Portrait phone (embedded): the TV home's title-row buttons. Home then
+  /// draws that row itself: "Home", the profiles beside it (owner,
+  /// 2026-11-13: no strip of their own), these buttons on the right.
+  final Widget? phoneHeader;
 
   /// Narrower than this (a phone), Home has no mini player.
   static const miniPlayerMinWidth = 720.0;
@@ -343,8 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ScrollController _rowScroll(String rowId) =>
       _rowScrolls.putIfAbsent(rowId, ScrollController.new);
 
-  GlobalKey _rowKey(String rowId) =>
-      _rowKeys.putIfAbsent(rowId, GlobalKey.new);
+  GlobalKey _rowKey(String rowId) => _rowKeys.putIfAbsent(rowId, GlobalKey.new);
 
   /// The collections chosen for Home, one row each (Settings > Media Hub
   /// sources > Collections > Show on Home). Read at every load: no fetch.
@@ -708,7 +717,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (source == null) {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text(tr("This title's Media Hub source is not available."))));
+          content:
+              Text(tr("This title's Media Hub source is not available."))));
       return;
     }
     if (title.meta.type == ArchiveType.series) {
@@ -1312,6 +1322,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ------------------------------------------------------------ profiles --
 
+  void _onProfileFocus(int i) {
+    if (!_inProfiles || _profileIndex != i) {
+      setState(() {
+        _inProfiles = true;
+        _profileIndex = i;
+      });
+    }
+  }
+
   Future<void> _switchProfile(ViewerProfile p) async {
     final viewers = context.read<ViewerProfileService>();
     if (p.id == viewers.active.id) {
@@ -1510,8 +1529,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await _load();
     if (!mounted || _rows.isEmpty) return;
     final r = keep == null ? 0 : _rows.indexWhere((x) => x.kind == keep);
-    _focusCard(
-        r < 0 ? 0 : r, keep == null || r < 0 ? 0 : (_cardIndex[_rows[r].id] ?? 0));
+    _focusCard(r < 0 ? 0 : r,
+        keep == null || r < 0 ? 0 : (_cardIndex[_rows[r].id] ?? 0));
   }
 
   // --------------------------------------------------------------- build --
@@ -1524,6 +1543,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final size = MediaQuery.sizeOf(context);
     // Profiles + hero stay put; only the rows scroll under them.
     final heroHeight = (size.height * 0.34).clamp(150.0, 380.0);
+    // A portrait phone has no hero (owner, 2026-11-13): it took half the
+    // screen, a tap opens a card at once anyway and there's no mini player.
+    // Only the wallpaper stays behind the rows.
+    final portraitPhone = size.width < 600 && size.height > size.width;
     final focused = _focused;
     // 16:9 in the hero's right side, its room kept even while nothing
     // plays (the hero text doesn't jump when a channel starts).
@@ -1541,7 +1564,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Backdrop(item: focused, wallpaper: _wallpaper),
+            _Backdrop(
+                item: portraitPhone ? null : focused, wallpaper: _wallpaper),
             AnimatedOpacity(
               opacity: _switching ? 0 : 1,
               duration: const Duration(milliseconds: 220),
@@ -1559,7 +1583,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 6),
                         child: Row(children: [
-                          if (needsBackArrow)
+                          if (needsBackArrow && !widget.embedded)
                             ExcludeFocus(
                                 child: IconButton(
                               tooltip: tr('Back'),
@@ -1571,38 +1595,59 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (size.width >= 800) const _HomeClock(),
                         ]),
                       ),
-                    if (!hideProfiles)
+                    if (widget.phoneHeader case final actions?)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 0, 4),
+                        child: Row(children: [
+                          Text(tr('Home'),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600)),
+                          Expanded(
+                            child: hideProfiles
+                                ? const SizedBox.shrink()
+                                : _ProfilesStrip(
+                                    inline: true,
+                                    compact: true,
+                                    nodes: _profileNode,
+                                    addNode: _addProfileNode,
+                                    onPick: _switchProfile,
+                                    onEdit: _editProfile,
+                                    onAdd: _manageProfiles,
+                                    onFocus: _onProfileFocus,
+                                  ),
+                          ),
+                          actions,
+                        ]),
+                      )
+                    else if (!hideProfiles)
                       _ProfilesStrip(
                         compact: !_inProfiles,
+                        showBack: needsBackArrow && !widget.embedded,
                         nodes: _profileNode,
                         addNode: _addProfileNode,
                         onPick: _switchProfile,
                         onEdit: _editProfile,
                         onAdd: _manageProfiles,
-                        onFocus: (i) {
-                          if (!_inProfiles || _profileIndex != i) {
-                            setState(() {
-                              _inProfiles = true;
-                              _profileIndex = i;
-                            });
-                          }
-                        },
+                        onFocus: _onProfileFocus,
                       ),
-                    SizedBox(
-                      height: heroHeight,
-                      child: Row(children: [
-                        Expanded(child: _Hero(item: focused, scheme: scheme)),
-                        if (mini)
-                          Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(0, 8, _sidePad, 8),
-                            child: _MiniPlayer(
-                                width: miniWidth,
-                                height: miniHeight,
-                                focusedChannelId: focused?.preview?.id),
-                          ),
-                      ]),
-                    ),
+                    if (!portraitPhone)
+                      SizedBox(
+                        height: heroHeight,
+                        child: Row(children: [
+                          Expanded(child: _Hero(item: focused, scheme: scheme)),
+                          if (mini)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(0, 8, _sidePad, 8),
+                              child: _MiniPlayer(
+                                  width: miniWidth,
+                                  height: miniHeight,
+                                  focusedChannelId: focused?.preview?.id),
+                            ),
+                        ]),
+                      ),
                     Expanded(
                       child: SingleChildScrollView(
                         controller: _pageScroll,
@@ -1695,10 +1740,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     // photo, +726: row 2 New episodes, focus on Disney).
                     final now = _rows.indexWhere((x) => x.id == row.id);
                     final at = now >= 0 ? now : r;
-                    final current =
-                        now >= 0 && i < _rows[now].items.length
-                            ? _rows[now].items[i]
-                            : item;
+                    final current = now >= 0 && i < _rows[now].items.length
+                        ? _rows[now].items[i]
+                        : item;
                     _cardIndex[row.id] = i;
                     _scheduleMini(current);
                     if (identical(_focused, current) &&
@@ -1964,64 +2008,66 @@ class _Hero extends StatelessWidget {
                   child: item.live && item.game == null
                       ? _LiveHero(item: item)
                       : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (item.live)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 10),
-                          child: _LivePill(),
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (item.live)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 10),
+                                child: _LivePill(),
+                              ),
+                            if (item.titleLogoUrl case final logo?)
+                              TrimmedLogo(
+                                key: ValueKey(logo),
+                                url: logo,
+                                height: 64,
+                                maxWidth: 320,
+                                tint: TrimmedLogo.brandColor(item.title),
+                                fallback: _HeroName(item.title),
+                              )
+                            else
+                              _HeroName(item.title),
+                            if (item.game?.statusText.isNotEmpty ?? false)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                    [
+                                      if (item.description != null)
+                                        item.description!,
+                                      item.game!.state == GameState.pre
+                                          ? TimeFormat.hm.format(
+                                              item.game!.start.toLocal())
+                                          : item.game!.statusText,
+                                    ].join('  ·  '),
+                                    style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: scheme.primary)),
+                              ),
+                            if (item.subtitle != null &&
+                                item.subtitle!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(item.subtitle!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 14, color: Colors.white70)),
+                              ),
+                            if (item.game == null &&
+                                (item.description?.isNotEmpty ?? false))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Text(item.description!,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        height: 1.35,
+                                        color: Colors.white70)),
+                              ),
+                          ],
                         ),
-                      if (item.titleLogoUrl case final logo?)
-                        TrimmedLogo(
-                          key: ValueKey(logo),
-                          url: logo,
-                          height: 64,
-                          maxWidth: 320,
-                          tint: TrimmedLogo.brandColor(item.title),
-                          fallback: _HeroName(item.title),
-                        )
-                      else
-                        _HeroName(item.title),
-                      if (item.game?.statusText.isNotEmpty ?? false)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                              [
-                                if (item.description != null) item.description!,
-                                item.game!.state == GameState.pre
-                                    ? TimeFormat.hm
-                                        .format(item.game!.start.toLocal())
-                                    : item.game!.statusText,
-                              ].join('  ·  '),
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: scheme.primary)),
-                        ),
-                      if (item.subtitle != null && item.subtitle!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(item.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.white70)),
-                        ),
-                      if (item.game == null &&
-                          (item.description?.isNotEmpty ?? false))
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(item.description!,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  height: 1.35,
-                                  color: Colors.white70)),
-                        ),
-                    ],
-                  ),
                 ),
               ),
       ),
@@ -2621,8 +2667,15 @@ class _ProfilesStrip extends StatelessWidget {
       required this.onEdit,
       required this.onAdd,
       required this.onFocus,
+      this.showBack = false,
+      this.inline = false,
       this.compact = false});
   final bool compact;
+  final bool showBack;
+
+  /// Only the scrolling cards, for the phone's title row (no padding,
+  /// Back arrow or clock).
+  final bool inline;
   final FocusNode Function(int) nodes;
   final FocusNode addNode;
   final void Function(ViewerProfile) onPick, onEdit;
@@ -2632,6 +2685,46 @@ class _ProfilesStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewers = context.watch<ViewerProfileService>();
     final scale = MediaQuery.sizeOf(context).width < 600 ? .8 : 1.0;
+    final cards = SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: inline
+            ? const EdgeInsets.symmetric(vertical: 2, horizontal: 10)
+            : EdgeInsets.symmetric(vertical: compact ? 4 : 12, horizontal: 12),
+        child: Row(children: [
+          for (final (i, p) in viewers.profiles.indexed)
+            Builder(
+                builder: (cardContext) => ProfileCard(
+                    profile: p,
+                    label: p.displayName,
+                    focusNode: nodes(i),
+                    active: p.id == viewers.active.id,
+                    scale: scale,
+                    compact: compact,
+                    onTap: () => onPick(p),
+                    onHold: () => onEdit(p),
+                    onFocused: () {
+                      onFocus(i);
+                      Scrollable.ensureVisible(cardContext,
+                          duration: Duration.zero,
+                          alignmentPolicy:
+                              ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+                    })),
+          Builder(
+              builder: (cardContext) => ProfileCard(
+                  label: tr('Add Profile'),
+                  focusNode: addNode,
+                  scale: scale,
+                  compact: compact,
+                  onTap: onAdd,
+                  onFocused: () {
+                    onFocus(viewers.profiles.length);
+                    Scrollable.ensureVisible(cardContext,
+                        duration: Duration.zero,
+                        alignmentPolicy:
+                            ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+                  })),
+        ]));
+    if (inline) return cards;
     return AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
@@ -2639,7 +2732,7 @@ class _ProfilesStrip extends StatelessWidget {
         child: Padding(
             padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
             child: Row(children: [
-              if (needsBackArrow)
+              if (showBack)
                 ExcludeFocus(
                   child: IconButton(
                     tooltip: tr('Back'),
@@ -2647,47 +2740,7 @@ class _ProfilesStrip extends StatelessWidget {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
-              Expanded(
-                  child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.symmetric(
-                          vertical: compact ? 4 : 12, horizontal: 12),
-                      child: Row(children: [
-                        for (final (i, p) in viewers.profiles.indexed)
-                          Builder(
-                              builder: (cardContext) => ProfileCard(
-                                  profile: p,
-                                  label: p.displayName,
-                                  focusNode: nodes(i),
-                                  active: p.id == viewers.active.id,
-                                  scale: scale,
-                                  compact: compact,
-                                  onTap: () => onPick(p),
-                                  onHold: () => onEdit(p),
-                                  onFocused: () {
-                                    onFocus(i);
-                                    Scrollable.ensureVisible(cardContext,
-                                        duration: Duration.zero,
-                                        alignmentPolicy:
-                                            ScrollPositionAlignmentPolicy
-                                                .keepVisibleAtEnd);
-                                  })),
-                        Builder(
-                            builder: (cardContext) => ProfileCard(
-                                label: tr('Add Profile'),
-                                focusNode: addNode,
-                                scale: scale,
-                                compact: compact,
-                                onTap: onAdd,
-                                onFocused: () {
-                                  onFocus(viewers.profiles.length);
-                                  Scrollable.ensureVisible(cardContext,
-                                      duration: Duration.zero,
-                                      alignmentPolicy:
-                                          ScrollPositionAlignmentPolicy
-                                              .keepVisibleAtEnd);
-                                })),
-                      ]))),
+              Expanded(child: cards),
               if (MediaQuery.sizeOf(context).width >= 800) const _HomeClock(),
             ])));
   }
