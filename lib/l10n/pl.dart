@@ -2449,8 +2449,8 @@ const Map<String, String> kPl = {
   "Use a recovery code": "Użyj kodu odzyskiwania",
   "Link code": "Kod połączenia",
   "Join sync": "Dołącz do synchronizacji",
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Ta synchronizacja ma już 3 urządzenia. Zatrzymaj synchronizację na jednym z nich i spróbuj ponownie. Urządzenie nieużywane przez 30 dni samo zwalnia miejsce.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Ta synchronizacja ma już {max} urządzenia. Zatrzymaj synchronizację na jednym z nich i spróbuj ponownie. Urządzenie nieużywane przez 30 dni samo zwalnia miejsce.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "Zresetowanie kodu synchronizacji usuwa wszystkie Twoje zaszyfrowane dane z serwera. Każde inne urządzenie przestaje się synchronizować i trzeba je połączyć ponownie nowym kodem. Zapisz nowy kod odzyskiwania.",
   "This code works for one device, once. Create a new code to link another device.":

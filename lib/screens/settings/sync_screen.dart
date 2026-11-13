@@ -8,7 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../l10n/l10n.dart';
 import '../../services/app_restart.dart';
 import '../../services/cloud_sync_service.dart';
-import '../../services/cloud_sync.dart' show SyncDeviceLimit;
+import '../../services/cloud_sync.dart' show SyncDeviceLimit, kSyncMaxDevices;
 import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
 import '../../services/parental_pin.dart';
@@ -21,7 +21,8 @@ import '../../widgets/tv_text_field_gate.dart';
 import 'transfer_screen.dart' show TransferCodeKey;
 
 String _syncDeviceLimitText() => tr(
-    'This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.');
+    'This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.',
+    {'max': kSyncMaxDevices});
 
 String _syncError(TransferException error) => switch (error.kind) {
       TransferError.tooBig => tr(

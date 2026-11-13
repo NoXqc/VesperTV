@@ -139,7 +139,7 @@ class SyncDeviceLimit implements Exception {
 
 /// Most devices one sync takes (the relay's `SYNC_MAX_DEVICES`); used
 /// when its answer doesn't say.
-const int kSyncMaxDevices = 3;
+const int kSyncMaxDevices = 4;
 
 /// A random id for this device's slot on the relay (not tied to the
 /// hardware; a new one after Stop syncing).

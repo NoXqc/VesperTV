@@ -324,7 +324,11 @@ void main() {
         secret: newSyncSecret(),
         deviceId: 'dev1',
         version: 7,
-        base: SyncSnapshot({'fav': l(['ch1'])}, const {'fav': 5}),
+        base: SyncSnapshot({
+          'fav': l(['ch1'])
+        }, const {
+          'fav': 5
+        }),
         pending: const {'fav': 9});
     await store.save(state);
     final json = jsonEncode(state.toJson());
@@ -345,8 +349,8 @@ void main() {
     await storage.init();
     final synced = storage.exportForSync();
     expect(synced.containsKey('nox_favorites'), isTrue);
-    expect(synced.keys.where((k) => k.startsWith('vesper_goal_phone')),
-        isEmpty);
+    expect(
+        synced.keys.where((k) => k.startsWith('vesper_goal_phone')), isEmpty);
     expect(
         storage
             .exportForTransfer()
@@ -357,7 +361,9 @@ void main() {
 
   test('cold start only pulls: own changes go up after the launch', () async {
     if (relay == null) return markTestSkipped('python not found');
-    final a = _Device({'fav': l(['ch1'])});
+    final a = _Device({
+      'fav': l(['ch1'])
+    });
     final b = _Device({});
     await a.engine.start(newSyncSecret());
     await a.engine.sync();
@@ -524,7 +530,7 @@ void main() {
     if (relay == null) return markTestSkipped('python not found');
     final secret = newSyncSecret();
     final devices = [
-      for (var n = 0; n < 3; n++)
+      for (var n = 0; n < kSyncMaxDevices; n++)
         _Device({
           'nox_favorites': l(['server::live'])
         })
@@ -543,7 +549,8 @@ void main() {
     final service = CloudSyncService(storage, store: store);
     addTearDown(service.dispose);
     await service.init();
-    final limit = isA<SyncDeviceLimit>().having((e) => e.max, 'max', 3);
+    final limit =
+        isA<SyncDeviceLimit>().having((e) => e.max, 'max', kSyncMaxDevices);
     await expectLater(
         service.joinWithRecoveryCode(syncRecoveryCode(secret)), throwsA(limit));
     expect(service.status, SyncStatus.full);
@@ -578,12 +585,12 @@ void main() {
     await service.init();
     await service.setUp();
     final secret = List<int>.of(store.state!.secret);
-    for (var n = 0; n < 2; n++) {
+    for (var n = 0; n < kSyncMaxDevices - 1; n++) {
       final other = _Device({});
       await other.engine.start(secret);
       await other.engine.sync();
     }
-    final fourth = _Device({});
+    final fourth = _Device({}); // one past the limit
     await fourth.engine.start(secret);
     await expectLater(fourth.engine.sync(), throwsA(isA<SyncDeviceLimit>()));
     await service.stop();

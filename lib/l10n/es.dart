@@ -2551,8 +2551,8 @@ const Map<String, String> kEs = {
   "Join sync": "Unirse a la sincronización",
 
   // Sync device limit and reset.
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Esta sincronización ya tiene 3 dispositivos. Deja de sincronizar uno de ellos y vuelve a intentarlo. Un dispositivo sin usar durante 30 días libera su plaza automáticamente.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Esta sincronización ya tiene {max} dispositivos. Deja de sincronizar uno de ellos y vuelve a intentarlo. Un dispositivo sin usar durante 30 días libera su plaza automáticamente.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "Al restablecer el código de sincronización se eliminan todos tus datos cifrados del servidor. Los demás dispositivos dejan de sincronizarse y deben vincularse de nuevo con un código nuevo. Guarda el nuevo código de recuperación.",
   "This code works for one device, once. Create a new code to link another device.":

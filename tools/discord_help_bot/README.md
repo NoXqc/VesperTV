@@ -40,7 +40,7 @@ catch-up is not shipped yet.
 
 The Sync tab documents the upcoming cloud-sync release: account-free setup, 16-digit
 single-use link code / QR (one device, 10 minutes), 26-character recovery code, PIN-protected reveal, reset,
-stop/free a device slot, the shared 3-device cap, 30-day idle slot expiry, reset wiping
+stop/free a device slot, the shared 4-device cap, 30-day idle slot expiry, reset wiping
 the old server copy (30-day notice), what syncs and exclusions, restart timing and
 deletion after 3 months (90 days)
 unused. It explicitly says Sync is not in the current public packages. The generated

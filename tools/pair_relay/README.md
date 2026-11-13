@@ -20,7 +20,7 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   at most once a day. Wrong token = 403, stale version = 412, over 4 MB = 413,
   over 1,200 requests/hour/IP = 429. Shares the vault's 2 GB disk cap (507).
   Files use an `s.` prefix, so even identical vault/sync ids never collide.
-  Each sync has **3 device slots** identified by hashed random `X-Sync-Device` ids.
+  Each sync has **4 device slots** identified by hashed random `X-Sync-Device` ids.
   A fourth device gets 403 plus `X-Sync-Error: device-limit` / `X-Sync-Max-Devices: 3`.
   `DELETE /api/sync/<id>/device` frees the caller's slot; 30 days idle frees it automatically.
   Reset (`X-Sync-Revoke: 1`) overwrites the old encrypted snapshot, drops its slots and leaves

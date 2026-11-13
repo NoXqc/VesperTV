@@ -19,7 +19,7 @@ lives in memory only for rate limiting.
   uploads the secret to the **vault** (`/api/v/`, 10 minutes, envelope `kind: sync-link`); the new
   device types the code (or scans the QR) and gets the secret. `X-Vault-Once: 1` makes each
   link code single-use, for one device; Transfer uploads stay multi-read. Every link/recovery
-  code for that secret shares the same limit of 3 devices per sync.
+  code for that secret shares the same limit of 4 devices per sync.
 - **Recovery code**: the secret itself, 26 characters of Crockford base32 (`ABCD-EFGH-…`). Shown
   once at setup ("Save this code. It's the only way back in if you lose all your devices. We
   can't recover it."), again behind the profile PIN, and as a QR. Optional in Backup & restore.
@@ -103,7 +103,7 @@ the app comes back to the screen, when a show/movie page opens, and every 5 minu
 
 ## Server API (`relay.py`, `/api/sync/<id>`)
 All current clients send `X-VesperTV-App` and a random `X-Sync-Device` id. A sync has at most
-3 device slots, stored as hashes and last check-in times in `dev`; no hardware ids. Valid GETs
+4 device slots, stored as hashes and last check-in times in `dev`; no hardware ids. Valid GETs
 (including 304) and PUTs enroll/check in the device. A slot expires after 30 days idle; its
 last-seen write is throttled to once an hour. New link/recovery codes never reset this budget.
 
@@ -142,7 +142,7 @@ multi-read lifetime. The relay never decrypts either snapshot or reset marker.
 Deploying the relay change needs the owner's OK (back up the service, restart only pair-relay).
 
 ## Device limit + reset wipe (Claude, 2026-11-04, owner-approved design)
-- **3 devices per sync**, counted per sync (secret), not per link code: every code and the
+- **4 devices per sync**, counted per sync (secret), not per link code: every code and the
   recovery code lead to the same sync id, so a new code never resets the count.
   Each device keeps a random `SyncState.deviceId` (state file key `device`; old states get one at
   their next sync) and sends `X-Sync-Device` on every sync call. The relay keeps a hash of it +
@@ -167,7 +167,7 @@ Done by Claude (committed on `claude/cloud-sync`): relay (`tools/pair_relay/rela
 Initial checks: analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK.
 **Codex follow-up checklist (items 1–5 now complete; verification below):**
 1. **Sync screen** (`lib/screens/settings/sync_screen.dart`):
-   - `SyncStatus.full` banner (like `revoked`): "This sync already has 3 devices. Stop syncing on
+   - `SyncStatus.full` banner (like `revoked`): "This sync already has 4 devices. Stop syncing on
      one of them, then try again. A device unused for 30 days frees its place on its own."
    - Join screen: catch `SyncDeviceLimit` from `joinWithLinkCode`/`joinWithRecoveryCode` and show
      the same text (don't treat it as a wrong code).
@@ -185,7 +185,7 @@ Initial checks: analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK
    Dart: limit -> `SyncStatus.full`, stop() calls leave, reset keeps deviceId, old state without
    `device` gets one.
 4. **Docs**: remote guide Sync tab + FAQ + homepage "05 / SYNC" section in `docs/index.html`
-   (3 devices, single-use link code, reset wording), README/help index regen, this file's Server
+   (4 devices, single-use link code, reset wording), README/help index regen, this file's Server
    API section (new endpoint/headers/status codes).
 5. **Deploy prep only**: relay redeploy steps in `tools/pair_relay/README.md`. **Do not deploy,
    push, merge to main or release** without the owner's OK.

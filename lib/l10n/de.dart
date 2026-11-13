@@ -2453,8 +2453,8 @@ const Map<String, String> kDe = {
   "Join sync": "Mit Synchronisierung verbinden",
 
   // Sync device limit and reset.
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Diese Synchronisierung hat bereits 3 Geräte. Beende die Synchronisierung auf einem davon und versuche es erneut. Ein 30 Tage lang ungenutztes Gerät gibt seinen Platz automatisch frei.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Diese Synchronisierung hat bereits {max} Geräte. Beende die Synchronisierung auf einem davon und versuche es erneut. Ein 30 Tage lang ungenutztes Gerät gibt seinen Platz automatisch frei.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "Das Zurücksetzen des Synchronisierungscodes entfernt alle deine verschlüsselten Daten vom Server. Alle anderen Geräte synchronisieren nicht mehr und müssen mit einem neuen Code erneut verknüpft werden. Bewahre den neuen Wiederherstellungscode auf.",
   "This code works for one device, once. Create a new code to link another device.":

@@ -207,7 +207,7 @@ or AI apps. [See below](#vesper-ai).
 
 ### Your setup on every device
 
-- **Sync** your setup and watch progress across up to **3 devices per sync**, with no account.
+- **Sync** your setup and watch progress across up to **4 devices per sync**, with no account.
   Each 16-digit link code works once for one device and expires after 10 minutes; every code
   and the recovery code share the same device limit. Everything is encrypted on your device.
   Stop syncing to free a slot, or an unused device frees it after 30 days. Reset removes the old

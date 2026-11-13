@@ -9,6 +9,8 @@ import sys
 import urllib.error
 import urllib.request
 
+MAX_DEVICES = 4  # relay SYNC_MAX_DEVICES
+
 
 def smoke(base):
     url = base.rstrip("/") + "/api/sync/" + secrets.token_urlsafe(24)
@@ -43,18 +45,21 @@ def smoke(base):
             raise RuntimeError("stale update did not return 412")
         if request("PUT", blob, **{"If-Match": '"1"'})[1].get("ETag") != '"2"':
             raise RuntimeError("update did not return version 2")
-        second, third, fourth = [secrets.token_urlsafe(16) for _ in range(3)]
-        for other in (second, third):
+        # The relay allows MAX_DEVICES per sync; fill the rest, then one more.
+        others = [secrets.token_urlsafe(16) for _ in range(MAX_DEVICES - 1)]
+        second, extra = others[0], secrets.token_urlsafe(16)
+        for other in others:
             if request("GET", **{"X-Sync-Device": other})[0] != 200:
                 raise RuntimeError("could not fill the test device slots")
-        status, headers, _ = request("GET", **{"X-Sync-Device": fourth})
-        if status != 403 or headers.get("X-Sync-Error") != "device-limit":
-            raise RuntimeError("fourth device GET was not refused")
-        if request("PUT", blob, **{"If-Match": '"2"', "X-Sync-Device": fourth})[0] != 403:
-            raise RuntimeError("fourth device PUT was not refused")
+        status, headers, _ = request("GET", **{"X-Sync-Device": extra})
+        if (status != 403 or headers.get("X-Sync-Error") != "device-limit"
+                or headers.get("X-Sync-Max-Devices") != str(MAX_DEVICES)):
+            raise RuntimeError("extra device GET was not refused")
+        if request("PUT", blob, **{"If-Match": '"2"', "X-Sync-Device": extra})[0] != 403:
+            raise RuntimeError("extra device PUT was not refused")
         if request("DELETE", suffix="/device", **{"X-Sync-Device": second})[0] != 204:
             raise RuntimeError("test device could not leave")
-        if request("GET", **{"X-Sync-Device": fourth})[0] != 200:
+        if request("GET", **{"X-Sync-Device": extra})[0] != 200:
             raise RuntimeError("leaving did not free the test slot")
         marker = b"\x01" + secrets.token_bytes(63)
         if request("PUT", marker, **{"If-Match": '"2"', "X-Sync-Revoke": "1"})[0] != 204:

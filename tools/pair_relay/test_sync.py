@@ -21,7 +21,7 @@ class SyncApiTests(unittest.TestCase):
     token = "fixture_write_token_01234567890123456789"
     wrong_token = "different_write_token_0123456789012345"
     blob = b"\x01" + bytes(range(63))
-    devices = [f"fixture_device_{i}_0123456789" for i in range(5)]
+    devices = [f"fixture_device_{i}_0123456789" for i in range(6)]
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="vesper-sync-test-")
@@ -230,21 +230,21 @@ class SyncApiTests(unittest.TestCase):
 
 
     def fill_devices(self):
-        self.assertEqual(relay.SYNC_MAX_DEVICES, 3)
+        self.assertEqual(relay.SYNC_MAX_DEVICES, 4)
         self.assertEqual(self.put(headers={"X-Sync-Device": self.devices[0]})[0], 204)
-        for device in self.devices[1:3]:
+        for device in self.devices[1:4]:
             self.assertEqual(self.request(headers={"X-Sync-Device": device})[0], 200)
-        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(len(self.meta()["dev"]), 4)
 
-    def test_fourth_device_refused_on_get_and_put_per_sync(self):
+    def test_fifth_device_refused_on_get_and_put_per_sync(self):
         self.fill_devices()
-        fourth = {"X-Sync-Device": self.devices[3]}
+        fourth = {"X-Sync-Device": self.devices[4]}
         for result in [self.request(headers=fourth), self.put(1, headers=fourth)]:
             self.assertEqual(result[0], 403)
             self.assertEqual(result[1]["X-Sync-Error"], "device-limit")
-            self.assertEqual(result[1]["X-Sync-Max-Devices"], "3")
+            self.assertEqual(result[1]["X-Sync-Max-Devices"], "4")
         self.assertEqual(self.meta()["ver"], 1)
-        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(len(self.meta()["dev"]), 4)
         self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[1],
                                                "If-None-Match": '"1"'})[0], 304)
         # A different sync id has its own budget. Link codes never
@@ -256,12 +256,12 @@ class SyncApiTests(unittest.TestCase):
         leave = f"/api/sync/{self.sid}/device"
         first = {"X-Sync-Device": self.devices[0]}
         self.assertEqual(self.delete(path=leave, token=self.wrong_token, headers=first)[0], 403)
+        self.assertEqual(len(self.meta()["dev"]), 4)
+        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
+        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
         self.assertEqual(len(self.meta()["dev"]), 3)
-        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
-        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
-        self.assertEqual(len(self.meta()["dev"]), 2)
-        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 200)
-        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[4]})[0], 403)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[4]})[0], 200)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[5]})[0], 403)
         self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[1]})[2], self.blob)
         self.assertEqual(self.meta()["ver"], 1)
 
@@ -270,14 +270,14 @@ class SyncApiTests(unittest.TestCase):
         self.fill_devices()
         start = self.now
         self.now += 29 * 24 * 3600
-        for device in self.devices[1:3]:
+        for device in self.devices[1:4]:
             self.assertEqual(self.request(headers={"X-Sync-Device": device})[0], 200)
         self.now = start + relay.SYNC_DEVICE_IDLE - 1
-        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 403)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[4]})[0], 403)
         self.now += 1
-        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 200)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[4]})[0], 200)
         self.assertNotIn(relay._device_hash(self.devices[0]), self.meta()["dev"])
-        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(len(self.meta()["dev"]), 4)
         self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[0]})[0], 403)
 
     def test_revoke_overwrites_snapshot_drops_devices_and_expires_in_30_days(self):
@@ -293,7 +293,7 @@ class SyncApiTests(unittest.TestCase):
         self.assertNotIn("dev", self.meta())
         self.assertEqual(Path(self.directory.name, f"s.{self.sid}.bin").read_bytes(), marker)
         self.assertEqual(self.meta()["size"], len(marker))
-        for device in self.devices[:4]:
+        for device in self.devices[:5]:
             self.assertEqual(self.put(2, headers={"X-Sync-Device": device})[0], 410)
         # Refused/offline devices can learn the reset without claiming a
         # slot or extending the marker's fixed retention period.

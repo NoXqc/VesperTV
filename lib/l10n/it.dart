@@ -2558,8 +2558,8 @@ const Map<String, String> kIt = {
   "Join sync": "Unisciti alla sincronizzazione",
 
   // Sync device limit and reset.
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Questa sincronizzazione ha già 3 dispositivi. Interrompi la sincronizzazione su uno di essi e riprova. Un dispositivo inutilizzato per 30 giorni libera automaticamente il suo posto.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Questa sincronizzazione ha già {max} dispositivi. Interrompi la sincronizzazione su uno di essi e riprova. Un dispositivo inutilizzato per 30 giorni libera automaticamente il suo posto.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "La reimpostazione del codice di sincronizzazione elimina tutti i tuoi dati crittografati dal server. Tutti gli altri dispositivi smettono di sincronizzarsi e devono essere collegati di nuovo con un nuovo codice. Conserva il nuovo codice di recupero.",
   "This code works for one device, once. Create a new code to link another device.":

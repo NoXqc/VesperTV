@@ -17,7 +17,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const limitMessage =
-    'This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.';
+    'This sync already has 4 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.';
 const resetWarning =
     'Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.';
 

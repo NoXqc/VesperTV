@@ -84,10 +84,10 @@ test('sync answers cover setup, recovery, reset and expiry without implying it s
 });
 
 test('sync device limits, single-use links and reset wipe return the current policy', () => {
-  for (const query of ['sync device limit', 'how many devices can I sync', 'sync already has 3 devices']) {
-    assert.equal(searchGuide(entries, query)[0]?.entry.title, 'Sync device limit: 3 devices', query);
+  for (const query of ['sync device limit', 'how many devices can I sync', 'sync already has 4 devices']) {
+    assert.equal(searchGuide(entries, query)[0]?.entry.title, 'Sync device limit: 4 devices', query);
     const answer = guideReply(entries, query).content;
-    assert.match(answer, /3 devices in total/);
+    assert.match(answer, /4 devices in total/);
     assert.match(answer, /another code does not reset the count/);
     assert.match(answer, /unused for 30 days/);
     assert.match(answer, /Stop syncing on this device/);

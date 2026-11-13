@@ -2512,8 +2512,8 @@ const Map<String, String> kEl = {
   "Join sync": "Σύνδεση στον συγχρονισμό",
 
   // Sync device limit and reset.
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Αυτός ο συγχρονισμός έχει ήδη 3 συσκευές. Διακόψτε τον συγχρονισμό σε μία από αυτές και δοκιμάστε ξανά. Μια συσκευή που δεν χρησιμοποιείται για 30 ημέρες ελευθερώνει αυτόματα τη θέση της.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Αυτός ο συγχρονισμός έχει ήδη {max} συσκευές. Διακόψτε τον συγχρονισμό σε μία από αυτές και δοκιμάστε ξανά. Μια συσκευή που δεν χρησιμοποιείται για 30 ημέρες ελευθερώνει αυτόματα τη θέση της.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "Η επαναφορά του κωδικού συγχρονισμού αφαιρεί όλα τα κρυπτογραφημένα δεδομένα σας από τον διακομιστή. Όλες οι άλλες συσκευές σταματούν να συγχρονίζονται και πρέπει να συνδεθούν ξανά με νέο κωδικό. Αποθηκεύστε τον νέο κωδικό ανάκτησης.",
   "This code works for one device, once. Create a new code to link another device.":

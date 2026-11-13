@@ -2563,8 +2563,8 @@ const Map<String, String> kFr = {
   "Join sync": "Rejoindre la synchronisation",
 
   // Sync device limit and reset.
-  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
-      "Cette synchronisation compte déjà 3 appareils. Arrêtez la synchronisation sur l’un d’eux, puis réessayez. Un appareil inutilisé pendant 30 jours libère sa place automatiquement.",
+  "This sync already has {max} devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Cette synchronisation compte déjà {max} appareils. Arrêtez la synchronisation sur l’un d’eux, puis réessayez. Un appareil inutilisé pendant 30 jours libère sa place automatiquement.",
   "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
       "La réinitialisation du code de synchronisation supprime toutes vos données chiffrées du serveur. Tous les autres appareils cessent la synchronisation et doivent être réassociés avec un nouveau code. Conservez le nouveau code de récupération.",
   "This code works for one device, once. Create a new code to link another device.":
