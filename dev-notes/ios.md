@@ -14,8 +14,10 @@ debug build can't start without Xcode attached.
 ## TestFlight (paid account, 2026-11-10)
 
 The owner joined the Apple Developer Program (account holder). Bundle ID **`app.vespertv.player`**
-(registered as an explicit App ID, no capabilities); the project uses it and is **iPhone only**
-(`TARGETED_DEVICE_FAMILY = 1`; an iPad build would need iPad screenshots and iPad review).
+(registered as an explicit App ID, no capabilities); the project uses it and is **iPhone + iPad**
+(`TARGETED_DEVICE_FAMILY = "1,2"` since 2026-11-13: an iPad tester saw the iPhone-only build in
+iPadOS's iPhone window, whatever the Apple ID. App Store review will need iPad screenshots; the
+iPad gets the wide touch layout, not box-tested).
 `com.nox.noxIptv.9947N9` in Identifiers is Sideloadly's own, ignore it. A sideloaded build with
 the old id is a separate app on the phone (its data doesn't carry over).
 
