@@ -1160,7 +1160,8 @@ class SettingsCatalog {
                   'Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.'),
               value: prefs.fastStartup,
               onChanged: prefs.setFastStartup),
-          if (!isDesktop)
+          // Android only: a computer always asks, an iPhone never exits.
+          if (Platform.isAndroid)
             SettingsToggle(
                 id: 'ask_before_exit',
                 icon: Icons.exit_to_app,

@@ -332,7 +332,8 @@ final List<_AiSetting> _aiSettings = [
       'Ask before exiting',
       'Back on the first screen asks "Exit VesperTV?" before leaving.',
       (b) => b.prefs.askBeforeExit,
-      (b, on) => b.prefs.setAskBeforeExit(on)),
+      (b, on) => b.prefs.setAskBeforeExit(on),
+      androidOnly: true),
   _switch(
       'update_in_background',
       'startup',
