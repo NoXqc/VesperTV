@@ -29,6 +29,11 @@ class AppExit {
 
   static bool _warmPending = false;
 
+  /// Set by the app root: Settings > Ask before exiting. On, Android asks
+  /// too before its warm exit (older viewers left with one Back too many,
+  /// Discord 2026-11-13).
+  static bool Function() askFirst = () => false;
+
   /// True on a computer (no warm exit there). Tests run on a computer but
   /// exercise the Android path.
   @visibleForTesting
@@ -37,11 +42,12 @@ class AppExit {
   /// Back at the app's root (the TV home's tabs column, Sports Mode, Who's
   /// watching). Android leaves at once with [warm]: reopening is instant,
   /// so the old "Exit VesperTV?" prompt only cost a press (owner,
-  /// 2026-11-08). A computer has no warm exit and Back (Esc) would close
-  /// the window, so there [confirm] still asks first.
+  /// 2026-11-08), unless [askFirst] (Ask before exiting). A computer has no
+  /// warm exit and Back (Esc) would close the window, so there [confirm]
+  /// always asks first.
   static Future<void> back(Future<bool> Function() confirm) async {
-    if (!isWindows) return warm();
-    if (await confirm()) await full();
+    if (!isWindows && !askFirst()) return warm();
+    if (await confirm()) await (isWindows ? full() : warm());
   }
 
   static Future<void> warm() async {

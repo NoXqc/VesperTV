@@ -606,6 +606,8 @@ class StorageService {
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
+  bool getAskBeforeExit() =>
+      _prefs.getBool(AppConstants.keyAskBeforeExit) ?? false;
 
   bool getLauncherRows() =>
       _prefs.getBool(AppConstants.keyLauncherRows) ?? true;
@@ -632,6 +634,8 @@ class StorageService {
       _prefs.setString(_vk(AppConstants.keyNextEpisodes), jsonEncode(map));
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
+  Future<void> setAskBeforeExit(bool value) =>
+      _prefs.setBool(AppConstants.keyAskBeforeExit, value);
 
   bool getBackgroundSync() =>
       _prefs.getBool(AppConstants.keyBackgroundSync) ?? false;

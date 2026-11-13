@@ -396,6 +396,11 @@ class AppConstants {
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
 
+  /// Settings > Profiles & startup > Ask before exiting: Back at the root
+  /// asks "Exit VesperTV?" on Android too (Discord request, 2026-11-13: older
+  /// viewers pressed Back once too often). Off by default.
+  static const String keyAskBeforeExit = 'vesper_ask_before_exit';
+
   /// Settings > Interface > TV home screen (Android TV, on by default):
   /// Continue watching / Watch list in the launcher's Watch Next row and a
   /// Favourite channels row (LauncherChannels). Device-only.

@@ -1753,6 +1753,9 @@ const Map<String, String> kEs = {
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Cuando toca actualizar el contenido, abre directamente la TV en vivo y actualiza Películas y Series en segundo plano. Se van completando durante los próximos minutos y el mando puede ir más lento hasta que termine. Se aplica desde el próximo inicio.",
   "Fast startup": "Inicio rápido",
+  "Ask before exiting": "Preguntar antes de salir",
+  "Back on the first screen asks before leaving, so one Back too many doesn't close the app.":
+      "Atrás en la primera pantalla pregunta antes de salir: un Atrás de más no cierra la aplicación.",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Abre la app sin esperar a que carguen Películas y Series; se completan unos segundos después. Para dispositivos rápidos — déjalo desactivado en un aparato antiguo si la app se cierra sola justo después de iniciar. Se aplica en el próximo inicio.",
   // Group hold menu: New group

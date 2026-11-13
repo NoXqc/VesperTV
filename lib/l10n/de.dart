@@ -1680,6 +1680,9 @@ const Map<String, String> kDe = {
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Wenn ein Inhalts-Update fällig ist, öffnet die App sofort Live-TV und aktualisiert Filme und Serien im Hintergrund. Sie füllen sich in den nächsten Minuten, und die Fernbedienung kann bis dahin langsamer reagieren. Gilt ab dem nächsten Start.",
   "Fast startup": "Schnellstart",
+  "Ask before exiting": "Vor dem Beenden fragen",
+  "Back on the first screen asks before leaving, so one Back too many doesn't close the app.":
+      "Zurück auf dem ersten Bildschirm fragt vor dem Beenden, damit ein Zurück zu viel die App nicht schließt.",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Öffnet die App, ohne auf das Laden von Filmen und Serien zu warten; sie füllen sich einige Sekunden später. Für schnelle Geräte – lass es bei einer älteren Box aus, wenn sich die App direkt nach dem Start von selbst schließt. Gilt ab dem nächsten Start.",
   "{group} created. Hold OK on a channel > Move to group… to add channels.":

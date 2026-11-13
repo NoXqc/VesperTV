@@ -1759,6 +1759,9 @@ const Map<String, String> kIt = {
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Quando è il momento di aggiornare i contenuti, apre subito la TV in diretta e aggiorna Film e Serie TV in background. Si completano nei prossimi minuti e il telecomando può risultare più lento fino alla fine. Si applica dal prossimo avvio.",
   "Fast startup": "Avvio rapido",
+  "Ask before exiting": "Chiedi prima di uscire",
+  "Back on the first screen asks before leaving, so one Back too many doesn't close the app.":
+      "Indietro nella prima schermata chiede prima di uscire: un Indietro di troppo non chiude l’app.",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Apre l’app senza aspettare il caricamento di Film e Serie TV; si completano qualche secondo dopo. Per dispositivi veloci — lascialo disattivato su un box più vecchio se l’app si chiude da sola subito dopo l’avvio. Vale dal prossimo avvio.",
   // Group hold menu: New group

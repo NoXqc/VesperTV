@@ -1160,6 +1160,15 @@ class SettingsCatalog {
                   'Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.'),
               value: prefs.fastStartup,
               onChanged: prefs.setFastStartup),
+          if (!isDesktop)
+            SettingsToggle(
+                id: 'ask_before_exit',
+                icon: Icons.exit_to_app,
+                title: tr('Ask before exiting'),
+                help: tr(
+                    "Back on the first screen asks before leaving, so one Back too many doesn't close the app."),
+                value: prefs.askBeforeExit,
+                onChanged: prefs.setAskBeforeExit),
           SettingsToggle(
               id: 'background_sync',
               icon: Icons.sync,
