@@ -1006,7 +1006,7 @@ const Map<String, String> kPl = {
       "Jeśli skończono wybierać grupy, naciśnij Potwierdź poniżej.\n\nJeśli jeszcze nie, naciśnij Lewo, aby wrócić do kategorii.",
   "No categories yet — load a playlist first.":
       "Brak kategorii — najpierw wczytaj playlistę.",
-  "Search groups (starts with)": "Szukaj grup (zaczyna się od)",
+  "Search groups": "Szukaj grup",
   "Countries": "Kraje",
   "Countries and prefixes": "Kraje i prefiksy",
   "Found at the start of the group names. Select one to show or hide all its groups at once.":

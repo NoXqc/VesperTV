@@ -1018,7 +1018,7 @@ const Map<String, String> kEl = {
       "Αν τελειώσατε την επιλογή ομάδων, πατήστε Επιβεβαίωση παρακάτω.\n\nΑν όχι ακόμη, πατήστε Αριστερά για να επιστρέψετε στις κατηγορίες.",
   "No categories yet — load a playlist first.":
       "Δεν υπάρχουν ακόμη κατηγορίες — φορτώστε πρώτα μια λίστα.",
-  'Search groups (starts with)': 'Αναζήτηση ομάδων (αρχίζει με)',
+  'Search groups': 'Αναζήτηση ομάδων',
   "Countries": "Χώρες",
   "Countries and prefixes": "Χώρες και προθέματα",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Βρέθηκαν στην αρχή των ονομάτων των ομάδων. Επιλέξτε μία για να εμφανίσετε ή να κρύψετε όλες τις ομάδες της μαζί.",

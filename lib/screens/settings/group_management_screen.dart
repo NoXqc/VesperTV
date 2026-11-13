@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/m3u_group.dart';
 import '../../services/playlist_manager.dart';
 import '../../utils/group_regions.dart';
+import '../../utils/title_search.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/glass_menu.dart';
 import '../../widgets/mode_button.dart';
@@ -223,8 +224,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               Navigator.of(context).pop(true);
             },
             child: SettingsScaffold(
-          // A multi-pane tool: the glass panel spans the screen.
-          wide: true,
+              // A multi-pane tool: the glass panel spans the screen.
+              wide: true,
               title: tr('Group Management'),
               // Explicit "Done" so the caller can tell a deliberate finish apart
               // from just leaving the screen some other way (physical back, an
@@ -465,12 +466,15 @@ class _GroupListState extends State<_GroupList> {
           child: Text(tr('No categories yet — load a playlist first.')));
     }
 
-    final query = widget.searchController.text.trim().toLowerCase();
-    final filtered = query.isEmpty
+    // Matches the start of any word in the name, not just the whole name:
+    // providers prefix groups ("US| Entertainment") and "ent" must still find
+    // it. Never mid-word (rank 2+): Hide / Show results act on every match,
+    // and "ent" must not take "Documentaries" with it. Accent and punctuation
+    // tolerant, same matcher as global Search.
+    final search = TitleSearch(widget.searchController.text);
+    final filtered = search.isEmpty
         ? groups
-        : groups
-            .where((g) => g.title.trimLeft().toLowerCase().startsWith(query))
-            .toList();
+        : groups.where((g) => (search.rank(g.title) ?? 9) <= 1).toList();
     final titles = filtered.map((g) => g.title);
 
     return Column(
@@ -488,7 +492,7 @@ class _GroupListState extends State<_GroupList> {
                   ? _clearNode.requestFocus()
                   : _showNode.requestFocus(),
               decoration: InputDecoration(
-                labelText: tr('Search groups (starts with)'),
+                labelText: tr('Search groups'),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: widget.searchController.text.isEmpty
                     ? null
@@ -524,7 +528,7 @@ class _GroupListState extends State<_GroupList> {
                       : () => playlist.setGroupsHidden(
                           playlistId, titles, false,
                           loadImmediately: !deferLoading),
-                  child: Text(tr(query.isEmpty ? 'Show All' : 'Show results')),
+                  child: Text(tr(search.isEmpty ? 'Show All' : 'Show results')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -534,7 +538,7 @@ class _GroupListState extends State<_GroupList> {
                       ? null
                       : () =>
                           playlist.setGroupsHidden(playlistId, titles, true),
-                  child: Text(tr(query.isEmpty ? 'Hide All' : 'Hide results')),
+                  child: Text(tr(search.isEmpty ? 'Hide All' : 'Hide results')),
                 ),
               ),
               if (_hasRegions) ...[
@@ -629,27 +633,28 @@ class _GroupListState extends State<_GroupList> {
                     // after that change, so the `RepaintBoundary` above is
                     // likely no longer doing any real work — left in place
                     // anyway since it's strictly safe and costs nothing.
-                    return GlassFocusFrame(key: ValueKey(group.title), child: ListTile(
-                      
-                      title: Text(group.title),
-                      trailing: RepaintBoundary(
-                        key: ValueKey(group.isHidden),
-                        child: Icon(
-                          group.isHidden
-                              ? Icons.circle_outlined
-                              : Icons.check_circle,
-                          color: group.isHidden
-                              ? Colors.white54
-                              : Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      onTap: () => playlist.setGroupHidden(
-                        playlistId,
-                        group.title,
-                        !group.isHidden,
-                        loadImmediately: !deferLoading,
-                      ),
-                    ));
+                    return GlassFocusFrame(
+                        key: ValueKey(group.title),
+                        child: ListTile(
+                          title: Text(group.title),
+                          trailing: RepaintBoundary(
+                            key: ValueKey(group.isHidden),
+                            child: Icon(
+                              group.isHidden
+                                  ? Icons.circle_outlined
+                                  : Icons.check_circle,
+                              color: group.isHidden
+                                  ? Colors.white54
+                                  : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          onTap: () => playlist.setGroupHidden(
+                            playlistId,
+                            group.title,
+                            !group.isHidden,
+                            loadImmediately: !deferLoading,
+                          ),
+                        ));
                   },
                 ),
         ),

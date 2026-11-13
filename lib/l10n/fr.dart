@@ -1047,7 +1047,7 @@ const Map<String, String> kFr = {
       "Si vous avez fini de choisir vos groupes, appuyez sur Confirmer ci-dessous.\n\nSinon, appuyez sur Gauche pour revenir à vos catégories.",
   'No categories yet — load a playlist first.':
       "Aucune catégorie — chargez d'abord une liste.",
-  'Search groups (starts with)': 'Rechercher des groupes (commence par)',
+  'Search groups': 'Rechercher des groupes',
   "Countries": "Pays",
   "Countries and prefixes": "Pays et préfixes",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Trouvés au début des noms de groupes. Choisissez-en un pour afficher ou masquer tous ses groupes d'un coup.",

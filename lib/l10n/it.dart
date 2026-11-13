@@ -1042,7 +1042,7 @@ const Map<String, String> kIt = {
       "Se hai finito di scegliere i gruppi, premi Conferma qui sotto.\n\nAltrimenti premi Sinistra per tornare alle categorie.",
   'No categories yet — load a playlist first.':
       "Nessuna categoria: prima carica una lista.",
-  'Search groups (starts with)': 'Cerca gruppi (inizia con)',
+  'Search groups': 'Cerca gruppi',
   "Countries": "Paesi",
   "Countries and prefixes": "Paesi e prefissi",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Trovati all'inizio dei nomi dei gruppi. Scegline uno per mostrare o nascondere tutti i suoi gruppi in una volta.",

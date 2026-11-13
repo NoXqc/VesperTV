@@ -996,7 +996,7 @@ const Map<String, String> kDe = {
       "Wenn du mit der Auswahl deiner Gruppen fertig bist, drücke unten auf Bestätigen.\n\nWenn du noch nicht fertig bist, drücke Links, um zu deinen Kategorien zurückzukehren.",
   "No categories yet — load a playlist first.":
       "Noch keine Kategorien – lade zuerst eine Playlist.",
-  "Search groups (starts with)": "Gruppen suchen (beginnt mit)",
+  "Search groups": "Gruppen suchen",
   "Countries": "Länder",
   "Countries and prefixes": "Länder und Präfixe",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Am Anfang der Gruppennamen gefunden. Wähle eines, um alle seine Gruppen auf einmal ein- oder auszublenden.",

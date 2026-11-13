@@ -1042,7 +1042,7 @@ const Map<String, String> kEs = {
       "Si terminaste de elegir tus grupos, pulsa Confirmar abajo.\n\nSi aún no, pulsa Izquierda para volver a tus categorías.",
   'No categories yet — load a playlist first.':
       "Aún no hay categorías; primero carga una lista.",
-  'Search groups (starts with)': 'Buscar grupos (empieza por)',
+  'Search groups': 'Buscar grupos',
   "Countries": "Países",
   "Countries and prefixes": "Países y prefijos",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Encontrados al principio de los nombres de grupo. Elige uno para mostrar u ocultar todos sus grupos a la vez.",
