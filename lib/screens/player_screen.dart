@@ -2032,6 +2032,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                               info: info,
                               requests: _fileInfoRequests,
                             ),
+                          // Touch: the top bar already names the title.
+                          if (channel.mediaFileInfo != null && !_touch)
+                            MediaTitleCue.forChannel(
+                              key: ValueKey('title-cue-${channel.id}'),
+                              seriesName: channel.seriesName,
+                              name: channel.name,
+                              requests: _fileInfoRequests,
+                            ),
                           // The schedule control stays inside the compact info card.
                           Positioned(
                             top: MediaQuery.paddingOf(context).top + 48,

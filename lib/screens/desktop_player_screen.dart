@@ -1836,6 +1836,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                           (playerClock && !_touch
                               ? PlayerClockPill.height
                               : 0)),
+                // Touch: the top bar already names the title.
+                if (_currentChannel.mediaFileInfo != null && !_touch)
+                  MediaTitleCue.forChannel(
+                      key: ValueKey('title-cue-${_currentChannel.id}'),
+                      seriesName: _currentChannel.seriesName,
+                      name: _currentChannel.name,
+                      requests: _fileInfoRequests),
                 if (_panelOpen)
                   Positioned(
                     left: 0,
