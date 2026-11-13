@@ -3600,7 +3600,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _largeUi = prefs.largeUi;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
+    // Home has no content page: it is the second one (owner, 2026-11-13:
+    // turning the phone to portrait on Home showed an empty page).
     if (!_compact) _phonePage = 2;
+    if (_tab == 'Home' && _phonePage == 2) _phonePage = 1;
 
     // Streaming-app convention: always dark on the TV screen, regardless of
     // the phone's light/dark setting, but still keyed off the user's chosen

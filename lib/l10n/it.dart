@@ -2133,6 +2133,8 @@ const Map<String, String> kIt = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "OK su una scheda live la avvia in alto a destra nella Home, OK di nuovo la apre a schermo intero (con Anteprima alla selezione attiva, la scheda su cui ti fermi parte da sola). Play/Pausa o tenere premuto OK la ferma.",
   "Stop mini player": "Ferma il mini player",
+  "Turn off the mini player": "Disattiva il mini player",
+  "Turn on the mini player": "Attiva il mini player",
   "Preferred audio language": "Lingua audio preferita",
   "Preferred subtitle language": "Lingua dei sottotitoli preferita",
   "Source default": "Predefinita della sorgente",

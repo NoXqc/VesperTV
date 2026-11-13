@@ -2039,6 +2039,8 @@ const Map<String, String> kPl = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "OK na karcie kanału na żywo odtwarza go w prawym górnym rogu ekranu Start, ponowne OK otwiera go na pełnym ekranie (przy włączonym Podglądzie po zaznaczeniu karta, na której się zatrzymasz, odtwarza się sama). Odtwórz/Pauza lub przytrzymanie OK wyłącza go.",
   "Stop mini player": "Zatrzymaj miniodtwarzacz",
+  "Turn off the mini player": "Wyłącz miniodtwarzacz",
+  "Turn on the mini player": "Włącz miniodtwarzacz",
   "Preferred audio language": "Preferowany język dźwięku",
   "Preferred subtitle language": "Preferowany język napisów",
   "Source default": "Domyślny ze źródła",

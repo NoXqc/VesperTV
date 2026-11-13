@@ -265,4 +265,68 @@ void main() {
       prefs.dispose();
     });
   }
+
+  // A phone on its side (owner, 2026-11-13): no hero, the mini player in the
+  // profiles row with a button that turns it off and back on.
+  testWidgets('phone on its side: mini player button', (tester) async {
+    tester.view.physicalSize = const Size(800, 380);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final storage = ZapStorage();
+    await storage.init();
+    await storage.setHomeRows([
+      for (final kind in HomeRowKind.values)
+        kind == HomeRowKind.recentChannels ? kind.id : '-${kind.id}',
+    ]);
+    final playlist = GuidePlaylist(storage);
+    final playback = _MiniPlayback(storage, playlist);
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    final viewers = ViewerProfileService(storage, playlist, playback);
+    final epg = EpgService(storage);
+    final archive = ArchiveService(storage);
+    await playback.recordWatched(playlist.live);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(
+            'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+            (_) async => const StandardMessageCodec().encodeMessage([null]));
+    await tester.pumpWidget(MultiProvider(providers: [
+      Provider<StorageService>.value(value: storage),
+      ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+      ChangeNotifierProvider<PlaybackService>.value(value: playback),
+      ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+      ChangeNotifierProvider<ViewerProfileService>.value(value: viewers),
+      ChangeNotifierProvider<EpgService>.value(value: epg),
+      ChangeNotifierProvider<ArchiveService>.value(value: archive),
+    ], child: const MaterialApp(home: HomeScreen())));
+    await tester.pumpAndSettle();
+
+    final off = find.byTooltip('Turn off the mini player');
+    expect(off, findsOneWidget);
+    expect(find.byType(VideoPlayerPane), findsNothing);
+    // A channel playing (back from full screen) shows in the row.
+    await playback.play(playlist.live);
+    await tester.pump();
+    expect(find.byType(VideoPlayerPane), findsOneWidget);
+    // Off: the channel stops, the switch is off, the button turns it on.
+    await tester.tap(off);
+    await tester.pump();
+    expect(prefs.homeMiniPlayer, isFalse);
+    expect(playback.stops, 1);
+    expect(find.byType(VideoPlayerPane), findsNothing);
+    await tester.tap(find.byTooltip('Turn on the mini player'));
+    await tester.pump();
+    expect(prefs.homeMiniPlayer, isTrue);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 11));
+    viewers.dispose();
+    playback.dispose();
+    playlist.dispose();
+    epg.dispose();
+    archive.dispose();
+    prefs.dispose();
+  });
 }

@@ -2038,6 +2038,8 @@ const Map<String, String> kDe = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "OK auf einer Live-Karte spielt sie oben rechts auf dem Start, erneut OK öffnet sie im Vollbild (mit Vorschau beim Markieren an läuft die Karte, auf der du stehen bleibst, von selbst). Play/Pause oder OK gedrückt halten stoppt sie.",
   "Stop mini player": "Mini-Player stoppen",
+  "Turn off the mini player": "Mini-Player ausschalten",
+  "Turn on the mini player": "Mini-Player einschalten",
   "Preferred audio language": "Bevorzugte Audiosprache",
   "Preferred subtitle language": "Bevorzugte Untertitelsprache",
   "Source default": "Standard der Quelle",

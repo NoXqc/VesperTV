@@ -2138,6 +2138,8 @@ const Map<String, String> kFr = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "OK sur une carte en direct la lance en haut à droite de l’accueil, OK une deuxième fois l’ouvre en plein écran (avec Aperçu au survol activé, la carte où vous vous arrêtez joue toute seule). Lecture/Pause ou OK maintenu l’arrête.",
   "Stop mini player": "Arrêter le mini lecteur",
+  "Turn off the mini player": "Désactiver le mini lecteur",
+  "Turn on the mini player": "Activer le mini lecteur",
   "Preferred audio language": "Langue audio préférée",
   "Preferred subtitle language": "Langue de sous-titres préférée",
   "Source default": "Par défaut de la source",

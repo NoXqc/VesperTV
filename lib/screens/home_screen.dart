@@ -176,6 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _gap = 14.0;
   static const _sidePad = 40.0;
 
+  /// A phone's side margin (owner, 2026-11-13: rows started 40 px in; the
+  /// cards a swipe had moved to the edge looked right).
+  static const _phonePad = 12.0;
+
   late HomeRows _rowsConfig;
   List<_HomeRow> _rows = const [];
   bool _loading = true;
@@ -1107,6 +1111,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return playback.liveChannel?.id;
   }
 
+  /// The mini player button of a phone on its side. Off stops its channel
+  /// (like Stop mini player) and Home parks a playing channel again, as with
+  /// Settings > Mini player on Home, the same switch; on lets the next
+  /// channel play in it (back from full screen).
+  void _setPhoneMini(bool on) {
+    if (on) {
+      _miniOff = false;
+    } else {
+      unawaited(_stopMini());
+    }
+    context.read<AppPreferences>().setHomeMiniPlayer(on);
+  }
+
   /// Turns the mini player off: its channel stops and highlights stay
   /// quiet until OK or Play/Pause plays a card ([_miniOff]).
   Future<void> _stopMini() async {
@@ -1557,6 +1574,19 @@ class _HomeScreenState extends State<HomeScreen> {
     // screen, a tap opens a card at once anyway and there's no mini player.
     // Only the wallpaper stays behind the rows.
     final portraitPhone = size.width < 600 && size.height > size.width;
+    // A phone either way up. On its side too: no hero, everything tucked to
+    // the top like portrait; the mini player moves into the profiles row with
+    // a button to turn it off / on (owner, 2026-11-13: the hero took half the
+    // screen, the rows sat at the bottom, and a phone had no way to turn the
+    // mini player off: its Settings switch is hidden on phones). Under 500: a
+    // TV box is 540 (1080p at 2x), a phone on its side 360-430.
+    final phone = portraitPhone ||
+        (!prefs.isTelevision && !isDesktopTarget && size.shortestSide < 500);
+    final pad = phone ? _phonePad : _sidePad;
+    final phoneMini =
+        phone && !portraitPhone && size.width >= HomeScreen.miniPlayerMinWidth
+            ? _PhoneMini(on: prefs.homeMiniPlayer, onChanged: _setPhoneMini)
+            : null;
     final focused = _focused;
     // 16:9 in the hero's right side, its room kept even while nothing
     // plays (the hero text doesn't jump when a channel starts).
@@ -1574,8 +1604,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Backdrop(
-                item: portraitPhone ? null : focused, wallpaper: _wallpaper),
+            _Backdrop(item: phone ? null : focused, wallpaper: _wallpaper),
             AnimatedOpacity(
               opacity: _switching ? 0 : 1,
               duration: const Duration(milliseconds: 220),
@@ -1588,61 +1617,85 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hideProfiles && (isDesktop || size.width >= 800))
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 6),
-                        child: Row(children: [
-                          if (needsBackArrow && !widget.embedded)
-                            ExcludeFocus(
-                                child: IconButton(
-                              tooltip: tr('Back'),
-                              icon: const Icon(Icons.arrow_back,
-                                  color: Colors.white),
-                              onPressed: () => Navigator.of(context).maybePop(),
-                            )),
-                          const Spacer(),
-                          if (size.width >= 800) const _HomeClock(),
-                        ]),
-                      ),
-                    if (widget.phoneHeader case final actions?)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 0, 4),
-                        child: Row(children: [
-                          Text(tr('Home'),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600)),
-                          Expanded(
-                            child: hideProfiles
-                                ? const SizedBox.shrink()
-                                : _ProfilesStrip(
-                                    inline: true,
-                                    compact: true,
-                                    nodes: _profileNode,
-                                    addNode: _addProfileNode,
-                                    onPick: _switchProfile,
-                                    onEdit: _editProfile,
-                                    onAdd: _manageProfiles,
-                                    onFocus: _onProfileFocus,
-                                  ),
-                          ),
-                          actions,
-                        ]),
-                      )
-                    else if (!hideProfiles)
-                      _ProfilesStrip(
-                        compact: !_inProfiles,
-                        showBack: needsBackArrow && !widget.embedded,
-                        nodes: _profileNode,
-                        addNode: _addProfileNode,
-                        onPick: _switchProfile,
-                        onEdit: _editProfile,
-                        onAdd: _manageProfiles,
-                        onFocus: _onProfileFocus,
-                      ),
-                    if (!portraitPhone)
+                    if (phoneMini != null)
+                      Row(children: [
+                        Expanded(
+                          child: hideProfiles
+                              ? const SizedBox.shrink()
+                              : _ProfilesStrip(
+                                  compact: true,
+                                  showBack: needsBackArrow && !widget.embedded,
+                                  nodes: _profileNode,
+                                  addNode: _addProfileNode,
+                                  onPick: _switchProfile,
+                                  onEdit: _editProfile,
+                                  onAdd: _manageProfiles,
+                                  onFocus: _onProfileFocus,
+                                ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(8, 6, pad, 4),
+                          child: phoneMini,
+                        ),
+                      ])
+                    else ...[
+                      if (hideProfiles && (isDesktop || size.width >= 800))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 6),
+                          child: Row(children: [
+                            if (needsBackArrow && !widget.embedded)
+                              ExcludeFocus(
+                                  child: IconButton(
+                                tooltip: tr('Back'),
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white),
+                                onPressed: () =>
+                                    Navigator.of(context).maybePop(),
+                              )),
+                            const Spacer(),
+                            if (size.width >= 800) const _HomeClock(),
+                          ]),
+                        ),
+                      if (widget.phoneHeader case final actions?)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 0, 4),
+                          child: Row(children: [
+                            Text(tr('Home'),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600)),
+                            Expanded(
+                              child: hideProfiles
+                                  ? const SizedBox.shrink()
+                                  : _ProfilesStrip(
+                                      inline: true,
+                                      compact: true,
+                                      nodes: _profileNode,
+                                      addNode: _addProfileNode,
+                                      onPick: _switchProfile,
+                                      onEdit: _editProfile,
+                                      onAdd: _manageProfiles,
+                                      onFocus: _onProfileFocus,
+                                    ),
+                            ),
+                            actions,
+                          ]),
+                        )
+                      else if (!hideProfiles)
+                        _ProfilesStrip(
+                          compact: !_inProfiles,
+                          showBack: needsBackArrow && !widget.embedded,
+                          nodes: _profileNode,
+                          addNode: _addProfileNode,
+                          onPick: _switchProfile,
+                          onEdit: _editProfile,
+                          onAdd: _manageProfiles,
+                          onFocus: _onProfileFocus,
+                        ),
+                    ],
+                    if (!phone)
                       SizedBox(
                         height: heroHeight,
                         child: Row(children: [
@@ -1667,8 +1720,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             if (_rows.isEmpty)
                               Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: _sidePad, vertical: 24),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: pad, vertical: 24),
                                 child: _loading
                                     ? const SizedBox(
                                         width: 28,
@@ -1683,7 +1736,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 16)),
                               ),
                             for (var r = 0; r < _rows.length; r++)
-                              _buildRow(r, scheme),
+                              _buildRow(r, scheme, pad),
                           ],
                         ),
                       ),
@@ -1698,7 +1751,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRow(int r, ColorScheme scheme) {
+  Widget _buildRow(int r, ColorScheme scheme, double pad) {
     final row = _rows[r];
     final poster = row.shape == _CardShape.poster;
     final w = poster ? _posterW : _wideW;
@@ -1709,7 +1762,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(_sidePad, 10, _sidePad, 8),
+          padding: EdgeInsets.fromLTRB(pad, 10, pad, 8),
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),
             style: TextStyle(
@@ -1726,7 +1779,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView.builder(
             controller: _rowScroll(row.id),
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: _sidePad - 8),
+            // The first card's left edge lines up with the row's title.
+            padding: EdgeInsets.symmetric(horizontal: pad - _gap / 2),
             itemExtent: w + _gap,
             clipBehavior: Clip.none,
             itemCount: row.items.length,
@@ -2189,6 +2243,64 @@ class _LiveHero extends StatelessWidget {
 /// [DesktopMiniPlayer]'s texture. Nothing live playing = an empty slot the
 /// backdrop shows through. Its channel's name shows only when it isn't the
 /// focused card's (the hero names that one). Tap = full screen.
+/// A phone on its side: Home's mini player in the profiles row, while a
+/// live channel plays in it, beside a small button that turns it off (or
+/// back on). Portrait phones have no mini player.
+class _PhoneMini extends StatelessWidget {
+  const _PhoneMini({required this.on, required this.onChanged});
+  final bool on;
+  final ValueChanged<bool> onChanged;
+
+  static const _height = 90.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final button = ExcludeFocus(
+      child: Tooltip(
+        message:
+            on ? tr('Turn off the mini player') : tr('Turn on the mini player'),
+        child: Material(
+          color: on ? scheme.primary : Colors.white.withValues(alpha: 0.1),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => onChanged(!on),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(
+                  on
+                      ? Icons.picture_in_picture_alt
+                      : Icons.picture_in_picture_alt_outlined,
+                  size: 20,
+                  color: on ? scheme.onPrimary : Colors.white60),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!on) return button;
+    Widget slot(bool playing) => Row(mainAxisSize: MainAxisSize.min, children: [
+          button,
+          if (playing) ...[
+            const SizedBox(width: 10),
+            const _MiniPlayer(width: _height * 16 / 9, height: _height),
+          ],
+        ]);
+    if (usesMediaKitTarget) {
+      return ValueListenableBuilder<Channel?>(
+          valueListenable: DesktopMiniPlayer.instance.channel,
+          builder: (_, channel, __) => slot(channel != null));
+    }
+    final playback = context.watch<PlaybackService>();
+    final channel = playback.currentChannel;
+    return slot(channel != null &&
+        playback.liveChannel != null &&
+        (channel.isLive || playback.catchup != null));
+  }
+}
+
 class _MiniPlayer extends StatelessWidget {
   const _MiniPlayer(
       {required this.width, required this.height, this.focusedChannelId});

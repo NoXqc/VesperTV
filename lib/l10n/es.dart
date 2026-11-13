@@ -2124,6 +2124,8 @@ const Map<String, String> kEs = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "OK en una tarjeta en directo la reproduce arriba a la derecha de Inicio, OK otra vez la abre a pantalla completa (con Vista previa al resaltar activada, la tarjeta en la que te detienes se reproduce sola). Reproducir/Pausa o mantener OK la detiene.",
   "Stop mini player": "Detener el minirreproductor",
+  "Turn off the mini player": "Desactivar el minirreproductor",
+  "Turn on the mini player": "Activar el minirreproductor",
   "Preferred audio language": "Idioma de audio preferido",
   "Preferred subtitle language": "Idioma de subtítulos preferido",
   "Source default": "Predeterminado de la fuente",

@@ -273,6 +273,12 @@ inaccurate. Recoverable from commit c18de49.)
   resize stretched wide logos into squares); full-size logos filled the image cache and re-decoded on
   scroll. (7) `_SlideSteadyWidth` (TV): during a column slide the live list / guide keeps one width,
   clipped, and takes the slot's width when it lands: one layout per slide, not one per frame (+746).
+  (8) `withTvThemeIfNeeded` (Sports Trak, the player, Search, title pages, Settings pages) builds its
+  theme once per palette + finish (`tvThemeFor`): its button styles hold closures, so a theme built per
+  build never compared equal and RefinedFinish.apply's memo missed (+764). (9) Sports Trak: a step
+  between cards / guide rows / feed rows bumps `_heroTick` (hero, team glow, selected row), never a
+  SportsScreen setState; the 30 s poll skips its rebuild when scores, clocks and channels are unchanged
+  (`_gamesSig`, `_matchesSig`); the RedZone pill breathes 3 times, then only while focused.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
   (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;
@@ -413,6 +419,20 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-13 - Sports Trak: next 3 days + one top row (`claude/sports-days`, test +764):** owner
+  photo of regular Sports Trak (Cards). Today shows rows for Tomorrow and the two days after it right under
+  Later today (Final stays last), loaded after today's rows (`_loadUpcoming`, `gamesForDay` per day, cached
+  like any day); channels matched one day at a time (each its own 36 h guide window; on the 30 s poll at
+  most every 5 min). A game listed on two days (golf week, past midnight) shows on its first day only.
+  Another day picked in the menu = that day only; Sports Mode unchanged. The day strip + tools rows became
+  Sports Mode's one row (live count, Today ▾ day menu, Standings, My Teams, Networks) in Cards and Guide,
+  phones too. The Cards body is a non-lazy column (Down into an unbuilt row did nothing). Frame cost items
+  (8)/(9) in §10. **+765 phone Home** (owner photos): rows 12 px from the edge on phones (was 40); a phone
+  on its side has no hero (like portrait) and its mini player sits in the profiles row while a channel plays,
+  beside a round on/off button (`_PhoneMini`, the `homeMiniPlayer` switch Settings hides on phones). Phone =
+  portrait, or not TV / computer and shortest side < 500 (a TV box is 540). +766: turning the phone to portrait
+  on Home showed an empty page (`_phonePage` 2 has nothing for Home). Owner on +764: Sports Trak "feels great".
+  Next build > 766.
 - **Claude, 2026-11-13 - phone Home in the pill (main, +757, owner-tested on his phone, not released):** portrait
   phone only (`_compact`). Bottom pill = Home | TV | Movies | TV Shows | Media Hub | Sports Trak; the More slot
   became a floating round ☰ (`_phoneGear`, roll-down menu: Settings, Multiview, Update Content, Exit not on iOS).

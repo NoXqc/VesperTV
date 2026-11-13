@@ -2084,6 +2084,8 @@ const Map<String, String> kEl = {
   "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
       "Το OK σε μια ζωντανή κάρτα την παίζει πάνω δεξιά στην αρχική, το OK ξανά την ανοίγει σε πλήρη οθόνη (με την Προεπισκόπηση με επισήμανση ενεργή, η κάρτα όπου σταματάτε παίζει μόνη της). Το Αναπαραγωγή/Παύση ή το παρατεταμένο OK τη σταματά.",
   "Stop mini player": "Διακοπή μίνι player",
+  "Turn off the mini player": "Απενεργοποίηση μίνι player",
+  "Turn on the mini player": "Ενεργοποίηση μίνι player",
   "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
   "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",
   "Source default": "Προεπιλογή πηγής",

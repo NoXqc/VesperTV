@@ -215,4 +215,22 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
+
+  // Turned sideways on Home and back (owner, 2026-11-13): portrait showed an
+  // empty page until Home was pressed again.
+  testWidgets('phone turned sideways and back keeps Home on screen',
+      (tester) async {
+    await pumpHome(tester, const Size(420, 900));
+    await tester.tap(find.text('Home').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
+    tester.view.physicalSize = const Size(900, 420);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
+    tester.view.physicalSize = const Size(420, 900);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }
