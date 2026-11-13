@@ -36,6 +36,10 @@ class ReminderViewers extends ViewerProfileService {
   }
 }
 
+/// The logo's URL (decoded small: a ResizeImage around it).
+String urlOf(ImageProvider image) =>
+    ((image is ResizeImage ? image.imageProvider : image) as NetworkImage).url;
+
 void main() {
   late StorageService storage;
   late GameReminders reminders;
@@ -116,8 +120,8 @@ void main() {
         tester.widget<Image>(find.byKey(const ValueKey('reminder-watermark')));
     final crest =
         tester.widget<Image>(find.byKey(const ValueKey('reminder-crest')));
-    expect((crest.image as NetworkImage).url, 'https://example.com/logo.png');
-    expect((image.image as NetworkImage).url, 'https://example.com/logo.png');
+    expect(urlOf(crest.image), 'https://example.com/logo.png');
+    expect(urlOf(image.image), 'https://example.com/logo.png');
     final fade = tester.widget<Opacity>(find
         .ancestor(
             of: find.byKey(const ValueKey('reminder-watermark')),

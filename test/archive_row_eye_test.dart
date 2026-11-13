@@ -73,8 +73,8 @@ int _historyPosters(WidgetTester tester) => tester
     .where((c) => c.title.startsWith('Title h'))
     .length;
 
-final _popularPoster = find.byWidgetPredicate(
-    (w) => w is PosterCard && w.title == 'Title p0');
+final _popularPoster =
+    find.byWidgetPredicate((w) => w is PosterCard && w.title == 'Title p0');
 
 void main() {
   testWidgets('Up reaches the eye, OK folds the row to its title line',
@@ -103,7 +103,8 @@ void main() {
     final eye = find.byKey(ValueKey('archive-eye-$key'));
     expect(eye, findsOneWidget);
     expect(find.byKey(ValueKey('archive-eye-${service.popular.key}')),
-        findsNothing, reason: 'only Continue watching / Recently watched');
+        findsNothing,
+        reason: 'only Continue watching / Recently watched');
 
     // Into the first row (Recently watched), then Up = its eye.
     await _press(tester, LogicalKeyboardKey.arrowRight);
@@ -128,8 +129,8 @@ void main() {
     expect(_focused, 'archive-card');
     expect(
         tester
-            .widget<PosterCard>(find.byWidgetPredicate((w) =>
-                w is PosterCard && (w.focusNode?.hasFocus ?? false)))
+            .widget<PosterCard>(find.byWidgetPredicate(
+                (w) => w is PosterCard && (w.focusNode?.hasFocus ?? false)))
             .title,
         startsWith('Title p'));
     await _press(tester, LogicalKeyboardKey.arrowUp);
@@ -142,11 +143,63 @@ void main() {
     await _press(tester, LogicalKeyboardKey.arrowDown);
     expect(
         tester
-            .widget<PosterCard>(find.byWidgetPredicate((w) =>
-                w is PosterCard && (w.focusNode?.hasFocus ?? false)))
+            .widget<PosterCard>(find.byWidgetPredicate(
+                (w) => w is PosterCard && (w.focusNode?.hasFocus ?? false)))
             .title,
         startsWith('Title h'),
         reason: 'shown again, Down from the eye = its own posters');
+
+    await tester.pumpWidget(const SizedBox());
+    service.dispose();
+  });
+  // +772 (Homatics): one OK on the eye opened the row and folded it again.
+  // The remote's OK is `select`; a held OK repeats, and every repeat was an
+  // ActivateIntent (a toggle). One press, held or not, toggles once.
+  testWidgets('one OK on the eye toggles once, even held', (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final service = _Rows(storage);
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ArchiveService>.value(value: service),
+        Provider<StorageService>.value(value: storage),
+      ],
+      child: MaterialApp(
+          navigatorObservers: [appRouteObserver],
+          theme: ThemeData.dark(),
+          home: const ArchiveScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+    final key = service.history.key;
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    expect(_focused, 'archive-row-eye');
+
+    Future<void> ok({int repeats = 0}) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 500));
+      for (var k = 0; k < repeats; k++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(seconds: 2));
+    }
+
+    await ok();
+    expect(storage.getHubHiddenRows(), {key});
+    expect(_focused, 'archive-row-eye');
+    await ok(repeats: 1);
+    expect(storage.getHubHiddenRows(), isEmpty, reason: 'shown, not refolded');
+    await ok(repeats: 5);
+    expect(storage.getHubHiddenRows(), {key});
+    expect(_focused, 'archive-row-eye');
 
     await tester.pumpWidget(const SizedBox());
     service.dispose();

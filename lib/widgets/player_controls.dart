@@ -1,6 +1,7 @@
 import '../utils/refined_finish.dart';
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -382,8 +383,10 @@ String _friendlyPlaybackError(String raw) {
       tr('Your source sent a message instead of the video:'),
       if (said.isNotEmpty) '"$said"',
       appStoreBuild
-          ? tr('Check your source (plan limits, active downloads), or pick another stream.')
-          : tr('Check your source or debrid account (plan limits, active downloads), or pick another stream.'),
+          ? tr(
+              'Check your source (plan limits, active downloads), or pick another stream.')
+          : tr(
+              'Check your source or debrid account (plan limits, active downloads), or pick another stream.'),
     ].join('\n');
   }
   final status = httpStatusFromPlaybackError(raw);
@@ -453,7 +456,18 @@ class PlayerControls extends StatelessWidget {
     this.trailingOptions = const [],
     this.insetForSystemBars = false,
     this.touchLayout = false,
+    this.active = true,
   });
+
+  /// False while the bar is hidden: it shows a still of the player's value
+  /// instead of following it. The position changes every 100 ms, so the
+  /// hidden bar rebuilt and a frame was drawn 10 times a second for as long
+  /// as anything played full screen (frame cost audit, 2026-11-13). Same
+  /// widgets either way: the buttons keep their focus nodes.
+  final bool active;
+
+  ValueListenable<VideoPlayerHdrValue> get _value =>
+      active ? controller : _Still(controller.value);
 
   /// Phones / tablets, full-screen player (the iPhone player's look, owner
   /// 2026-11-09): no title (it's in the top bar) and no transport (big
@@ -834,7 +848,7 @@ class PlayerControls extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(
           12 + inset.left, 6, 12 + inset.right, 6 + inset.bottom),
       child: ValueListenableBuilder<VideoPlayerHdrValue>(
-        valueListenable: controller,
+        valueListenable: _value,
         builder: (context, value, _) {
           final position = value.position;
           final duration = value.duration;
@@ -1072,7 +1086,7 @@ class PlayerControls extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(
           12 + inset.left, 28, 8 + inset.right, 4 + inset.bottom),
       child: ValueListenableBuilder<VideoPlayerHdrValue>(
-        valueListenable: controller,
+        valueListenable: _value,
         builder: (context, value, _) {
           final position = value.position;
           final duration = value.duration;
@@ -2110,7 +2124,8 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               selected: false,
               icon: Icons.cloud_download_outlined,
               title: tr('Search online subtitles'),
-              subtitle: tr('From your add-ons (Settings > Playlists & sources > Online subtitles)'),
+              subtitle: tr(
+                  'From your add-ons (Settings > Playlists & sources > Online subtitles)'),
               result: 'online'),
         _option(sheet,
             selected: false,
@@ -3218,4 +3233,18 @@ class _SkipButtonState extends State<_SkipButton> {
       ),
     );
   }
+}
+
+/// A value that never changes ([PlayerControls.active] off).
+class _Still<T> implements ValueListenable<T> {
+  const _Still(this.value);
+
+  @override
+  final T value;
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }

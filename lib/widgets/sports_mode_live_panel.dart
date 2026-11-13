@@ -104,6 +104,14 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
   int _groupIndex = 0;
   int _channelIndex = 0;
 
+  /// Bumped by an Up / Down step: only the rows' highlight listens. A
+  /// setState per step rebuilt the panel, which lists every group and the
+  /// open group's channels again (27k channels on the Homatics: Multiview's
+  /// guide stuttered, 2026-11-13).
+  final _stepTick = ValueNotifier<int>(0);
+  late final _groupsRepaint = Listenable.merge([_stepTick, _groupsNode]);
+  late final _guideRepaint = Listenable.merge([_stepTick, _guideNode]);
+
   /// The group the guide shows (null = guide closed).
   String? _openKey;
 
@@ -172,6 +180,7 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     _guideNode.dispose();
     _groupsScroll.dispose();
     _guideScroll.dispose();
+    _stepTick.dispose();
     super.dispose();
   }
 
@@ -359,8 +368,8 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     final step = _step(key);
     if (step != 0) {
       if (_groups.isEmpty) return KeyEventResult.handled;
-      setState(() =>
-          _groupIndex = (_groupIndex + step).clamp(0, _groups.length - 1));
+      _groupIndex = (_groupIndex + step).clamp(0, _groups.length - 1);
+      _stepTick.value++;
       _keepVisible(_groupsScroll, _groupIndex, _groupExtent);
       return KeyEventResult.handled;
     }
@@ -439,8 +448,8 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     final step = _step(key);
     if (step != 0) {
       if (_channels.isEmpty) return KeyEventResult.handled;
-      setState(() => _channelIndex =
-          (_channelIndex + step).clamp(0, _channels.length - 1));
+      _channelIndex = (_channelIndex + step).clamp(0, _channels.length - 1);
+      _stepTick.value++;
       _lastChannelIndex = _channelIndex;
       _keepVisible(_guideScroll, _channelIndex, _channelExtent);
       return KeyEventResult.handled;
@@ -533,7 +542,6 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
 
   Widget _buildGroupsColumn() {
     final scheme = Theme.of(context).colorScheme;
-    final focused = _groupsNode.hasFocus;
     return _frame(
       key: const ValueKey('sports-live-groups'),
       title: tr('Live TV'),
@@ -547,8 +555,6 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
           itemCount: _groups.length,
           itemBuilder: (context, i) {
             final g = _groups[i];
-            final current = i == _groupIndex;
-            final open = g.key == _openKey;
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
@@ -556,10 +562,20 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
                 setState(() => _groupIndex = i);
                 _openGroup(i);
               },
-              child: _Row(
-                focused: focused && current,
-                marked: open || (!focused && current && !guideOpen),
-                scheme: scheme,
+              // A step redraws the highlight only ([_stepTick]).
+              child: ListenableBuilder(
+                listenable: _groupsRepaint,
+                builder: (context, child) {
+                  final focused = _groupsNode.hasFocus;
+                  final current = i == _groupIndex;
+                  return _Row(
+                    focused: focused && current,
+                    marked: g.key == _openKey ||
+                        (!focused && current && !guideOpen),
+                    scheme: scheme,
+                    child: child!,
+                  );
+                },
                 child: Row(children: [
                   Icon(g.icon,
                       size: 18,
@@ -594,7 +610,6 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
 
   Widget _buildGuide() {
     final scheme = Theme.of(context).colorScheme;
-    final focused = _guideNode.hasFocus;
     final title = _openKey == _liveKey && _liveGameId != null
         ? _games.where((g) => g.id == _liveGameId).firstOrNull?.title ?? ''
         : _groups.where((g) => g.key == _openKey).firstOrNull?.title ?? '';
@@ -627,7 +642,6 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
                 itemCount: _channels.length,
                 itemBuilder: (context, i) {
                   final channel = _channels[i];
-                  final current = i == _channelIndex;
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
@@ -641,10 +655,20 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
                             _openLiveGame(i);
                           }
                         : null,
-                    child: _Row(
-                      focused: focused && current,
-                      marked: !focused && current,
-                      scheme: scheme,
+                    // A step redraws the highlight only ([_stepTick]), not
+                    // the channel's logo, programme and progress.
+                    child: ListenableBuilder(
+                      listenable: _guideRepaint,
+                      builder: (context, child) {
+                        final focused = _guideNode.hasFocus;
+                        final current = i == _channelIndex;
+                        return _Row(
+                          focused: focused && current,
+                          marked: !focused && current,
+                          scheme: scheme,
+                          child: child!,
+                        );
+                      },
                       child: _ChannelRow(
                           channel: channel,
                           playing: channel.id == playing,

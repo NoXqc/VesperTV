@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../utils/tv_theme.dart';
 import 'glass_menu.dart';
 import 'tv_menu_tile.dart';
+import 'ink_layer.dart';
 
 /// A `SwitchListTile` with an obvious solid-fill focus highlight — see
 /// `SettingsMenuScreen`'s `_MenuTile` for why the stock widget's own
@@ -59,46 +60,47 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
                   radius: 8,
                   quiet: GlassMenuSurface.quietRows(context))
               : RefinedFinish.decorate(
-              context,
-              BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: _focused
-                    ? Border.all(color: scheme.primary, width: 2)
-                    : null,
-                // A flat `black87` fill here photographed as more "filled" than
-                // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
-                // exact same focus state — see their doc comment.
-                // `SwitchListTile.tileColor` can't paint a gradient, so this
-                // Container paints it instead and `tileColor` below stays
-                // transparent to let it show through.
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.black,
-                          Color.lerp(
-                              Colors.black, scheme.primaryContainer, 0.4)!,
-                          Colors.black,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      )
-                    : null,
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.4),
-                            blurRadius: 12)
-                      ]
-                    : const [],
-              ),
-              focused: _focused),
+                  context,
+                  BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: _focused
+                        ? Border.all(color: scheme.primary, width: 2)
+                        : null,
+                    // A flat `black87` fill here photographed as more "filled" than
+                    // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
+                    // exact same focus state — see their doc comment.
+                    // `SwitchListTile.tileColor` can't paint a gradient, so this
+                    // Container paints it instead and `tileColor` below stays
+                    // transparent to let it show through.
+                    gradient: _focused
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.black,
+                              Color.lerp(
+                                  Colors.black, scheme.primaryContainer, 0.4)!,
+                              Colors.black,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          )
+                        : null,
+                    boxShadow: _focused
+                        ? [
+                            BoxShadow(
+                                color: scheme.primary.withValues(alpha: 0.4),
+                                blurRadius: 12)
+                          ]
+                        : const [],
+                  ),
+                  focused: _focused),
           // The stable wrapper adds focus blur only for the opt-in glass finish.
           // Its interactive child keeps the same slot when the finish changes.
           child: MinimalGlassFocus(
             active: !glass && RefinedFinish.of(context) && _focused,
             borderRadius: 8,
-            child: SwitchListTile(
+            child: InkLayer(
+                child: SwitchListTile(
               focusNode: widget.focusNode,
               // Inset from the focus outline: flush text touched the border.
               contentPadding: compact
@@ -122,7 +124,7 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
                     ),
               value: widget.value,
               onChanged: widget.onChanged,
-            ),
+            )),
           ),
         ));
   }

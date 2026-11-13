@@ -1694,6 +1694,9 @@ const Map<String, String> kPl = {
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Gdy aktualizacja zawartości jest wymagana, od razu otwórz Live TV i zaktualizuj Filmy i Seriale w tle. Wypełnią się w ciągu kilku następnych minut, a do tego czasu pilot może działać wolniej. Działa od następnego uruchomienia.",
   "Fast startup": "Szybkie uruchamianie",
+  "Ask before exiting": "Pytaj przed wyjściem",
+  "Back on the first screen asks before leaving, so one Back too many doesn't close the app.":
+      "Wstecz na pierwszym ekranie pyta przed wyjściem, więc jedno Wstecz za dużo nie zamyka aplikacji.",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Otwiera aplikację bez czekania na wczytanie Filmów i Seriali; wypełniają się kilka sekund później. Dla szybkich urządzeń — na starszej przystawce wyłącz, jeśli aplikacja zamyka się sama zaraz po uruchomieniu. Działa od następnego uruchomienia.",
   "{group} created. Hold OK on a channel > Move to group… to add channels.":

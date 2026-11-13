@@ -399,6 +399,14 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Ask before exiting: see [AppConstants.keyAskBeforeExit] ([AppExit.back]).
+  bool get askBeforeExit => _storage.getAskBeforeExit();
+
+  void setAskBeforeExit(bool value) {
+    _storage.setAskBeforeExit(value);
+    notifyListeners();
+  }
+
   /// TV home screen rows: see [AppConstants.keyLauncherRows].
   bool get launcherRows => _storage.getLauncherRows();
 

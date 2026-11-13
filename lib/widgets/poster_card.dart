@@ -10,6 +10,7 @@ import '../utils/wide_art_queue.dart';
 import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
 import '../utils/desktop_platform.dart';
+import 'ink_layer.dart';
 
 /// One poster/backdrop tile in a browse row — scales and glows when
 /// focused, which is the standard "this is where the D-pad is" affordance
@@ -258,7 +259,8 @@ class _PosterCardState extends State<PosterCard> {
 
     final card = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: InkWell(
+      child: InkLayer(
+          child: InkWell(
         focusNode: _effectiveFocusNode,
         borderRadius: BorderRadius.circular(10),
         // The poster's own border + glow is the focus look. InkWell's grey
@@ -609,7 +611,7 @@ class _PosterCardState extends State<PosterCard> {
             ),
           ),
         ),
-      ),
+      )),
     );
 
     final onToggleFavorite = widget.onToggleFavorite;

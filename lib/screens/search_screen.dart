@@ -510,17 +510,22 @@ class _SearchScreenState extends State<SearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = rowKey.currentContext;
       if (ctx != null) {
-        Scrollable.ensureVisible(ctx,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            alignment: 0);
+        // A jump (CLAUDE.md §10): a 200 ms glide per step restarted on
+        // every held Up / Down.
+        Scrollable.ensureVisible(ctx, alignment: 0);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final playlist = context.watch<PlaylistManager>();
+    // Results follow the catalog as it loads; with no query the page reads
+    // nothing from it (the warm-up line has its own listener), so a catalog
+    // warm-up notify every 400 ms no longer rebuilds it (frame-cost audit,
+    // 2026-11-13).
+    context.select<PlaylistManager, int>(
+        (p) => _query.trim().isEmpty ? 0 : p.notifyCount);
+    final playlist = context.read<PlaylistManager>();
     final scheme = Theme.of(context).colorScheme;
     final q = _query.trim().toLowerCase();
     final rows = q.isEmpty ? const <_ResultRow>[] : _buildRows(playlist, q);
@@ -646,35 +651,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Column(
                         children: [
                           if (q.isEmpty) _buildSuggestionPills(scheme),
-                          if (playlist.isXtream && playlist.isWarmingCatalog)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 4),
-                              child: Row(
-                                children: [
-                                  const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2)),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      tr(
-                                          'Still loading the full catalog in the background ({warmCatalogDone}/{warmCatalogTotal} categories) — some results may not show up yet.',
-                                          {
-                                            'warmCatalogDone':
-                                                playlist.warmCatalogDone,
-                                            'warmCatalogTotal':
-                                                playlist.warmCatalogTotal
-                                          }),
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          const _WarmupLine(),
                           Expanded(
                             child: q.isEmpty
                                 ? (_recentSearches.isEmpty
@@ -982,6 +959,42 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// "Still loading the full catalog…" under the search field: the one part
+/// of Search that follows every warm-up step.
+class _WarmupLine extends StatelessWidget {
+  const _WarmupLine();
+
+  @override
+  Widget build(BuildContext context) {
+    final (warming, done, total) =
+        context.select<PlaylistManager, (bool, int, int)>((p) => (
+              p.isXtream && p.isWarmingCatalog,
+              p.warmCatalogDone,
+              p.warmCatalogTotal
+            ));
+    if (!warming) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              tr('Still loading the full catalog in the background ({warmCatalogDone}/{warmCatalogTotal} categories) — some results may not show up yet.',
+                  {'warmCatalogDone': done, 'warmCatalogTotal': total}),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

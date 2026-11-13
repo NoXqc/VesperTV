@@ -2536,7 +2536,8 @@ class ArchiveService extends ChangeNotifier {
             ArchiveStreamOption(source: s, stream: stream)
         ]);
       } catch (e) {
-        debugPrint('ArchiveStreams: source=${s.key} failed=${e.runtimeType}');
+        debugPrint('ArchiveStreams: source=${s.key} '
+            'failed=${ArchiveApiService.errorText(e)}');
         session.finish(key, const [], failed: true);
       }
     }

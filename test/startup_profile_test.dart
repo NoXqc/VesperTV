@@ -242,10 +242,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(profileCard(tester, 'p1').focusNode.hasFocus, isTrue);
     expect(find.byKey(const ValueKey('wallpaper-p1')), findsOneWidget);
+    // The panel's glass is that wallpaper blurred once, never a live blur
+    // (slow steps on the Homatics, +772).
+    expect(find.byKey(const ValueKey('glass-p1')), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsNothing);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('wallpaper-p1')), findsNothing);
+    expect(find.byKey(const ValueKey('glass-p1')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

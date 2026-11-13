@@ -57,6 +57,8 @@ class LiveChannelInfoCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: logo,
                         fit: BoxFit.contain,
+                        // A small logo: decoded small, not at the file's size (CLAUDE.md §10 (6)).
+                        memCacheWidth: 160,
                         errorWidget: (_, __, ___) =>
                             const Icon(Icons.tv, color: Colors.white54))
                     : const Icon(Icons.tv, color: Colors.white54))),

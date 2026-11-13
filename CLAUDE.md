@@ -279,6 +279,17 @@ inaccurate. Recoverable from commit c18de49.)
   between cards / guide rows / feed rows bumps `_heroTick` (hero, team glow, selected row), never a
   SportsScreen setState; the 30 s poll skips its rebuild when scores, clocks and channels are unchanged
   (`_gamesSig`, `_matchesSig`); the RedZone pill breathes 3 times, then only while focused.
+  (10) Focusable cards / rows built on InkWell / ListTile get their own layer and Material (`InkLayer`):
+  their focus ink was painted by the nearest Material (a whole page or panel). (11) `GlassBlur`
+  (refined_finish.dart): over Multiview's moving tiles, live blurs are off (`BackdropFilter.enabled`) and menu
+  animations are instant (`GlassBlur.motion`): on the Homatics, 2 x 1080p60 native tiles leave each UI frame
+  45-59 ms. (12) A hidden player bar must not follow the 100 ms position (`PlayerControls.active`).
+  (13) No always-on BackdropFilter over a page that animates: blur the picture once, small
+  (`SettingsBackdrop.blurred`; Who's watching's panel glass, +773). (14) A page whose only catalog state is a
+  star `context.select`s it (`PlaylistManager.favoritesVersion`, `isChannelFavorited`): the catalog warm-up
+  notifies up to every 400 ms, and a root `context.watch<PlaylistManager>` rebuilt the movie / show pages,
+  Expand catalog and Search on each (+774). `select` asserts inside a LayoutBuilder: select in `build`.
+  Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
   (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;
@@ -419,6 +430,21 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-13 - frame cost pass 2 (`claude/exit-prompt`, +768..+774, committed on the branch, not
+  merged to main: another session had uncommitted l10n work there):** Settings (owner: "Settings fixed"),
+  Multiview menus, then an audit of every TV screen (Home, TV show page, Media Hub folder, Networks, player bar,
+  shared cards and rows), its leftovers (+774: warm-up rebuilds, Multiview `_active`, Hub Live TV `_cursor`).
+  Rules (10)-(14) in §10. Owner's +772 bugs fixed in +773: Home profile strip stayed big after Down
+  (`_focusCard` cleared `_inProfiles` without setState), Media Hub row eye toggled twice (the Homatics remote
+  sends an OK repeat ~420 ms after a press when the release is late; Flutter's `select` -> ActivateIntent
+  includes repeats, so `_RowEye` swallows them; `HubEye:` log), Who's watching slow (live blur). +774: an add-on
+  GET is asked once more after a connection error (`ArchiveApiService._get`; Continue watching from Projectivy
+  said "No playable stream" seconds after playing, `failed=ClientException`). Details: HANDOFF.md.
+- **Claude, 2026-11-13 - Ask before exiting (`claude/exit-prompt`, test +767):** Discord request (older viewers
+  left with one Back too many after the warm exit dropped "Exit VesperTV?"). Settings > Profiles & startup >
+  Startup > Ask before exiting (Android, off by default): `AppExit.askFirst` makes `AppExit.back` show the old
+  Exit / Stay dialog (Stay focused) at the TV home tabs, Sports Mode and Who's watching; Exit is still the
+  warm exit. Next build > 767.
 - **Claude, 2026-11-13 - Sports Trak: next 3 days + one top row (`claude/sports-days`, test +764):** owner
   photo of regular Sports Trak (Cards). Today shows rows for Tomorrow and the two days after it right under
   Later today (Final stays last), loaded after today's rows (`_loadUpcoming`, `gamesForDay` per day, cached

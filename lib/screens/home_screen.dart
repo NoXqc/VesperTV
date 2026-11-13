@@ -53,6 +53,7 @@ import '../widgets/profile_card.dart';
 import 'sports_screen.dart';
 import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
+import '../widgets/ink_layer.dart';
 
 /// The Home page (top of the tabs column, or Settings > Startup > Open on:
 /// Home): the viewer's profiles strip, a hero for the focused card, then
@@ -194,6 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, int> _cardIndex = {};
   _HomeItem? _focused;
 
+  /// Bumped by a remote step between cards: the backdrop, the hero, the mini
+  /// player's name and the row titles listen to it. A setState per step
+  /// rebuilt every row of the page (frame cost audit, 2026-11-13; same fix as
+  /// Media Hub's +762).
+  final _focusTick = ValueNotifier<int>(0);
+
   /// Fades the page out and back in around a profile switch.
   bool _switching = false;
 
@@ -310,6 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _focusTick.dispose();
     HardwareKeyboard.instance.removeHandler(_noteKey);
     if (RemoteButtons.instance.home == _onRemoteAction) {
       RemoteButtons.instance.home = null;
@@ -954,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (r >= 0 && i != null) {
         _row = r;
         _cardIndex[id] = i;
-        _inProfiles = false;
+        if (_inProfiles) setState(() => _inProfiles = false);
       }
       return;
     }
@@ -1198,7 +1206,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final row = _rows[r];
     i = i.clamp(0, row.items.length - 1);
     _row = r;
-    _inProfiles = false;
+    // Leaving the profiles shrinks the strip: the card's onFocus only
+    // rebuilds the page while _inProfiles is still true, so do it here.
+    if (_inProfiles) setState(() => _inProfiles = false);
     final c = _rowScrolls[row.id];
     if (c != null && c.hasClients) {
       final pos = c.position;
@@ -1587,7 +1597,6 @@ class _HomeScreenState extends State<HomeScreen> {
         phone && !portraitPhone && size.width >= HomeScreen.miniPlayerMinWidth
             ? _PhoneMini(on: prefs.homeMiniPlayer, onChanged: _setPhoneMini)
             : null;
-    final focused = _focused;
     // 16:9 in the hero's right side, its room kept even while nothing
     // plays (the hero text doesn't jump when a channel starts).
     final mini =
@@ -1604,7 +1613,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Backdrop(item: phone ? null : focused, wallpaper: _wallpaper),
+            // Its own layer: a live card's glow animates 600 ms per step.
+            RepaintBoundary(
+              child: ValueListenableBuilder<int>(
+                valueListenable: _focusTick,
+                builder: (_, __, ___) => _Backdrop(
+                    item: phone ? null : _focused, wallpaper: _wallpaper),
+              ),
+            ),
             AnimatedOpacity(
               opacity: _switching ? 0 : 1,
               duration: const Duration(milliseconds: 220),
@@ -1699,15 +1715,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(
                         height: heroHeight,
                         child: Row(children: [
-                          Expanded(child: _Hero(item: focused, scheme: scheme)),
+                          Expanded(
+                              child: ValueListenableBuilder<int>(
+                                  valueListenable: _focusTick,
+                                  builder: (_, __, ___) =>
+                                      _Hero(item: _focused, scheme: scheme))),
                           if (mini)
                             Padding(
                               padding:
                                   const EdgeInsets.fromLTRB(0, 8, _sidePad, 8),
-                              child: _MiniPlayer(
-                                  width: miniWidth,
-                                  height: miniHeight,
-                                  focusedChannelId: focused?.preview?.id),
+                              child: ValueListenableBuilder<int>(
+                                  valueListenable: _focusTick,
+                                  builder: (_, __, ___) => _MiniPlayer(
+                                      width: miniWidth,
+                                      height: miniHeight,
+                                      focusedChannelId: _focused?.preview?.id)),
                             ),
                         ]),
                       ),
@@ -1756,20 +1778,25 @@ class _HomeScreenState extends State<HomeScreen> {
     final poster = row.shape == _CardShape.poster;
     final w = poster ? _posterW : _wideW;
     final h = poster ? _posterH : _wideH;
-    final active = !_inProfiles && r == _row;
     return Column(
       key: _rowKey(row.id),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(pad, 10, pad, 8),
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 180),
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.2,
-                color: active ? scheme.primary : Colors.white),
+          child: ValueListenableBuilder<int>(
+            valueListenable: _focusTick,
+            builder: (_, __, child) => AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 180),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                  color: !_inProfiles && r == _row
+                      ? scheme.primary
+                      : Colors.white),
+              child: child!,
+            ),
             child: Text(row.title ?? tr(row.kind.title)),
           ),
         ),
@@ -1814,11 +1841,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         !_inProfiles) {
                       return;
                     }
-                    setState(() {
-                      _row = at;
-                      _inProfiles = false;
-                      _focused = current;
-                    });
+                    // Leaving the profiles changes the page (the strip
+                    // shrinks); a step between cards only the listeners.
+                    if (_inProfiles) {
+                      setState(() {
+                        _row = at;
+                        _inProfiles = false;
+                        _focused = current;
+                      });
+                      return;
+                    }
+                    _row = at;
+                    _focused = current;
+                    _focusTick.value++;
                   },
                 ),
               );
@@ -2678,7 +2713,8 @@ class _HomeCardState extends State<_HomeCard> {
     return HoldToActivate(
       onTap: widget.onTap,
       onHold: widget.onHold,
-      child: InkWell(
+      child: InkLayer(
+          child: InkWell(
         focusNode: widget.focusNode,
         onTap: widget.onTap,
         onLongPress: widget.onHold,
@@ -2711,7 +2747,7 @@ class _HomeCardState extends State<_HomeCard> {
                   style: const TextStyle(fontSize: 11, color: Colors.white54)),
           ],
         ),
-      ),
+      )),
     );
   }
 }

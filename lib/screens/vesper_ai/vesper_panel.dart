@@ -9,6 +9,7 @@ import '../../services/vesper_ai/vesper_ai.dart';
 import '../../services/vesper_ai/voice_input.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'phone_mic_sheet.dart';
+import '../../utils/refined_finish.dart';
 
 /// Opens the Vesper panel over [navigator]'s current screen (the remote's
 /// voice button, the mic buttons, the assistant launch). [listen] starts
@@ -116,8 +117,9 @@ class _VesperPanelState extends State<VesperPanel> {
       if (!mounted) return;
       setState(() {
         _stage = _Stage.answered;
-        _answer = tr(
-            'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.').ifNotIos(_iosMicDenied);
+        _answer =
+            tr('VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.')
+                .ifNotIos(_iosMicDenied);
       });
       return;
     }
@@ -146,8 +148,9 @@ class _VesperPanelState extends State<VesperPanel> {
             _answer = switch (e.code) {
               'nomatch' => tr('I did not hear anything.'),
               'network' => tr('Voice needs the internet.'),
-              'permission' => tr(
-                  'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.').ifNotIos(_iosMicDenied),
+              'permission' =>
+                tr('VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.')
+                    .ifNotIos(_iosMicDenied),
               'busy' => tr('The microphone is busy. Try again.'),
               _ => tr(
                   'Voice is not available on this device. Type, or talk from your phone.'),
@@ -237,6 +240,7 @@ class _VesperPanelState extends State<VesperPanel> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(22),
             child: BackdropFilter(
+              enabled: GlassBlur.live,
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Material(
                 color: Colors.black.withValues(alpha: 0.78),
@@ -375,8 +379,30 @@ class _Orb extends StatefulWidget {
 
 class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
   late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 900))
-    ..repeat(reverse: true);
+      vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_Orb old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  /// Pulses only while thinking: a pulse that never stopped drew a frame
+  /// 60 times a second, under a blur, for as long as the panel was open
+  /// (frame cost audit, 2026-11-13).
+  void _sync() {
+    if (widget.thinking && !widget.active) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else if (_pulse.isAnimating) {
+      _pulse.stop();
+    }
+  }
 
   @override
   void dispose() {

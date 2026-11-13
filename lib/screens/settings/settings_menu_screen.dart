@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -69,6 +70,36 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
     });
   }
 
+  /// The category the remote stopped on: its page is built after a short
+  /// rest, so moving through the categories doesn't build every page on
+  /// the way (a whole-screen rebuild per step, frames up to 350 ms on the
+  /// Homatics, 2026-11-13). Right / OK use it at once.
+  Timer? _selectTimer;
+  int? _pending;
+
+  /// The category under the remote: the rail's gold frame follows it at
+  /// once (owner, 2026-11-13: it stayed on the last one until the page
+  /// came, like a late focus); the page ([_selected]) after the rest.
+  final _railAt = ValueNotifier<int>(1);
+
+  void _selectSoon(int i) {
+    _railAt.value = i;
+    _pending = i;
+    _selectTimer?.cancel();
+    _selectTimer = Timer(const Duration(milliseconds: 120), _applySelection);
+  }
+
+  /// Shows the [_pending] category; false = it was already shown.
+  bool _applySelection() {
+    _selectTimer?.cancel();
+    _selectTimer = null;
+    final i = _pending;
+    _pending = null;
+    if (i == null || !mounted || i == _selected) return false;
+    setState(() => _selected = i);
+    return true;
+  }
+
   void _onPaneFocus() {
     if (_paneScope.hasFocus != _inPane) {
       setState(() => _inPane = _paneScope.hasFocus);
@@ -79,6 +110,8 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
   @override
   void dispose() {
     _paneScope.removeListener(_onPaneFocus);
+    _selectTimer?.cancel();
+    _railAt.dispose();
     _railScope.dispose();
     _paneScope.dispose();
     _firstEntryNode.dispose();
@@ -102,9 +135,18 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
     if (mounted) setState(() {});
   }
 
-  void _enterPane() => _selected == 0
-      ? _searchNode.requestFocus()
-      : _firstEntryNode.requestFocus();
+  void _enterPane() {
+    // A category still waiting for its page: build it, then go in.
+    if (_applySelection()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _enterPane();
+      });
+      return;
+    }
+    _selected == 0
+        ? _searchNode.requestFocus()
+        : _firstEntryNode.requestFocus();
+  }
 
   void _backToRail() => _railNode(_selected).requestFocus();
 
@@ -128,7 +170,12 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
       final categories = SettingsCatalog(context,
               refresh: _refresh, nativeStatus: _nativeStatus, volumes: _volumes)
           .build();
-      if (_selected > categories.length) _selected = 1;
+      if (_selected > categories.length) {
+        _selected = 1;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _railAt.value = 1;
+        });
+      }
       final narrow = MediaQuery.sizeOf(context).width < 700;
       return PopScope(
         canPop: narrow || !_inPane,
@@ -218,23 +265,26 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         canRequestFocus: false,
         skipTraversal: true,
         onFocusChange: (f) {
-          if (f && _selected != i) setState(() => _selected = i);
+          if (f) _selectSoon(i);
         },
-        child: SettingRow(
-          focusNode: _railNode(i),
-          // Opens on the first category; Search is one Up away.
-          autofocus: i == 1,
-          icon: icon,
-          title: title,
-          selected: i == _selected,
-          trailing: i == _selected
-              ? Icon(Icons.chevron_right,
-                  size: 20, color: Theme.of(context).colorScheme.primary)
-              : null,
-          onTap: () {
-            setState(() => _selected = i);
-            _enterPane();
-          },
+        child: ValueListenableBuilder<int>(
+          valueListenable: _railAt,
+          builder: (context, at, _) => SettingRow(
+            focusNode: _railNode(i),
+            // Opens on the first category; Search is one Up away.
+            autofocus: i == 1,
+            icon: icon,
+            title: title,
+            selected: i == at,
+            trailing: i == at
+                ? Icon(Icons.chevron_right,
+                    size: 20, color: Theme.of(context).colorScheme.primary)
+                : null,
+            onTap: () {
+              _pending = i;
+              _enterPane();
+            },
+          ),
         ),
       );
 

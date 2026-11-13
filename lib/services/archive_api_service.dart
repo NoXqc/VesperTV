@@ -52,6 +52,36 @@ class ArchiveApiService {
   final http.Client _client;
   static const _timeout = Duration(seconds: 20);
 
+  /// A GET, asked once more after a connection error. While a movie plays
+  /// (or the app sits behind the launcher) the add-on's server can close
+  /// the pooled connection, and the next request on it fails at once:
+  /// Continue watching from Projectivy seconds after playing showed "No
+  /// playable stream" (Homatics, owner 2026-11-13, `ArchiveStreams: ...
+  /// failed=ClientException`). The retry gets a fresh connection. A
+  /// timeout isn't retried (it already waited [_timeout]).
+  Future<http.Response> _get(Uri uri) async {
+    try {
+      return await _client.get(uri).timeout(_timeout);
+    } on http.ClientException catch (e) {
+      diagnostics?.call('ArchiveApi: retry after ${errorText(e)}');
+      return _client.get(uri).timeout(_timeout);
+    }
+  }
+
+  /// [error]'s type, plus a connection error's message ("Connection closed
+  /// before full header was received") without host names or links.
+  static String errorText(Object error) {
+    if (error is! http.ClientException) return '${error.runtimeType}';
+    final message = error.message
+        .replaceAll(
+            RegExp(r'[a-z][a-z0-9+.-]*://\S*', caseSensitive: false), '<url>')
+        .replaceAll(RegExp(r"'[^']*'"), "'<host>'")
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final short = message.length > 80 ? message.substring(0, 80) : message;
+    return 'ClientException($short)';
+  }
+
   /// Turns whatever the user pasted (`stremio://…`, a base URL, a link
   /// with or without `/manifest.json`) into the manifest URL.
   static String normalizeManifestUrl(String input) {
@@ -67,7 +97,7 @@ class ArchiveApiService {
   }
 
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
-    final r = await _client.get(uri).timeout(_timeout);
+    final r = await _get(uri);
     if (r.statusCode != 200) {
       throw ArchiveApiException('HTTP ${r.statusCode}',
           statusCode: r.statusCode);
@@ -95,7 +125,7 @@ class ArchiveApiService {
 
   /// Any JSON document (a collections file is a list, not an object).
   Future<Object?> fetchAnyJson(Uri uri) async {
-    final r = await _client.get(uri).timeout(_timeout);
+    final r = await _get(uri);
     if (r.statusCode != 200) {
       throw ArchiveApiException('HTTP ${r.statusCode}',
           statusCode: r.statusCode);
@@ -272,9 +302,9 @@ class ArchiveApiService {
       if (search != null) 'search': search,
       if (skip > 0) 'skip': '$skip',
     });
-    final j = await _getJson(Uri.parse(
-        '$baseUrl/catalog/${_seg(catalog.requestWire)}/'
-        '${_seg(catalog.id)}$extra.json'));
+    final j = await _getJson(
+        Uri.parse('$baseUrl/catalog/${_seg(catalog.requestWire)}/'
+            '${_seg(catalog.id)}$extra.json'));
     final out = [
       for (final m in (j['metas'] as List? ?? const []))
         if (m is Map)

@@ -119,6 +119,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _hasEye(row) && _hiddenRows.contains(row.key);
 
   Future<void> _toggleRowHidden(ArchiveRow row) async {
+    debugPrint('HubEye: toggle ${row.catalog.id} '
+        '${_hiddenRows.contains(row.key) ? 'show' : 'hide'} '
+        '+${_RowEyeState.sinceDown()}');
     setState(() {
       if (!_hiddenRows.remove(row.key)) _hiddenRows.add(row.key);
       _lastIndex[row.key] = 0;
@@ -2210,42 +2213,78 @@ class _RowEye extends StatefulWidget {
 class _RowEyeState extends State<_RowEye> {
   bool _focused = false;
 
+  /// When the last OK went down on an eye (Send log: what followed it).
+  static final _sinceDown = Stopwatch();
+
+  static String sinceDown() =>
+      _sinceDown.isRunning ? '${_sinceDown.elapsedMilliseconds} ms' : '-';
+
+  /// One OK = one toggle. A held OK repeats ActivateIntent, which opened
+  /// the row and folded it again (owner, +772): the eye swallows repeats.
+  /// Send log `HubEye:` times every OK on the eye.
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (!isActivateKey(event.logicalKey)) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) {
+      _sinceDown
+        ..reset()
+        ..start();
+    }
+    final kind = switch (event) {
+      KeyDownEvent() => 'down',
+      KeyRepeatEvent() => 'repeat',
+      _ => 'up',
+    };
+    debugPrint('HubEye: $kind ${event.logicalKey.keyLabel} +${sinceDown()}');
+    return event is KeyRepeatEvent
+        ? KeyEventResult.handled
+        : KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: widget.hidden ? tr('Show this row') : tr('Hide this row'),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          focusNode: widget.node,
-          focusColor: Colors.transparent,
-          customBorder: const CircleBorder(),
-          onTap: widget.onTap,
-          onFocusChange: (f) {
-            setState(() => _focused = f);
-            if (f) widget.onFocus();
-          },
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black.withValues(alpha: 0.35),
-              border: Border.all(
-                  color: _focused ? scheme.primary : Colors.white24, width: 2),
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _onKey,
+      child: Semantics(
+        button: true,
+        label: widget.hidden ? tr('Show this row') : tr('Hide this row'),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            focusNode: widget.node,
+            focusColor: Colors.transparent,
+            customBorder: const CircleBorder(),
+            onTap: widget.onTap,
+            onFocusChange: (f) {
+              setState(() => _focused = f);
+              if (_sinceDown.isRunning) {
+                debugPrint('HubEye: focus ${f ? 'in' : 'out'} +${sinceDown()}');
+              }
+              if (f) widget.onFocus();
+            },
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.35),
+                border: Border.all(
+                    color: _focused ? scheme.primary : Colors.white24,
+                    width: 2),
+              ),
+              child: Icon(
+                  widget.hidden
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 17,
+                  color: _focused
+                      ? scheme.primary
+                      : widget.hidden
+                          ? Colors.white54
+                          : Colors.white),
             ),
-            child: Icon(
-                widget.hidden
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                size: 17,
-                color: _focused
-                    ? scheme.primary
-                    : widget.hidden
-                        ? Colors.white54
-                        : Colors.white),
           ),
         ),
       ),

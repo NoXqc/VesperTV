@@ -66,6 +66,10 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
   final Map<int, ScrollController> _horizontal = {};
   String? _starting;
 
+  /// Bumped on every cursor step: the tiles and row titles redraw their
+  /// highlight, not the whole grid (frame-cost audit, 2026-11-13).
+  final _cursor = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
@@ -91,6 +95,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
   @override
   void dispose() {
     _stopLiveTv();
+    _cursor.dispose();
     _vertical.dispose();
     for (final c in _horizontal.values) {
       c.dispose();
@@ -147,10 +152,9 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
     final key = event.logicalKey;
     final count = rows[_row].metas.length;
     void move(int row, int col) {
-      setState(() {
-        _row = row.clamp(0, rows.length - 1);
-        _cols[_row] = col.clamp(0, rows[_row].metas.length - 1);
-      });
+      _row = row.clamp(0, rows.length - 1);
+      _cols[_row] = col.clamp(0, rows[_row].metas.length - 1);
+      _cursor.value++;
       WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
     }
 
@@ -276,14 +280,17 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-          child: Text(
-            '${row.title} · ${tr('{n} channels', {'n': row.metas.length})}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                color: index == _row ? Colors.white : Colors.white70,
-                fontSize: 16,
-                fontWeight: FontWeight.w600),
+          child: ValueListenableBuilder<int>(
+            valueListenable: _cursor,
+            builder: (context, _, __) => Text(
+              '${row.title} · ${tr('{n} channels', {'n': row.metas.length})}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: index == _row ? Colors.white : Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600),
+            ),
           ),
         ),
         Expanded(
@@ -302,71 +309,76 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
 
   Widget _tile(LiveTvRow row, int rowIndex, int i) {
     final meta = row.metas[i];
-    final selected = rowIndex == _row && i == _col(rowIndex);
     final accent = Theme.of(context).colorScheme.primary;
     final image = meta.logoUrl ?? meta.posterUrl;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _row = rowIndex;
-          _cols[rowIndex] = i;
-        });
+        _row = rowIndex;
+        _cols[rowIndex] = i;
+        _cursor.value++;
         unawaited(_play(row, i));
       },
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1C),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: selected ? accent : Colors.transparent, width: 3),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (image != null && image.isNotEmpty)
-                      Image.network(
-                        image,
-                        fit: BoxFit.contain,
-                        cacheWidth: 360,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.live_tv,
-                            color: Colors.white38, size: 36),
-                      )
-                    else
-                      const Icon(Icons.live_tv,
+      child: ValueListenableBuilder<int>(
+        valueListenable: _cursor,
+        builder: (context, _, __) => _tileBody(
+            meta, accent, image, rowIndex == _row && i == _col(rowIndex)),
+      ),
+    );
+  }
+
+  Widget _tileBody(
+      ArchiveMeta meta, Color accent, String? image, bool selected) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C1C1C),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: selected ? accent : Colors.transparent, width: 3),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (image != null && image.isNotEmpty)
+                    Image.network(
+                      image,
+                      fit: BoxFit.contain,
+                      cacheWidth: 360,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.live_tv,
                           color: Colors.white38, size: 36),
-                    if (_starting != null && selected && _starting!.isNotEmpty)
-                      const ColoredBox(
-                        color: Colors.black54,
-                        child: Center(
-                            child: SizedBox(
-                                width: 28,
-                                height: 28,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 3))),
-                      ),
-                  ],
-                ),
+                    )
+                  else
+                    const Icon(Icons.live_tv, color: Colors.white38, size: 36),
+                  if (_starting != null && selected && _starting!.isNotEmpty)
+                    const ColoredBox(
+                      color: Colors.black54,
+                      child: Center(
+                          child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 3))),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              meta.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
-                  fontSize: 13),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            meta.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                color: selected ? Colors.white : Colors.white70, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

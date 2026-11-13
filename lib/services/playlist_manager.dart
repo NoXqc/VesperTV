@@ -66,9 +66,23 @@ class PlaylistManager extends ChangeNotifier {
   /// `PlaylistSession._loadLiveChannelsOnce` for the first, narrower fix
   /// of the same bug class. This is the general one: anything that
   /// notifies mid-frame is deferred to the end of that frame instead.
+  /// Bumped on every [notifyListeners]: a page that reads the catalog only
+  /// some of the time selects it ([SearchScreen] with a query) instead of
+  /// watching the whole manager.
+  int get notifyCount => _notifyCount;
+  int _notifyCount = 0;
+
+  /// Bumped when the favourites change (a toggle, a viewer switch, a
+  /// reload): pages whose only catalog state is the stars select this, so
+  /// the catalog warm-up's row loads (a notify every 400 ms) don't rebuild
+  /// them (frame-cost audit, 2026-11-13).
+  int get favoritesVersion => _favoritesVersion;
+  int _favoritesVersion = 0;
+
   @override
   void notifyListeners() {
     PerfDiagnostics.notifies++;
+    _notifyCount++;
     // Anything changed (channels loaded, hidden, moved): count again.
     _liveCounts = null;
     _placedCache = null;
@@ -100,6 +114,7 @@ class PlaylistManager extends ChangeNotifier {
 
   void _invalidateFavoriteCatalog({bool clear = false}) {
     _favoriteCatalogGeneration++;
+    _favoritesVersion++;
     _favoriteCatalogKey = null;
     _favoriteCatalogFuture = null;
     if (clear) {

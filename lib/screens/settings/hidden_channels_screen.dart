@@ -75,6 +75,8 @@ class _HiddenChannelRow extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: channel.logoUrl!,
                   fit: BoxFit.contain,
+                  // A small logo: decoded small, not at the file's size (CLAUDE.md §10 (6)).
+                  memCacheWidth: 160,
                   errorWidget: (_, __, ___) => const Icon(Icons.tv))
               : const Icon(Icons.tv),
         ),

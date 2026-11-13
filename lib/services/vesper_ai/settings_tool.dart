@@ -327,6 +327,13 @@ final List<_AiSetting> _aiSettings = [
       (b, on) => b.prefs.setFastStartup(on),
       nextStart: true),
   _switch(
+      'ask_before_exit',
+      'startup',
+      'Ask before exiting',
+      'Back on the first screen asks "Exit VesperTV?" before leaving.',
+      (b) => b.prefs.askBeforeExit,
+      (b, on) => b.prefs.setAskBeforeExit(on)),
+  _switch(
       'update_in_background',
       'startup',
       'Update in the background',

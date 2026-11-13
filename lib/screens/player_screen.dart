@@ -2123,6 +2123,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     child: FocusScope(
                                       node: _bottomScope,
                                       child: PlayerControls(
+                                        active: _bottomVisible,
                                         insetForSystemBars: true,
                                         controller: controller,
                                         title: channel.name,
@@ -2206,6 +2207,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                       child: FocusScope(
                                         node: _optionsScope,
                                         child: PlayerControls(
+                                          active: _optionsVisible,
                                           optionsRow: true,
                                           // TV only: the system-bar inset
                                           // left a big gap under the row.
@@ -2466,14 +2468,20 @@ class _UpNextBubble extends StatelessWidget {
   static const _hidden = Positioned(
       right: 24, bottom: 110, width: 0, height: 0, child: SizedBox.shrink());
 
+  static final _ticks =
+      Stream<void>.periodic(const Duration(seconds: 1)).asBroadcastStream();
+
   @override
   Widget build(BuildContext context) {
     final next = nextChannel;
     if (next == null || mode == 'off') return _hidden;
     final atEnd = mode == 'end';
-    return ValueListenableBuilder<VideoPlayerHdrValue>(
-      valueListenable: controller,
-      builder: (context, value, _) {
+    // Once a second, not on every 100 ms position change: it stays hidden
+    // until the last minutes, and each change was a frame drawn.
+    return StreamBuilder<void>(
+      stream: _ticks,
+      builder: (context, _) {
+        final value = controller.value;
         final duration = value.duration;
         if (duration <= Duration.zero) return _hidden;
         final remaining = duration - value.position;
@@ -2510,6 +2518,8 @@ class _UpNextBubble extends StatelessWidget {
                           ? CachedNetworkImage(
                               imageUrl: next.logoUrl!,
                               fit: BoxFit.cover,
+                              // A small logo: decoded small, not at the file's size (CLAUDE.md §10 (6)).
+                              memCacheWidth: 192,
                               errorWidget: (_, __, ___) =>
                                   const _UpNextFallbackIcon(),
                             )
