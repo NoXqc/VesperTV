@@ -412,6 +412,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-12 - release 1.0.66 (beta), +753 (latest):** owner said "Commit and /cutr". Android only;
+  Windows stays 1.0.61, Linux 1.0.63 (+702). Since 1.0.65: Remote buttons (+738) with Fast forward / Rewind and
+  "Buttons your box keeps" (RemoteKeyService, §10), Interface size Compact / Normal / Large + passed columns hide
+  on TV, Polish, DVB/PGS picture subtitles (Automatic subtitles removed), Goals alert delay, Vesper AI
+  epg_matching, fuller Transfer, TV home speed on weak boxes (+745/+746), Largest file skips season packs, Clock in
+  full screen (Settings > Appearance > Language and clock), resume after a native live zap. Analyze 16, 1941
+  tests. Notes: dev-notes/releases/1.0.66.md. Next build > 753.
 - **Claude, 2026-11-11 - Remote buttons (main, uncommitted, test +735 on the Homatics only):** owner: assign VesperTV actions
   to spare remote buttons + remap the full-screen player's arrows. Settings > **Backup & devices** > Remote
   (owner: a remote is a device), TV boxes only: learn mode (press a button, pick a short press + a hold),
