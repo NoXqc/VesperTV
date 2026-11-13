@@ -2660,7 +2660,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         final stayOnCatchup = _selectedGroup == _catchupGroupSentinel &&
             _showCatchupGroup &&
             (playing?.hasCatchup ?? false);
-        if (!stayOnFavorites && !stayOnCatchup) {
+        // Any other group (an own group, History...) the channel was
+        // picked from and is still in: stay there too. A favourite opened
+        // from the viewer's own "my sports" group came back on Favourites,
+        // the fallback's first choice (owner, 2026-11-13).
+        final stayInGroup = !stayOnFavorites &&
+            !stayOnCatchup &&
+            playing != null &&
+            _selectedGroup != null &&
+            _selectedGroup != _favoritesGroupSentinel &&
+            _selectedGroup != _catchupGroupSentinel &&
+            _currentLiveChannels(context.read<PlaylistManager>())
+                .any((c) => c.id == playing.id);
+        if (!stayOnFavorites && !stayOnCatchup && !stayInGroup) {
           setState(() => _selectedGroup = null);
         }
       }
@@ -9263,6 +9275,42 @@ class _TimelineGuide extends StatefulWidget {
 }
 
 class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
+  /// Same inputs = the very same row widget, so Flutter skips the row. The
+  /// guide rebuilds on every page pushed over it or popped (its
+  /// `ModalRoute.of` dependency) and when the home screen shows again, and
+  /// rebuilding every row and programme block cost ~250 ms + their semantics
+  /// in one frame on the Homatics: the glide to full screen and back held
+  /// still for 0.5-1.3 s (timeline trace, 2026-11-13). The row's callbacks
+  /// read `widget` when called, so a kept row never calls an old guide.
+  final Map<int, (_RowInputs, Widget)> _rowCache = {};
+
+  Widget _cachedRow(int i, bool epgLoading, _TimelineRow Function() build) {
+    final channel = widget.channels[i];
+    final inputs = _RowInputs(
+      channel: channel,
+      programs: widget.epg.getPrograms(channel.epgId),
+      windowStart: _windowStart,
+      windowEnd: _windowEnd,
+      pixelsPerMinute: _pixelsPerMinute,
+      // Interface size / Compact guide (the blocks read _compactUi too).
+      rowHeight: _rowHeight,
+      epgLoading: epgLoading,
+      translucent: widget.translucent,
+      catchup: widget.onOpenCatchup != null,
+      onFocusChanged: widget.onFocusChanged,
+      // Blocks show "now" and replayable past from the clock and texts
+      // through tr(): a row is rebuilt at least once a minute.
+      minute: DateTime.now().millisecondsSinceEpoch ~/ 60000,
+      language: L10n.code,
+    );
+    final kept = _rowCache[i];
+    if (kept != null && kept.$1 == inputs) return kept.$2;
+    if (_rowCache.length > 200) _rowCache.clear();
+    final row = build();
+    _rowCache[i] = (inputs, row);
+    return row;
+  }
+
   List<Channel>? _tagsFor;
   bool _mixedPlaylists = false;
 
@@ -10134,31 +10182,36 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                               controller: _gridVScroll,
                               itemCount: widget.channels.length,
                               itemExtent: _rowHeight,
-                              itemBuilder: (context, i) => _TimelineRow(
-                                rowIndex: i,
-                                channel: widget.channels[i],
-                                programs: widget.epg
-                                    .getPrograms(widget.channels[i].epgId),
-                                windowStart: _windowStart,
-                                windowEnd: _windowEnd,
-                                pixelsPerMinute: _pixelsPerMinute,
-                                onOpen: () => widget.onOpen(widget.channels[i]),
-                                onOpenCatchup: widget.onOpenCatchup == null
-                                    ? null
-                                    : (at) => widget.onOpenCatchup!(
-                                        widget.channels[i], at),
-                                onShowOptions: () =>
-                                    widget.onShowOptions(widget.channels[i]),
-                                ensureRowVisible: _ensureRowVisible,
-                                onFocusChanged: widget.onFocusChanged,
-                                onFocusTracked: _trackFocus,
-                                onFocusedBlockGone: _onFocusedBlockGone,
-                                onRegisterBlock: _registerBlock,
-                                onUnregisterBlock: _unregisterBlock,
-                                hScroll: _gridHScroll,
-                                epgLoading: epgLoading,
-                                translucent: widget.translucent,
-                              ),
+                              itemBuilder: (context, i) => _cachedRow(
+                                  i,
+                                  epgLoading,
+                                  () => _TimelineRow(
+                                        rowIndex: i,
+                                        channel: widget.channels[i],
+                                        programs: widget.epg.getPrograms(
+                                            widget.channels[i].epgId),
+                                        windowStart: _windowStart,
+                                        windowEnd: _windowEnd,
+                                        pixelsPerMinute: _pixelsPerMinute,
+                                        onOpen: () =>
+                                            widget.onOpen(widget.channels[i]),
+                                        onOpenCatchup:
+                                            widget.onOpenCatchup == null
+                                                ? null
+                                                : (at) => widget.onOpenCatchup!(
+                                                    widget.channels[i], at),
+                                        onShowOptions: () => widget
+                                            .onShowOptions(widget.channels[i]),
+                                        ensureRowVisible: _ensureRowVisible,
+                                        onFocusChanged: widget.onFocusChanged,
+                                        onFocusTracked: _trackFocus,
+                                        onFocusedBlockGone: _onFocusedBlockGone,
+                                        onRegisterBlock: _registerBlock,
+                                        onUnregisterBlock: _unregisterBlock,
+                                        hScroll: _gridHScroll,
+                                        epgLoading: epgLoading,
+                                        translucent: widget.translucent,
+                                      )),
                             ),
                             Positioned(
                               left: nowX,
@@ -10672,6 +10725,59 @@ class _ChannelLabel extends StatelessWidget {
 /// is its own [Focus]/`InkWell`, no per-row [FocusScope] — nesting one per
 /// row was tried elsewhere in this file for a similar row-of-rows layout
 /// and confirmed to break Up/Down between rows entirely).
+/// What a [_TimelineRow] is built from ([_TimelineGuideState._cachedRow]).
+/// Objects compare by identity: the guide service hands out the same
+/// programme list until that channel's guide changes.
+class _RowInputs {
+  const _RowInputs({
+    required this.channel,
+    required this.programs,
+    required this.windowStart,
+    required this.windowEnd,
+    required this.pixelsPerMinute,
+    required this.rowHeight,
+    required this.epgLoading,
+    required this.translucent,
+    required this.catchup,
+    required this.onFocusChanged,
+    required this.minute,
+    required this.language,
+  });
+
+  final Channel channel;
+  final List<EpgProgram> programs;
+  final DateTime windowStart;
+  final DateTime windowEnd;
+  final double pixelsPerMinute;
+  final double rowHeight;
+  final bool epgLoading;
+  final bool translucent;
+  final bool catchup;
+  final Object? onFocusChanged;
+  final int minute;
+  final String language;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _RowInputs &&
+      identical(channel, other.channel) &&
+      identical(programs, other.programs) &&
+      windowStart == other.windowStart &&
+      windowEnd == other.windowEnd &&
+      pixelsPerMinute == other.pixelsPerMinute &&
+      rowHeight == other.rowHeight &&
+      epgLoading == other.epgLoading &&
+      translucent == other.translucent &&
+      catchup == other.catchup &&
+      onFocusChanged == other.onFocusChanged &&
+      minute == other.minute &&
+      language == other.language;
+
+  @override
+  int get hashCode => Object.hash(identityHashCode(channel),
+      identityHashCode(programs), windowStart, minute);
+}
+
 class _TimelineRow extends StatelessWidget {
   const _TimelineRow({
     required this.rowIndex,
