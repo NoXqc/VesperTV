@@ -19,6 +19,7 @@ import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'player_screen.dart';
+import '../widgets/ink_layer.dart';
 
 /// The Recordings tab (Android): what's recording or downloading, what's
 /// scheduled, and what's been recorded or downloaded. A game shows as a Sports Trak style card with
@@ -226,7 +227,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final next = _service.nextOf(rule);
     final count = _service.scheduledCount(rule);
     if (next == null) return tr('Waiting for the guide');
-    return '${tr('{count} scheduled', {'count': '$count'})} · ${tr('Next: {when}', {'when': _when(next)})}';
+    return '${tr('{count} scheduled', {
+          'count': '$count'
+        })} · ${tr('Next: {when}', {'when': _when(next)})}';
   }
 
   static String _size(int bytes) {
@@ -325,9 +328,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           children: [
             Text(tr('Series recordings').toUpperCase(),
                 style: const TextStyle(
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                    color: Colors.white54)),
+                    fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
             const SizedBox(height: 8),
             Wrap(children: [
               for (var i = 0; i < series.length; i++)
@@ -346,8 +347,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-          // A multi-pane tool: the glass panel spans the screen.
-          wide: true,
+        // A multi-pane tool: the glass panel spans the screen.
+        wide: true,
         // Windows has downloads only.
         title: RecordingService.supported ? tr('Recordings') : tr('Downloads'),
         body: ListView(
@@ -366,7 +367,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       style: const TextStyle(color: Colors.white70)),
                 ]),
               ),
-            if (all.isEmpty && series.isEmpty && offered.isEmpty && !_netLoading)
+            if (all.isEmpty &&
+                series.isEmpty &&
+                offered.isEmpty &&
+                !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
@@ -546,7 +550,8 @@ class _DownloadCardState extends State<_DownloadCard> {
       child: HoldToActivate(
         onTap: widget.onTap,
         onHold: widget.onHold,
-        child: InkWell(
+        child: InkLayer(
+            child: InkWell(
           autofocus: widget.autofocus,
           borderRadius: BorderRadius.circular(16),
           onTap: widget.onTap,
@@ -703,7 +708,7 @@ class _DownloadCardState extends State<_DownloadCard> {
               ]),
             ),
           ),
-        ),
+        )),
       ),
     );
   }
@@ -803,7 +808,8 @@ class _RecordingCardState extends State<_RecordingCard> {
       child: HoldToActivate(
         onTap: widget.onTap,
         onHold: widget.onHold,
-        child: InkWell(
+        child: InkLayer(
+            child: InkWell(
           autofocus: widget.autofocus,
           borderRadius: BorderRadius.circular(16),
           onTap: widget.onTap,
@@ -887,7 +893,7 @@ class _RecordingCardState extends State<_RecordingCard> {
               ),
             ),
           ),
-        ),
+        )),
       ),
     );
   }
@@ -924,7 +930,8 @@ class _SeriesCardState extends State<_SeriesCard> {
       child: HoldToActivate(
         onTap: widget.onTap,
         onHold: widget.onTap,
-        child: InkWell(
+        child: InkLayer(
+            child: InkWell(
           autofocus: widget.autofocus,
           borderRadius: BorderRadius.circular(16),
           onTap: widget.onTap,
@@ -1000,13 +1007,13 @@ class _SeriesCardState extends State<_SeriesCard> {
                   Text(widget.status,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(fontSize: 11.5, color: Colors.white70)),
+                      style: const TextStyle(
+                          fontSize: 11.5, color: Colors.white70)),
                 ],
               ),
             ),
           ),
-        ),
+        )),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../services/watch_game_offer.dart';
+import '../utils/refined_finish.dart';
 
 /// The white "Watch game" pill above the player bar (Settings > Sports Trak
 /// > Watch game button): a reminded game just started. Same look and remote
@@ -100,6 +101,7 @@ class WatchGameButton extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(40),
           child: BackdropFilter(
+            enabled: GlassBlur.live,
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Material(
               color: Colors.black.withValues(alpha: focused ? 0.62 : 0.48),

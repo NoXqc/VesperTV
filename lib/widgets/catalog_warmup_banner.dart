@@ -30,10 +30,14 @@ class CatalogWarmupBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                // Its own layer: it spins for the whole warm-up (minutes)
+                // over the TV home (frame cost audit, 2026-11-13).
+                const RepaintBoundary(
+                  child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

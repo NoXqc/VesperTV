@@ -206,6 +206,8 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                       child: Image.network(logoUrl!,
                           key: const ValueKey('reminder-watermark'),
                           fit: BoxFit.contain,
+                          // Decoded at most 512 wide, not at the file's size.
+                          cacheWidth: 512,
                           errorBuilder: (_, __, ___) =>
                               const SizedBox.shrink()),
                     ))),
@@ -263,6 +265,8 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                             ? Image.network(logoUrl!,
                                 key: const ValueKey('reminder-crest'),
                                 fit: BoxFit.contain,
+                                // A small logo: decoded small, not at the file's size (CLAUDE.md §10 (6)).
+                                cacheWidth: 192,
                                 errorBuilder: (_, __, ___) =>
                                     Icon(Icons.sports, color: accent, size: 38))
                             : Icon(Icons.sports, color: accent, size: 38),

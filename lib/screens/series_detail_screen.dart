@@ -140,6 +140,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   /// detail strip shows it, and Down/Up returns to it.
   final Map<int, int> _highlight = {};
 
+  /// Bumped when the highlighted episode moves: only the episode cards and
+  /// the strip under them listen. A setState per step rebuilt the whole
+  /// title page (header, chips, cast and discovery rows: frame cost audit,
+  /// 2026-11-13).
+  final _episodeTick = ValueNotifier<int>(0);
+
   final _discoveryNode = FocusNode(debugLabel: 'series-discovery');
   final _backNode = FocusNode(debugLabel: 'series-back');
   final _backgroundTrailer = GlobalKey<DetailTrailerState>();
@@ -313,6 +319,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   @override
   void dispose() {
+    _episodeTick.dispose();
     for (final t in _refreshTimers) {
       t.cancel();
     }
@@ -1004,8 +1011,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   // --- Build ------------------------------------------------------------------
 
+  /// The star, selected in [build] ([_buildActions] runs in a LayoutBuilder):
+  /// watching the manager rebuilt the page on every catalog warm-up notify
+  /// (frame-cost audit, 2026-11-13).
+  bool _favorited = false;
+
   @override
   Widget build(BuildContext context) {
+    _favorited = context.select<PlaylistManager, bool>(
+        (p) => p.isSeriesFavorited(widget.series.id));
     return withTvThemeIfNeeded(
       context,
       (context) => Scaffold(
@@ -1226,8 +1240,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   Widget _buildActions(double s, {bool narrow = false}) {
-    final favorited = widget.showFavorite &&
-        context.watch<PlaylistManager>().isSeriesFavorited(widget.series.id);
+    final favorited = widget.showFavorite && _favorited;
     final next = _loaded ? _nextUp() : null;
     final alerts = _alerts(listen: true);
     final follow = alerts == null ? null : _followTarget();
@@ -1392,11 +1405,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final thumbH = cardW * 9 / 16;
     final focusPad = 10 * s;
     final textH = 44 * s;
-    final highlighted = (_highlight[season] ?? 0)
+    int highlighted() => (_highlight[season] ?? 0)
         .clamp(0, math.max(episodes.length - 1, 0))
         .toInt();
-    final info =
-        episodes.isEmpty ? null : _info(episodes[highlighted], storage);
 
     return [
       KeyedSubtree(
@@ -1442,24 +1453,27 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                   final episode = episodes[i];
                   return Padding(
                     padding: EdgeInsets.symmetric(horizontal: 7 * s),
-                    child: _EpisodeCard(
-                      info: _info(episode, storage),
-                      focusNode: _episodeNode(i),
-                      width: cardW,
-                      thumbHeight: thumbH,
-                      scale: s,
-                      highlighted: i == highlighted,
-                      busy: _startingId == episode.id,
-                      onTap: () => _play(episode),
-                      onHold: () => _toggleWatched(episode),
-                      onFocused: () {
-                        if (_highlight[season] != i) {
-                          setState(() => _highlight[season] = i);
-                        }
-                        _scrollEpisodeIntoView(i);
-                        _reveal(_episodesKey, atEnd: true);
-                      },
-                    ),
+                    child: ValueListenableBuilder<int>(
+                        valueListenable: _episodeTick,
+                        builder: (_, __, ___) => _EpisodeCard(
+                              info: _info(episode, storage),
+                              focusNode: _episodeNode(i),
+                              width: cardW,
+                              thumbHeight: thumbH,
+                              scale: s,
+                              highlighted: i == highlighted(),
+                              busy: _startingId == episode.id,
+                              onTap: () => _play(episode),
+                              onHold: () => _toggleWatched(episode),
+                              onFocused: () {
+                                if (_highlight[season] != i) {
+                                  _highlight[season] = i;
+                                  _episodeTick.value++;
+                                }
+                                _scrollEpisodeIntoView(i);
+                                _reveal(_episodesKey, atEnd: true);
+                              },
+                            )),
                   );
                 },
               ),
@@ -1467,10 +1481,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ),
         ),
       ),
-      if (info != null)
+      if (episodes.isNotEmpty)
         Padding(
           padding: EdgeInsets.fromLTRB(pad, 2 * s, pad, 0),
-          child: _EpisodeStrip(info: info, scale: s, maxWidth: 760 * s),
+          child: ValueListenableBuilder<int>(
+            valueListenable: _episodeTick,
+            builder: (_, __, ___) => _EpisodeStrip(
+                info: _info(episodes[highlighted()], storage),
+                scale: s,
+                maxWidth: 760 * s),
+          ),
         ),
     ];
   }

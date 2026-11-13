@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/viewer_profile.dart';
 import '../services/viewer_profile_service.dart';
 import 'hold_to_activate.dart';
+import 'ink_layer.dart';
 
 class ProfilePortrait extends StatelessWidget {
   const ProfilePortrait(
@@ -117,52 +118,54 @@ class _ProfileCardState extends State<ProfileCard> {
     return HoldToActivate(
         onTap: widget.onTap,
         onHold: widget.onHold,
-        child: InkWell(
-            focusNode: widget.focusNode,
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(14),
-            onFocusChange: (f) {
-              setState(() => _focused = f);
-              if (f) widget.onFocused?.call();
-            },
-            child: SizedBox(
-                width: widget.compact ? 44 : 124 * s,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  AnimatedScale(
-                      scale: _focused ? 1.1 : 1,
-                      curve: Curves.easeOutBack,
-                      duration: const Duration(milliseconds: 180),
-                      child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(17),
-                              border: Border.all(
-                                  width: 2.5,
-                                  color: _focused
-                                      ? Colors.white
-                                      : widget.active
-                                          ? primary
-                                          : Colors.transparent)),
-                          child: widget.profile != null
-                              ? ProfilePortrait(
-                                  profile: widget.profile!,
-                                  width: 104 * s,
-                                  height: 136 * s)
-                              : Container(
-                                  width: 104 * s,
-                                  height: 136 * s,
-                                  decoration: BoxDecoration(
-                                      color: Colors.white12,
-                                      borderRadius: BorderRadius.circular(14)),
-                                  child: const Icon(Icons.add, size: 40)))),
-                  if (!widget.compact) const SizedBox(height: 7),
-                  if (!widget.compact)
-                    Text(widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: widget.active ? primary : Colors.white,
-                            fontSize: 13 * s)),
-                ]))));
+        child: InkLayer(
+            child: InkWell(
+                focusNode: widget.focusNode,
+                onTap: widget.onTap,
+                borderRadius: BorderRadius.circular(14),
+                onFocusChange: (f) {
+                  setState(() => _focused = f);
+                  if (f) widget.onFocused?.call();
+                },
+                child: SizedBox(
+                    width: widget.compact ? 44 : 124 * s,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      AnimatedScale(
+                          scale: _focused ? 1.1 : 1,
+                          curve: Curves.easeOutBack,
+                          duration: const Duration(milliseconds: 180),
+                          child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(17),
+                                  border: Border.all(
+                                      width: 2.5,
+                                      color: _focused
+                                          ? Colors.white
+                                          : widget.active
+                                              ? primary
+                                              : Colors.transparent)),
+                              child: widget.profile != null
+                                  ? ProfilePortrait(
+                                      profile: widget.profile!,
+                                      width: 104 * s,
+                                      height: 136 * s)
+                                  : Container(
+                                      width: 104 * s,
+                                      height: 136 * s,
+                                      decoration: BoxDecoration(
+                                          color: Colors.white12,
+                                          borderRadius:
+                                              BorderRadius.circular(14)),
+                                      child: const Icon(Icons.add, size: 40)))),
+                      if (!widget.compact) const SizedBox(height: 7),
+                      if (!widget.compact)
+                        Text(widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: widget.active ? primary : Colors.white,
+                                fontSize: 13 * s)),
+                    ])))));
   }
 }

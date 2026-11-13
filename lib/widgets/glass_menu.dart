@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../utils/refined_finish.dart';
+import 'ink_layer.dart';
 
 /// Keeps the backdrop visible while preserving each menu's dismissal policy.
 Future<T?> showGlassMenu<T>({
@@ -122,22 +123,30 @@ class GlassMenuSurface extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: borderRadius,
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black54,
-                    blurRadius: 28,
-                    offset: Offset(0, 10)),
-              ],
+              // No blurred shadow over moving video (see GlassBlur).
+              boxShadow: GlassBlur.live
+                  ? const [
+                      BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 28,
+                          offset: Offset(0, 10)),
+                    ]
+                  : null,
             ),
             child: ClipRRect(
               borderRadius: borderRadius,
               child: BackdropFilter(
+                enabled: GlassBlur.live,
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Material(
                   type: MaterialType.transparency,
                   child: Ink(
                     decoration: BoxDecoration(
-                      color: const Color(0xC20D1016),
+                      // Darker without the blur: the video behind stays
+                      // quiet under the text.
+                      color: GlassBlur.live
+                          ? const Color(0xC20D1016)
+                          : const Color(0xEB0D1016),
                       borderRadius: borderRadius,
                       border: Border.all(color: Colors.white24),
                       gradient: LinearGradient(
@@ -200,8 +209,7 @@ class GlassFocusFrame extends StatefulWidget {
 
 class _GlassFocusFrameState extends State<GlassFocusFrame> {
   bool _focused = false;
-  final _node =
-      FocusNode(canRequestFocus: false, skipTraversal: true);
+  final _node = FocusNode(canRequestFocus: false, skipTraversal: true);
 
   @override
   void initState() {
@@ -234,7 +242,7 @@ class _GlassFocusFrameState extends State<GlassFocusFrame> {
         child: Container(
           decoration: GlassMenuSurface.rowDecoration(context,
               focused: _focused, radius: widget.radius, quiet: true),
-          child: widget.child,
+          child: InkLayer(child: widget.child),
         ),
       );
 }
@@ -284,12 +292,19 @@ class GlassPanel extends StatelessWidget {
       ),
       child: Material(
         type: MaterialType.transparency,
-        child: padding == null ? child : Padding(padding: padding!, child: child),
+        // The content on its own layer: a focus step inside doesn't redraw
+        // the panel's gradient and shadow (weak boxes, CLAUDE.md §10).
+        child: RepaintBoundary(
+            child: padding == null
+                ? child
+                : Padding(padding: padding!, child: child)),
       ),
     );
     if (blur) {
       glass = BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), child: glass);
+          enabled: GlassBlur.live,
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: glass);
     }
     return RefinedFinishBackdrop(
       translucent: true,

@@ -105,44 +105,51 @@ class _SettingRowState extends State<SettingRow> {
           skipTraversal: true,
           onKeyEvent:
               widget.onLeft == null && widget.onRight == null ? null : _onKey,
-          child: Container(
-            decoration: GlassMenuSurface.rowDecoration(context,
-                focused: _focused,
-                selected: widget.selected,
-                radius: 10,
-                quiet: true),
-            child: ListTile(
-              focusNode: widget.focusNode,
-              autofocus: widget.autofocus,
-              enabled: widget.enabled,
-              dense: compact,
-              // The row's own outline shows focus; no theme wash under it.
-              focusColor: Colors.transparent,
-              hoverColor: Colors.white.withValues(alpha: 0.04),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
-              minLeadingWidth: compact ? 24 : 32,
-              horizontalTitleGap: compact ? 12 : 16,
-              onFocusChange: (f) {
-                setState(() => _focused = f);
-                widget.onFocusChange?.call(f);
-                if (f) _revealSoon();
-              },
-              leading: Icon(widget.icon,
-                  size: compact ? 20 : 24,
-                  color: lit ? scheme.tertiary : Colors.white70),
-              title: title,
-              subtitle: widget.subtitle == null
-                  ? null
-                  : Text(widget.subtitle!,
-                      maxLines: widget.subtitleMaxLines,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6))),
-              trailing: widget.trailing,
-              onTap: widget.enabled ? widget.onTap : null,
-            ),
-          ),
+          // Its own layer and its own Material: the ListTile's focus ink is
+          // painted by the nearest Material, the whole panel, so every step
+          // redrew every row of it for the length of the animation (Settings
+          // on the Homatics, 2026-11-13).
+          child: RepaintBoundary(
+              child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    decoration: GlassMenuSurface.rowDecoration(context,
+                        focused: _focused,
+                        selected: widget.selected,
+                        radius: 10,
+                        quiet: true),
+                    child: ListTile(
+                      focusNode: widget.focusNode,
+                      autofocus: widget.autofocus,
+                      enabled: widget.enabled,
+                      dense: compact,
+                      // The row's own outline shows focus; no theme wash under it.
+                      focusColor: Colors.transparent,
+                      hoverColor: Colors.white.withValues(alpha: 0.04),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
+                      minLeadingWidth: compact ? 24 : 32,
+                      horizontalTitleGap: compact ? 12 : 16,
+                      onFocusChange: (f) {
+                        setState(() => _focused = f);
+                        widget.onFocusChange?.call(f);
+                        if (f) _revealSoon();
+                      },
+                      leading: Icon(widget.icon,
+                          size: compact ? 20 : 24,
+                          color: lit ? scheme.tertiary : Colors.white70),
+                      title: title,
+                      subtitle: widget.subtitle == null
+                          ? null
+                          : Text(widget.subtitle!,
+                              maxLines: widget.subtitleMaxLines,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.6))),
+                      trailing: widget.trailing,
+                      onTap: widget.enabled ? widget.onTap : null,
+                    ),
+                  ))),
         ),
       ),
     );

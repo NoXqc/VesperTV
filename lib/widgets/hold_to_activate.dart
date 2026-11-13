@@ -64,7 +64,7 @@ class _SwallowHeldActivateState extends State<SwallowHeldActivate> {
   bool _armed = false;
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (_armed || !_isActivateKey(event.logicalKey)) {
+    if (_armed || !isActivateKey(event.logicalKey)) {
       return KeyEventResult.ignored;
     }
     if (event is KeyDownEvent) {
@@ -83,7 +83,8 @@ class _SwallowHeldActivateState extends State<SwallowHeldActivate> {
       );
 }
 
-bool _isActivateKey(LogicalKeyboardKey key) =>
+/// The remote's OK (and Enter / gamepad A): the keys that activate.
+bool isActivateKey(LogicalKeyboardKey key) =>
     key == LogicalKeyboardKey.select ||
     key == LogicalKeyboardKey.enter ||
     key == LogicalKeyboardKey.numpadEnter ||

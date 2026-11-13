@@ -172,6 +172,7 @@ class MinimalGlassFocus extends StatelessWidget {
           Positioned.fill(
             child: active
                 ? BackdropFilter(
+                    enabled: GlassBlur.live,
                     filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                     child: DecoratedBox(
                       decoration: BoxDecoration(

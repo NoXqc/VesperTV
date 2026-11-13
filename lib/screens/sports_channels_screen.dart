@@ -191,15 +191,16 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                     child: Text(tr('Clear results'))),
               ]),
               if (widget.allowRules)
-                GlassFocusFrame(child: CheckboxListTile(
-                    title: Text(tr('Keep this list updated')),
-                    value: _updated,
-                    onChanged: (v) => setState(() {
-                          _updated = v ?? false;
-                          if (_updated) {
-                            _selected.addAll(results.map((c) => c.id));
-                          }
-                        }))),
+                GlassFocusFrame(
+                    child: CheckboxListTile(
+                        title: Text(tr('Keep this list updated')),
+                        value: _updated,
+                        onChanged: (v) => setState(() {
+                              _updated = v ?? false;
+                              if (_updated) {
+                                _selected.addAll(results.map((c) => c.id));
+                              }
+                            }))),
             ])),
         Expanded(
             child: results.isEmpty
@@ -375,60 +376,55 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                               var query = '';
                               await showGlassMenu<void>(
                                   context: dialog,
-                                  builder:
-                                      (facetDialog) =>
-                                          StatefulBuilder(builder: (_, change) {
-                                            final visible = options
-                                                .where((s) => s
-                                                    .toLowerCase()
-                                                    .contains(
-                                                        query.toLowerCase()))
-                                                .toList();
-                                            String label(String value) =>
-                                                dimension == 'Playlist'
-                                                    ? context
-                                                        .read<PlaylistManager>()
-                                                        .playlistNameFor(value)
-                                                    : dimension == 'Group' &&
-                                                            value.contains('::')
-                                                        ? value
-                                                            .split('::')
-                                                            .skip(1)
-                                                            .join('::')
-                                                        : tr(value);
-                                            return GlassMenuDialog(
-                                                title: Text(tr(dimension)),
-                                                content: SizedBox(
-                                                    width: 560,
-                                                    height: 360,
-                                                    child: Column(children: [
-                                                      FocusNodeOwner(
-                                                          builder: (_, node) => TvTextFieldGate(
+                                  builder: (facetDialog) =>
+                                      StatefulBuilder(builder: (_, change) {
+                                        final visible = options
+                                            .where((s) => s
+                                                .toLowerCase()
+                                                .contains(query.toLowerCase()))
+                                            .toList();
+                                        String label(String value) =>
+                                            dimension == 'Playlist'
+                                                ? context
+                                                    .read<PlaylistManager>()
+                                                    .playlistNameFor(value)
+                                                : dimension == 'Group' &&
+                                                        value.contains('::')
+                                                    ? value
+                                                        .split('::')
+                                                        .skip(1)
+                                                        .join('::')
+                                                    : tr(value);
+                                        return GlassMenuDialog(
+                                            title: Text(tr(dimension)),
+                                            content: SizedBox(
+                                                width: 560,
+                                                height: 360,
+                                                child: Column(children: [
+                                                  FocusNodeOwner(
+                                                      builder: (_, node) => TvTextFieldGate(
+                                                          focusNode: node,
+                                                          builder: (_, readOnly) => TextField(
                                                               focusNode: node,
-                                                              builder: (_, readOnly) => TextField(
-                                                                  focusNode:
-                                                                      node,
-                                                                  readOnly:
-                                                                      readOnly,
-                                                                  decoration: InputDecoration(
-                                                                      labelText: tr(
-                                                                          'Search')),
-                                                                  onChanged: (v) =>
-                                                                      change(() =>
-                                                                          query =
-                                                                              v)))),
-                                                      Expanded(
-                                                          child:
-                                                              ListView.builder(
-                                                                  itemCount:
-                                                                      visible
-                                                                          .length,
-                                                                  itemBuilder:
-                                                                      (_, i) {
-                                                                    final value =
-                                                                        visible[
-                                                                            i];
-                                                                    return GlassFocusFrame(child: CheckboxListTile(
+                                                              readOnly:
+                                                                  readOnly,
+                                                              decoration: InputDecoration(
+                                                                  labelText: tr(
+                                                                      'Search')),
+                                                              onChanged: (v) =>
+                                                                  change(() =>
+                                                                      query =
+                                                                          v)))),
+                                                  Expanded(
+                                                      child: ListView.builder(
+                                                          itemCount:
+                                                              visible.length,
+                                                          itemBuilder: (_, i) {
+                                                            final value =
+                                                                visible[i];
+                                                            return GlassFocusFrame(
+                                                                child:
+                                                                    CheckboxListTile(
                                                                         title: Text(
                                                                             '${label(value)} (${counts[dimension]?[value] ?? 0})'),
                                                                         value: selected[dimension]?.contains(value) ??
@@ -438,16 +434,16 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                                                                               final values = selected[dimension] ??= [];
                                                                               on == true ? values.add(value) : values.remove(value);
                                                                             })));
-                                                                  })),
-                                                    ])),
-                                                actions: [
-                                                  TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                              facetDialog),
-                                                      child: Text(tr('Save')))
-                                                ]);
-                                          }));
+                                                          })),
+                                                ])),
+                                            actions: [
+                                              TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                          facetDialog),
+                                                  child: Text(tr('Save')))
+                                            ]);
+                                      }));
                               update(() {});
                             }),
                     ]))),
@@ -513,6 +509,14 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   /// The card focused last (hero text + backdrop) and its row.
   SportsNetworkGroup? _focused;
 
+  /// Bumped when [_focused] moves: only the hero and the backdrop listen. A
+  /// setState per card step rebuilt every row of cards (frame cost audit,
+  /// 2026-11-13).
+  final _focusTick = ValueNotifier<int>(0);
+
+  /// Channels on the page, counted when the rows are built (not per build).
+  int _total = 0;
+
   /// Rows as last built, for the arrow keys.
   List<_CardRow> _rows = const [];
   final Map<String, FocusNode> _cardNodes = {};
@@ -552,6 +556,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
 
   @override
   void dispose() {
+    _focusTick.dispose();
     _playlist.removeListener(_markDirty);
     for (final c in _rowScrolls.values) {
       c.dispose();
@@ -953,16 +958,16 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       _library = SportsChannelLibrary(_playlist.visibleChannels(category: 'tv'),
           store: _store);
       _rows = _buildRows(_library!);
+      _total = {
+        for (final r in _rows)
+          if (r.list == null)
+            for (final g in r.cards) ...g.channels.map((c) => c.id)
+      }.length;
       _dirty = false;
     }
     final library = _library!;
-    final total = {
-      for (final r in _rows)
-        if (r.list == null)
-          for (final g in r.cards) ...g.channels.map((c) => c.id)
-    }.length;
+    final total = _total;
     final activeFilters = _viewFilters.values.where((v) => v.isNotEmpty).length;
-    final focused = _focused;
     // Back: to Games, never out of Sports Trak (the preview carries over,
     // see SportsScreen._closeNetworks).
     return PopScope(
@@ -973,8 +978,16 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       child: Stack(
         children: [
           const Positioned.fill(child: SettingsGradientBackground()),
-          if (focused != null)
-            Positioned.fill(child: SportsBackdrop(logoUrl: focused.logoUrl)),
+          Positioned.fill(
+            child: RepaintBoundary(
+              child: ValueListenableBuilder<int>(
+                valueListenable: _focusTick,
+                builder: (_, __, ___) => _focused == null
+                    ? const SizedBox.shrink()
+                    : SportsBackdrop(logoUrl: _focused!.logoUrl),
+              ),
+            ),
+          ),
           Scaffold(
             backgroundColor: Colors.transparent,
             body: SafeArea(
@@ -1044,17 +1057,20 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                             onTap: () => _edit()),
                       ]),
                       const SizedBox(height: 12),
-                      _ChannelsHero(
-                        group: _preview == null
-                            ? focused
-                            : _rows
-                                    .expand((r) => r.cards)
-                                    .where(_previewing)
-                                    .firstOrNull ??
-                                focused,
-                        channel: _preview ??
-                            (focused == null ? null : _mainOf(focused)),
-                        previewing: _preview != null,
+                      ValueListenableBuilder<int>(
+                        valueListenable: _focusTick,
+                        builder: (_, __, ___) => _ChannelsHero(
+                          group: _preview == null
+                              ? _focused
+                              : _rows
+                                      .expand((r) => r.cards)
+                                      .where(_previewing)
+                                      .firstOrNull ??
+                                  _focused,
+                          channel: _preview ??
+                              (_focused == null ? null : _mainOf(_focused!)),
+                          previewing: _preview != null,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Expanded(
@@ -1142,7 +1158,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                           _position = (_rows.indexOf(row), i);
                           _lastColumn[row.id] = i;
                           if (_focused?.id != g.id) {
-                            setState(() => _focused = g);
+                            _focused = g;
+                            _focusTick.value++;
                           }
                         },
                         onTap: () {
@@ -1196,7 +1213,8 @@ class _ChannelsHero extends StatelessWidget {
                         ? Video(
                             controller: mini,
                             controls: NoVideoControls,
-                            pauseUponEnteringBackgroundMode: mediaKitPausesInBackground)
+                            pauseUponEnteringBackgroundMode:
+                                mediaKitPausesInBackground)
                         : const VideoPlayerPane(
                             showEpgBar: false, showControls: false))
                     : Center(

@@ -4,6 +4,32 @@ import 'package:flutter/material.dart';
 
 /// Reversible glass finish. Existing stable focus wrappers supply bounded blur;
 /// decorations preserve geometry and never sample or reconfigure native video.
+/// Live blurs (BackdropFilter: glass menus, the focused glass row) are off
+/// while moving video is under them. Multiview's tiles each bring 25-30 new
+/// pictures a second, and every one made each blur copy and blur the screen
+/// behind it again: its menus stuttered on the Homatics (owner, 2026-11-13).
+/// Off = `BackdropFilter.enabled` false, the same widgets (focus nodes keep
+/// their slots); glass menus get a darker tint instead.
+class GlassBlur {
+  GlassBlur._();
+
+  static int _videoScreens = 0;
+
+  /// False while a moving-video screen is open (Multiview).
+  static bool get live => _videoScreens == 0;
+
+  /// How long a menu's open / focus animation runs: none over moving video.
+  /// With Multiview's tiles playing, the GPU puts 2-4 full-HD videos on
+  /// screen and each frame the app draws took 30-95 ms on the Homatics; a
+  /// 150-200 ms fade was a dozen of them per press (owner, 2026-11-13).
+  static Duration motion(Duration normal) => live ? normal : Duration.zero;
+
+  static void videoScreenOpened() => _videoScreens++;
+
+  static void videoScreenClosed() =>
+      _videoScreens = math.max(0, _videoScreens - 1);
+}
+
 class RefinedFinish extends ThemeExtension<RefinedFinish> {
   const RefinedFinish({required this.enabled});
   final bool enabled;

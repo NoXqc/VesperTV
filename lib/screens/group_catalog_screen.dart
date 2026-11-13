@@ -361,8 +361,16 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     return context.watch<AppPreferences>().wideCards && !portraitPhone;
   }
 
+  /// The manager, rebuilding the grid only when the favourites change (its
+  /// stars): watching it re-sorted and rebuilt the grid on every catalog
+  /// warm-up notify (frame-cost audit, 2026-11-13).
+  PlaylistManager _playlist(BuildContext context) {
+    context.select<PlaylistManager, int>((p) => p.favoritesVersion);
+    return context.read<PlaylistManager>();
+  }
+
   Widget _buildVodGrid(BuildContext context) {
-    final playlist = context.watch<PlaylistManager>();
+    final playlist = _playlist(context);
     final storage = context.read<StorageService>();
     final items = _sortedChannels(_vodItems);
     final wide = _wide(context);
@@ -376,9 +384,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         imageUrl: c.posterUrl ?? c.logoUrl,
         rating: c.rating,
         cardWidth: wide ? PosterCard.wideStyleWidth : PosterCard.width,
-        cardPosterHeight: wide
-            ? PosterCard.wideStylePosterHeight
-            : PosterCard.posterHeight,
+        cardPosterHeight:
+            wide ? PosterCard.wideStylePosterHeight : PosterCard.posterHeight,
         wideStyle: wide,
         backdropUrl: c.anyBackdropUrl,
         artKey: c.id,
@@ -402,7 +409,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   }
 
   Widget _buildSeriesGrid(BuildContext context) {
-    final playlist = context.watch<PlaylistManager>();
+    final playlist = _playlist(context);
     final items = _sortedSeries(_seriesItems);
     final wide = _wide(context);
     return _posterGrid(
@@ -413,9 +420,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         imageUrl: s.posterUrl ?? s.coverUrl,
         rating: s.rating,
         cardWidth: wide ? PosterCard.wideStyleWidth : PosterCard.width,
-        cardPosterHeight: wide
-            ? PosterCard.wideStylePosterHeight
-            : PosterCard.posterHeight,
+        cardPosterHeight:
+            wide ? PosterCard.wideStylePosterHeight : PosterCard.posterHeight,
         wideStyle: wide,
         backdropUrl: s.anyBackdropUrl,
         artKey: s.id,

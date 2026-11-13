@@ -8,6 +8,7 @@ import 'hold_to_activate.dart';
 import 'roll_down_menu.dart';
 import 'sports_mode_live_panel.dart';
 import 'sports_widgets.dart';
+import 'ink_layer.dart';
 
 class SportsModeRailEntry {
   const SportsModeRailEntry({
@@ -260,73 +261,75 @@ class SportsModeShellState extends State<SportsModeShell> {
               _reveal(entry.focusNode);
             }
           },
-          child: Builder(builder: (context) {
-            return InkWell(
-              focusNode: entry.focusNode,
-              canRequestFocus: entry.enabled,
-              onTap: entry.enabled ? entry.onTap : null,
-              onFocusChange: (_) {
-                if (mounted) setState(() {});
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 44),
-                margin: const EdgeInsets.symmetric(vertical: 3),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: RefinedFinish.decorate(
-                    context,
-                    BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: entry.focusNode.hasFocus
-                          ? null
-                          : entry.selected
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: .10)
-                              : Colors.transparent,
-                      gradient: entry.focusNode.hasFocus
-                          ? sportsFocusSheen(Theme.of(context).colorScheme)
-                          : null,
-                      border: Border.all(
-                          width: 2,
+          // A step restyles this tile only: a setState per step rebuilt the
+          // whole shell and every rail tile (frame cost audit, 2026-11-13).
+          child: ListenableBuilder(
+              listenable: entry.focusNode,
+              builder: (context, _) {
+                return InkLayer(
+                    child: InkWell(
+                  focusNode: entry.focusNode,
+                  canRequestFocus: entry.enabled,
+                  onTap: entry.enabled ? entry.onTap : null,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    margin: const EdgeInsets.symmetric(vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: RefinedFinish.decorate(
+                        context,
+                        BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
                           color: entry.focusNode.hasFocus
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.transparent),
-                    ),
-                    focused: entry.focusNode.hasFocus),
-                child: Opacity(
-                    opacity: entry.enabled ? 1 : .35,
-                    child: Row(
-                      mainAxisSize:
-                          narrow ? MainAxisSize.min : MainAxisSize.max,
-                      children: [
-                        if (entry.logoUrl != null)
-                          SportsLogo(
-                              url: entry.logoUrl,
-                              size: 22,
-                              fallback: entry.label)
-                        else
-                          Icon(entry.icon, size: 20, color: Colors.white70),
-                        const SizedBox(width: 8),
-                        if (narrow)
-                          Text(entry.label,
-                              style: const TextStyle(fontSize: 13))
-                        else
-                          Expanded(
-                              child: Text(entry.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 13))),
-                        if (entry.moving)
-                          Icon(narrow ? Icons.swap_horiz : Icons.swap_vert,
-                              size: 16),
-                      ],
-                    )),
-              ),
-            );
-          }),
+                              ? null
+                              : entry.selected
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: .10)
+                                  : Colors.transparent,
+                          gradient: entry.focusNode.hasFocus
+                              ? sportsFocusSheen(Theme.of(context).colorScheme)
+                              : null,
+                          border: Border.all(
+                              width: 2,
+                              color: entry.focusNode.hasFocus
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent),
+                        ),
+                        focused: entry.focusNode.hasFocus),
+                    child: Opacity(
+                        opacity: entry.enabled ? 1 : .35,
+                        child: Row(
+                          mainAxisSize:
+                              narrow ? MainAxisSize.min : MainAxisSize.max,
+                          children: [
+                            if (entry.logoUrl != null)
+                              SportsLogo(
+                                  url: entry.logoUrl,
+                                  size: 22,
+                                  fallback: entry.label)
+                            else
+                              Icon(entry.icon, size: 20, color: Colors.white70),
+                            const SizedBox(width: 8),
+                            if (narrow)
+                              Text(entry.label,
+                                  style: const TextStyle(fontSize: 13))
+                            else
+                              Expanded(
+                                  child: Text(entry.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13))),
+                            if (entry.moving)
+                              Icon(narrow ? Icons.swap_horiz : Icons.swap_vert,
+                                  size: 16),
+                          ],
+                        )),
+                  ),
+                ));
+              }),
         ),
       );
 

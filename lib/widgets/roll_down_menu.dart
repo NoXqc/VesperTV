@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/app_preferences.dart';
 import 'hold_to_activate.dart';
 import 'glass_menu.dart';
+import '../utils/refined_finish.dart';
 
 /// One choice in a [showRollDownMenu].
 class RollDownMenuItem<T> {
@@ -69,8 +70,10 @@ Future<T?> showRollDownMenu<T>(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black38,
-      transitionDuration: const Duration(milliseconds: 200),
+      // No full-screen dimming over Multiview's videos: one more layer
+      // for a GPU already busy putting them on screen (GlassBlur.motion).
+      barrierColor: GlassBlur.live ? Colors.black38 : Colors.transparent,
+      transitionDuration: GlassBlur.motion(const Duration(milliseconds: 200)),
       pageBuilder: (ctx, animation, _) => SwallowHeldActivate(
         child: _RollDownMenu<T>(
           anchor: anchor,
@@ -238,55 +241,61 @@ class _RollDownMenuButtonState extends State<_RollDownMenuButton> {
     final item = widget.item;
     final lit = _focused || item.selected;
     final dim = item.dimmed && !_focused;
-    return InkWell(
-      autofocus: widget.autofocus,
-      onFocusChange: (f) {
-        setState(() => _focused = f);
-        if (f) Scrollable.ensureVisible(context, alignment: 0.5);
-      },
-      onTap: widget.onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: GlassMenuSurface.rowDecoration(context,
-            focused: _focused, selected: item.selected, radius: 20),
-        child: Row(
-          children: [
-            Icon(item.selected ? Icons.check : item.icon,
-                size: 20, color: lit ? scheme.primary : Colors.white70),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: dim
-                              ? Colors.white38
-                              : lit
-                                  ? Colors.white
-                                  : Colors.white70,
-                          fontSize: 14,
-                          fontWeight: item.selected
-                              ? FontWeight.w700
-                              : FontWeight.w500)),
-                  if (item.subtitle != null)
-                    Text(item.subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
-                ],
+    // Its own layer and Material: a step (ink + the 150 ms fade) redraws
+    // this row, not the whole menu over Multiview's moving tiles.
+    return RepaintBoundary(
+        child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              autofocus: widget.autofocus,
+              onFocusChange: (f) {
+                setState(() => _focused = f);
+                if (f) Scrollable.ensureVisible(context, alignment: 0.5);
+              },
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedContainer(
+                duration: GlassBlur.motion(const Duration(milliseconds: 150)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                decoration: GlassMenuSurface.rowDecoration(context,
+                    focused: _focused, selected: item.selected, radius: 20),
+                child: Row(
+                  children: [
+                    Icon(item.selected ? Icons.check : item.icon,
+                        size: 20, color: lit ? scheme.primary : Colors.white70),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: dim
+                                      ? Colors.white38
+                                      : lit
+                                          ? Colors.white
+                                          : Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: item.selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500)),
+                          if (item.subtitle != null)
+                            Text(item.subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
+            )));
   }
 }
 
@@ -315,7 +324,7 @@ class _RollDownActionButtonState extends State<_RollDownActionButton> {
       onTap: widget.onTap,
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: GlassBlur.motion(const Duration(milliseconds: 150)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: GlassMenuSurface.rowDecoration(context,
             focused: _focused, radius: 20),

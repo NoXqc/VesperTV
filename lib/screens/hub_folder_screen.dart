@@ -46,6 +46,12 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   final Map<String, int> _lastIndex = {};
   int _row = 0;
   ArchiveMeta? _focused;
+
+  /// Bumped by a step between titles: the backdrop, the hero and the row
+  /// titles listen. A setState per step re-ran the folder's rows (every
+  /// catalog name through a RegExp) and rebuilt every row (frame cost audit,
+  /// 2026-11-13).
+  final _focusTick = ValueNotifier<int>(0);
   bool _entered = false;
 
   static const _slot = PosterCard.width + 12 + 8;
@@ -125,6 +131,7 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
 
   @override
   void dispose() {
+    _focusTick.dispose();
     _wideTimer?.cancel();
     _scroll.dispose();
     for (final c in _rowScrolls.values) {
@@ -286,9 +293,6 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
         }
       });
     }
-    final focused = _focused;
-    final backdrop =
-        focused?.backgroundUrl ?? focused?.posterUrl ?? folder.backdropUrl;
     return CallbackShortcuts(
       bindings: {
         if (isDesktop)
@@ -305,7 +309,14 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
               bottom: 0,
               left: narrow ? 0 : size.width * 0.2,
               child: Stack(fit: StackFit.expand, children: [
-                DetailBackdrop(url: backdrop, fadeLeft: true),
+                ValueListenableBuilder<int>(
+                  valueListenable: _focusTick,
+                  builder: (_, __, ___) => DetailBackdrop(
+                      url: _focused?.backgroundUrl ??
+                          _focused?.posterUrl ??
+                          folder.backdropUrl,
+                      fadeLeft: true),
+                ),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -330,14 +341,17 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                     height: narrow ? 150 : (short ? 96 : 200),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                      child: _Hero(
-                        folder: folder,
-                        collection: widget.collection,
-                        focused: focused,
-                        compact: narrow || short,
-                        onBack: needsBackArrow || _touch
-                            ? () => Navigator.of(context).maybePop()
-                            : null,
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _focusTick,
+                        builder: (_, __, ___) => _Hero(
+                          folder: folder,
+                          collection: widget.collection,
+                          focused: _focused,
+                          compact: narrow || short,
+                          onBack: needsBackArrow || _touch
+                              ? () => Navigator.of(context).maybePop()
+                              : null,
+                        ),
                       ),
                     ),
                   ),
@@ -393,13 +407,16 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
           height: _headerHeight,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 10, 24, 4),
-            child: Text(_rowTitle(rows, row),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: r == _row ? scheme.primary : Colors.white)),
+            child: ValueListenableBuilder<int>(
+              valueListenable: _focusTick,
+              builder: (_, __, ___) => Text(_rowTitle(rows, row),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: r == _row ? scheme.primary : Colors.white)),
+            ),
           ),
         ),
         SizedBox(
@@ -440,10 +457,9 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                       _clearWide();
                     }
                     _armWide(row, i);
-                    setState(() {
-                      _row = r;
-                      _focused = meta;
-                    });
+                    _row = r;
+                    _focused = meta;
+                    _focusTick.value++;
                   },
                 ),
               );

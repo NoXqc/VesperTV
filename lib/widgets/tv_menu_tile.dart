@@ -132,105 +132,114 @@ class _TvMenuTileState extends State<TvMenuTile> {
     // is needed here at all.
     final focusForeground = scheme.primary;
     final compact = CompactMenus.of(context);
-    return Container(
-      // Always present (even with an empty shadow list) rather than
-      // conditionally wrapped — MinimalGlassFocus's own doc comment just
-      // below has the full story on why changing a focus widget's
-      // ancestor shape between builds corrupts its FocusNode on real
-      // hardware.
-      decoration: GlassMenuSurface.of(context)
-          ? GlassMenuSurface.rowDecoration(context,
-              focused: _focused,
-              radius: 8,
-              quiet: GlassMenuSurface.quietRows(context))
-          : RefinedFinish.decorate(
-              context,
-              BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: _focused
-                    ? Border.all(color: scheme.primary, width: 2)
-                    : null,
-                // A flat `black87` fill here photographed as more "filled" than
-                // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
-                // exact same focus state — see their doc comment. `ListTile.
-                // tileColor` can't paint a gradient, so this Container paints it
-                // instead and `tileColor` below stays transparent to let it show
-                // through.
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.black,
-                          Color.lerp(
-                              Colors.black, scheme.primaryContainer, 0.4)!,
-                          Colors.black,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      )
-                    : null,
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.4),
-                            blurRadius: 12)
-                      ]
-                    : const [],
-              ),
-              focused: _focused),
-      // The stable wrapper adds focus blur only for the opt-in glass finish.
-      // Its interactive child keeps the same slot when the finish changes.
-      child: MinimalGlassFocus(
-        active: !GlassMenuSurface.of(context) &&
-            RefinedFinish.of(context) &&
-            _focused,
-        borderRadius: 8,
-        child: ListTile(
-          focusNode: widget.focusNode,
-          autofocus: widget.autofocus,
-          enabled: widget.enabled,
-          // On glass the row's outline shows focus: no theme wash under it.
-          focusColor:
-              GlassMenuSurface.of(context) ? Colors.transparent : null,
-          onFocusChange: (f) {
-            setState(() => _focused = f);
-            if (f) _revealSoon();
-          },
-          leading: widget.leading ??
-              CircleAvatar(
-                backgroundColor: _focused
-                    ? focusForeground.withValues(alpha: 0.2)
-                    : scheme.primary.withValues(alpha: 0.16),
-                // `scheme.tertiary` — a dedicated icon/symbol-glyph
-                // accent, separate from the text/border/contour accent
-                // (`focusForeground`) — see `buildPaletteColorScheme`'s
-                // own doc comment for why (Habs: white contour/text,
-                // blue icons).
-                foregroundColor: scheme.tertiary,
-                radius: compact ? 15 : null,
-                child: Icon(widget.icon, size: compact ? 18 : null),
-              ),
-          title: Text(widget.title,
-              maxLines: widget.titleMaxLines,
-              overflow:
-                  widget.titleMaxLines == null ? null : TextOverflow.ellipsis,
-              style: TextStyle(color: _focused ? focusForeground : null)),
-          subtitle: widget.subtitle == null
-              ? null
-              : Text(
-                  widget.subtitle!,
-                  style: TextStyle(
-                      color: _focused
-                          ? focusForeground.withValues(alpha: 0.85)
-                          : null),
+    // Its own layer and its own Material: ListTile's focus ink is painted by
+    // the nearest Material (a whole menu or page), so each step redrew every
+    // row of it (Multiview's channel picker, Homatics 2026-11-13).
+    return RepaintBoundary(
+        child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              // Always present (even with an empty shadow list) rather than
+              // conditionally wrapped — MinimalGlassFocus's own doc comment just
+              // below has the full story on why changing a focus widget's
+              // ancestor shape between builds corrupts its FocusNode on real
+              // hardware.
+              decoration: GlassMenuSurface.of(context)
+                  ? GlassMenuSurface.rowDecoration(context,
+                      focused: _focused,
+                      radius: 8,
+                      quiet: GlassMenuSurface.quietRows(context))
+                  : RefinedFinish.decorate(
+                      context,
+                      BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: _focused
+                            ? Border.all(color: scheme.primary, width: 2)
+                            : null,
+                        // A flat `black87` fill here photographed as more "filled" than
+                        // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
+                        // exact same focus state — see their doc comment. `ListTile.
+                        // tileColor` can't paint a gradient, so this Container paints it
+                        // instead and `tileColor` below stays transparent to let it show
+                        // through.
+                        gradient: _focused
+                            ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.black,
+                                  Color.lerp(Colors.black,
+                                      scheme.primaryContainer, 0.4)!,
+                                  Colors.black,
+                                ],
+                                stops: const [0.0, 0.5, 1.0],
+                              )
+                            : null,
+                        boxShadow: _focused
+                            ? [
+                                BoxShadow(
+                                    color:
+                                        scheme.primary.withValues(alpha: 0.4),
+                                    blurRadius: 12)
+                              ]
+                            : const [],
+                      ),
+                      focused: _focused),
+              // The stable wrapper adds focus blur only for the opt-in glass finish.
+              // Its interactive child keeps the same slot when the finish changes.
+              child: MinimalGlassFocus(
+                active: !GlassMenuSurface.of(context) &&
+                    RefinedFinish.of(context) &&
+                    _focused,
+                borderRadius: 8,
+                child: ListTile(
+                  focusNode: widget.focusNode,
+                  autofocus: widget.autofocus,
+                  enabled: widget.enabled,
+                  // On glass the row's outline shows focus: no theme wash under it.
+                  focusColor:
+                      GlassMenuSurface.of(context) ? Colors.transparent : null,
+                  onFocusChange: (f) {
+                    setState(() => _focused = f);
+                    if (f) _revealSoon();
+                  },
+                  leading: widget.leading ??
+                      CircleAvatar(
+                        backgroundColor: _focused
+                            ? focusForeground.withValues(alpha: 0.2)
+                            : scheme.primary.withValues(alpha: 0.16),
+                        // `scheme.tertiary` — a dedicated icon/symbol-glyph
+                        // accent, separate from the text/border/contour accent
+                        // (`focusForeground`) — see `buildPaletteColorScheme`'s
+                        // own doc comment for why (Habs: white contour/text,
+                        // blue icons).
+                        foregroundColor: scheme.tertiary,
+                        radius: compact ? 15 : null,
+                        child: Icon(widget.icon, size: compact ? 18 : null),
+                      ),
+                  title: Text(widget.title,
+                      maxLines: widget.titleMaxLines,
+                      overflow: widget.titleMaxLines == null
+                          ? null
+                          : TextOverflow.ellipsis,
+                      style:
+                          TextStyle(color: _focused ? focusForeground : null)),
+                  subtitle: widget.subtitle == null
+                      ? null
+                      : Text(
+                          widget.subtitle!,
+                          style: TextStyle(
+                              color: _focused
+                                  ? focusForeground.withValues(alpha: 0.85)
+                                  : null),
+                        ),
+                  trailing: widget.trailing ??
+                      Icon(Icons.chevron_right,
+                          size: compact ? 20 : null,
+                          color: _focused ? scheme.tertiary : null),
+                  onTap: widget.enabled ? widget.onTap : null,
                 ),
-          trailing: widget.trailing ??
-              Icon(Icons.chevron_right,
-                  size: compact ? 20 : null,
-                  color: _focused ? scheme.tertiary : null),
-          onTap: widget.enabled ? widget.onTap : null,
-        ),
-      ),
-    );
+              ),
+            )));
   }
 }

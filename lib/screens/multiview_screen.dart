@@ -26,8 +26,9 @@ import '../widgets/roll_down_menu.dart';
 import '../widgets/sports_mode_live_panel.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
-import '../l10n/l10n.dart';
+import '../l10n/l10n.dart';
 import '../widgets/glass_menu.dart';
+import '../utils/refined_finish.dart';
 
 /// TV-remote-first multiview grid — several live channels playing at
 /// once, one with audio focus at a time. Same idea/UX as
@@ -247,7 +248,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   static const _anim = Duration(milliseconds: 280);
   final List<_MultiviewCell> _cells =
       List.generate(_cellCount, (_) => _MultiviewCell());
-  int _activeCell = 0;
+
+  /// The screen the sound comes from. A step between screens redraws the
+  /// tiles' frames only: a setState here rebuilt the whole Multiview (every
+  /// tile, the header) per D-pad step (frame-cost audit, 2026-11-13).
+  final _active = ValueNotifier<int>(0);
+  int get _activeCell => _active.value;
+  set _activeCell(int index) => _active.value = index;
 
   /// Screens on show: Add screen adds one, Remove screen closes it
   /// (TiviMate-style, owner 2026-11-03). Cells 0 .. _slots-1 are on screen.
@@ -618,7 +625,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 12),
-                GlassFocusFrame(child: CheckboxListTile(
+                GlassFocusFrame(
+                    child: CheckboxListTile(
                   value: dontShow,
                   onChanged: (v) => setDialogState(() => dontShow = v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -813,7 +821,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     if (_cells[index].channel == null) return;
     final previousActive = _activeCell;
     if (previousActive == index) return;
-    setState(() => _activeCell = index);
+    _activeCell = index;
     await Future.wait([
       if (_cells[previousActive].controller != null)
         _cells[previousActive].controller!.setVolume(0.0),
@@ -899,9 +907,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       // favourited groups, the viewer's own moves).
       final favorites = playlist.orderedFavoriteLiveChannels(
           mixPlaylists: context.read<AppPreferences>().mixFavoritePlaylists);
+      // No page transition: every frame drawn over the playing tiles is
+      // slow on a weak box (GlassBlur.motion).
       final chosen = await Navigator.of(context).push<Channel>(
-        MaterialPageRoute(
-            builder: (_) => _ChannelPickerScreen(
+        PageRouteBuilder(
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (_, __, ___) => _ChannelPickerScreen(
                 channels: channels,
                 favorites: favorites,
                 groupOrder: [for (final g in playlist.tvGroups) g.title])),
@@ -1019,6 +1031,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // player first (which releases its wakelock) — a Fire Stick fell into
     // its screensaver mid-test.
     unawaited(WakelockPlus.enable());
+    GlassBlur.videoScreenOpened();
     _statsTimer =
         Timer.periodic(const Duration(seconds: 10), (_) => _logTiles());
     _headerScope.addListener(_onHeaderFocus);
@@ -1131,6 +1144,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   @override
   void dispose() {
+    _active.dispose();
+    GlassBlur.videoScreenClosed();
     if (RecordingService.supported) {
       RecordingService.instance.multiviewChanged(const []);
     }
@@ -1418,7 +1433,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   Widget _buildCell(int index, {bool full = false}) {
     final cell = _cells[index];
-    final active = index == _activeCell && cell.channel != null;
     // OK: an empty screen picks a channel, a playing one opens its menu.
     void onTap() {
       if (_swapMode) {
@@ -1458,21 +1472,25 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     return HoldToActivate(
       onTap: onTap,
       onHold: cell.channel == null ? null : onHold,
-      child: _MultiviewCellTile(
-        focusNode: cell.focusNode,
-        channel: cell.channel,
-        controller: cell.controller,
-        active: active,
-        onTap: onTap,
-        onLongPress: cell.channel == null ? null : onHold,
-        // The sound follows the selected screen (TiviMate-style).
-        onFocused: () => _setActive(index),
-        widthBoost: 1,
-        fill: true,
-        bare: full,
-        alignment: Alignment.center,
-        badge:
-            _swapMode && index == 0 ? _SwapModeBadge(swaps: _swapCount) : null,
+      child: ValueListenableBuilder<int>(
+        valueListenable: _active,
+        builder: (context, activeCell, _) => _MultiviewCellTile(
+          focusNode: cell.focusNode,
+          channel: cell.channel,
+          controller: cell.controller,
+          active: index == activeCell && cell.channel != null,
+          onTap: onTap,
+          onLongPress: cell.channel == null ? null : onHold,
+          // The sound follows the selected screen (TiviMate-style).
+          onFocused: () => _setActive(index),
+          widthBoost: 1,
+          fill: true,
+          bare: full,
+          alignment: Alignment.center,
+          badge: _swapMode && index == 0
+              ? _SwapModeBadge(swaps: _swapCount)
+              : null,
+        ),
       ),
     );
   }
@@ -1967,7 +1985,20 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     return true;
   }
 
+  /// One filtered list per group / search / Live now load: every build
+  /// (a guide update, a group pick) filtered all the channels again, 27k on
+  /// the Homatics, 200-300 ms each.
+  (int, String, Object?)? _filteredFor;
+  List<Channel> _filtered = const [];
+
   List<Channel> get _filteredChannels {
+    final key = (_selectedGroupIndex, _query, _live);
+    if (key == _filteredFor) return _filtered;
+    _filteredFor = key;
+    return _filtered = _filter();
+  }
+
+  List<Channel> _filter() {
     Iterable<Channel> base = widget.channels;
     final entry = _groupEntries[_selectedGroupIndex];
     if (entry == 'Favorites') {
@@ -2162,16 +2193,22 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                     ? null
                                     : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
                                 focusNode: i == 0 ? _firstResultFocus : null,
-                                leading:
-                                    (c.logoUrl != null && c.logoUrl!.isNotEmpty)
-                                        ? Image.network(c.logoUrl!,
-                                            width: 32,
-                                            height: 32,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Icon(Icons.tv,
-                                                    color: Colors.white54))
-                                        : const Icon(Icons.tv,
-                                            color: Colors.white54),
+                                leading: (c.logoUrl != null &&
+                                        c.logoUrl!.isNotEmpty)
+                                    ? Image.network(c.logoUrl!,
+                                        width: 32,
+                                        height: 32,
+                                        // Decoded at its size, not the
+                                        // file's (CLAUDE.md §10 (6)).
+                                        cacheWidth: (32 *
+                                                MediaQuery.devicePixelRatioOf(
+                                                    context))
+                                            .round(),
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.tv,
+                                                color: Colors.white54))
+                                    : const Icon(Icons.tv,
+                                        color: Colors.white54),
                                 title: c.name,
                                 trailing: const SizedBox.shrink(),
                                 onTap: () => Navigator.of(context).pop(c),

@@ -351,12 +351,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final playlist = context.watch<PlaylistManager>();
-    // Re-read the live copy so the favorite star reflects toggles made here.
-    final current = playlist.allCachedVod.firstWhere(
-      (c) => c.id == widget.channel.id,
-      orElse: () => widget.channel,
-    );
+    // The star reads the manager's saved ids, and a toggle here stamps
+    // this copy too: the page follows that one flag. Watching the manager
+    // rebuilt it (and listed every cached movie) on each catalog warm-up
+    // notify, every 400 ms (frame-cost audit, 2026-11-13).
+    context.select<PlaylistManager, bool>(
+        (p) => p.isChannelFavorited(widget.channel.id));
+    final current = widget.channel;
     return withTvThemeIfNeeded(
       context,
       (context) => Scaffold(

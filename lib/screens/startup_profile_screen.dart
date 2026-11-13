@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +13,7 @@ import '../services/home_wallpaper.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../widgets/profile_card.dart';
+import '../widgets/settings_scaffold.dart';
 
 /// A launch-only gate. The application routes and automatic playback are not
 /// created until [onSelected], after switchTo has applied the selected viewer.
@@ -40,12 +41,21 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   /// watching?" (Settings > General > Home wallpaper); the highlighted
   /// card's shows behind the panel.
   final _wallpapers = <String, Uint8List>{};
-  String? _focused;
+
+  /// The same wallpapers small and blurred once: the panel's frosted glass.
+  /// A live BackdropFilter (sigma 20) redid the blur over most of the screen
+  /// on every frame of a step's card and wallpaper fades: slow on the
+  /// Homatics (owner, +772).
+  final _glass = <String, ui.Image>{};
+
+  /// The highlighted card. A step repaints the wallpaper and glass, it
+  /// doesn't rebuild the page.
+  late final ValueNotifier<String?> _focused =
+      ValueNotifier(context.read<ViewerProfileService>().active.id);
 
   @override
   void initState() {
     super.initState();
-    _focused = context.read<ViewerProfileService>().active.id;
     _loadWallpapers();
   }
 
@@ -60,6 +70,16 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
           await (widget.wallpapers ?? HomeWallpaper.instance).load(id);
       if (bytes == null || !mounted) continue;
       setState(() => _wallpapers[id] = bytes);
+      try {
+        final glass = await SettingsBackdrop.blurred(bytes, sigma: 3.3);
+        if (!mounted) {
+          glass.dispose();
+          return;
+        }
+        setState(() => _glass[id] = glass);
+      } catch (e) {
+        debugPrint('StartupProfile: wallpaper glass failed: $e');
+      }
     }
   }
 
@@ -67,6 +87,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   void dispose() {
     for (final node in _nodes.values) {
       node.dispose();
+    }
+    _focused.dispose();
+    for (final image in _glass.values) {
+      image.dispose();
     }
     super.dispose();
   }
@@ -209,9 +233,7 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                           active: _selected == profile.id,
                           onFocused: () {
                             _reveal(_nodes[profile.id]!);
-                            if (_focused != profile.id) {
-                              setState(() => _focused = profile.id);
-                            }
+                            _focused.value = profile.id;
                           },
                           onTap: () => _select(profile),
                         ),
@@ -243,9 +265,10 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final motion = Duration(milliseconds: reduceMotion ? 0 : 260);
     final selected = profiles.where((p) => p.id == _selected).firstOrNull;
-    final wallpaperId = _selected ?? _focused;
-    final wallpaper = _wallpapers[wallpaperId];
     final size = MediaQuery.sizeOf(context);
+    final safe = MediaQuery.paddingOf(context);
+    final fade = Duration(milliseconds: reduceMotion ? 0 : 450);
+    final glows = _glows(accent);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -256,47 +279,47 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // The highlighted viewer's wallpaper, dimmed so the panel
-            // reads; crossfades as the highlight moves.
-            AnimatedSwitcher(
-              duration: Duration(milliseconds: reduceMotion ? 0 : 450),
-              child: wallpaper == null
-                  ? const SizedBox.expand(key: ValueKey('no-wallpaper'))
-                  : Stack(
-                      key: ValueKey('wallpaper-$wallpaperId'),
-                      fit: StackFit.expand,
-                      children: [
-                        Image.memory(wallpaper,
-                            fit: BoxFit.cover,
-                            cacheWidth: math
-                                .min(
-                                    1920,
-                                    size.width *
-                                        MediaQuery.devicePixelRatioOf(context))
-                                .round(),
-                            gaplessPlayback: true,
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink()),
-                        const ColoredBox(color: Color(0x73000000)),
-                      ],
-                    ),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(-.7, -.8),
-                  radius: 1.5,
-                  colors: [accent.withValues(alpha: .24), Colors.transparent],
-                ),
-              ),
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(.9, .9),
-                  radius: 1.1,
-                  colors: [Color(0x503B5F99), Colors.transparent],
-                ),
+            RepaintBoundary(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // The highlighted viewer's wallpaper, dimmed so the panel
+                  // reads; crossfades as the highlight moves.
+                  ValueListenableBuilder<String?>(
+                    valueListenable: _focused,
+                    builder: (context, focused, _) {
+                      final id = _selected ?? focused;
+                      final wallpaper = _wallpapers[id];
+                      return AnimatedSwitcher(
+                        duration: fade,
+                        child: wallpaper == null
+                            ? const SizedBox.expand(
+                                key: ValueKey('no-wallpaper'))
+                            : Stack(
+                                key: ValueKey('wallpaper-$id'),
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.memory(wallpaper,
+                                      fit: BoxFit.cover,
+                                      cacheWidth: math
+                                          .min(
+                                              1920,
+                                              size.width *
+                                                  MediaQuery.devicePixelRatioOf(
+                                                      context))
+                                          .round(),
+                                      gaplessPlayback: true,
+                                      errorBuilder: (_, __, ___) =>
+                                          const SizedBox.shrink()),
+                                  const ColoredBox(color: _dim),
+                                ],
+                              ),
+                      );
+                    },
+                  ),
+                  for (final glow in glows)
+                    DecoratedBox(decoration: BoxDecoration(gradient: glow)),
+                ],
               ),
             ),
             SafeArea(
@@ -337,56 +360,91 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(28),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: Colors.white24),
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0x493C4657), Color(0xB318202E)],
+                        child: Stack(
+                          fit: StackFit.passthrough,
+                          children: [
+                            Positioned.fill(
+                              child: RepaintBoundary(
+                                child: ValueListenableBuilder<String?>(
+                                  valueListenable: _focused,
+                                  builder: (context, focused, _) {
+                                    final id = _selected ?? focused;
+                                    final glass = _glass[id];
+                                    return AnimatedSwitcher(
+                                      duration: fade,
+                                      child: glass == null
+                                          ? const SizedBox.expand(
+                                              key: ValueKey('no-glass'))
+                                          : CustomPaint(
+                                              key: ValueKey('glass-$id'),
+                                              painter: _PanelGlass(
+                                                  glass,
+                                                  Offset(safe.left, safe.top) &
+                                                      bounds.biggest,
+                                                  size,
+                                                  glows),
+                                              child: const SizedBox.expand(),
+                                            ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                            child: SingleChildScrollView(
-                              padding: EdgeInsets.all(inside),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.auto_awesome,
-                                      color: accent, size: 28),
-                                  const SizedBox(height: 14),
-                                  Text(tr('Who is watching?'),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                      selected == null
-                                          ? tr(
-                                              'Choose your profile to get started.')
-                                          : tr('Welcome, {name}',
-                                              {'name': selected.displayName}),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white70)),
-                                  const SizedBox(height: 28),
-                                  _profileGrid(profiles, tileWidth, motion),
-                                  if (_error != null) ...[
-                                    const SizedBox(height: 16),
-                                    Text(_error!,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .error)),
-                                  ],
-                                ],
+                            RepaintBoundary(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(color: Colors.white24),
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0x493C4657),
+                                      Color(0xB318202E)
+                                    ],
+                                  ),
+                                ),
+                                child: SingleChildScrollView(
+                                  padding: EdgeInsets.all(inside),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.auto_awesome,
+                                          color: accent, size: 28),
+                                      const SizedBox(height: 14),
+                                      Text(tr('Who is watching?'),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                          selected == null
+                                              ? tr(
+                                                  'Choose your profile to get started.')
+                                              : tr('Welcome, {name}', {
+                                                  'name': selected.displayName
+                                                }),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                              color: Colors.white70)),
+                                      const SizedBox(height: 28),
+                                      _profileGrid(profiles, tileWidth, motion),
+                                      if (_error != null) ...[
+                                        const SizedBox(height: 16),
+                                        Text(_error!,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error)),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -399,4 +457,60 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
       ),
     );
   }
+
+  static const _dim = Color(0x73000000);
+
+  /// The two soft lights over the wallpaper (the panel's glass repeats them).
+  static List<RadialGradient> _glows(Color accent) => [
+        RadialGradient(
+          center: const Alignment(-.7, -.8),
+          radius: 1.5,
+          colors: [accent.withValues(alpha: .24), Colors.transparent],
+        ),
+        const RadialGradient(
+          center: Alignment(.9, .9),
+          radius: 1.1,
+          colors: [Color(0x503B5F99), Colors.transparent],
+        ),
+      ];
+}
+
+/// The panel's frosted glass without a live blur: the blurred wallpaper and
+/// the page's lights, drawn where they are on the screen behind the panel.
+class _PanelGlass extends CustomPainter {
+  _PanelGlass(this.image, this.area, this.screen, this.glows);
+  final ui.Image image;
+
+  /// The SafeArea the panel is centred in, in screen coordinates.
+  final Rect area;
+  final Size screen;
+  final List<RadialGradient> glows;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = area.topLeft +
+        Offset((area.width - size.width) / 2, (area.height - size.height) / 2);
+    final page = (-origin) & screen;
+    final panel = Offset.zero & size;
+    canvas.save();
+    canvas.clipRect(panel);
+    paintImage(
+        canvas: canvas,
+        rect: page,
+        image: image,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium);
+    canvas.drawRect(panel, Paint()..color = _StartupProfileScreenState._dim);
+    for (final glow in glows) {
+      canvas.drawRect(panel, Paint()..shader = glow.createShader(page));
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_PanelGlass old) =>
+      old.image != image ||
+      old.area != area ||
+      old.screen != screen ||
+      old.glows.first.colors.first != glows.first.colors.first;
 }

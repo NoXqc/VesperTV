@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' as ui;
 
 import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
@@ -71,6 +71,16 @@ class SettingsScaffold extends StatelessWidget {
   /// 2026-11-10) — a faint light sheen for stock widgets, the glass outline
   /// for rows ([GlassRowScope]) — and rounded glass text fields, smaller
   /// on a TV box / computer ([compact]) so a short form stays short.
+  /// [glassTheme] built once per theme: a new copy per build never
+  /// compared equal, and `Theme` then rebuilt every row under it
+  /// (CLAUDE.md §10 "Frame cost on weak boxes" (2)).
+  static final _glassThemes = Expando<List<ThemeData?>>();
+
+  static ThemeData _glassFor(ThemeData theme, bool compact) {
+    final cached = _glassThemes[theme] ??= List<ThemeData?>.filled(2, null);
+    return cached[compact ? 1 : 0] ??= glassTheme(theme, compact: compact);
+  }
+
   static ThemeData glassTheme(ThemeData theme, {bool compact = false}) {
     final scheme = theme.colorScheme;
     OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
@@ -97,58 +107,59 @@ class SettingsScaffold extends StatelessWidget {
     if (SettingsFloating.of(context)) return _buildFloating(context);
     final glass = compact && panel;
     return Theme(
-      data: glassTheme(Theme.of(context), compact: compact),
+      data: _glassFor(Theme.of(context), compact),
       child: Stack(
-      children: [
-        const Positioned.fill(child: SettingsBackdrop()),
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
+        children: [
+          const Positioned.fill(
+              child: RepaintBoundary(child: SettingsBackdrop())),
+          Scaffold(
             backgroundColor: Colors.transparent,
-            elevation: 0,
-            // Replaces the implicit default back button — reported
-            // directly: "the back arrow, edit and delete is barely
-            // visible... that's the case for every page." Flutter's own
-            // default focus indicator for an AppBar's back button is a
-            // faint ripple/overlay, not the solid-fill-on-real-focus this
-            // app established everywhere else via ModeButton.
-            // TvAppBarButton is that same fix, sized for the app bar.
-            leading: Builder(
-              builder: (context) => ModalRoute.of(context)?.canPop ?? false
-                  ? Center(
-                      child: TvAppBarButton.icon(
-                        focusNode: backFocusNode,
-                        icon: Icons.arrow_back,
-                        tooltip: tr('Back'),
-                        onTap: () => Navigator.of(context).pop(),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              // Replaces the implicit default back button — reported
+              // directly: "the back arrow, edit and delete is barely
+              // visible... that's the case for every page." Flutter's own
+              // default focus indicator for an AppBar's back button is a
+              // faint ripple/overlay, not the solid-fill-on-real-focus this
+              // app established everywhere else via ModeButton.
+              // TvAppBarButton is that same fix, sized for the app bar.
+              leading: Builder(
+                builder: (context) => ModalRoute.of(context)?.canPop ?? false
+                    ? Center(
+                        child: TvAppBarButton.icon(
+                          focusNode: backFocusNode,
+                          icon: Icons.arrow_back,
+                          tooltip: tr('Back'),
+                          onTap: () => Navigator.of(context).pop(),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              title: Text(title),
+              actions: actions,
+              bottom: bottom,
             ),
-            title: Text(title),
-            actions: actions,
-            bottom: bottom,
-          ),
-          // TV boxes and computers: compact rows (CompactMenus). Phones
-          // keep Material's touch sizes.
-          //
-          // SafeArea: Android 15 draws apps behind the navigation bar, and a
-          // ListView with its own padding doesn't add that space itself, so a
-          // page's last row stayed under the Back/Home buttons (user photo,
-          // Settings > Playback > Resume reminder, 2026-11-09). No inset on
-          // a TV box, so nothing changes there.
-          body: SafeArea(
-            top: false,
-            child: GlassRowScope(
-              child: compact
-                  ? CompactMenus(
-                      child: CompactMenus.listTheme(context,
-                          child: glass ? _floating(body) : body))
-                  : body,
+            // TV boxes and computers: compact rows (CompactMenus). Phones
+            // keep Material's touch sizes.
+            //
+            // SafeArea: Android 15 draws apps behind the navigation bar, and a
+            // ListView with its own padding doesn't add that space itself, so a
+            // page's last row stayed under the Back/Home buttons (user photo,
+            // Settings > Playback > Resume reminder, 2026-11-09). No inset on
+            // a TV box, so nothing changes there.
+            body: SafeArea(
+              top: false,
+              child: GlassRowScope(
+                child: compact
+                    ? CompactMenus(
+                        child: CompactMenus.listTheme(context,
+                            child: glass ? _floating(body) : body))
+                    : body,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -156,8 +167,8 @@ class SettingsScaffold extends StatelessWidget {
   Widget _floating(Widget body) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-              maxWidth: wide ? double.infinity : panelWidth),
+          constraints:
+              BoxConstraints(maxWidth: wide ? double.infinity : panelWidth),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
             child: SizedBox(
@@ -172,7 +183,7 @@ class SettingsScaffold extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final canPop = ModalRoute.of(context)?.canPop ?? false;
     return Theme(
-      data: glassTheme(Theme.of(context), compact: compact),
+      data: _glassFor(Theme.of(context), compact),
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -272,11 +283,35 @@ Future<T?> openSettingsPage<T>(BuildContext context, WidgetBuilder builder,
 
 /// Behind every Settings page: the viewer's Home wallpaper, blurred and
 /// dimmed, so the glass panels have something to show through; without
-/// one, a soft glow in the theme colours. The picture is decoded tiny (the
-/// blur hides it) and kept for the session, so pages pushed on top don't
-/// read the file again.
+/// one, a soft glow in the theme colours. The picture is decoded tiny,
+/// blurred once and kept for the session, so pages pushed on top don't read
+/// the file again. A live full-screen blur (ImageFiltered) was redone by
+/// the GPU on every frame: 24-36 ms per frame on the Homatics while
+/// scrolling Settings (2026-11-13).
 class SettingsBackdrop extends StatefulWidget {
   const SettingsBackdrop({super.key});
+
+  /// The wallpaper 160 px wide, blurred once (sigma 1 there is the old
+  /// sigma 6 on the screen-size picture); drawn scaled up, which smooths
+  /// it further. Who's watching's panel uses it too ([sigma] 3.3 = its old
+  /// live sigma 20 on a 960-wide screen).
+  static Future<ui.Image> blurred(Uint8List bytes, {double sigma = 1}) async {
+    final codec = await ui.instantiateImageCodec(bytes, targetWidth: 160);
+    final source = (await codec.getNextFrame()).image;
+    codec.dispose();
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImage(
+        source,
+        Offset.zero,
+        Paint()
+          ..imageFilter = ui.ImageFilter.blur(
+              sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.clamp));
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(source.width, source.height);
+    picture.dispose();
+    source.dispose();
+    return image;
+  }
 
   @override
   State<SettingsBackdrop> createState() => _SettingsBackdropState();
@@ -284,8 +319,8 @@ class SettingsBackdrop extends StatefulWidget {
 
 class _SettingsBackdropState extends State<SettingsBackdrop> {
   static String? _cachedFor;
-  static Uint8List? _cached;
-  Uint8List? _bytes;
+  static ui.Image? _cached;
+  ui.Image? _image;
 
   @override
   void initState() {
@@ -301,24 +336,31 @@ class _SettingsBackdropState extends State<SettingsBackdrop> {
   }
 
   Future<void> _load() async {
-    final viewer =
-        context.read<AppPreferences?>()?.storage.getActiveViewerId();
+    final viewer = context.read<AppPreferences?>()?.storage.getActiveViewerId();
     if (viewer == null) return;
     final key = '$viewer#${HomeWallpaper.instance.changes.value}';
     if (_cachedFor == key) {
-      if (_bytes != _cached) setState(() => _bytes = _cached);
+      if (_image != _cached) setState(() => _image = _cached);
       return;
     }
     final bytes = await HomeWallpaper.instance.load(viewer);
+    ui.Image? image;
+    if (bytes != null) {
+      try {
+        image = await SettingsBackdrop.blurred(bytes);
+      } catch (e) {
+        debugPrint('SettingsBackdrop: wallpaper failed: $e');
+      }
+    }
     _cachedFor = key;
-    _cached = bytes;
-    if (mounted && bytes != _bytes) setState(() => _bytes = bytes);
+    _cached = image;
+    if (mounted && image != _image) setState(() => _image = image);
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bytes = _bytes;
+    final image = _image;
     return Stack(fit: StackFit.expand, children: [
       DecoratedBox(
         decoration: BoxDecoration(
@@ -337,19 +379,15 @@ class _SettingsBackdropState extends State<SettingsBackdrop> {
           ),
         ),
       ),
-      if (bytes != null)
+      if (image != null)
         RepaintBoundary(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: Image(
-              image: ResizeImage(MemoryImage(bytes), width: 160),
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-            ),
+          child: RawImage(
+            image: image,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
           ),
         ),
-      if (bytes != null) const ColoredBox(color: Color(0x80000000)),
+      if (image != null) const ColoredBox(color: Color(0x80000000)),
     ]);
   }
 }

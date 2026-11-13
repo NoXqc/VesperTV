@@ -83,6 +83,38 @@ void main() {
     expect(find.text('Theme color'), findsNothing);
   });
 
+  // Moving through the categories builds no page on the way (a whole-screen
+  // rebuild per step on the Homatics, 2026-11-13); the one it rests on comes
+  // after a short pause, and Right goes into it at once.
+  testWidgets('categories: the page follows a rest, Right uses it at once',
+      (tester) async {
+    await pump(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(focusedLabel(), 'Playback');
+    expect(find.text('Playlist Manager'), findsOneWidget);
+    // The gold frame is on it already; only the page waits.
+    bool selected(String title) => tester
+        .widget<SettingRow>(find.widgetWithText(SettingRow, title).first)
+        .selected;
+    expect(selected('Playback'), isTrue);
+    expect(selected('Playlists & sources'), isFalse);
+    expect(find.text('Refined finish'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Automatic trailers'), findsOneWidget);
+    expect(find.text('Playlist Manager'), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(focusedLabel(), 'Appearance');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(focusedLabel(), 'Theme color');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a switch flips in place and the help line follows focus',
       (tester) async {
     await pump(tester);
