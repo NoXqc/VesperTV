@@ -30,7 +30,6 @@ class YouTubePlatformView extends StatefulWidget {
 
 class _YouTubePlatformViewState extends State<YouTubePlatformView> {
   static Future<WebViewEnvironment>? _windowsEnvironment;
-  static Future<bool>? _amazon;
   WebViewEnvironment? _environment;
   bool _ready = false;
   bool _hybrid = true;
@@ -59,14 +58,16 @@ class _YouTubePlatformViewState extends State<YouTubePlatformView> {
         _environment = await _windowsEnvironment;
       }
       if (Platform.isAndroid) {
-        // Fire OS's WebView puts <video> on its own native layer. Under hybrid
-        // composition that layer sat behind the opaque page (black, audio only);
-        // texture composition shows it, but on top of everything: Fire TV plays
-        // trailers full screen (Settings > Playback > Trailers says so).
-        _amazon ??= Process.run('getprop', ['ro.product.manufacturer']).then(
-            (r) => '${r.stdout}'.trim().toLowerCase() == 'amazon',
-            onError: (_) => false);
-        _hybrid = !await _amazon!;
+        // Texture composition on every Android box. Fire OS's WebView puts
+        // <video> on its own native layer: hybrid composition left it behind
+        // the opaque page (black, audio only), texture shows it on top of
+        // everything, so Fire TV plays trailers full screen (Settings >
+        // Playback > Trailers says so). Elsewhere hybrid composition froze the
+        // whole UI under the SurfaceView render mode (MainActivity, +745):
+        // Homatics, 2026-11-13, a show page's automatic trailer played sound
+        // while the page stayed on its spinner and ignored the remote until
+        // Back.
+        _hybrid = false;
       }
       if (mounted) setState(() => _ready = true);
     } catch (_) {
