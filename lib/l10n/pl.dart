@@ -3246,6 +3246,18 @@ const Map<String, String> kPl = {
   "Button {key}": "Przycisk {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Nic nie dotarło. Jeśli naciśnięto przycisk, urządzenie zachowuje go dla siebie.",
+  "Buttons your box keeps":
+      "Przyciski zatrzymywane przez dekoder",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Włączone: {app} może nauczyć się przycisków takich jak TV, YouTube czy Prime. Poza {app} działają jak zwykle.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Wyłączone: aby używać przycisków takich jak TV, YouTube czy Prime, włącz „{name}” w ustawieniach ułatwień dostępu Androida.",
+  "If Android says it is a restricted setting":
+      "Jeśli Android mówi, że to ustawienie z ograniczeniami",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Otwórz informacje o aplikacji {app}, zezwól na ustawienia z ograniczeniami, a potem włącz to ponownie.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Nic nie dotarło. Urządzenie zatrzymuje ten przycisk dla siebie: włącz poniżej Przyciski zatrzymywane przez dekoder i spróbuj ponownie.",
   "{button}: short press": "{button}: krótkie naciśnięcie",
   "{button} set. Hold it too? Open the button below.":
       "Ustawiono {button}. Ustawić też przytrzymanie? Otwórz przycisk poniżej.",

@@ -34,20 +34,38 @@ String remoteActionLabel(String? id) {
   return action.id == 'sports' ? action.label : tr(action.label);
 }
 
-class _RemoteButtonsScreenState extends State<RemoteButtonsScreen> {
+class _RemoteButtonsScreenState extends State<RemoteButtonsScreen>
+    with WidgetsBindingObserver {
   final _buttons = RemoteButtons.instance;
   final _learnFocus = FocusNode();
   bool _learning = false;
   Timer? _learnTimeout;
 
+  /// Android: [RemoteKeys] (buttons the box keeps); null elsewhere.
+  ({bool enabled, bool connected})? _boxKeys;
+
   @override
   void initState() {
     super.initState();
     _buttons.changes.addListener(_changed);
+    WidgetsBinding.instance.addObserver(this);
+    _refreshBoxKeys();
+  }
+
+  /// Back from Android's settings: it may be on now.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshBoxKeys();
+  }
+
+  Future<void> _refreshBoxKeys() async {
+    final status = await RemoteKeys.status();
+    if (mounted) setState(() => _boxKeys = status);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _buttons.changes.removeListener(_changed);
     _stopLearning();
     _learnFocus.dispose();
@@ -76,8 +94,11 @@ class _RemoteButtonsScreenState extends State<RemoteButtonsScreen> {
     _learnTimeout = Timer(const Duration(seconds: 15), () {
       if (!mounted) return;
       setState(_stopLearning);
-      _say(tr(
-          'Nothing arrived. If you pressed a button, your device keeps it for itself.'));
+      _say(_boxKeys?.connected == false
+          ? tr(
+              'Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.')
+          : tr(
+              'Nothing arrived. If you pressed a button, your device keeps it for itself.'));
     });
   }
 
@@ -236,6 +257,34 @@ class _RemoteButtonsScreenState extends State<RemoteButtonsScreen> {
                 tr('OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.'),
                 style: const TextStyle(fontSize: 13, color: Colors.white60)),
           ),
+          if (_boxKeys case final box?) ...[
+            const SizedBox(height: 12),
+            TvMenuTile(
+              icon: box.connected
+                  ? Icons.check_circle_outline
+                  : Icons.settings_accessibility,
+              title: tr('Buttons your box keeps'),
+              subtitle: box.connected
+                  ? tr(
+                      'On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.',
+                      {
+                          'app': AppConstants.appName
+                        })
+                  : tr(
+                      'Off: to use buttons like TV, YouTube or Prime, turn on "{name}" in Android\'s Accessibility settings.',
+                      {'name': '${AppConstants.appName} remote buttons'}),
+              onTap: RemoteKeys.openSettings,
+            ),
+            if (!box.connected)
+              TvMenuTile(
+                icon: Icons.lock_open_outlined,
+                title: tr('If Android says it is a restricted setting'),
+                subtitle: tr(
+                    'Open {app}\'s App info, allow restricted settings, then turn it on again.',
+                    {'app': AppConstants.appName}),
+                onTap: RemoteKeys.openAppInfo,
+              ),
+          ],
         ],
       ),
     );

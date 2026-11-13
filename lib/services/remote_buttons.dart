@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -39,6 +41,15 @@ class RemoteAction {
         help: 'In the full-screen player'),
     RemoteAction(
         'info', 'Channel info', Icons.info_outline, RemoteActionGroup.playback,
+        help: 'In the full-screen player'),
+    // The player's own FF / RW keys: longer steps the more you press, and
+    // back into catch-up on a live channel (owner, 2026-11-12: the box's
+    // YouTube / Prime buttons as FF / RW).
+    RemoteAction('rewind', 'Rewind', Icons.fast_rewind_outlined,
+        RemoteActionGroup.playback,
+        help: 'In the full-screen player'),
+    RemoteAction('fast_forward', 'Fast forward', Icons.fast_forward_outlined,
+        RemoteActionGroup.playback,
         help: 'In the full-screen player'),
     RemoteAction(
         'favourites', 'Favourites', Icons.star_outline, RemoteActionGroup.open),
@@ -151,6 +162,9 @@ enum PlayerArrow {
 abstract interface class RemotePlayerTarget {
   void lastChannel();
   void zap(int step);
+
+  /// [step] 1 = fast forward, -1 = rewind (the remote's FF / RW keys).
+  void skip(int step);
   void showInfo();
   void cycleFit();
   void openMultiview();
@@ -187,8 +201,17 @@ class RemoteButtons {
   bool Function() isActive = () => true;
 
   /// Set by Settings while it waits for "press your remote's button": key
-  /// downs that aren't navigation come here first and are taken.
-  void Function(KeyDownEvent event)? learning;
+  /// downs that aren't navigation come here first and are taken. Android:
+  /// the box's own buttons are taken for it too ([RemoteKeys]).
+  void Function(KeyDownEvent event)? get learning => _learning;
+  set learning(void Function(KeyDownEvent event)? value) {
+    if ((value == null) != (_learning == null)) {
+      unawaited(RemoteKeys._call('setLearning', value != null));
+    }
+    _learning = value;
+  }
+
+  void Function(KeyDownEvent event)? _learning;
 
   /// Set while a full-screen player is open (the newest one).
   final _players = <RemotePlayerTarget>[];
@@ -206,7 +229,10 @@ class RemoteButtons {
 
   bool _installed = false;
 
-  void attach(StorageService storage) => _storage = storage;
+  void attach(StorageService storage) {
+    _storage = storage;
+    _load();
+  }
 
   /// Once, at the app root.
   void install() {
@@ -229,6 +255,7 @@ class RemoteButtons {
     _cacheGen = storage.viewerGeneration;
     _bindings = decodeBindings(storage.getRemoteButtons());
     _arrows = decodeArrows(storage.getPlayerArrows());
+    RemoteKeys._take(_bindings.keys);
   }
 
   static Map<int, RemoteBinding> decodeBindings(String? json) {
@@ -292,6 +319,7 @@ class RemoteButtons {
 
   Future<void> _saveBindings(Map<int, RemoteBinding> next) async {
     _bindings = next;
+    RemoteKeys._take(next.keys);
     await _storage?.setRemoteButtons(next.isEmpty
         ? null
         : jsonEncode({for (final b in next.values) '${b.keyId}': b.toJson()}));
@@ -326,6 +354,7 @@ class RemoteButtons {
 
   Future<void> reset() async {
     _bindings = const {};
+    RemoteKeys._take(const []);
     _arrows = const {};
     await _storage?.setRemoteButtons(null);
     await _storage?.setPlayerArrows(null);
@@ -409,6 +438,9 @@ class RemoteButtons {
   /// Visible for tests: true = taken (the focused widget never sees it).
   @visibleForTesting
   bool handle(KeyEvent event) {
+    // A profile switch: the new viewer's buttons go to RemoteKeys on the
+    // first key (an arrow, usually) instead of whenever one is learned.
+    _load();
     final physical = event.physicalKey;
     if (event is KeyUpEvent) {
       final held = _held.remove(physical);
@@ -459,6 +491,71 @@ class RemoteButtons {
     debugPrint('RemoteButtons: $action');
     if (run != null) unawaited(run(action));
   }
+}
+
+/// Android: buttons the box keeps for itself (the Homatics' TV, YouTube,
+/// Prime, app button and Settings never reach an app). RemoteKeyService, an
+/// accessibility service the viewer turns on in Android's settings, sees
+/// them first and, while VesperTV is on screen, hands it the Guide key, the
+/// learned buttons ([_take], by Android key code) and any button while
+/// Settings waits for one.
+class RemoteKeys {
+  RemoteKeys._();
+
+  static const _channel = MethodChannel('vespertv/remote_keys');
+
+  static Future<T?> _call<T>(String method, [Object? arguments]) async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await _channel.invokeMethod<T>(method, arguments);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static List<int> _taken = const [];
+
+  static void _take(Iterable<int> keyIds) {
+    final codes = {for (final id in keyIds) ...androidKeyCodes(id)}.toList()
+      ..sort();
+    if (listEquals(codes, _taken)) return;
+    _taken = codes;
+    unawaited(_call('setTaken', codes));
+  }
+
+  static final Map<int, List<int>> _androidCodes = () {
+    final out = <int, List<int>>{};
+    kAndroidToLogicalKey
+        .forEach((code, key) => (out[key.keyId] ??= <int>[]).add(code));
+    return out;
+  }();
+
+  /// The Android key codes behind a learned [LogicalKeyboardKey.keyId]: an
+  /// Android key Flutter has no name for carries its code.
+  static List<int> androidKeyCodes(int keyId) {
+    if (keyId & LogicalKeyboardKey.planeMask ==
+        LogicalKeyboardKey.androidPlane) {
+      return [keyId & LogicalKeyboardKey.valueMask];
+    }
+    return _androidCodes[keyId] ?? const [];
+  }
+
+  /// Null off Android. enabled = switched on in Android's settings;
+  /// connected = running (on but not running: Android blocked it).
+  static Future<({bool enabled, bool connected})?> status() async {
+    final map = await _call<Map<Object?, Object?>>('status');
+    if (map == null) return null;
+    return (
+      enabled: map['enabled'] == true,
+      connected: map['connected'] == true,
+    );
+  }
+
+  static Future<bool> openSettings() async =>
+      await _call<bool>('openSettings') ?? false;
+
+  static Future<bool> openAppInfo() async =>
+      await _call<bool>('openAppInfo') ?? false;
 }
 
 class _Held {

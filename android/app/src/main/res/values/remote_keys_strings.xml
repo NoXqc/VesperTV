@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="remote_keys_label">VesperTV remote buttons</string>
+    <string name="remote_keys_description">Lets VesperTV use remote buttons your box keeps for itself, such as the TV / Guide button. It only acts while VesperTV is on screen.</string>
+</resources>

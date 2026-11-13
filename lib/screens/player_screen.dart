@@ -1423,6 +1423,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void zap(int step) => _zapChannel(step);
   @override
+  void skip(int step) => _skipKey(step);
+  @override
   void showInfo() => _toggleInfoCard();
   @override
   void cycleFit() => unawaited(_cycleFit());

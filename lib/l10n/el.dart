@@ -3621,6 +3621,18 @@ const Map<String, String> kEl = {
       "Κουμπί {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Δεν έφτασε τίποτα. Αν πατήσατε κάποιο κουμπί, η συσκευή σας το κρατά για τον εαυτό της.",
+  "Buttons your box keeps":
+      "Κουμπιά που κρατά το κουτί σας",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Ενεργό: το {app} μπορεί να μάθει κουμπιά όπως TV, YouTube ή Prime. Έξω από το {app} κάνουν τη συνηθισμένη τους δουλειά.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Ανενεργό: για να χρησιμοποιήσετε κουμπιά όπως TV, YouTube ή Prime, ενεργοποιήστε το «{name}» στις ρυθμίσεις προσβασιμότητας του Android.",
+  "If Android says it is a restricted setting":
+      "Αν το Android πει ότι είναι περιορισμένη ρύθμιση",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Ανοίξτε τις πληροφορίες εφαρμογής του {app}, επιτρέψτε τις περιορισμένες ρυθμίσεις και ενεργοποιήστε το ξανά.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Δεν ήρθε τίποτα. Η συσκευή κρατά αυτό το κουμπί για τον εαυτό της: ενεργοποιήστε το «Κουμπιά που κρατά το κουτί σας» παρακάτω και δοκιμάστε ξανά.",
   "{button}: short press":
       "{button}: σύντομο πάτημα",
   "{button} set. Hold it too? Open the button below.":

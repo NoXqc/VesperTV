@@ -162,4 +162,16 @@ void main() {
         RemoteButtons.describe(LogicalKeyboardKey.channelUp.keyId).$1, 'CH+');
     expect(RemoteButtons.describe(_bookmarkId), (null, '#174'));
   });
+
+  test(
+      'learned buttons map back to the Android key codes the box service takes',
+      () {
+    // Homatics TV button: KEYCODE_GUIDE, a key Flutter names.
+    expect(RemoteKeys.androidKeyCodes(LogicalKeyboardKey.guide.keyId), [172]);
+    // Homatics YouTube button: KEYCODE_NES_SHORTCUT_04, unnamed.
+    expect(RemoteKeys.androidKeyCodes(0x1100000000 | 5118), [5118]);
+    expect(RemoteKeys.androidKeyCodes(_bookmarkId), [174]);
+    expect(RemoteKeys.androidKeyCodes(LogicalKeyboardKey.keyA.keyId),
+        contains(29));
+  });
 }

@@ -3672,6 +3672,18 @@ const Map<String, String> kFr = {
       "Bouton {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Rien n'est arrivé. Si vous avez appuyé sur un bouton, votre appareil le garde pour lui.",
+  "Buttons your box keeps":
+      "Boutons gardés par votre boîtier",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Activé : {app} peut apprendre des boutons comme TV, YouTube ou Prime. Hors de {app}, ils gardent leur fonction habituelle.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Désactivé : pour utiliser des boutons comme TV, YouTube ou Prime, activez « {name} » dans les paramètres d'accessibilité d'Android.",
+  "If Android says it is a restricted setting":
+      "Si Android parle de paramètre restreint",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Ouvrez les infos de l'appli {app}, autorisez les paramètres restreints, puis réactivez-le.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Rien n'est arrivé. Votre appareil garde ce bouton pour lui : activez Boutons gardés par votre boîtier ci-dessous, puis réessayez.",
   "{button}: short press":
       "{button} : appui court",
   "{button} set. Hold it too? Open the button below.":

@@ -3562,6 +3562,18 @@ const Map<String, String> kDe = {
       "Taste {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Nichts angekommen. Wenn du eine Taste gedrückt hast, behält dein Gerät sie für sich.",
+  "Buttons your box keeps":
+      "Tasten, die deine Box behält",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "An: {app} kann Tasten wie TV, YouTube oder Prime lernen. Außerhalb von {app} machen sie das Übliche.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Aus: Um Tasten wie TV, YouTube oder Prime zu nutzen, schalte „{name}“ in den Bedienungshilfen von Android ein.",
+  "If Android says it is a restricted setting":
+      "Wenn Android von einer eingeschränkten Einstellung spricht",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Öffne die App-Info von {app}, erlaube eingeschränkte Einstellungen und schalte es dann erneut ein.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Nichts angekommen. Dein Gerät behält diese Taste für sich: Schalte unten „Tasten, die deine Box behält“ ein und versuche es erneut.",
   "{button}: short press":
       "{button}: kurz drücken",
   "{button} set. Hold it too? Open the button below.":

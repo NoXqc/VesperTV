@@ -71,6 +71,10 @@ class RemoteButtonActions {
         _player?.zap(-1);
       case 'channel_down':
         _player?.zap(1);
+      case 'fast_forward':
+        _player?.skip(1);
+      case 'rewind':
+        _player?.skip(-1);
       case 'info':
         _player?.showInfo();
       case 'favourites' ||

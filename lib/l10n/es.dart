@@ -3659,6 +3659,18 @@ const Map<String, String> kEs = {
       "Botón {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "No llegó nada. Si pulsaste un botón, tu dispositivo se lo reserva.",
+  "Buttons your box keeps":
+      "Botones que se queda tu equipo",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Activado: {app} puede aprender botones como TV, YouTube o Prime. Fuera de {app} siguen haciendo lo de siempre.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Desactivado: para usar botones como TV, YouTube o Prime, activa «{name}» en los ajustes de accesibilidad de Android.",
+  "If Android says it is a restricted setting":
+      "Si Android dice que es un ajuste restringido",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Abre la información de la app {app}, permite los ajustes restringidos y vuelve a activarlo.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "No llegó nada. Tu dispositivo se queda ese botón: activa Botones que se queda tu equipo abajo y vuelve a intentarlo.",
   "{button}: short press":
       "{button}: pulsación corta",
   "{button} set. Hold it too? Open the button below.":

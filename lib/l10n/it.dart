@@ -3666,6 +3666,18 @@ const Map<String, String> kIt = {
       "Tasto {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Non è arrivato nulla. Se hai premuto un tasto, il tuo dispositivo lo tiene per sé.",
+  "Buttons your box keeps":
+      "Tasti che il box tiene per sé",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Attivo: {app} può imparare tasti come TV, YouTube o Prime. Fuori da {app} fanno il loro solito lavoro.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Disattivo: per usare tasti come TV, YouTube o Prime, attiva \"{name}\" nelle impostazioni di accessibilità di Android.",
+  "If Android says it is a restricted setting":
+      "Se Android dice che è un'impostazione con restrizioni",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Apri le info app di {app}, consenti le impostazioni con restrizioni, poi riattivalo.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Non è arrivato nulla. Il dispositivo tiene quel tasto per sé: attiva Tasti che il box tiene per sé qui sotto, poi riprova.",
   "{button}: short press":
       "{button}: pressione breve",
   "{button} set. Hold it too? Open the button below.":
