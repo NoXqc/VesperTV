@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/utils/constants.dart';
 import 'package:nox_iptv/utils/refined_finish.dart';
+import 'package:nox_iptv/utils/tv_theme.dart';
 
 // A screen that builds its Theme on every build (the TV home screen) must get
 // an equal ThemeData each time, or `Theme` rebuilds everything under it: a
@@ -21,4 +23,15 @@ void main() {
     expect(build(true).extension<RefinedFinish>()?.enabled, isTrue);
     expect(build(false).extension<RefinedFinish>()?.enabled, isFalse);
   });
+
+  // withTvThemeIfNeeded (Sports Trak, the player, Search...): its button
+  // styles hold closures, so it must not build a new theme per build.
+  for (final refined in [false, true]) {
+    test('the TV theme is built once per palette (refined $refined)', () {
+      final palette = AppConstants.cyberpunkPalettes.first;
+      expect(
+          identical(tvThemeFor(palette, refined), tvThemeFor(palette, refined)),
+          isTrue);
+    });
+  }
 }

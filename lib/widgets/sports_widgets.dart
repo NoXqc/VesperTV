@@ -359,9 +359,9 @@ class _SportsChipState extends State<SportsChip> {
 }
 
 /// NFL RedZone shortcut beside Standings / My Teams: an NFL-red pill that
-/// slowly floats and breathes a red glow; focus adds the usual accent
-/// contour. One 2.4 s controller, inside a RepaintBoundary so only the pill
-/// repaints (weak boxes).
+/// slowly floats and breathes a red glow (a few breaths, then while it has
+/// focus); focus adds the usual accent contour. One 2.4 s controller, inside
+/// a RepaintBoundary so only the pill repaints (weak boxes).
 class RedZonePill extends StatefulWidget {
   const RedZonePill({
     super.key,
@@ -386,9 +386,13 @@ class _RedZonePillState extends State<RedZonePill>
     with SingleTickerProviderStateMixin {
   static const _red = Color(0xFFD50A0A);
 
+  // Three breaths when it appears, then for as long as it has focus: a
+  // controller repeating forever drew a frame 60 times a second while
+  // Sports Trak was open (CLAUDE.md §10 "Frame cost on weak boxes" (1)).
+  // An even count ends at rest (passes alternate up and down).
   late final AnimationController _pulse = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 2400))
-    ..repeat(reverse: true);
+    ..repeat(reverse: true, count: 6);
   late bool _focused = widget.focusNode.hasFocus;
 
   @override
@@ -413,7 +417,12 @@ class _RedZonePillState extends State<RedZonePill>
             onLongPress: widget.onHold,
             onFocusChange: (f) {
               setState(() => _focused = f);
-              if (f) widget.onFocus();
+              if (f) {
+                _pulse.repeat(reverse: true);
+                widget.onFocus();
+              } else {
+                _pulse.reverse();
+              }
             },
             child: AnimatedBuilder(
               animation: _pulse,

@@ -84,8 +84,10 @@ bool get _desktopSports => usesMediaKitTarget;
 /// channels; when none was found — or the wrong one — the user picks it once
 /// and can have it remembered for that team.
 ///
-/// D-pad layout, top to bottom: league chips, day strip, then one horizontal
-/// row per section (Live now / Later / Final). Up/Down move between those
+/// D-pad layout, top to bottom: league chips, one tools row (live count, day
+/// menu, Standings / My Teams / Networks), then one horizontal row per
+/// section (Live now / Later today / the next three days / Final; only the
+/// picked day's rows on another day). Up/Down move between those
 /// zones explicitly (CLAUDE.md §10: default traversal across differently
 /// shaped rows is unreliable); Left/Right is plain traversal inside a row.
 class SportsScreen extends StatefulWidget {
@@ -237,6 +239,34 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   bool _hideScores = false;
 
   List<SportsGame> _games = const [];
+
+  /// Regular Sports Trak on Today: the next [_upcomingDays] days as rows of
+  /// their own under Later today (owner, 2026-11-13: scroll down instead of
+  /// picking each day). (day offset, games), a game shown once.
+  static const _upcomingDays = 3;
+  List<(int, List<SportsGame>)> _upcoming = const [];
+  String? _upcomingFor;
+
+  bool get _showsUpcoming => !_modeActive && _dayOffset == 0;
+
+  /// What [_upcoming] was loaded for: another day or league is another list.
+  String get _upcomingKey => '${_leagueFilter ?? ''}|$_dayOffset';
+
+  /// Today's games and the coming days' (lookups by game key).
+  List<SportsGame> get _allGames => _upcoming.isEmpty
+      ? _games
+      : [
+          ..._games,
+          for (final (_, games) in _upcoming) ...games,
+        ];
+
+  /// Bumped on a remote step between games (cards, guide rows, the feed):
+  /// the hero, the team glow and the selected row listen to it. A setState
+  /// per step rebuilt every row of the page, like Media Hub's 380 ms per
+  /// Up/Down on the Homatics (2026-11-13).
+  final _heroTick = ValueNotifier<int>(0);
+  late final _guideRepaint = Listenable.merge([_guideNode, _heroTick]);
+  late final _feedRepaint = Listenable.merge([_feedNode, _heroTick]);
 
   /// Last visit's channels, shown at once on the way back in while the
   /// silent re-match confirms them (owner: reopening Sports said
@@ -440,6 +470,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _feedScroll.dispose();
     _guideNode.dispose();
     _guideScroll.dispose();
+    _heroTick.dispose();
     super.dispose();
   }
 
@@ -493,19 +524,39 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         return;
       }
     }
-    _updateLeagueNavigation(() {
-      _hideEmptyLeagues = hideEmpty;
-      _emptyLeagues = empty;
-      _leagueFilter = filter;
-      _nextGame = next;
-      _nextGameLooked = games.isEmpty && filtered != null;
-      _games = games;
-      _loading = false;
-      _error = games.isEmpty ? _service.lastError : null;
-      final heroKey = _heroGame == null ? null : _gameKey(_heroGame!);
-      _heroGame = games.where((g) => _gameKey(g) == heroKey).firstOrNull ??
-          _defaultHero(games);
-    });
+    final error = games.isEmpty ? _service.lastError : null;
+    final gamesSig = _gamesSig(games);
+    // The 30 s poll: nothing new (no score, no clock) = no rebuild of the
+    // whole page (it landed in the middle of remote steps).
+    final unchanged = silent &&
+        !_loading &&
+        gamesSig == _shownGamesSig &&
+        hideEmpty == _hideEmptyLeagues &&
+        setEquals(empty, _emptyLeagues) &&
+        filter == _leagueFilter &&
+        next == _nextGame &&
+        error == _error;
+    if (!unchanged) {
+      _updateLeagueNavigation(() {
+        _hideEmptyLeagues = hideEmpty;
+        _emptyLeagues = empty;
+        _leagueFilter = filter;
+        _nextGame = next;
+        _nextGameLooked = games.isEmpty && filtered != null;
+        _games = games;
+        _shownGamesSig = gamesSig;
+        if (!_showsUpcoming || _upcomingFor != _upcomingKey) {
+          _upcoming = const [];
+          _upcomingFor = null;
+        }
+        _loading = false;
+        _error = error;
+        final heroKey = _heroGame == null ? null : _gameKey(_heroGame!);
+        _heroGame =
+            _allGames.where((g) => _gameKey(g) == heroKey).firstOrNull ??
+                _defaultHero(games);
+      });
+    }
     _ensureInitialFocus();
     if (!_notificationFocused && widget.initialGameKey != null) {
       final game = games
@@ -529,33 +580,140 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     unawaited(SportsRanks.ensure(games.map((g) => g.league)).then((changed) {
       if (changed && mounted) setState(() {});
     }));
-    await _rematch(token);
+    await _rematch(token: token, quiet: silent);
+    await _loadUpcoming(token);
   }
 
-  Future<void> _rematch([int? token]) async {
+  /// What the cards show of [games]: a poll with the same text skips its
+  /// rebuild ([_load]).
+  String? _shownGamesSig;
+  String? _shownUpcomingSig;
+  DateTime? _daysMatchedAt;
+
+  static String _gamesSig(List<SportsGame> games) => [
+        for (final g in games)
+          '${_gameKey(g)}|${g.state.name}|${g.statusText}|'
+              '${g.start.millisecondsSinceEpoch}|${g.first.score}|'
+              '${g.second.score}|${g.first.record}|${g.second.record}|'
+              '${g.odds?.line}|'
+              '${g.event?.leaders.map((e) => '${e.position}${e.name}${e.value}').join(',')}',
+      ].join(';');
+
+  /// Today's rows are on screen: the next days' games, then their channels
+  /// ([_rematch] matches each day on its own guide window).
+  Future<void> _loadUpcoming(int token) async {
+    if (!_showsUpcoming) return;
+    final viewer = _storage.viewerGeneration;
+    final key = _upcomingKey;
+    final leagues = _shownLeagues;
+    final today = _day;
+    final days = await Future.wait([
+      for (var i = 1; i <= _upcomingDays; i++)
+        _service.gamesForDay(
+            leagues, DateTime(today.year, today.month, today.day + i)),
+    ]);
+    if (!mounted ||
+        token != _loadToken ||
+        viewer != _storage.viewerGeneration ||
+        !_showsUpcoming ||
+        key != _upcomingKey) {
+      return;
+    }
+    // A golf week or a game carried past midnight sits on the first of its
+    // days only (one card, one focus node per game).
+    final seen = {for (final g in _games) _gameKey(g)};
+    final upcoming = [
+      for (final (i, games) in days.indexed)
+        (
+          i + 1,
+          [
+            for (final g in games)
+              if (seen.add(_gameKey(g))) g
+          ]
+        ),
+    ];
+    final sig = _gamesSig([for (final (_, games) in upcoming) ...games]);
+    if (_upcomingFor == key && sig == _shownUpcomingSig) return;
+    setState(() {
+      _upcoming = upcoming;
+      _upcomingFor = key;
+      _shownUpcomingSig = sig;
+      final heroKey = _heroGame == null ? null : _gameKey(_heroGame!);
+      _heroGame = _allGames.where((g) => _gameKey(g) == heroKey).firstOrNull ??
+          _heroGame ??
+          _defaultHero(_allGames);
+      // Their cards say "Looking…" until [_rematch] has their channels.
+      _matching = true;
+      _daysMatchedAt = null;
+    });
+    await _rematch(token: token, quiet: true);
+  }
+
+  /// Channels for today's games and the coming days' rows. [quiet]: the
+  /// poll, cards keep their channels while it runs (no "Looking…" flash),
+  /// and the same channels again change nothing on screen.
+  Future<void> _rematch({int? token, bool quiet = false}) async {
     final myToken = token ?? _loadToken;
-    setState(() => _matching = true);
+    if (!quiet) setState(() => _matching = true);
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
     final live = playlist.visibleChannels(category: 'tv');
     await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
     _picks = SportsChannelPicks.load(_storage);
-    final matches = await _matcher.matchDay(_games, _picks);
+    final games = _games;
+    // The coming days on the 30 s poll: every 5 minutes, their channels
+    // barely move ([_loadUpcoming] matches a changed list at once).
+    final daysDue = !quiet ||
+        _daysMatchedAt == null ||
+        DateTime.now().difference(_daysMatchedAt!) > const Duration(minutes: 5);
+    final upcoming = daysDue ? _upcoming : const <(int, List<SportsGame>)>[];
+    final matches = await _matcher.matchDay(games, _picks);
+    // One day at a time: one match scans a 36 h guide window.
+    for (final (_, day) in upcoming) {
+      if (!mounted || myToken != _loadToken) return;
+      if (day.isNotEmpty) matches.addAll(await _matcher.matchDay(day, _picks));
+    }
     if (!mounted || myToken != _loadToken) return;
-    SportsChannelLists(context.read<StorageService>())
-        .mergeAddedSources(_games, matches, live, _picks);
-    setState(() {
-      _redZoneChoices = _findRedZones(live);
-      _redZone = _redZoneChoices
-              .where((c) => c.id == _picks.redZoneChannelId)
-              .firstOrNull ??
-          _redZoneChoices.firstOrNull;
+    SportsChannelLists(context.read<StorageService>()).mergeAddedSources(
+        [...games, for (final (_, day) in upcoming) ...day],
+        matches,
+        live,
+        _picks);
+    if (daysDue) {
+      _daysMatchedAt = DateTime.now();
+    } else {
+      for (final (_, day) in _upcoming) {
+        for (final g in day) {
+          final key = _gameKey(g);
+          if (_matches[key] case final kept?) matches[key] = kept;
+        }
+      }
+    }
+    final redZones = _findRedZones(live);
+    final redZone =
+        redZones.where((c) => c.id == _picks.redZoneChannelId).firstOrNull ??
+            redZones.firstOrNull;
+    _lastMatches = {..._lastMatches, ...matches};
+    if (!_matching &&
+        redZone?.id == _redZone?.id &&
+        _matchesSig(matches) == _matchesSig(_matches)) {
       _matches = matches;
-      _lastMatches = {..._lastMatches, ...matches};
+      _redZoneChoices = redZones;
+      return;
+    }
+    setState(() {
+      _redZoneChoices = redZones;
+      _redZone = redZone;
+      _matches = matches;
       _matching = false;
     });
   }
+
+  static String _matchesSig(Map<String, List<ChannelMatch>> matches) => [
+        for (final e in matches.entries)
+          '${e.key}=${e.value.map((m) => '${m.channel.id}/${m.reason.name}').join(',')}',
+      ].join(';');
 
   static String _gameKey(SportsGame g) => SportsChannelPicks.eventKey(g);
 
@@ -682,6 +840,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (followed.isNotEmpty) _Section('teams', tr('My Teams'), followed),
       if (live.isNotEmpty) _Section('live', tr('Live now'), live),
       if (pre.isNotEmpty) _Section('pre', laterLabel, pre),
+      // Today: the next days right under Later today (owner, 2026-11-13).
+      if (_showsUpcoming)
+        for (final (offset, games) in _upcoming)
+          if (games.isNotEmpty)
+            _Section('day$offset', _dayLabel(offset), followedFirst(games)),
       if (post.isNotEmpty) _Section('post', tr('Final'), post),
     ];
   }
@@ -695,7 +858,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _cardNodes[key] ??= FocusNode(debugLabel: 'sports-card-$key');
 
   String get _leagueChipId => 'league:${_leagueFilter ?? 'all'}';
-  String get _dayChipId => 'day:$_dayOffset';
 
   void _ensureInitialFocus() {
     if (_initialFocusDone) return;
@@ -720,11 +882,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       final ids = _modeControlIds(zone);
       if (ids.isEmpty) return;
       final remembered = _lastModeControls[zone];
-      final selected = zone == 0
-          ? _leagueChipId
-          : zone == 1
-              ? _dayChipId
-              : ids.first;
+      final selected = zone == 0 ? _leagueChipId : ids.first;
       final id = ids.contains(remembered)
           ? remembered!
           : ids.contains(selected)
@@ -745,17 +903,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         final ctx = node.context;
         if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
       });
-    } else if (zone == 1 && !_guideTools) {
-      _chipNode(_dayChipId).requestFocus();
     } else if (zone == 1 || zone == 2) {
-      // Guide: one tools row led by the day menu (zone 1 folds into it).
-      if (_guideTools) zone = 2;
-      _chipNode(_guideTools
-              ? 'day:menu'
-              : _showStandingsChip
-                  ? 'standings'
-                  : 'myteams')
-          .requestFocus();
+      // One tools row led by the day menu (zone 1 folds into it).
+      zone = 2;
+      _chipNode('day:menu').requestFocus();
     } else if (sections.isEmpty) {
       if (_modeActive && _chipNode('nextgame').context == null) {
         _focusZone(0, sections);
@@ -911,7 +1062,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (_backToFeed(delta, _zone)) return;
     if (_headerChipStep(delta, sections)) return;
     var target = _zone + delta;
-    if ((_modeActive || _guideTools) && target == 1) target += delta;
+    // Zone 1 (the old day strip) is the tools row's day menu now.
+    if (target == 1) target += delta;
     if (_railLayout && target == 0) return;
     // Guide: one list for every section, back on the row it was on.
     if (_guideLayout && sections.isNotEmpty && target >= _firstRowZone) {
@@ -937,11 +1089,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _rowKeys[sectionId]?.currentContext;
       if (ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(ctx,
-            duration:
-                _modeActive ? Duration.zero : const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            alignment: 0.05);
+        // A jump, like the TV home's columns and Media Hub's rows: a 200 ms
+        // glide restarted on every held Down (CLAUDE.md §10).
+        Scrollable.ensureVisible(ctx, alignment: 0.05);
       }
     });
   }
@@ -1011,11 +1161,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       return KeyEventResult.ignored;
     }
     bool has(String id) => _chipNodes[id]?.hasFocus ?? false;
-    final edge = has('day:-1') ||
-        // Guide's single row starts with the day menu, not Standings.
-        (_guideTools
-            ? has('day:menu')
-            : has(_showStandingsChip ? 'standings' : 'myteams')) ||
+    final edge = has('day:menu') ||
         has('nextgame') ||
         has(_liveAllId) ||
         has(_mvOpenId) ||
@@ -1223,8 +1369,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _setDay(offset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _chipNode(_modeActive || _guideTools ? 'day:menu' : 'day:$offset')
-            .requestFocus();
+        _chipNode('day:menu').requestFocus();
       }
     });
   }
@@ -1346,9 +1491,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           IconButton.filledTonal(
             tooltip: vertical ? tr('Move down') : tr('Move right'),
             icon: Icon(vertical ? Icons.arrow_downward : Icons.arrow_forward),
-            onPressed: i >= 0 && i < visible.length - 1
-                ? () => _moveLeague(1)
-                : null,
+            onPressed:
+                i >= 0 && i < visible.length - 1 ? () => _moveLeague(1) : null,
           ),
           const SizedBox(width: 12),
           FilledButton(onPressed: _endLeagueMove, child: Text(tr('Done'))),
@@ -1425,14 +1569,29 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       (_previewOpened?.isCompleted == false || _isPreviewing(game));
 
   void _focusGame(SportsGame game) {
-    setState(() {
-      _heroGame = game;
-      // Looking at another card changes information, never the playing stream.
-      _heroPick = _livePreview(context.read<PlaybackService>()) != null &&
-              !_isPreviewing(game)
-          ? game
-          : null;
-    });
+    // No hero on screen yet (a day without games of its own): build it.
+    final appears = _heroGame == null;
+    _heroGame = game;
+    // Looking at another card changes information, never the playing stream.
+    _heroPick = _livePreview(context.read<PlaybackService>()) != null &&
+            !_isPreviewing(game)
+        ? game
+        : null;
+    if (appears) {
+      setState(() {});
+    } else {
+      _heroTick.value++;
+    }
+  }
+
+  /// The card picked to look at beside the playing [preview] (see
+  /// [_heroPick]), refreshed from the latest scores; null = none.
+  SportsGame? _shownPick(SportsGame? preview) {
+    final pick = _heroPick;
+    if (preview == null || pick == null) return null;
+    final key = _gameKey(pick);
+    if (key == _gameKey(preview)) return null;
+    return _allGames.where((g) => _gameKey(g) == key).firstOrNull ?? pick;
   }
 
   /// A channel chosen from the game's menu plays in the hero (OK there =
@@ -1456,7 +1615,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (game == null || channel == null) return null;
     if (_playingNow(playback)?.id != channel.id) return null;
     final key = _gameKey(game);
-    return _games.where((g) => _gameKey(g) == key).firstOrNull ?? game;
+    return _allGames.where((g) => _gameKey(g) == key).firstOrNull ?? game;
   }
 
   bool _isPreviewing(SportsGame game) =>
@@ -1465,7 +1624,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   SportsGame? _focusedCardGame() {
     if (_guideNode.hasFocus) return _guideGame;
-    for (final g in _games) {
+    for (final g in _allGames) {
       if (_cardNodes[_gameKey(g)]?.hasFocus ?? false) return g;
     }
     return null;
@@ -1993,49 +2152,48 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final preview = _livePreview(playback);
     // Sports Mode: a Live TV guide channel plays in the same big player.
     final channelOnly = _modeActive && _panelPreview(playback) != null;
-    // Focus can show another matchup beside the same video. Re-read its
-    // information from the latest scoreboard without changing the stream.
-    final pickKey = _heroPick == null ? null : _gameKey(_heroPick!);
-    final pick = preview == null ||
-            pickKey == null ||
-            pickKey == _gameKey(preview)
-        ? null
-        : _games.where((g) => _gameKey(g) == pickKey).firstOrNull ?? _heroPick;
-    final hero = pick ?? preview ?? _heroGame;
-    Widget heroWidget({double? playingHeight, _HeroPart? part}) => _Hero(
-          game: hero!,
-          service: _service,
-          matches: _matches[_gameKey(hero)],
-          matching: _matching,
-          hideScores: _hideScores,
-          playing: preview != null || channelOnly,
-          showingOther: pick != null,
-          touch: _touch,
-          narrow: _narrow,
-          playingHeight: playingHeight,
-          part: part,
-          // Tap/click the playing video = full screen on the same stream
-          // (owner, 2026-10-18); a remote keeps OK.
-          onVideoTap: (_touch || _desktopSports) &&
-                  _previewGame != null &&
-                  _previewChannel != null
-              ? () => _play(_previewChannel!, game: _previewGame)
-              : null,
+    // Focus can show another matchup beside the same video ([_shownPick]).
+    // Which game the hero shows is read where it's drawn, on each
+    // [_heroTick] (a remote step), never by this build.
+    SportsGame? heroGame() => _shownPick(preview) ?? preview ?? _heroGame;
+    final hasHero = (preview ?? _heroGame) != null;
+    Widget heroWidget({double? playingHeight, _HeroPart? part}) =>
+        ValueListenableBuilder<int>(
+          valueListenable: _heroTick,
+          builder: (context, _, __) {
+            final pick = _shownPick(preview);
+            final hero = pick ?? preview ?? _heroGame;
+            if (hero == null) return const SizedBox.shrink();
+            return _Hero(
+              game: hero,
+              service: _service,
+              matches: _matches[_gameKey(hero)],
+              matching: _matching,
+              hideScores: _hideScores,
+              playing: preview != null || channelOnly,
+              showingOther: pick != null,
+              touch: _touch,
+              narrow: _narrow,
+              playingHeight: playingHeight,
+              part: part,
+              // Tap/click the playing video = full screen on the same stream
+              // (owner, 2026-10-18); a remote keeps OK.
+              onVideoTap: (_touch || _desktopSports) &&
+                      _previewGame != null &&
+                      _previewChannel != null
+                  ? () => _play(_previewChannel!, game: _previewGame)
+                  : null,
+            );
+          },
         );
     final header = [
       _buildLeagueBar(mode: mode),
       const SizedBox(height: 8),
-      // Guide: one row (day menu + tools), like Sports Mode; Cards: the day
-      // strip, then the tools row.
-      if (_guideTools)
-        _buildModeTools()
-      else ...[
-        _buildDayBar(),
-        const SizedBox(height: 6),
-        _buildStandingsButton(),
-      ],
+      // One row (live count, day menu, tools), like Sports Mode (owner,
+      // 2026-11-13: the day strip + tools took two rows in Cards too).
+      _buildModeTools(),
       const SizedBox(height: 4),
-      if (hero != null && !_guideHidesHero(preview, channelOnly)) heroWidget(),
+      if (hasHero && !_guideHidesHero(preview, channelOnly)) heroWidget(),
     ];
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
@@ -2057,7 +2215,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           _liveBack();
         } else if (_movingLeague != null) {
           _endLeagueMove();
-        } else if (pick != null) {
+        } else if (_shownPick(preview) != null) {
           setState(() => _heroPick = null);
         } else if (!mode && preview != null) {
           unawaited(_setPreview(null, null));
@@ -2087,12 +2245,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                       logoUrl: league?.logoUrl, league: league);
                 }),
               ),
-            Positioned.fill(child: _TeamGlow(game: hero)),
+            // Its own layer: the 400 ms fade on a card step repaints only it.
+            Positioned.fill(
+                child: RepaintBoundary(
+                    child: ValueListenableBuilder<int>(
+                        valueListenable: _heroTick,
+                        builder: (_, __, ___) => _TeamGlow(game: heroGame())))),
             Scaffold(
               backgroundColor: Colors.transparent,
-              bottomNavigationBar: _touch && _movingLeague != null
-                  ? _buildTouchMoveBar()
-                  : null,
+              bottomNavigationBar:
+                  _touch && _movingLeague != null ? _buildTouchMoveBar() : null,
               body: SafeArea(
                 child: CallbackShortcuts(
                   bindings: _movingLeague != null
@@ -2122,7 +2284,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                         },
                   child: mode
                       ? _buildSportsMode(header.first,
-                          hero == null ? null : heroWidget, sections, preview,
+                          hasHero ? heroWidget : null, sections, preview,
                           channelOnly: channelOnly)
                       : _touch
                           // Phones: the bars and hero left the game rows a
@@ -2149,7 +2311,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                                     children: [
                                       ...header,
                                       Expanded(
-                                          child: _buildBody(sections, preview)),
+                                          child: RepaintBoundary(
+                                              child: _buildBody(
+                                                  sections, preview))),
                                     ],
                                   ),
                                 )
@@ -2175,9 +2339,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                                             children: [
                                               // Not the league bar (in the rail).
                                               ...header.skip(2),
+                                              // Rows apart from the hero:
+                                              // a card step redraws the hero.
                                               Expanded(
-                                                  child: _buildBody(
-                                                      sections, preview)),
+                                                  child: RepaintBoundary(
+                                                      child: _buildBody(
+                                                          sections, preview))),
                                             ],
                                           ),
                                         ),
@@ -2241,11 +2408,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// the panel left room for two games on a TV (owner photo, 2026-11-07).
   bool _guideHidesHero(SportsGame? preview, bool channelOnly) =>
       _guideLayout && preview == null && !channelOnly;
-
-  /// Guide in regular Sports Trak: the day strip and the tools row become
-  /// Sports Mode's single row (day menu, Standings, My Teams, Networks), for
-  /// more games on screen (owner, 2026-11-07). Cards keeps both rows.
-  bool get _guideTools => _guideLayout && !_modeActive;
 
   /// Guide: moving through the leagues (rail, Sports Mode rail and bar)
   /// shows their games without OK, like a TV guide's groups (owner,
@@ -2527,7 +2689,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   void _selectFeed(int index) {
-    setState(() => _feedIndex = index);
+    // The rows listen ([_feedRepaint]): no rebuild of the page per step.
+    _feedIndex = index;
+    _heroTick.value++;
     // Keep the row on screen - jumpTo, never animateTo (CLAUDE.md 10).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_feedScroll.hasClients) return;
@@ -2688,7 +2852,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final game = sections[r].games.firstWhere((g) => _gameKey(g) == key);
     _zone = _firstRowZone + r;
     _lastCardInRow[sections[r].id] = key;
-    setState(() => _guideKey = key);
+    // The rows listen ([_guideRepaint]): no rebuild of the page per step.
+    _guideKey = key;
+    _heroTick.value++;
     if (_heroGame != game || _heroPick != null) _focusGame(game);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -2843,8 +3009,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         for (final s in sections)
           for (final g in s.games) _gameKey(g)
       ];
-      final selectedKey =
-          allKeys.contains(_guideKey) ? _guideKey : allKeys.firstOrNull;
+      final keySet = allKeys.toSet();
+      final firstKey = allKeys.firstOrNull;
       Widget header(_Section s) => SizedBox(
             height: _guideHeaderExtent,
             child: Align(
@@ -2876,7 +3042,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           key: _guideRowKeys[key] ??= GlobalKey(),
           height: rowExtent,
           child: ListenableBuilder(
-            listenable: _guideNode,
+            listenable: _guideRepaint,
             builder: (context, _) => _GuideRow(
               key: ValueKey('guide-row-$key'),
               game: g,
@@ -2886,7 +3052,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               hideScores: _hideScores,
               starred: _follows.involves(g),
               previewing: preview != null && _gameKey(preview) == key,
-              selected: _guideNode.hasFocus && key == selectedKey,
+              selected: _guideNode.hasFocus &&
+                  key == (keySet.contains(_guideKey) ? _guideKey : firstKey),
               checked: _mvPicks == null || g.state != GameState.live
                   ? null
                   : _mvPicks!.contains(key),
@@ -3013,7 +3180,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                       final game = item as SportsGame;
                       final index = indexOf[i]!;
                       return ListenableBuilder(
-                          listenable: _feedNode,
+                          listenable: _feedRepaint,
                           builder: (context, _) => _FeedRow(
                                 key: ValueKey('feed-${_gameKey(game)}'),
                                 game: game,
@@ -3418,7 +3585,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         .format(DateTime(n.year, n.month, n.day + offset));
   }
 
-  /// Sports Mode's day chip: the day strip's days in a roll-down menu.
+  /// The day chip: Yesterday to six days ahead in a roll-down menu.
   Future<void> _openDayMenu() async {
     final node = _chipNode('day:menu');
     final picked = await showRollDownMenu<int>(
@@ -3445,8 +3612,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     node.requestFocus();
   }
 
-  /// Sports Mode's one tools row: live count, day menu, Standings / My
-  /// Teams / Networks / RedZone (zone 2).
+  /// The one tools row (Sports Mode and regular Sports Trak): live count,
+  /// day menu, Standings / My Teams / Networks / RedZone (zone 2).
   Widget _buildModeTools() {
     final live = _games.where((g) => g.state == GameState.live).length;
     return SingleChildScrollView(
@@ -3463,6 +3630,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             focusNode: _chipNode('day:menu'),
             label: _dayLabel(_dayOffset),
             icon: Icons.calendar_month,
+            dropdown: true,
             selected: false,
             compact: true,
             onFocus: () => _zone = 2,
@@ -3474,63 +3642,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
   }
 
-  Widget _buildDayBar() {
-    String label(int offset) => _dayLabel(offset);
-
-    final live = _games.where((g) => g.state == GameState.live).length;
-    return SizedBox(
-      height: 40,
-      child: Row(
-        children: [
-          if (_dayOffset == 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: _LiveCount(count: live),
-            ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [
-                for (var o = -1; o <= 6; o++)
-                  SportsChip(
-                    focusNode: _chipNode('day:$o'),
-                    label: label(o),
-                    selected: _dayOffset == o,
-                    compact: true,
-                    onFocus: () => _zone = 1,
-                    onTap: () => _setDay(o),
-                  ),
-                // A day reached through "Next game" beyond the strip.
-                if (_dayOffset < -1 || _dayOffset > 6)
-                  SportsChip(
-                    focusNode: _chipNode('day:$_dayOffset'),
-                    label: DateFormat('EEE d MMM').format(_day),
-                    selected: true,
-                    compact: true,
-                    onFocus: () => _zone = 1,
-                    onTap: () {},
-                  ),
-              ]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Its own centered spot under the day row (was the last chip of the
-  /// league bar — owner: hard to find there). Names the filtered league so
-  /// it's clear which table opens.
-  /// Golf, fighting, racing and cups have no table.
+  /// In the tools row beside the day menu (was the last chip of the league
+  /// bar — owner: hard to find there). Names the filtered league so it's
+  /// clear which table opens. Golf, fighting, racing and cups have no table.
   bool get _showStandingsChip =>
       sportsLeagueById(_leagueFilter ?? '')?.hasStandings ?? true;
-
-  Widget _buildStandingsButton() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(mainAxisSize: MainAxisSize.min, children: _toolChips()),
-    );
-  }
 
   List<Widget> _toolChips() {
     final league = sportsLeagueById(_leagueFilter ?? '');
@@ -3595,7 +3711,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         padding: const EdgeInsets.only(top: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [for (final s in sections) _buildSection(s, preview)],
+          children: [
+            for (final (i, s) in sections.indexed)
+              _buildSection(s, preview, _firstRowZone + i),
+          ],
         ),
       );
     }
@@ -3643,11 +3762,18 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         child: _buildBody(sections, preview, inPage: true),
       );
     }
-    return ListView(
+    // Not a lazy ListView: Down focuses a card in the next row, and with the
+    // coming days' rows that row could be off screen and unbuilt, so the
+    // focus stayed put (CLAUDE.md §10). Each row is still a lazy list.
+    return SingleChildScrollView(
       padding: const EdgeInsets.only(top: 8, bottom: 32),
-      children: [
-        for (final s in sections) _buildSection(s, preview),
-      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (i, s) in sections.indexed)
+            _buildSection(s, preview, _firstRowZone + i),
+        ],
+      ),
     );
   }
 
@@ -3793,7 +3919,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return KeyEventResult.handled;
   }
 
-  Widget _buildSection(_Section s, SportsGame? preview) {
+  Widget _buildSection(_Section s, SportsGame? preview, int zoneIndex) {
     // Settings > Sports Trak > Game card size scales the card's box; the
     // row and its scroll math use the same scaled size.
     final cardHeight = _GameCard.height *
@@ -3801,7 +3927,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             .clamp(1.0, double.infinity);
     final cardScale = _GameCard.scaleOf(context);
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
-    final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
       key: rowKey,
       padding: const EdgeInsets.only(bottom: 14),
@@ -4870,7 +4995,8 @@ class _HeroVideo extends StatelessWidget {
                     ? Video(
                         controller: miniController,
                         controls: NoVideoControls,
-                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground)
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground)
                     : VideoPlayerPane(
                         key: ValueKey(playingChannel.id),
                         showEpgBar: false,
@@ -6348,8 +6474,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
         child: withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-          // A multi-pane tool: the glass panel spans the screen.
-          wide: true,
+        // A multi-pane tool: the glass panel spans the screen.
+        wide: true,
         title: tr('Pick the channel'),
         body: Stack(
           children: [

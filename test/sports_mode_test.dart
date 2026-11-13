@@ -1670,9 +1670,9 @@ void main() {
       await open(tester);
       expect(find.byKey(const ValueKey('sports-guide')), findsNothing);
       expect(find.byKey(const ValueKey('card-nhl:game100')), findsOneWidget);
-      // The day strip stays (Guide's single row is Guide only).
+      // One tools row led by the day menu, as in Guide (owner, 2026-11-13).
       await press(tester, LogicalKeyboardKey.arrowRight);
-      expect(getFocus(), 'sports-chip-day:0');
+      expect(getFocus(), 'sports-chip-day:menu');
       await disposePage(tester);
     });
 
@@ -2026,6 +2026,85 @@ void main() {
     await disposePage(tester);
   });
 
+  group('next days under Today (owner, 2026-11-13)', () {
+    SportsGame later(int day, int index) {
+      final now = DateTime.now();
+      return _game(index, GameState.pre,
+          start: DateTime(now.year, now.month, now.day + day, 19));
+    }
+
+    _Feed feed() => _Feed([], days: {
+          0: [_game(100, GameState.live), _game(1, GameState.pre)],
+          // The same game listed again the next day (a game past midnight,
+          // a golf week): one card, on its first day.
+          1: [later(1, 301), _game(1, GameState.pre)],
+          2: [later(2, 302)],
+          3: [later(3, 303)],
+          4: [later(4, 304)],
+        });
+
+    Finder card(int index) => find.byKey(ValueKey('card-nhl:game$index'));
+
+    testWidgets('Cards: a row per day, Down walks them, three days only',
+        (tester) async {
+      await prefs.setSportsMode(false);
+      await open(tester, feed: feed());
+      await tester.pumpAndSettle();
+      expect(find.text('Tomorrow'), findsOneWidget);
+      for (final index in [100, 1, 301, 302, 303]) {
+        expect(card(index), findsOneWidget, reason: 'game$index');
+      }
+      expect(card(304), findsNothing);
+      tester
+          .widget<InkWell>(find.byWidgetPredicate((w) =>
+              w is InkWell &&
+              w.focusNode?.debugLabel == 'sports-card-nhl:game100'))
+          .focusNode!
+          .requestFocus();
+      await tester.pump();
+      for (final index in [1, 301, 302, 303]) {
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expect(getFocus(), 'sports-card-nhl:game$index');
+      }
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(getFocus(), 'sports-card-nhl:game303', reason: 'last row');
+      for (final index in [302, 301, 1, 100]) {
+        await press(tester, LogicalKeyboardKey.arrowUp);
+        expect(getFocus(), 'sports-card-nhl:game$index');
+      }
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
+    testWidgets('another day in the menu shows that day only', (tester) async {
+      await prefs.setSportsMode(false);
+      await open(tester, feed: feed());
+      await tester.pumpAndSettle();
+      chip(tester, 'Today').focusNode.requestFocus();
+      await tester.pump();
+      await press(tester, LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      await press(tester, LogicalKeyboardKey.arrowDown); // Today -> Tomorrow
+      await press(tester, LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(card(301), findsOneWidget);
+      expect(card(302), findsNothing);
+      expect(card(100), findsNothing);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
+    testWidgets('Sports Mode keeps its own day only', (tester) async {
+      await prefs.setSportsMode(true);
+      await open(tester, feed: feed());
+      await tester.pumpAndSettle();
+      expect(card(100), findsOneWidget);
+      expect(card(301), findsNothing);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+  });
+
   for (final size in [const Size(390, 844), const Size(960, 540)]) {
     testWidgets('game content fits $size with large text', (tester) async {
       L10n.code = 'el';
@@ -2145,17 +2224,23 @@ void main() {
     });
     await open(tester, feed: feed);
     chip(tester, 'NHL').focusNode.requestFocus();
+    await tester.pump();
+    final before = feed.requests.length;
     await press(tester, LogicalKeyboardKey.select);
-    expect(feed.requests.last, storage.getSportsLeagues());
-    final tomorrow = chip(tester, 'Tomorrow');
-    tomorrow.focusNode.requestFocus();
+    expect(chip(tester, 'NHL').selected, true);
+    // Today's load (the next days' rows load after it).
+    expect(feed.requests[before], storage.getSportsLeagues());
+    chip(tester, 'Today').focusNode.requestFocus();
     await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.arrowDown); // Today -> Tomorrow
     await press(tester, LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
     expect(leagueControl('nhl'), findsNothing);
     expect(leagueControl('esp.1'), findsOneWidget);
     expect(chip(tester, 'All').selected, true);
-    expect(getFocus(), 'sports-chip-day:1');
+    expect(getFocus(), 'sports-chip-day:menu');
     expect(tester.takeException(), null);
     await disposePage(tester);
   });
@@ -2319,9 +2404,7 @@ void main() {
     await press(tester, LogicalKeyboardKey.arrowDown);
     expect(getFocus(), 'sports-chip-league:nhl');
     await press(tester, LogicalKeyboardKey.arrowRight);
-    expect(getFocus(), startsWith('sports-chip-day:'));
-    chip(tester, 'Yesterday').focusNode.requestFocus();
-    await tester.pump();
+    expect(getFocus(), 'sports-chip-day:menu');
     await press(tester, LogicalKeyboardKey.arrowLeft);
     expect(getFocus(), 'sports-chip-league:all');
     expect(tester.takeException(), isNull);
