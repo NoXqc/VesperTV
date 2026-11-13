@@ -92,9 +92,12 @@ import '../utils/app_store.dart';
 /// reading as "doesn't exist"). Called from every row's `onFocusChange`
 /// rather than added once at the list level, since a `ListView` has no
 /// single hook for "one of my descendants just got focused."
+///
+/// A jump, not an animation (§10 rule): a held arrow restarted the 150 ms
+/// scroll on every row, and the groups column stuttered on the Homatics
+/// (owner, 2026-11-12).
 void _ensureVisible(BuildContext context) {
-  Scrollable.ensureVisible(context,
-      duration: const Duration(milliseconds: 150), alignment: 0.5);
+  Scrollable.ensureVisible(context, alignment: 0.5);
 }
 
 /// A 10-foot, remote-friendly alternate to [HomeScreen] for TV boxes/
@@ -371,8 +374,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (resetFavorites) {
         _selectedGroup = _favoritesGroupSentinel;
         _focusGroupKeyOnBuild = null;
-        _guideFocusedChannel = null;
-        _guideFocusedProgram = null;
+        _guideFocus.value = (null, null);
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -438,8 +440,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// sibling, not inside it. Null until the guide is first navigated,
   /// which is when [_GuideNowPanel] falls back to the playing channel's
   /// own live programme instead.
-  Channel? _guideFocusedChannel;
-  EpgProgram? _guideFocusedProgram;
+  /// The Timeline guide's highlighted channel and programme. A notifier,
+  /// not State fields: only the programme card listens. A setState here
+  /// rebuilt the whole TV home on every D-pad step in the guide (250-420 ms
+  /// frames on the Homatics, 2026-11-12).
+  final _guideFocus = ValueNotifier<(Channel?, EpgProgram?)>((null, null));
+  Channel? get _guideFocusedChannel => _guideFocus.value.$1;
+  EpgProgram? get _guideFocusedProgram => _guideFocus.value.$2;
 
   /// The "double ← for groups" hint's floating overlay — anchored to
   /// whichever poster is actually focused at the moment [_handleBrowseLeft]
@@ -1907,8 +1914,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // Otherwise the Timeline Guide's header keeps describing a program
       // from whichever group was focused before this switch, until the
       // D-pad happens to land on something in the new one.
-      _guideFocusedChannel = null;
-      _guideFocusedProgram = null;
+      _guideFocus.value = (null, null);
     });
     if (group == null) return;
     if (group == _catchupGroupSentinel || group == _recentGroupSentinel) {
@@ -2547,6 +2553,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _groupSortFocusNode.dispose();
     _playlistsRowFocusNode.dispose();
     _groupsScroll.dispose();
+    _guideFocus.dispose();
     _timelineFilterButtonFocusNode.dispose();
     _guideHoldFocus.dispose();
     _timelineFilterFieldFocusNode.dispose();
@@ -3291,6 +3298,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _col1Scope.requestFocus();
       return;
     }
+    // Portrait phone: Home is the bottom pill's first tab, shown in place
+    // so the pill stays under it (owner, 2026-11-13).
+    if (_compact) {
+      _onTabChanged('Home');
+      return;
+    }
     _returnToTv = true;
     _returnHomeToFavorites = true;
     final route = MaterialPageRoute<void>(builder: (_) => const HomeScreen());
@@ -3651,7 +3664,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               // Settings redesign. Reusing the shared widget instead of a
               // second copy of the same gradient math keeps both screens in
               // sync automatically if the recipe ever changes again.
-              const Positioned.fill(child: SettingsGradientBackground()),
+              const Positioned.fill(
+                  child: RepaintBoundary(child: SettingsGradientBackground())),
               if (_fullVideo)
                 Positioned.fill(
                   child: ColoredBox(
@@ -3920,9 +3934,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                       children: [
                                         _collapsible(
                                           depth: 0,
-                                          expandedWidth: _compactUi
-                                              ? 136
-                                              : (_largeUi ? 200 : 160),
+                                          expandedWidth: _tabsWidth,
                                           child: _fullVideoScrim(_tabsScope(
                                               collapsed: _focusDepth > 0)),
                                         ),
@@ -3938,9 +3950,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                         else ...[
                                           _collapsible(
                                             depth: 1,
-                                            expandedWidth: _compactUi
-                                                ? 220
-                                                : (_largeUi ? 320 : 260),
+                                            expandedWidth: _groupsWidth,
                                             child: _fullVideoScrim(_groupsScope(
                                                 playlist, isBrowseTab,
                                                 collapsed: _focusDepth > 1)),
@@ -3953,8 +3963,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                   ? Colors.transparent
                                                   : null),
                                           Expanded(
-                                              child: _contentScope(
-                                                  playlist, epg, isBrowseTab)),
+                                              child: _SlideSteadyWidth(
+                                                  enabled: prefs.isTelevision,
+                                                  columnsWidth: _columnWidth(
+                                                          0, _tabsWidth) +
+                                                      _columnWidth(
+                                                          1, _groupsWidth),
+                                                  child: _contentScope(playlist,
+                                                      epg, isBrowseTab))),
                                         ],
                                       ],
                                     ),
@@ -3996,12 +4012,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               alpha: context.read<AppPreferences>().guideOverlayOpacity),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: _GuideNowPanel(
-          focusedChannel: _guideFocusedChannel,
-          focusedProgram: _guideFocusedProgram,
-          playingChannel: channel,
-          epg: epg,
-          compact: true,
+        child: ValueListenableBuilder<(Channel?, EpgProgram?)>(
+          valueListenable: _guideFocus,
+          builder: (context, focus, _) => _GuideNowPanel(
+            focusedChannel: focus.$1,
+            focusedProgram: focus.$2,
+            playingChannel: channel,
+            epg: epg,
+            compact: true,
+          ),
         ),
       );
 
@@ -4041,9 +4060,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(1);
           },
-          child: _uiText(isBrowseTab
-              ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
-              : _buildGroupsColumn(playlist, collapsed: collapsed)),
+          // Own layer: a step in the groups repaints only this column, not
+          // the guide and background beside it (choppy groups on the
+          // Homatics' small GPU, 2026-11-12). Same for the content column.
+          child: RepaintBoundary(
+            child: _uiText(isBrowseTab
+                ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
+                : _buildGroupsColumn(playlist, collapsed: collapsed)),
+          ),
         ),
       );
 
@@ -4053,7 +4077,32 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         onFocusChange: (has) {
           if (has) _onColumnFocus(1);
         },
-        child: const HomeScreen(),
+        child: HomeScreen(
+            embedded: true,
+            phoneHeader: _compact ? _phoneHeaderActions() : null),
+      );
+
+  /// Portrait phone: the title row's buttons (Vesper, Search, ☰ More).
+  Widget _phoneHeaderActions() => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Search without going back to the tabs page first.
+          if (context.watch<AppPreferences>().vesperShortcut)
+            IconButton(
+              icon: const Icon(Icons.mic_none, color: Colors.white),
+              tooltip: 'Vesper AI',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => VesperAi.instance.openPanel(),
+            ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            tooltip: tr('Search'),
+            visualDensity: VisualDensity.compact,
+            onPressed: _openSearch,
+          ),
+          const SizedBox(width: 4),
+          _phoneGear(),
+        ],
       );
 
   Widget _contentScope(
@@ -4065,9 +4114,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             if (has) _onColumnFocus(2);
           },
           // Movies / TV Shows posters keep their size: fixed cards.
-          child: isBrowseTab
-              ? _buildMainArea(playlist, epg)
-              : _uiText(_buildLiveRegion(playlist, epg)),
+          child: RepaintBoundary(
+            child: isBrowseTab
+                ? _buildMainArea(playlist, epg)
+                : _uiText(_buildLiveRegion(playlist, epg)),
+          ),
         ),
       );
 
@@ -4143,7 +4194,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (title != null)
+        // Home draws this row itself, with the profiles beside its title
+        // (HomeScreen.phoneHeader).
+        if (title != null && _tab != 'Home')
           InkWell(
             canRequestFocus: false,
             // Groups is the top level now (the bottom bar switches tabs).
@@ -4167,20 +4220,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             fontSize: 18,
                             fontWeight: FontWeight.w600)),
                   ),
-                  // Search without going back to the tabs page first.
-                  if (context.watch<AppPreferences>().vesperShortcut)
-                    IconButton(
-                      icon: const Icon(Icons.mic_none, color: Colors.white),
-                      tooltip: 'Vesper AI',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => VesperAi.instance.openPanel(),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.white),
-                    tooltip: tr('Search'),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _openSearch,
-                  ),
+                  _phoneHeaderActions(),
                 ],
               ),
             ),
@@ -4228,9 +4268,77 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     );
   }
 
+  /// Portrait phone: a floating round ☰ "More" button at the top right
+  /// (owner, 2026-11-13: it replaced the pill's More slot so Home fits).
+  /// Settings first, then what the old More page held that has no other
+  /// home on a phone.
+  Widget _phoneGear() => Builder(
+        builder: (gearContext) => Tooltip(
+          message: tr('More'),
+          child: GestureDetector(
+            onTap: () => _openPhoneGearMenu(gearContext),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.12),
+                border: Border.all(color: Colors.white24),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black45, blurRadius: 10),
+                ],
+              ),
+              child: const Icon(Icons.menu, color: Colors.white, size: 22),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> _openPhoneGearMenu(BuildContext gearContext) async {
+    final prefs = context.read<AppPreferences>();
+    final picked = await showRollDownMenu<String>(
+      gearContext,
+      anchor: rollDownAnchorOf(gearContext),
+      title: tr('More'),
+      centered: false,
+      width: 240,
+      items: [
+        RollDownMenuItem(
+            value: 'settings', icon: Icons.settings, label: tr('Settings')),
+        if (!prefs.hideMultiview)
+          RollDownMenuItem(
+              value: 'multiview',
+              icon: Icons.grid_view,
+              label: tr('Multiview')),
+        RollDownMenuItem(
+            value: 'update',
+            icon: Icons.playlist_add_check,
+            label: tr('Update Content')),
+        // iOS apps never quit themselves (see the tabs column's Exit row).
+        if (!Platform.isIOS)
+          RollDownMenuItem(
+              value: 'exit',
+              icon: Icons.power_settings_new,
+              label: tr('Exit {appName}', {'appName': AppConstants.appName})),
+      ],
+    );
+    if (!mounted || picked == null) return;
+    switch (picked) {
+      case 'settings':
+        unawaited(_openSettings());
+      case 'multiview':
+        _openMultiview();
+      case 'update':
+        unawaited(_refreshPlaylist(context));
+      case 'exit':
+        _fullExit();
+    }
+  }
+
   /// Portrait phone: floating tab bar under the pages (streaming-app
-  /// style). Sports opens its own screen like the tabs column's row;
-  /// "More" is the old tabs page (Search, Multiview, Settings, Exit...).
+  /// style), Home first. Sports opens its own screen like the tabs
+  /// column's row. The old "More" slot (the tabs page) became the ☰ button
+  /// at the top right ([_phoneGear]); page 0 is no longer reachable.
   Widget _buildPhoneTabBar() {
     final scheme = Theme.of(context).colorScheme;
     Widget item(
@@ -4301,6 +4409,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ),
           child: Row(
             children: [
+              item(Icons.home_outlined, tr('Home'), _tab == 'Home', _openHome),
               for (final tab in _visibleTabs)
                 item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
                   if (_tab == tab) {
@@ -4321,8 +4430,6 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               if (!context.watch<AppPreferences>().hideSportsTrak)
                 item(Icons.sports_hockey, AppConstants.sportsTabName, false,
                     _openSports),
-              item(Icons.menu, tr('More'), !onTabs,
-                  () => setState(() => _phonePage = 0)),
             ],
           ),
         ),
@@ -4338,6 +4445,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// full-video mode: it's how they tap back into the columns.
   bool get _hidesPassedColumns =>
       _fullVideo || context.read<AppPreferences>().isTelevision;
+
+  double get _tabsWidth => _compactUi ? 136 : (_largeUi ? 200 : 160);
+  double get _groupsWidth => _compactUi ? 220 : (_largeUi ? 320 : 260);
+
+  /// Where [_collapsible]'s width animation ends for the column at [depth].
+  double _columnWidth(int depth, double expandedWidth) =>
+      _focusDepth > depth ? (_hidesPassedColumns ? 0 : 56) : expandedWidth;
 
   /// A column that animates between [expandedWidth] and a narrow icon-only
   /// strip (or nothing, [_hidesPassedColumns]) once D-pad focus has moved
@@ -4402,6 +4516,29 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         },
       );
 
+  /// Multiview from the tabs column or the phone's gear menu.
+  void _openMultiview() {
+    if (usesMediaKit) {
+      DesktopMiniPlayer.instance.clear();
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DesktopMultiviewScreen()));
+      return;
+    }
+    // PlaybackService's own background-kept-alive live channel
+    // (the mobile "island"/resume hint — deliberately still
+    // playing after backing out of fullscreen, and almost
+    // always populated anyway since the app auto-resumes the
+    // last channel on launch) is a separate player system from
+    // this screen's own controllers, same as DesktopMiniPlayer
+    // is on Windows. Reported directly as its audio bleeding
+    // through on top of whichever multiview cell has audio
+    // focus — stopping it here is the same fix as the Windows
+    // branch above, just a different background player.
+    unawaited(context.read<PlaybackService>().stop());
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MultiviewScreen()));
+  }
+
   Widget _buildTabsColumn({required bool collapsed}) {
     return ListView(
       children: [
@@ -4442,27 +4579,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             label: tr('Multiview'),
             selected: false,
             collapsed: collapsed,
-            onTap: () {
-              if (usesMediaKit) {
-                DesktopMiniPlayer.instance.clear();
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const DesktopMultiviewScreen()));
-              } else {
-                // PlaybackService's own background-kept-alive live channel
-                // (the mobile "island"/resume hint — deliberately still
-                // playing after backing out of fullscreen, and almost
-                // always populated anyway since the app auto-resumes the
-                // last channel on launch) is a separate player system from
-                // this screen's own controllers, same as DesktopMiniPlayer
-                // is on Windows. Reported directly as its audio bleeding
-                // through on top of whichever multiview cell has audio
-                // focus — stopping it here is the same fix as the Windows
-                // branch above, just a different background player.
-                unawaited(context.read<PlaybackService>().stop());
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MultiviewScreen()));
-              }
-            },
+            onTap: _openMultiview,
           ),
         // Its own full-screen page (like Search), not a tab in these
         // columns: league/day/game rows don't fit the groups -> content
@@ -5231,10 +5348,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   // this app has spent this whole session getting stable.
 
   void _onGuideFocusChanged(Channel channel, EpgProgram? program) {
-    setState(() {
-      _guideFocusedChannel = channel;
-      _guideFocusedProgram = program;
-    });
+    _guideFocus.value = (channel, program);
     _scheduleFocusPreview(
         channel, () => _guideFocusedChannel?.id == channel.id);
   }
@@ -5678,11 +5792,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         // empty so the picture shows.
                         child: _fullVideo
                             ? const SizedBox.shrink()
-                            : _GuideNowPanel(
-                                focusedChannel: _guideFocusedChannel,
-                                focusedProgram: _guideFocusedProgram,
-                                playingChannel: channel,
-                                epg: epg,
+                            : ValueListenableBuilder<(Channel?, EpgProgram?)>(
+                                valueListenable: _guideFocus,
+                                builder: (context, focus, _) => _GuideNowPanel(
+                                  focusedChannel: focus.$1,
+                                  focusedProgram: focus.$2,
+                                  playingChannel: channel,
+                                  epg: epg,
+                                ),
                               ),
                       ),
                     ],
@@ -6106,10 +6223,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               ? CachedNetworkImage(
                   imageUrl: channel.logoUrl!,
                   fit: BoxFit.contain,
+                  // Width only: with a height too the decode is stretched
+                  // to that exact square (a wide logo came out squashed).
                   memCacheWidth:
-                      (_liveLogoSize * MediaQuery.of(context).devicePixelRatio)
-                          .round(),
-                  memCacheHeight:
                       (_liveLogoSize * MediaQuery.of(context).devicePixelRatio)
                           .round(),
                   errorWidget: (_, __, ___) => const Icon(Icons.tv))
@@ -6932,6 +7048,86 @@ typedef _FavoriteCardExtras = ({
   FocusNode? focusNode,
   VoidCallback onFocused,
 });
+
+/// Lays the live list / guide out once per column slide instead of on every
+/// frame of it: a passed column's 200 ms width animation re-laid out every
+/// guide row about 12 times (Homatics, 2026-11-12). While the columns move,
+/// [child] keeps the wider of its old and new widths, left-aligned and
+/// clipped by the slot, then takes the slot's width when the slide ends.
+/// Off ([enabled] false) it simply follows the slot.
+class _SlideSteadyWidth extends StatefulWidget {
+  const _SlideSteadyWidth(
+      {required this.enabled, required this.columnsWidth, required this.child});
+
+  final bool enabled;
+
+  /// Where the columns left of the slot are heading: a change = a slide.
+  final double columnsWidth;
+  final Widget child;
+
+  @override
+  State<_SlideSteadyWidth> createState() => _SlideSteadyWidthState();
+}
+
+class _SlideSteadyWidthState extends State<_SlideSteadyWidth> {
+  /// Slot + columns, measured while settled.
+  double? _rowWidth;
+  double? _slot;
+
+  /// [child]'s width during a slide; null = the slot's.
+  double? _held;
+
+  /// Ends a slide that never lands on its width (window resized mid-way).
+  Timer? _giveUp;
+
+  @override
+  void didUpdateWidget(_SlideSteadyWidth old) {
+    super.didUpdateWidget(old);
+    final row = _rowWidth, slot = _slot;
+    if (!widget.enabled) {
+      _held = null;
+      return;
+    }
+    if (widget.columnsWidth == old.columnsWidth ||
+        row == null ||
+        slot == null) {
+      return;
+    }
+    _held = math.max(_held ?? slot, row - widget.columnsWidth);
+    _giveUp?.cancel();
+    _giveUp = Timer(const Duration(milliseconds: 400), () {
+      if (mounted && _held != null) setState(() => _held = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _giveUp?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+        child: LayoutBuilder(builder: (context, constraints) {
+          final slot = constraints.maxWidth;
+          _slot = slot;
+          final row = _rowWidth;
+          if (_held != null &&
+              row != null &&
+              (slot - (row - widget.columnsWidth)).abs() < 0.5) {
+            _held = null; // landed
+          }
+          if (_held == null) _rowWidth = slot + widget.columnsWidth;
+          final width = _held ?? slot;
+          return OverflowBox(
+            alignment: Alignment.centerLeft,
+            minWidth: width,
+            maxWidth: width,
+            child: widget.child,
+          );
+        }),
+      );
+}
 
 /// A tab/group/channel row styled with a solid highlight bar when selected,
 /// instead of relying on default `ListTile` selected-tint (which reads as
@@ -10380,6 +10576,14 @@ class _ChannelLabel extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: channel.logoUrl!,
                       fit: BoxFit.contain,
+                      // Decoded at the box's size, not the file's (often
+                      // 500-1000 px): full-size logos filled the weak boxes'
+                      // image cache, so rows coming into view decoded them
+                      // again (Homatics, 2026-11-12). Width only, see the
+                      // live list.
+                      memCacheWidth:
+                          (logo * MediaQuery.of(context).devicePixelRatio)
+                              .round(),
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
             ),

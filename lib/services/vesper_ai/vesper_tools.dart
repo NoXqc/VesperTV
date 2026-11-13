@@ -22,13 +22,17 @@ import '../archive_service.dart';
 import '../archive_stream_size.dart';
 import '../audio_track_preferences.dart';
 import '../channel_copy_fallback.dart';
+import '../channel_name_events.dart';
 import '../desktop_audio.dart';
 import '../desktop_player_control.dart';
 import '../desktop_stream_setup.dart';
 import '../epg_service.dart';
+import '../guide_link_log.dart';
+import '../guide_matching.dart';
 import '../playback_service.dart';
 import '../playlist_edits.dart';
 import '../playlist_edits_diff.dart';
+import '../playlist_editor_epg.dart';
 import '../playlist_manager.dart';
 import '../playlist_session.dart';
 import '../real_4k_channels.dart';
@@ -48,6 +52,7 @@ import '../../widgets/desktop_data_pool_card.dart';
 import '../../widgets/desktop_subtitles.dart';
 
 part 'desktop_player_tools.dart';
+part 'epg_matching_tool.dart';
 part 'collections_tool.dart';
 part 'game_channel_tool.dart';
 part 'hub_rows_tool.dart';
@@ -1377,6 +1382,7 @@ final List<VesperTool> vesperTools = [
   _collectionsTool,
   _hubRowsTool,
   _playlistEditorTool,
+  _epgMatchingTool,
   _settingsTool,
   _profilesTool,
   _parentalTool,

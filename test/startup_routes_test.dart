@@ -191,6 +191,33 @@ void main() {
     });
   }
 
+  testWidgets('portrait phone: Home starts as the root tab, not a page over it',
+      (tester) async {
+    await storage.setStartSection('home');
+    Widget root(BuildContext _) =>
+        Scaffold(body: Text('Root ${startup.takeRootSection()}'));
+    await tester.pumpWidget(MaterialApp(
+      routes: {'/': root},
+      onGenerateInitialRoutes: (_) => startup.generate(
+        preferences: prefs,
+        storage: storage,
+        portraitPhone: true,
+        rootBuilder: root,
+        destinations: {
+          for (final page in overlays)
+            page: (_) => Scaffold(body: Text('Page $page')),
+        },
+      ),
+    ));
+    expect(startup.homeInRoot, isTrue);
+    expect(find.text('Root home').hitTestable(), findsOneWidget);
+    expect(find.text('Page home'), findsNothing);
+    expect(
+        tester.state<NavigatorState>(find.byType(Navigator)).canPop(), isFalse);
+    startup.dispose();
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('crashed browse startup with TV hidden recovers to Home',
       (tester) async {
     prefs.setHideLiveTv(true);

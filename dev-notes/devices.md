@@ -33,6 +33,6 @@ Amlogic S905X4 (`sc2`), 4x Cortex-A55 up to 2.0 GHz, 3.5 GB RAM (above the 2.5 G
 (armeabi-v7a, no arm64 ABI). Licences present: Dolby Vision decoders (dvhe / dvav / dav1, c2.amlogic),
 Dolby MS12 (AC3/E-AC3/AC-4) and DTS / DTS-HD / DTS:X: the S905X4-K feature set (the variant letter
 itself isn't readable without root). AV1, HEVC, VP9 hardware. Connected to the owner's Sony TV on its eARC / 120 Hz port, HDMI signal format Enhanced (Dolby Vision) (EDID:
-DV up to 2160p60, HDR10, HLG, no HDR10+). Resolution set by hand to 4K 59.94 (Automatic picked 1080p), colour space YCbCr 4:2:2 12-bit. Google TV launcher disabled (`pm disable-user`), Projectivy is home; VesperTV Favourite channels row shows there.
+DV up to 2160p60, HDR10, HLG, no HDR10+). Resolution set by hand to 4K 59.94 (Automatic picked 1080p), colour space YCbCr 4:2:2 12-bit. Projectivy was home with the stock launcher disabled; owner uninstalled Projectivy 2026-11-12 and `com.google.android.tvlauncher` was re-enabled (`pm enable`). Then installed Monet launcher (`com.klevico.monet`): stock launcher stays enabled and resolves as HOME, but the Home key opens Monet (owner, 2026-11-12).
 Good box for Dolby Vision playback tests (the Formuler has no DV decoder).
 Vesper AI is the box's assistant (ASSISTANT role, 2026-11-11): the remote's mic button opens the Vesper panel.

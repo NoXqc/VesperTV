@@ -225,6 +225,17 @@ class EpgService extends ChangeNotifier {
   void debugSetChannelsWithData(Set<String> ids) =>
       _withData = {for (final id in ids) normalizeEpgId(id)};
 
+  /// Tests: a guide source's channel directory ([channelsFromSource]) and
+  /// what its channels air now ([currentProgramInCatalog]).
+  @visibleForTesting
+  void debugSetSourceChannels(String url, List<EpgChannelInfo> channels,
+      {Map<String, EpgProgram> now = const {}}) {
+    _sourceChannels[url] = List.unmodifiable(channels);
+    for (final e in now.entries) {
+      _nowPlayingCatalog[normalizeEpgId(e.key)] = e.value;
+    }
+  }
+
   final Set<String> _pendingLoads = {};
   final Set<String> _inFlightLoads = {};
   bool _loadScheduled = false;
@@ -394,6 +405,8 @@ class EpgService extends ChangeNotifier {
   /// Skipped while another refresh is already running.
   Future<void> refreshAll() async {
     if (isLoading) return;
+    // No sources wired (tests): nothing to refresh, keep what's loaded.
+    if (_sourcesProvider == null) return;
     final sources = _sourcesProvider?.call() ?? const [];
     _sourceChannels.removeWhere((url, _) => !sources.any((s) => s.url == url));
     if (sources.isEmpty) return;

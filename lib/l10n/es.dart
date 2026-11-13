@@ -1182,6 +1182,9 @@ const Map<String, String> kEs = {
   'Show clock': "Mostrar reloj",
   'Displays the current time in the top bar':
       "Muestra la hora en la barra superior",
+  "Clock in full screen": "Reloj en pantalla completa",
+  "A small clock in the top-right corner of the full-screen player":
+      "Un pequeño reloj en la esquina superior derecha del reproductor a pantalla completa",
   'Theme color': "Color del tema",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "«Auto» elige el diseño de teléfono o TV según la pantalla; fuerza uno si tu equipo no se detecta bien.",
@@ -3656,6 +3659,18 @@ const Map<String, String> kEs = {
       "Botón {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "No llegó nada. Si pulsaste un botón, tu dispositivo se lo reserva.",
+  "Buttons your box keeps":
+      "Botones que se queda tu equipo",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Activado: {app} puede aprender botones como TV, YouTube o Prime. Fuera de {app} siguen haciendo lo de siempre.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Desactivado: para usar botones como TV, YouTube o Prime, activa «{name}» en los ajustes de accesibilidad de Android.",
+  "If Android says it is a restricted setting":
+      "Si Android dice que es un ajuste restringido",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Abre la información de la app {app}, permite los ajustes restringidos y vuelve a activarlo.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "No llegó nada. Tu dispositivo se queda ese botón: activa Botones que se queda tu equipo abajo y vuelve a intentarlo.",
   "{button}: short press":
       "{button}: pulsación corta",
   "{button} set. Hold it too? Open the button below.":
@@ -3708,4 +3723,21 @@ const Map<String, String> kEs = {
       "Olvidar todos los botones y restaurar las flechas",
   "Forget every button you set and put the player's arrows back as they were?":
       "¿Olvidar todos los botones configurados y devolver las flechas del reproductor a como estaban?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Una app de IA quiere añadir una guía de TV a {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Una app de IA quiere quitar una guía de TV de {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Una app de IA quiere vincular {count} canales a la guía de TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Una app de IA quiere desvincular {count} canales de la guía de TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Una app de IA quiere deshacer su cambio en la guía de TV.",
+  "Goals alert delay":
+      "Retraso de la alerta de goles",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Esperar antes de mostrar un gol, para que el aviso no llegue antes de verlo. Las emisiones en HLS suelen ir de 20 a 30 segundos por detrás. Se guarda para este perfil.",
+  "{n} seconds":
+      "{n} segundos",
 };

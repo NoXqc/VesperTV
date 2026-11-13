@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -136,7 +137,7 @@ Future<void> _main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  if (usesMediaKit || Platform.isLinux) {
+  if (usesMediaKit) {
     // Only ever used by DesktopPlayerScreen — see its own doc comment and
     // pubspec.yaml's media_kit comment. Every other platform keeps using
     // video_player_hdr exclusively and never touches this at all. macOS
@@ -773,6 +774,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       unawaited(Future<void>.delayed(const Duration(seconds: 90), () {
         unawaited(_playlistManager.logCatalogSize().catchError((_) {}));
       }));
+      // Automatic subtitles were tried in test +740 and scrapped (owner,
+      // 2026-11-12): free the speech models that build downloaded (~140 MB
+      // in the app's private folder, out of adb's reach on a release build).
+      unawaited(Future<void>.delayed(const Duration(seconds: 60), () async {
+        final dir = Directory(
+            '${(await getApplicationSupportDirectory()).path}/auto_subtitles');
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+          debugPrint('AutoSubs: removed the old speech models');
+        }
+      }).catchError((Object _) {}));
       _playbackService = PlaybackService(_storage, _playlistManager)
         ..catchupGuide = ((live) => _epgService.getPrograms(live.epgId));
       if (RecordingService.supported) {
@@ -1405,8 +1417,29 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     );
   }
 
+  /// The splash pulse runs only while the splash shows. Left repeating, its
+  /// ticker asked for a frame at every vsync for as long as the app ran, so
+  /// every screen was redrawn ~60 times a second with nothing changing: the
+  /// Homatics' GPU stayed busy and the guide scrolled choppily (2026-11-12).
+  void _syncSplashPulse(bool splash) {
+    if (splash == _splashController.isAnimating) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (splash && !_splashController.isAnimating) {
+        _splashController.repeat(reverse: true);
+      } else if (!splash && _splashController.isAnimating) {
+        _splashController.stop();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _syncSplashPulse(_bootstrapError == null &&
+        !_ready &&
+        !_newUserPromptPending &&
+        !_syncPromptPending &&
+        !_syncing);
     if (_bootstrapError != null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -1628,6 +1661,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           onGenerateInitialRoutes: (_) => _startupRoutes.generate(
             preferences: prefs,
             storage: _storage,
+            portraitPhone: _isPortraitPhone(context),
             rootBuilder: _buildTvRoot,
             destinations: {
               'home': (_) => const HomeScreen(),
@@ -1679,6 +1713,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     );
   }
 
+  /// Same rule as TvHomeScreen's one-column phone layout (`_compact`).
+  static bool _isPortraitPhone(BuildContext context) {
+    final size = MediaQueryData.fromView(View.of(context)).size;
+    return size.width < 600 && size.height > size.width;
+  }
+
   Widget _buildTvRoot(BuildContext context) {
     // TvHomeScreen is the regular home; Sports Mode selects the sports root.
     // The regular layout adapts to phones itself
@@ -1710,14 +1750,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return TvHomeScreen(
           key: key,
           initialTab: switch (section) {
-            'home' when prefs.hideLiveTv => 'Home',
+            'home' when prefs.hideLiveTv || _startupRoutes.homeInRoot => 'Home',
             'movies' => 'Movies',
             'series' => 'TV Shows',
             _ => 'TV',
           },
           startupSportsCovered: section == 'sports',
-          startupBrowseCovered:
-              (section == 'home' && !prefs.hideLiveTv) || section == 'hub',
+          startupBrowseCovered: (section == 'home' &&
+                  !prefs.hideLiveTv &&
+                  !_startupRoutes.homeInRoot) ||
+              section == 'hub',
         );
       },
     );

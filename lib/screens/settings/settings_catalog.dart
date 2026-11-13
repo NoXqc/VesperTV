@@ -395,6 +395,14 @@ class SettingsCatalog {
               subtitle: tr('Displays the current time in the top bar'),
               value: prefs.showClock,
               onChanged: prefs.setShowClock),
+          SettingsToggle(
+              id: 'player_clock',
+              icon: Icons.more_time,
+              title: tr('Clock in full screen'),
+              subtitle: tr(
+                  'A small clock in the top-right corner of the full-screen player'),
+              value: prefs.playerClock,
+              onChanged: prefs.setPlayerClock),
         ]),
         SettingsSection(title: tr('Home'), [
           SettingsLink(
@@ -987,6 +995,20 @@ class SettingsCatalog {
                   'Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.'),
               value: prefs.goalsAlert,
               onChanged: prefs.setGoalsAlert),
+          SettingsChoice(
+              id: 'goal_alert_delay',
+              icon: Icons.timer_outlined,
+              title: tr('Goals alert delay'),
+              help: tr(
+                  'Wait before showing a goal, so the popup doesn\'t come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.'),
+              options: [
+                SettingsOption('0', tr('No delay')),
+                for (final s in const [15, 30, 60])
+                  SettingsOption('$s', tr('{n} seconds', {'n': '$s'})),
+              ],
+              selected: '${_storage.getGoalAlertDelay()}',
+              onPick: (v) => _saveViewer(
+                  () => _storage.setGoalAlertDelay(int.tryParse(v) ?? 0))),
           SettingsToggle(
               id: 'transparent_popups',
               icon: Icons.blur_on,

@@ -1129,6 +1129,9 @@ const Map<String, String> kDe = {
   "Show clock": "Uhr anzeigen",
   "Displays the current time in the top bar":
       "Zeigt die aktuelle Uhrzeit in der oberen Leiste an",
+  "Clock in full screen": "Uhr im Vollbild",
+  "A small clock in the top-right corner of the full-screen player":
+      "Eine kleine Uhr oben rechts im Vollbild-Player",
   "Theme color": "Designfarbe",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Auto wählt das Handy- oder TV-Layout nach Bildschirmgröße – erzwinge eines, falls dein Gerät nicht richtig erkannt wird.",
@@ -3559,6 +3562,18 @@ const Map<String, String> kDe = {
       "Taste {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Nichts angekommen. Wenn du eine Taste gedrückt hast, behält dein Gerät sie für sich.",
+  "Buttons your box keeps":
+      "Tasten, die deine Box behält",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "An: {app} kann Tasten wie TV, YouTube oder Prime lernen. Außerhalb von {app} machen sie das Übliche.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Aus: Um Tasten wie TV, YouTube oder Prime zu nutzen, schalte „{name}“ in den Bedienungshilfen von Android ein.",
+  "If Android says it is a restricted setting":
+      "Wenn Android von einer eingeschränkten Einstellung spricht",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Öffne die App-Info von {app}, erlaube eingeschränkte Einstellungen und schalte es dann erneut ein.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Nichts angekommen. Dein Gerät behält diese Taste für sich: Schalte unten „Tasten, die deine Box behält“ ein und versuche es erneut.",
   "{button}: short press":
       "{button}: kurz drücken",
   "{button} set. Hold it too? Open the button below.":
@@ -3611,4 +3626,21 @@ const Map<String, String> kDe = {
       "Alle Tasten vergessen und die Pfeile zurücksetzen",
   "Forget every button you set and put the player's arrows back as they were?":
       "Alle eingestellten Tasten vergessen und die Pfeile des Players wie vorher einstellen?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Eine KI-App möchte {playlist} einen TV-Guide hinzufügen.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Eine KI-App möchte einen TV-Guide aus {playlist} entfernen.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Eine KI-App möchte {count} Sender mit dem TV-Guide verknüpfen.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Eine KI-App möchte die Verknüpfung von {count} Sendern mit dem TV-Guide lösen.",
+  "An AI app wants to undo its TV guide change.":
+      "Eine KI-App möchte ihre Änderung am TV-Guide rückgängig machen.",
+  "Goals alert delay":
+      "Verzögerung der Toralarme",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Vor dem Anzeigen eines Tores warten, damit der Hinweis nicht kommt, bevor Sie es sehen. HLS-Streams laufen oft 20 bis 30 Sekunden hinterher. Für dieses Profil gespeichert.",
+  "{n} seconds":
+      "{n} Sekunden",
 };

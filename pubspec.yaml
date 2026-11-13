@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.65+738
+version: 1.0.66+757
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -58,6 +58,8 @@ dependencies:
   # iPhone/iPad: media_kit too (usesMediaKit). Apple's AVPlayer can't open
   # raw MPEG-TS live streams or MKV files.
   media_kit_libs_ios_video: ^1.1.4
+  # Linux desktop: media_kit links the system libmpv (libmpv-dev to build).
+  media_kit_libs_linux: ^1.2.1
   # Used directly (not just transitively through video_player_hdr) by
   # multiview_screen.dart, to reach our vendored video_player_android's
   # setAudioTrackTypeDisabled — see third_party/video_player_android's own

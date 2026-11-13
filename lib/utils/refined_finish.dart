@@ -11,7 +11,29 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
   static bool of(BuildContext context) =>
       Theme.of(context).extension<RefinedFinish>()?.enabled ?? false;
 
+  @override
+  bool operator ==(Object other) =>
+      other is RefinedFinish && other.enabled == enabled;
+
+  @override
+  int get hashCode => enabled.hashCode;
+
+  static final _applied = <(ThemeData, bool), ThemeData>{};
+
+  /// [base] with the finish. The same inputs give the same ThemeData object:
+  /// the button styles below hold closures, which never compare equal, so a
+  /// fresh theme on every build made `Theme` rebuild everything under it
+  /// (the TV home screen's own Theme: a 1.2 s frame on a group change on the
+  /// Homatics, 2026-11-12).
   static ThemeData apply(ThemeData base, bool enabled) {
+    final key = (base, enabled);
+    final cached = _applied[key];
+    if (cached != null) return cached;
+    if (_applied.length >= 16) _applied.clear();
+    return _applied[key] = _apply(base, enabled);
+  }
+
+  static ThemeData _apply(ThemeData base, bool enabled) {
     final result = base.copyWith(extensions: [
       ...base.extensions.values.where((value) => value is! RefinedFinish),
       RefinedFinish(enabled: enabled),

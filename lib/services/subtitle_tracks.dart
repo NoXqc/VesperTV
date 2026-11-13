@@ -149,6 +149,7 @@ class SubtitleTrack {
     this.forced = false,
     this.selected = false,
     this.closedCaptions = false,
+    this.image = false,
     this.mimeType,
   });
 
@@ -162,7 +163,51 @@ class SubtitleTrack {
   /// Broadcast closed captions (CEA-608/708) on a live channel. Every .ts
   /// stream lists one; it stays empty on channels that don't carry them.
   final bool closedCaptions;
+
+  /// Picture subtitles (DVB on European live channels, PGS/VobSub in
+  /// Blu-ray/DVD rips): drawn as images ([SubtitleImage]).
+  final bool image;
   final String? mimeType;
+}
+
+/// One picture subtitle (a DVB / PGS / VobSub bitmap cue) as PNG bytes,
+/// with its place as fractions of the video (null = not given).
+class SubtitleImage {
+  const SubtitleImage(
+      {required this.png,
+      required this.width,
+      required this.height,
+      this.left,
+      this.top,
+      this.size});
+
+  final Uint8List png;
+  final int width;
+  final int height;
+  final double? left;
+  final double? top;
+
+  /// Width as a fraction of the video's.
+  final double? size;
+
+  /// Its horizontal centre (0..1), centred when not given.
+  double get centre {
+    final w = size ?? 0;
+    return left == null ? 0.5 : (left! + w / 2).clamp(0.0, 1.0);
+  }
+
+  static SubtitleImage? fromMap(Map m) {
+    final png = m['png'];
+    if (png is! Uint8List || png.isEmpty) return null;
+    double? d(String k) => (m[k] as num?)?.toDouble();
+    return SubtitleImage(
+        png: png,
+        width: (m['w'] as num?)?.toInt() ?? 0,
+        height: (m['h'] as num?)?.toInt() ?? 0,
+        left: d('position'),
+        top: d('line'),
+        size: d('size'));
+  }
 }
 
 /// One complete embedded-caption snapshot, not a delta to append to history.
@@ -173,10 +218,14 @@ class SubtitleCueEvent {
       this.closedCaptions = false,
       this.enabled = true,
       this.reset = false,
+      this.images = const [],
       this.mimeType});
 
   final int playerId;
   final String text;
+
+  /// Picture subtitles on screen now ([SubtitleImage]); empty for text.
+  final List<SubtitleImage> images;
   final bool closedCaptions;
   final bool enabled;
   final bool reset;
@@ -225,6 +274,11 @@ class SubtitleCueEvent {
         closedCaptions: cc,
         enabled: data['enabled'] != false,
         reset: data['reset'] == true,
+        images: [
+          for (final m
+              in (data['images'] as List? ?? const []).whereType<Map>())
+            if (SubtitleImage.fromMap(m) case final image?) image
+        ],
         mimeType: data['mime'] as String?);
   }
 }
@@ -264,6 +318,7 @@ class SubtitleTracks {
           forced: m['forced'] == true,
           selected: m['selected'] == true,
           closedCaptions: m['cc'] == true,
+          image: m['image'] == true,
           mimeType: m['mime'] as String?,
         ),
     ];

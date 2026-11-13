@@ -402,10 +402,11 @@ class StorageService {
   Future<void> setDesktopVolume(double value) =>
       _prefs.setDouble(AppConstants.keyDesktopVolume, value);
 
-  /// Windows: draw video without the GPU path (Settings > Playback >
-  /// Software video). Device-only.
+  /// A computer: draw video without the GPU path (Settings > Playback >
+  /// Software video). Device-only. On by default on Linux, where the GPU
+  /// path shows wrong colours (see `desktopSoftwareVideo`).
   bool getDesktopSoftwareVideo() =>
-      _prefs.getBool('vesper_desktop_software_video') ?? false;
+      _prefs.getBool('vesper_desktop_software_video') ?? Platform.isLinux;
   Future<void> setDesktopSoftwareVideo(bool value) =>
       _prefs.setBool('vesper_desktop_software_video', value);
 
@@ -516,6 +517,10 @@ class StorageService {
   bool getShowClock() => _prefs.getBool(AppConstants.keyShowClock) ?? true;
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
+
+  bool getPlayerClock() => _prefs.getBool(AppConstants.keyPlayerClock) ?? false;
+  Future<void> setPlayerClock(bool value) =>
+      _prefs.setBool(AppConstants.keyPlayerClock, value);
 
   /// "Don't show this again" on the Multiview connections tip.
   bool getMultiviewHideTips() =>
@@ -713,6 +718,11 @@ class StorageService {
       _prefs.getString(_vk(AppConstants.keyAiEditorUndo));
   Future<void> setAiEditorUndo(String json) =>
       _prefs.setString(_vk(AppConstants.keyAiEditorUndo), json);
+
+  /// See [AppConstants.keyAiGuideUndo].
+  String? getAiGuideUndo() => _prefs.getString(AppConstants.keyAiGuideUndo);
+  Future<void> setAiGuideUndo(String json) =>
+      _prefs.setString(AppConstants.keyAiGuideUndo, json);
 
   bool getAiConfirmRemotePlay() =>
       _prefs.getBool(AppConstants.keyAiConfirmRemotePlay) ?? true;
@@ -977,6 +987,14 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keyGoalsAlert)) ?? false;
   Future<void> setGoalsAlert(bool value) =>
       _sportsChanged(_prefs.setBool(_vk(AppConstants.keyGoalsAlert), value));
+
+  /// Seconds the in-app goal popup waits after the score feed reports the
+  /// goal (0 = none): an HLS stream runs 20-30 s behind, so the popup
+  /// spoiled the goal before it was seen (user report, 2026-11-12). Per viewer.
+  int getGoalAlertDelay() =>
+      _prefs.getInt(_vk(AppConstants.keyGoalAlertDelay)) ?? 0;
+  Future<void> setGoalAlertDelay(int seconds) =>
+      _prefs.setInt(_vk(AppConstants.keyGoalAlertDelay), seconds);
 
   /// Reminder and goal-alert popups without their fill (outline only).
   bool getTransparentPopups() =>

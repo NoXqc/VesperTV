@@ -25,6 +25,7 @@ import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
+import '../widgets/player_clock_pill.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_audio_button.dart';
 import '../services/desktop_catchup.dart';
@@ -319,7 +320,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _ownsPlayer = false;
       DesktopLiveRecovery.of(_player).watch(widget.channel);
     } else {
-      _player = newDesktopPlayer();
+      _player = newDesktopPlayer(bigCache: true);
       // Best-effort mpv/ffmpeg-level reconnect tuning for a live,
       // non-seekable TS stream — reconnect_streamed=1 is necessary for
       // mpv to even attempt recovering a genuinely dropped/reset read
@@ -1610,6 +1611,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
+    final playerClock =
+        context.select<AppPreferences, bool>((p) => p.playerClock);
     final size = MediaQuery.sizeOf(context);
     return PopScope(
       // Back with the side panel open closes it first.
@@ -1819,13 +1822,20 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ),
                     ),
                   ),
+                // Touch: hidden under the top bar's Sources / Rotate.
+                if (playerClock && !_inPip && !_pipStarting)
+                  PlayerClockPill(
+                      top: 6, visible: !(_touch && _controlsVisible)),
                 if (_currentChannel.mediaFileInfo case final info?)
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),
                       info: info,
                       requests: _fileInfoRequests,
                       // Touch: below the top bar's Sources / Rotate.
-                      top: _touch ? 64 : 16),
+                      top: (_touch ? 64 : 16) +
+                          (playerClock && !_touch
+                              ? PlayerClockPill.height
+                              : 0)),
                 if (_panelOpen)
                   Positioned(
                     left: 0,

@@ -11,6 +11,11 @@ class StartupRoutes {
   bool _generated = false;
   bool _rootClaimed = false;
   String section = 'tv';
+
+  /// Home opens as the TV root's own Home tab, not a page over it: a
+  /// portrait phone, where Home is the bottom pill's first tab (an overlay
+  /// page hid the pill, owner 2026-11-13). Set by [generate].
+  bool homeInRoot = false;
   Timer? _guardTimer;
 
   /// Only the first root consumes the startup choice. Viewer/language
@@ -28,6 +33,7 @@ class StartupRoutes {
     required StorageService storage,
     required WidgetBuilder rootBuilder,
     required Map<String, WidgetBuilder> destinations,
+    bool portraitPhone = false,
   }) {
     final first = !_generated;
     if (first) {
@@ -52,6 +58,7 @@ class StartupRoutes {
               () => unawaited(storage.setStartSectionPending(false)));
         }
       }
+      homeInRoot = section == 'home' && portraitPhone;
       _generated = true;
     }
     return [
@@ -59,7 +66,7 @@ class StartupRoutes {
           settings: const RouteSettings(name: '/'), builder: rootBuilder),
       if (first &&
           destinations.containsKey(section) &&
-          !(section == 'home' && preferences.hideLiveTv))
+          !(section == 'home' && (preferences.hideLiveTv || homeInRoot)))
         MaterialPageRoute<void>(
             settings: RouteSettings(name: '/startup-$section'),
             builder: destinations[section]!),

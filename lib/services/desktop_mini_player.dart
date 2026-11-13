@@ -55,7 +55,7 @@ class DesktopMiniPlayer {
   /// preview box never stacks up decoders.
   void play(Channel ch) {
     if (_player == null || _controller == null) {
-      final created = newDesktopPlayer();
+      final created = newDesktopPlayer(bigCache: true);
       // Same reconnect tuning as DesktopPlayerScreen.initState — see its
       // comment.
       configureDesktopStreamPlayer(created, 'mini');

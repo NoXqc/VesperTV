@@ -1182,6 +1182,9 @@ const Map<String, String> kIt = {
   'Show clock': "Mostra orologio",
   'Displays the current time in the top bar':
       "Mostra l'ora nella barra in alto",
+  "Clock in full screen": "Orologio a schermo intero",
+  "A small clock in the top-right corner of the full-screen player":
+      "Un piccolo orologio nell'angolo in alto a destra del lettore a schermo intero",
   'Theme color': "Colore del tema",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "«Auto» sceglie il layout telefono o TV in base allo schermo; forzane uno se il tuo box non viene riconosciuto bene.",
@@ -3663,6 +3666,18 @@ const Map<String, String> kIt = {
       "Tasto {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Non è arrivato nulla. Se hai premuto un tasto, il tuo dispositivo lo tiene per sé.",
+  "Buttons your box keeps":
+      "Tasti che il box tiene per sé",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Attivo: {app} può imparare tasti come TV, YouTube o Prime. Fuori da {app} fanno il loro solito lavoro.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Disattivo: per usare tasti come TV, YouTube o Prime, attiva \"{name}\" nelle impostazioni di accessibilità di Android.",
+  "If Android says it is a restricted setting":
+      "Se Android dice che è un'impostazione con restrizioni",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Apri le info app di {app}, consenti le impostazioni con restrizioni, poi riattivalo.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Non è arrivato nulla. Il dispositivo tiene quel tasto per sé: attiva Tasti che il box tiene per sé qui sotto, poi riprova.",
   "{button}: short press":
       "{button}: pressione breve",
   "{button} set. Hold it too? Open the button below.":
@@ -3715,4 +3730,21 @@ const Map<String, String> kIt = {
       "Dimentica tutti i tasti e ripristina le frecce",
   "Forget every button you set and put the player's arrows back as they were?":
       "Dimenticare tutti i tasti impostati e riportare le frecce del lettore come prima?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Un'app di IA vuole aggiungere una guida TV a {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Un'app di IA vuole rimuovere una guida TV da {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Un'app di IA vuole collegare {count} canali alla guida TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Un'app di IA vuole scollegare {count} canali dalla guida TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Un'app di IA vuole annullare la sua modifica alla guida TV.",
+  "Goals alert delay":
+      "Ritardo dell'avviso gol",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Attendi prima di mostrare un gol, così l'avviso non arriva prima che tu lo veda. I flussi HLS sono spesso 20-30 secondi indietro. Salvato per questo profilo.",
+  "{n} seconds":
+      "{n} secondi",
 };

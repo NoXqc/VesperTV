@@ -271,6 +271,7 @@ class AppConstants {
   static const String keyXtreamPassword = 'nox_xtream_password';
 
   static const String keyShowClock = 'nox_show_clock';
+  static const String keyPlayerClock = 'vesper_player_clock';
   static const String keyMultiviewHideTips = 'vesper_multiview_hide_tips';
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
   static const String keyMultiviewMain = 'vesper_multiview_main';
@@ -354,6 +355,10 @@ class AppConstants {
   /// What AI apps / Vesper changed in the playlist editor, for undo
   /// (`AiEditLog`, per viewer). Device-only: the edits themselves sync.
   static const String keyAiEditorUndo = 'vesper_ai_dev_editor_undo';
+
+  /// What AI apps changed in the TV guide links (EPG matching tool), for
+  /// undo (`GuideLinkLog`). Device-wide like the links themselves.
+  static const String keyAiGuideUndo = 'vesper_ai_dev_guide_undo';
 
   /// The viewer's watch list (per profile; Vesper / AI apps fill it).
   static const String keyVesperWatchList = 'vesper_watchlist';
@@ -474,6 +479,7 @@ class AppConstants {
   static const String keySportsMode = 'vesper_sports_mode';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keyGoalsAlert = 'vesper_goals_alert';
+  static const String keyGoalAlertDelay = 'vesper_goal_alert_delay';
   static const String keyTransparentPopups = 'vesper_transparent_popups';
   static const String keyMatchScoreAlerts = 'vesper_match_score_alerts';
   static const String keyLeagueGoalAlerts = 'vesper_league_goal_alerts';

@@ -14,9 +14,11 @@ import androidx.core.content.FileProvider
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
+import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.lang.ref.WeakReference
 
 /**
  * Exposes ActivityManager's real device memory info to Dart — Flutter has
@@ -86,6 +88,16 @@ class MainActivity : FlutterActivity() {
         return if (on) BackgroundMode.transparent else super.getBackgroundMode()
     }
 
+    /**
+     * A SurfaceView even when transparent (Flutter's default for a transparent background is a
+     * TextureView): a TextureView sends every UI frame through Android's own renderer a second
+     * time, blended over the window. On the Homatics (Mali-G31) Android's frames took 61 ms
+     * (median, 69 % janky) on top of Flutter's ~30 ms and the groups column scrolled choppily
+     * (owner, 2026-11-12). A transparent FlutterSurfaceView goes on top (setZOrderOnTop) and the
+     * compositor stacks it over the video SurfaceView.
+     */
+    override fun getRenderMode(): RenderMode = RenderMode.surface
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (!voiceBridge.onPermissionResult(requestCode, grantResults) &&
             !backupStore.onPermissionResult(requestCode, grantResults)) {
@@ -118,6 +130,16 @@ class MainActivity : FlutterActivity() {
         setIntent(intent)
         voiceBridge.onIntent(intent)
         launcherChannels.onIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        RemoteKeyService.onScreen = WeakReference(this)
+    }
+
+    override fun onPause() {
+        if (RemoteKeyService.onScreen?.get() === this) RemoteKeyService.onScreen = null
+        super.onPause()
     }
 
     override fun onStart() {
@@ -161,6 +183,10 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
             .setMethodCallHandler(overlayProbe::handle)
+
+        // Settings > Remote buttons: buttons the box keeps — see RemoteKeyService.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/remote_keys")
+            .setMethodCallHandler { call, result -> RemoteKeyService.handle(this, call, result) }
 
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)

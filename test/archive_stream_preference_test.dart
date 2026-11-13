@@ -41,6 +41,57 @@ void main() {
             .sizeBytes,
         isNull);
   });
+  test('largest file skips whole-season packs (LOG-7QUQAW)', () {
+    ArchiveStreamOption file(String name, int bytes, {bool hint = true}) =>
+        ArchiveStreamOption(
+            source: source,
+            stream: ArchiveStream(
+                url: 'https://example.com/$bytes',
+                fileName: hint ? name : null,
+                title: hint ? null : name,
+                sizeBytes: bytes));
+    bool pack(String name, {bool hint = true}) =>
+        archiveStreamIsSeasonPack(file(name, 1, hint: hint));
+
+    // Real AIOStreams file names for Dark Matter S2E7.
+    for (final name in [
+      'Dark Matter 2024 S02 1080p ATVP WEB DL DDP5 1 Atmos H 264-Kitsune',
+      'Dark.Matter.2026.S02E01-E09.2160p.ATVP.WEB-DL.HDR.H265.Master5',
+      'Dark.Matter.S01E07-09.2160p.ATVP.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-G66',
+      'Dark.Matter.S01.COMPLETE.2160p.ATVP.WEB-DL.DV.HDR10.PLUS.Atmos.H265',
+      'Dark Matter Season 2 2160p REMUX',
+    ]) {
+      expect(pack(name), isTrue, reason: name);
+    }
+    for (final name in [
+      'Dark.Matter.S02E07.WEBDL.1080p.2xUkr.Eng.mkv',
+      'Dark.Matter.2024.2x07.La.Piramide.ITA.ENG.1080p.ATVP.WEBRip.AAC.x265-Pir8.mkv',
+      'Dark.Matter.S02.Dub.EP-7.mp4',
+      'Materia oscura [4k 2160p][Cap.207].mkv',
+      'dark.matter.2024.s02e07.dv.2160p.web.h265-cakes.mkv',
+      'Interstellar.2014.2160p.UHD.BluRay.REMUX.HDR.HEVC.Atmos-EPSiLON.mkv',
+      'Movie.2023.1080p.WEB-DL.DDP5.1.H.264-FLUX.mkv',
+    ]) {
+      expect(pack(name), isFalse, reason: name);
+    }
+    // Without a file name the label is read; a folder/file line naming the
+    // episode keeps it a single file.
+    expect(
+        pack(
+            '[TB⚡] 2160p 📁 Dark.Matter.S02E01-E09.1080p/'
+            'Dark.Matter.S02E07.1080p.mkv',
+            hint: false),
+        isFalse);
+
+    final season = file('Dark Matter 2024 S02 2160p REMUX', 111439505299);
+    final episode = file('Dark.Matter.S02E07.2160p.mkv', 12147002240);
+    final smaller = file('Dark.Matter.S02E07.1080p.mkv', 5480000000);
+    expect(largestArchiveStream([season, smaller, episode]), same(episode));
+    // Only packs have a size: the biggest of them, as before.
+    expect(largestArchiveStream([season, option('https://example.com/x')]),
+        same(season));
+  });
+
   test(
       'episodes retain independent provider choices and auto-play preferences are per viewer',
       () async {

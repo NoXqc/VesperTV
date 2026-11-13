@@ -276,6 +276,39 @@ Owner, via Haiku in the Claude app: The Batman started the 76.5 GB file, not the
 - Reconnect gotcha: the relay answers tools/list from its saved copy while the TV app is closed (an install
   closes it), so reconnect with VesperTV open, then start a new chat.
 
+## EPG matching tool (Claude, 2026-11-12, branch `claude/ai-epg-match`, unreleased)
+
+Owner: the app has EPG matching but the AI couldn't use it; "paste an EPG link (EPG Genius…) in my AI chat and say
+fill in my missing EPG on playlist XYZ", or fill playlist B's gaps from playlist A's guide.
+
+- Tool `epg_matching` (`vesper_ai/epg_matching_tool.dart`, manual = `vesper_help` topic `epg_matching`): `status`,
+  `suggest`, `find_guide`, `add_guide` (XMLTV `url` or `from_playlist`), `remove_guide`, `link` (`sure: true` or
+  `links`), `unlink`, `undo`. Every change has `preview` and goes through `_confirmRemote` (TV OK for AI apps).
+- Same storage as the TV's own matching: a link = `PlaylistSession.epgIdOverrides` (set with
+  `setEpgIdOverridesBulk`, so marked automatic: Settings > EPG > Unpair auto removes them too); guides =
+  `PlaylistProfile.extraEpgUrls` (max 5, the editor page's Extra guides). Unlink / undo use the new one-write
+  `restoreEpgIdOverrides`.
+- Matching: `services/guide_matching.dart` `GuideMatcher` (pure Dart, `suggestGuides` runs it in an isolate). Leading
+  one-word tags (`US:`, `|UK|`, `[CA]`, `AM | US:`; the tag next to the name gives the region) and quality words are
+  dropped, `TSN1` = `TSN 1`, `BBC One` = `BBC 1`, joined spelling (`SkySports`), 1-2 letter typos; numbers must agree
+  (score x0.4), another region x0.75 (the id's `.ca` counts for its display name). Candidates = the playlist's
+  guides' channel lists (`EpgService.channelsFromSource`) + names of its own channels that have data (aliases); with
+  `from_playlist`, that playlist's guides and channels too. `isSure` = best >= 0.9 and 0.1 ahead (or the only
+  same-name id airing now). The AI reviews the rest with `now` (current programme from `currentProgramInCatalog`).
+- Linking to a guide only `from_playlist` has adds that guide to the playlist's extras (so it keeps working when the
+  other playlist is off). Guide addresses never reach the AI (Xtream `xmltv.php` carries the login): `status` shows
+  the host only.
+- The guide keeps programmes only for ids the playlist uses, so links show data after the next update:
+  `_reloadGuideSoon` (20 s after the last change, waits for a running update). `add_guide` waits up to 30 s for the
+  download (the relay gives a request 75 s, the TV confirm included); otherwise the AI polls `status`.
+- Directory lists (`_sourceChannels`) exist only after an update in this app run: `suggest` starts one when empty.
+- Undo log: `GuideLinkLog` (`services/guide_link_log.dart`, `vesper_ai_dev_guide_undo`, device-wide like the links):
+  links (before, after) per channel + extra guides (before, after); undo keeps links changed since.
+- Test seams: `EpgService.debugSetSourceChannels`; `refreshAll` does nothing without a sources provider (tests).
+- Tests: `test/guide_matching_test.dart`, `test/epg_matching_tool_test.dart`.
+- Not done: the relay's `INSTRUCTIONS` (VPS, `tools/pair_relay/ai_link.py`) still only name `playlist_editor`; the
+  tool description and the overview topic cover it. AI apps cache the tool list: reconnect after updating.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by

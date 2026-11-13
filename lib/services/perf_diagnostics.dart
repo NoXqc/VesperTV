@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 /// - `MainStall:` every 10 s while the UI thread stalled (a 200 ms timer
 ///   firing late), with PlaylistManager notifies and TV home rebuilds in
 ///   that window and how long a `SELECT 1` waited on each database;
+/// - `Frames:` every 10 s with 100+ frames, or 5+ of 33 ms or more;
 /// - `SlowDb:` a timed catalog / guide query over 500 ms ([timed]);
 /// - `CatalogSize:` once, live channels and categories per playlist and
 ///   the catalog rows the database holds.
@@ -40,6 +41,14 @@ class PerfDiagnostics {
   static const _tickMs = 200;
   static const _stallMs = 700;
 
+  /// `Frames:` every 10 s with 100+ frames, or 5+ whose build or raster
+  /// took [_jankMs] or more (2 frames at 60 Hz).
+  static const _jankMs = 33;
+  static int _frames = 0;
+  static int _jankFrames = 0;
+  static int _rasterTotalMs = 0;
+  static int _windowMaxRasterMs = 0;
+
   /// Starts the probes. [pings]: label -> a trivial query on that
   /// database (its wait = how long the database queue is).
   static void start(Map<String, Future<void> Function()> pings) {
@@ -67,6 +76,10 @@ class PerfDiagnostics {
         if (build >= 500 || raster >= 500) {
           debugPrint('SlowFrame: build=${build}ms raster=${raster}ms');
         }
+        _frames++;
+        _rasterTotalMs += raster;
+        if (raster > _windowMaxRasterMs) _windowMaxRasterMs = raster;
+        if (build >= _jankMs || raster >= _jankMs) _jankFrames++;
       }
     });
     _tick = Timer.periodic(const Duration(milliseconds: _tickMs), (_) {
@@ -91,6 +104,15 @@ class PerfDiagnostics {
       _stalls = _maxStallMs = _stallTotalMs = notifies = homeBuilds = 0;
       _windowMaxBuildMs = 0;
       _windowJobs.clear();
+      if (_jankFrames >= 5 || _frames >= 100) {
+        // Choppy scrolling without any long stall: many frames a bit too
+        // slow (groups column on the Homatics, 2026-11-12); or frames drawn
+        // with nothing to change (a forgotten repeating animation).
+        debugPrint('Frames: n=$_frames slow=$_jankFrames '
+            'maxBuild=${maxBuild}ms maxRaster=${_windowMaxRasterMs}ms '
+            'avgRaster=${_rasterTotalMs ~/ _frames}ms homeBuilds=$builds');
+      }
+      _frames = _jankFrames = _rasterTotalMs = _windowMaxRasterMs = 0;
       final waits = <String>[];
       for (final e in pings.entries) {
         final sw = Stopwatch()..start();

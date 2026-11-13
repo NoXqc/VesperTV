@@ -259,7 +259,12 @@ testing. Use one connector per TV and leave VesperTV open on that TV. Your AI
 and AI apps can also **change settings** (playback, startup, language and
 theme, the guide, tabs, Sports Trak), **clear history** (searches and channels,
 Continue Watching, Media Hub, the watch list) and reload the guide; the AI
-settings, PIN, profiles and playlists are never changed that way. **Ask on
+settings, PIN, profiles and playlists are never changed that way. They can
+also **fill in missing TV guide data**: paste an XMLTV guide link (or name
+another playlist) and ask to fill in the missing guide on a playlist; the AI
+adds it as an extra guide and links the channels whose names differ
+(prefixes, spelling), asking on the TV first, and every change can be undone.
+**Ask on
 the TV first** defaults on for starting titles, hiding/showing groups,
 changing settings and clearing history or the watch list; other tool actions
 can run without a dialog. Keep the address private; **Reset the address**

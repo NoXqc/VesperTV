@@ -60,13 +60,15 @@ class BackupService {
   /// the sandbox container (hidden from Finder): Export saves a copy.
   static String get locationLabel => Platform.isWindows
       ? r'Documents\VesperTV'
-      : Platform.isMacOS
-          ? tr('the app\'s own storage')
-          // iOS: Documents is shared with the Files app
-          // (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
-          : Platform.isIOS
-              ? 'Files > On My iPhone > VesperTV > VesperTV'
-              : 'Download/VesperTV';
+      : Platform.isLinux
+          ? '~/Documents/VesperTV'
+          : Platform.isMacOS
+              ? tr('the app\'s own storage')
+              // iOS: Documents is shared with the Files app
+              // (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
+              : Platform.isIOS
+                  ? 'Files > On My iPhone > VesperTV > VesperTV'
+                  : 'Download/VesperTV';
 
   static const _jsonFiles = XTypeGroup(
       label: 'VesperTV backup',

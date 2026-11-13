@@ -151,6 +151,28 @@ void main() {
     });
   }
 
+  testWidgets('Goals alert delay holds the popup back for HLS viewers',
+      (tester) async {
+    await setup();
+    await storage.setGoalAlertDelay(30);
+    GoalsAlertOverlay.debugSummary = (_) async => null;
+    addTearDown(() => GoalsAlertOverlay.debugSummary = null);
+    await mount(tester);
+    score = '1';
+    await tick(tester, 30);
+    // The feed has the goal, the stream doesn't show it yet.
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tick(tester, 20);
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tick(tester, 10);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    expect(focus.hasFocus, isTrue);
+    await tick(tester, 8);
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
   testWidgets(
       'overturned popup shows corrected score without looking up a scorer',
       (tester) async {

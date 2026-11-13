@@ -33,6 +33,9 @@ class AppPreferences extends ChangeNotifier {
   final StorageService _storage;
 
   late bool showClock;
+
+  /// The time in a small pill in the full-screen player (PlayerClockPill).
+  late bool playerClock;
   late CyberpunkPalette palette;
   late String layoutMode; // 'auto', 'tv'
   late String guideViewMode; // 'live', 'timeline'
@@ -432,6 +435,7 @@ class AppPreferences extends ChangeNotifier {
   Future<void> init() async {
     refinedFinish = _storage.getRefinedFinish();
     showClock = _storage.getShowClock();
+    playerClock = _storage.getPlayerClock();
     palette = _paletteById(_storage.getPaletteId());
     layoutMode = _storage.getLayoutMode();
     guideViewMode = _storage.getGuideViewMode();
@@ -478,6 +482,12 @@ class AppPreferences extends ChangeNotifier {
   void setShowClock(bool value) {
     showClock = value;
     _storage.setShowClock(value);
+    notifyListeners();
+  }
+
+  void setPlayerClock(bool value) {
+    playerClock = value;
+    _storage.setPlayerClock(value);
     notifyListeners();
   }
 

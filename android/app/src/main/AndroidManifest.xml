@@ -115,6 +115,19 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-requested live sports goal notifications for subscribed games; overlapping games share one bounded session with a Stop action."/>
         </service>
+        <!-- Test +750: remote buttons the box's firmware takes (RemoteKeyService). -->
+        <service
+            android:name=".RemoteKeyService"
+            android:exported="true"
+            android:label="@string/remote_keys_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/remote_keys_service"/>
+        </service>
         <receiver android:name=".SportsAlarmReceiver" android:exported="false"/>
         <receiver android:name=".RecorderAlarmReceiver" android:exported="false"/>
         <receiver android:name=".BootReceiver" android:exported="false">

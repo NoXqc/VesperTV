@@ -32,14 +32,11 @@ up on real boxes (weak CPUs, D-pad remotes, Fire OS quirks) — emulators/tests 
 Keep replies short; make routine calls yourself; **confirm before anything destructive or
 outward-facing** (deleting releases, force-pushes, posting). Only commit/release when asked.
 
-## 1b. Codex scoping only when asked (owner, 2026-11-07)
-**Don't mention Codex or offer to hand a task to it** - the owner says when he wants something
-scoped for Codex (replaces the 2026-11-04 "offer Codex first" rule). When asked, write a
-ready-to-paste Codex prompt (rules: `AGENTS.md`, `codex/<task>` branch, a HANDOFF block). Good for Codex: well-scoped features with a clear spec,
-translations, docs/site/remote-guide updates, tests, reviews of a diff, diagnostics from a Send log
-when the area is known, mechanical refactors, building/checking a branch. Keep for Claude: releases,
-signing, VPS, Discord, native player/vendored plugin, cloud sync/relay design, root-causing an
-unknown bug across many files, and reviewing/merging Codex branches. When in doubt, ask.
+## 1b. No more Codex (owner, 2026-11-12)
+The owner upgraded his Claude plan and dropped Codex: Claude does all the work, so don't offer to
+hand tasks to Codex or write Codex prompts. All 157 `codex/*` branches were merged and deleted locally
+that day. `AGENTS.md`, the `cdx` / `cdx-do` tags and the "cdx, …" entries in this file and HANDOFF are
+history: read them as notes about past work, and treat any open `cdx-do` item as Claude's.
 
 ## 2. Start-here checklist for a clean session
 1. `git pull`, then `git status` (ignore the untracked `*-windows-x64.zip` and
@@ -213,6 +210,12 @@ reads it). The format waits for that frame like the TS reader's. The wrapper mus
 factory's subtitle setters or MKV subtitles break. TrueHD too (owner, 2026-11-09): the first frame's
 major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as MediaInfo reads it)
 = codecs `truehd-atmos`, which `VideoPlayer.audioCodec` passes to Dart. `MatroskaAtmosTest` (12).
+Unreleased (2026-11-12, `claude/live-subtitles`): **`SubtitleBridge` picture subtitles** — DVB (European live
+channels), PGS and VobSub tracks are listed (`image`) and their bitmap cues go to Flutter as PNG bytes + place
+(`images` in the cue event; `SubtitleOverlay._pictures`). `mimeOf`: subtitles parsed during extraction say
+`application/x-media3-cues` with the real format in `codecs`. (Automatic subtitles from the sound, on-device
+sherpa-onnx through an `AudioTap` processor, were tried in +740 and scrapped by the owner the same day: too
+inaccurate. Recoverable from commit c18de49.)
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -255,6 +258,32 @@ major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as 
   scroll uses `jumpTo`, never `animateTo` (caused an ANR-length freeze on a big list). Pause periodic
   timers when covered (`RouteAware`). Remote "hold Select" = `HoldToActivate`; `InkWell.onLongPress`
   is touch-only.
+- **Frame cost on weak boxes (2026-11-12, Homatics +740..+745, measured with the `Frames:` Send-log
+  line: 100+ frames or 5+ frames of 33 ms in 10 s).** (1) Never leave a repeating AnimationController
+  running when its widget is gone: the splash pulse ticked for the app's whole life and redrew every
+  screen ~60 times a second with nothing changing. (2) A Theme built in `build` must come back equal:
+  `RefinedFinish.apply` memoizes (its button styles hold closures), or `Theme` rebuilds everything under
+  it (a 1.2 s frame per group change). (3) Per-D-pad-step state (guide focus `_guideFocus`, live list
+  `_liveListFocused`) lives in a ValueNotifier, never a TvHomeScreen setState. (4) The transparent
+  Flutter view of the native video surface stays `RenderMode.surface` (`MainActivity.getRenderMode`):
+  Flutter's default texture mode drew every frame twice (Android's own frames 61 ms). (5) Side-column
+  scrolls jump (`_ensureVisible`); columns and the background are separate RepaintBoundaries.
+  (6) Channel logos decode at their box size (`memCacheWidth` only: with a height too, Flutter's exact
+  resize stretched wide logos into squares); full-size logos filled the image cache and re-decoded on
+  scroll. (7) `_SlideSteadyWidth` (TV): during a column slide the live list / guide keeps one width,
+  clipped, and takes the slot's width when it lands: one layout per slide, not one per frame (+746).
+- **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
+  keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
+  (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;
+  Netflix is handled inside WindowManager and can never be caught. `RemoteKeyService` (an accessibility
+  service the viewer turns on, Settings > Remote buttons links to it) sees keys first and, while VesperTV is
+  on screen, hands it GUIDE, the viewer's learned buttons (`RemoteKeys` sends their Android key codes) and
+  any button while Settings learns. It takes the release of every press it took (the firmware acts on the
+  release) and makes its own key repeats (a taken key gets none, holds need them). A sideloaded app's
+  service is an Android 13+ "restricted setting": App info > allow restricted settings, or
+  `adb shell appops set com.nox.nox_iptv ACCESS_RESTRICTED_SETTINGS allow`. From Git Bash,
+  `settings put secure enabled_accessibility_services a/b:c/d` needs `MSYS_NO_PATHCONV=1` (the mangled value
+  dropped the Homatics' Monet launcher service once); keep other apps' entries in the list.
 - **Fire OS's on-screen keyboard swallows the physical Back button — known, unfixable limitation.**
   Confirmed via a raw `getevent` capture (clean `KEY_BACK`) plus Flutter-side logging of
   `logicalKey.keyId`: pressing Back on a Fire TV remote while the on-screen keyboard has D-pad
@@ -383,6 +412,21 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-13 - phone Home in the pill (main, +757, owner-tested on his phone, not released):** portrait
+  phone only (`_compact`). Bottom pill = Home | TV | Movies | TV Shows | Media Hub | Sports Trak; the More slot
+  became a floating round ☰ (`_phoneGear`, roll-down menu: Settings, Multiview, Update Content, Exit not on iOS).
+  Home is the root's own tab there (`_openHome` -> `_onTabChanged('Home')`, `HomeScreen(embedded, phoneHeader)`:
+  Home draws the title row with the profiles beside "Home"), **no hero** and no focused-card backdrop (wallpaper
+  only). Open on Home starts as that root tab (`StartupRoutes.homeInRoot`, `portraitPhone`), not a page over it
+  (it hid the pill). Tablets / landscape / TV unchanged. iOS branch: `TARGETED_DEVICE_FAMILY = "1,2"` (iPad tester
+  saw the iPhone-only window). Next build > 757.
+- **Claude, 2026-11-12 - release 1.0.66 (beta), +753 (latest):** owner said "Commit and /cutr". Android only;
+  Windows stays 1.0.61, Linux 1.0.63 (+702). Since 1.0.65: Remote buttons (+738) with Fast forward / Rewind and
+  "Buttons your box keeps" (RemoteKeyService, §10), Interface size Compact / Normal / Large + passed columns hide
+  on TV, Polish, DVB/PGS picture subtitles (Automatic subtitles removed), Goals alert delay, Vesper AI
+  epg_matching, fuller Transfer, TV home speed on weak boxes (+745/+746), Largest file skips season packs, Clock in
+  full screen (Settings > Appearance > Language and clock), resume after a native live zap. Analyze 16, 1941
+  tests. Notes: dev-notes/releases/1.0.66.md. Next build > 753.
 - **Claude, 2026-11-11 - Remote buttons (main, uncommitted, test +735 on the Homatics only):** owner: assign VesperTV actions
   to spare remote buttons + remap the full-screen player's arrows. Settings > **Backup & devices** > Remote
   (owner: a remote is a device), TV boxes only: learn mode (press a button, pick a short press + a hold),

@@ -1141,6 +1141,9 @@ const Map<String, String> kPl = {
   "Show clock": "Pokaż zegar",
   "Displays the current time in the top bar":
       "Wyświetla bieżącą godzinę na górnym pasku",
+  "Clock in full screen": "Zegar na pełnym ekranie",
+  "A small clock in the top-right corner of the full-screen player":
+      "Mały zegar w prawym górnym rogu odtwarzacza na pełnym ekranie",
   "Theme color": "Kolor motywu",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Automatycznie wybiera układ telefonu lub TV według rozmiaru ekranu — wymuś jeden, jeśli przystawka nie jest wykrywana poprawnie.",
@@ -3243,6 +3246,18 @@ const Map<String, String> kPl = {
   "Button {key}": "Przycisk {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Nic nie dotarło. Jeśli naciśnięto przycisk, urządzenie zachowuje go dla siebie.",
+  "Buttons your box keeps":
+      "Przyciski zatrzymywane przez dekoder",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Włączone: {app} może nauczyć się przycisków takich jak TV, YouTube czy Prime. Poza {app} działają jak zwykle.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Wyłączone: aby używać przycisków takich jak TV, YouTube czy Prime, włącz „{name}” w ustawieniach ułatwień dostępu Androida.",
+  "If Android says it is a restricted setting":
+      "Jeśli Android mówi, że to ustawienie z ograniczeniami",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Otwórz informacje o aplikacji {app}, zezwól na ustawienia z ograniczeniami, a potem włącz to ponownie.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Nic nie dotarło. Urządzenie zatrzymuje ten przycisk dla siebie: włącz poniżej Przyciski zatrzymywane przez dekoder i spróbuj ponownie.",
   "{button}: short press": "{button}: krótkie naciśnięcie",
   "{button} set. Hold it too? Open the button below.":
       "Ustawiono {button}. Ustawić też przytrzymanie? Otwórz przycisk poniżej.",
@@ -3284,6 +3299,17 @@ const Map<String, String> kPl = {
       "{n} profile",
   "{n} favorites#few":
       "{n} ulubione",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Aplikacja AI chce dodać przewodnik TV do {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Aplikacja AI chce usunąć przewodnik TV z {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Aplikacja AI chce połączyć kanały z przewodnikiem TV ({count}).",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Aplikacja AI chce odłączyć kanały od przewodnika TV ({count}).",
+  "An AI app wants to undo its TV guide change.":
+      "Aplikacja AI chce cofnąć swoją zmianę w przewodniku TV.",
   // iPhone build (claude/appstore-build): App Store error text,
   // picture-in-picture, microphone permission.
   "Check your source (plan limits, active downloads), or pick another stream.":
@@ -3302,4 +3328,10 @@ const Map<String, String> kPl = {
       "Oglądaj tutaj",
   "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
       "VesperTV nie ma dostępu do mikrofonu. Zezwól na Mikrofon i Rozpoznawanie mowy w Ustawienia > VesperTV lub pisz zamiast tego.",
+  "Goals alert delay":
+      "Opóźnienie alertu o golu",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Poczekaj przed pokazaniem gola, aby powiadomienie nie pojawiło się, zanim go zobaczysz. Strumienie HLS często mają 20-30 sekund opóźnienia. Zapisane dla tego profilu.",
+  "{n} seconds":
+      "{n} sekund",
 };

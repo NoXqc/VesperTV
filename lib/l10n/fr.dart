@@ -1188,6 +1188,9 @@ const Map<String, String> kFr = {
   'Show clock': "Afficher l'horloge",
   'Displays the current time in the top bar':
       "Affiche l'heure dans la barre du haut",
+  "Clock in full screen": "Horloge en plein écran",
+  "A small clock in the top-right corner of the full-screen player":
+      "Une petite horloge en haut à droite du lecteur plein écran",
   'Theme color': "Couleur du thème",
   'Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.':
       "« Auto » choisit la disposition téléphone ou télé selon l'écran — forcez-en une si votre boîtier est mal détecté.",
@@ -3669,6 +3672,18 @@ const Map<String, String> kFr = {
       "Bouton {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Rien n'est arrivé. Si vous avez appuyé sur un bouton, votre appareil le garde pour lui.",
+  "Buttons your box keeps":
+      "Boutons gardés par votre boîtier",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Activé : {app} peut apprendre des boutons comme TV, YouTube ou Prime. Hors de {app}, ils gardent leur fonction habituelle.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Désactivé : pour utiliser des boutons comme TV, YouTube ou Prime, activez « {name} » dans les paramètres d'accessibilité d'Android.",
+  "If Android says it is a restricted setting":
+      "Si Android parle de paramètre restreint",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Ouvrez les infos de l'appli {app}, autorisez les paramètres restreints, puis réactivez-le.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Rien n'est arrivé. Votre appareil garde ce bouton pour lui : activez Boutons gardés par votre boîtier ci-dessous, puis réessayez.",
   "{button}: short press":
       "{button} : appui court",
   "{button} set. Hold it too? Open the button below.":
@@ -3721,4 +3736,21 @@ const Map<String, String> kFr = {
       "Oublier tous les boutons et remettre les flèches",
   "Forget every button you set and put the player's arrows back as they were?":
       "Oublier tous les boutons réglés et remettre les flèches du lecteur comme avant?",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Une app d'IA veut ajouter un guide TV à {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Une app d'IA veut retirer un guide TV de {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Une app d'IA veut associer {count} chaînes au guide TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Une app d'IA veut dissocier {count} chaînes du guide TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Une app d'IA veut annuler sa modification du guide TV.",
+  "Goals alert delay":
+      "Délai de l'alerte de buts",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Attendre avant d'afficher un but, pour que l'alerte n'arrive pas avant que vous le voyiez. Les flux en HLS ont souvent 20 à 30 secondes de retard. Enregistré pour ce profil.",
+  "{n} seconds":
+      "{n} secondes",
 };

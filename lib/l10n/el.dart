@@ -1150,6 +1150,9 @@ const Map<String, String> kEl = {
   "Show clock": "Εμφάνιση ρολογιού",
   "Displays the current time in the top bar":
       "Δείχνει την τρέχουσα ώρα στην πάνω μπάρα",
+  "Clock in full screen": "Ρολόι σε πλήρη οθόνη",
+  "A small clock in the top-right corner of the full-screen player":
+      "Ένα μικρό ρολόι στην πάνω δεξιά γωνία της αναπαραγωγής σε πλήρη οθόνη",
   "Theme color": "Χρώμα θέματος",
   "Auto picks phone vs TV layout by screen size — force one if your box isn't detected correctly.":
       "Το Αυτόματο επιλέγει διάταξη κινητού ή TV ανάλογα με την οθόνη — επιβάλετε μία αν η συσκευή σας δεν αναγνωρίζεται σωστά.",
@@ -3618,6 +3621,18 @@ const Map<String, String> kEl = {
       "Κουμπί {key}",
   "Nothing arrived. If you pressed a button, your device keeps it for itself.":
       "Δεν έφτασε τίποτα. Αν πατήσατε κάποιο κουμπί, η συσκευή σας το κρατά για τον εαυτό της.",
+  "Buttons your box keeps":
+      "Κουμπιά που κρατά το κουτί σας",
+  "On: {app} can learn buttons like TV, YouTube or Prime. They keep their usual job outside {app}.":
+      "Ενεργό: το {app} μπορεί να μάθει κουμπιά όπως TV, YouTube ή Prime. Έξω από το {app} κάνουν τη συνηθισμένη τους δουλειά.",
+  "Off: to use buttons like TV, YouTube or Prime, turn on \"{name}\" in Android's Accessibility settings.":
+      "Ανενεργό: για να χρησιμοποιήσετε κουμπιά όπως TV, YouTube ή Prime, ενεργοποιήστε το «{name}» στις ρυθμίσεις προσβασιμότητας του Android.",
+  "If Android says it is a restricted setting":
+      "Αν το Android πει ότι είναι περιορισμένη ρύθμιση",
+  "Open {app}'s App info, allow restricted settings, then turn it on again.":
+      "Ανοίξτε τις πληροφορίες εφαρμογής του {app}, επιτρέψτε τις περιορισμένες ρυθμίσεις και ενεργοποιήστε το ξανά.",
+  "Nothing arrived. Your device keeps that button for itself: turn on Buttons your box keeps below, then try again.":
+      "Δεν ήρθε τίποτα. Η συσκευή κρατά αυτό το κουμπί για τον εαυτό της: ενεργοποιήστε το «Κουμπιά που κρατά το κουτί σας» παρακάτω και δοκιμάστε ξανά.",
   "{button}: short press":
       "{button}: σύντομο πάτημα",
   "{button} set. Hold it too? Open the button below.":
@@ -3670,4 +3685,21 @@ const Map<String, String> kEl = {
       "Ξεχάστε όλα τα κουμπιά και επαναφέρετε τα βέλη",
   "Forget every button you set and put the player's arrows back as they were?":
       "Να ξεχαστούν όλα τα κουμπιά και να επανέλθουν τα βέλη της αναπαραγωγής όπως ήταν;",
+  // Vesper AI: TV guide (EPG) matching confirms.
+  "An AI app wants to add a TV guide to {playlist}.":
+      "Μια εφαρμογή AI θέλει να προσθέσει έναν οδηγό TV στο {playlist}.",
+  "An AI app wants to remove a TV guide from {playlist}.":
+      "Μια εφαρμογή AI θέλει να αφαιρέσει έναν οδηγό TV από το {playlist}.",
+  "An AI app wants to link {count} channels to the TV guide.":
+      "Μια εφαρμογή AI θέλει να συνδέσει {count} κανάλια με τον οδηγό TV.",
+  "An AI app wants to unlink {count} channels from the TV guide.":
+      "Μια εφαρμογή AI θέλει να αποσυνδέσει {count} κανάλια από τον οδηγό TV.",
+  "An AI app wants to undo its TV guide change.":
+      "Μια εφαρμογή AI θέλει να αναιρέσει την αλλαγή της στον οδηγό TV.",
+  "Goals alert delay":
+      "Καθυστέρηση ειδοποίησης γκολ",
+  "Wait before showing a goal, so the popup doesn't come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.":
+      "Αναμονή πριν εμφανιστεί ένα γκολ, ώστε η ειδοποίηση να μην έρθει πριν το δείτε. Οι ροές HLS συχνά καθυστερούν 20 έως 30 δευτερόλεπτα. Αποθηκεύεται για αυτό το προφίλ.",
+  "{n} seconds":
+      "{n} δευτερόλεπτα",
 };

@@ -2197,6 +2197,31 @@ class PlaylistSession {
     onNotify();
   }
 
+  /// Sets (a value, marked automatic like [setEpgIdOverridesBulk]) or clears
+  /// (null) many guide links with one write: the AI's EPG matching unlink
+  /// and undo.
+  Future<void> restoreEpgIdOverrides(Map<String, String?> values) async {
+    if (values.isEmpty) return;
+    for (final e in values.entries) {
+      final id = e.value;
+      if (id == null || id.isEmpty) {
+        epgIdOverrides.remove(e.key);
+        autoPairedEpgOverrides.remove(e.key);
+      } else {
+        epgIdOverrides[e.key] = id;
+        autoPairedEpgOverrides.add(e.key);
+      }
+    }
+    await storage.setEpgIdOverrides(profile.id, epgIdOverrides);
+    await storage.setAutoPairedEpgOverrides(profile.id, autoPairedEpgOverrides);
+    for (final channel in [...channels, ...liveChannels]) {
+      if (values.containsKey(channel.rawId)) {
+        channel.epgIdOverride = epgIdOverrides[channel.rawId];
+      }
+    }
+    onNotify();
+  }
+
   /// [link] null clears it. No per-`Channel` field to patch afterward —
   /// see [channelLinks]'s own doc comment for why this is simpler than
   /// [setEpgIdOverride] just above it. [isAuto]: see that same method's

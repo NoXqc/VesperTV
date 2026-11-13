@@ -39,6 +39,7 @@ import 'multiview_screen.dart';
 import 'search_screen.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
+import '../widgets/player_clock_pill.dart';
 import '../widgets/phone_picture_in_picture.dart';
 import '../widgets/player_touch_lock.dart';
 
@@ -1402,7 +1403,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     final now = DateTime.now();
     final last = _arrowAt;
     _arrowAt = now;
-    if (last != null && now.difference(last) < const Duration(milliseconds: 400)) {
+    if (last != null &&
+        now.difference(last) < const Duration(milliseconds: 400)) {
       return;
     }
     switch (action) {
@@ -1420,6 +1422,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   void lastChannel() => _lastChannel();
   @override
   void zap(int step) => _zapChannel(step);
+  @override
+  void skip(int step) => _skipKey(step);
   @override
   void showInfo() => _toggleInfoCard();
   @override
@@ -2014,10 +2018,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                             ),
                           ),
 
+                          // Touch: the top bar has its own clock.
+                          if (prefs.playerClock)
+                            PlayerClockPill(
+                                top: 6, visible: !(_touch && _topVisible)),
                           if (channel.mediaFileInfo case final info?)
                             MediaFileInfoOverlay(
                               key: ValueKey('file-info-${channel.id}'),
-                              top: _touch ? 72 : 16,
+                              top: (_touch ? 72 : 16) +
+                                  (prefs.playerClock && !_touch
+                                      ? PlayerClockPill.height
+                                      : 0),
                               info: info,
                               requests: _fileInfoRequests,
                             ),
