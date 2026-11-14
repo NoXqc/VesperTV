@@ -31,6 +31,7 @@ import 'series_detail_screen.dart';
 import '../l10n/l10n.dart';
 import '../services/vesper_ai/vesper_ai.dart';
 import '../utils/desktop_platform.dart';
+import '../utils/hub_title_order.dart';
 
 /// Full-screen search — a search bar plus every matching result grouped
 /// into its own horizontally-scrolling poster row (Live TV, Movies, TV
@@ -830,6 +831,8 @@ class _SearchScreenState extends State<SearchScreen> {
               sourceLabel: items[i].$1.name,
               imageUrl: items[i].$2.posterUrl,
               rating: items[i].$2.year,
+              tag: items[i].$2.releaseTag?.label,
+              tagStrong: items[i].$2.releaseTag == HubReleaseTag.isNew,
               ready: watch.isReady(items[i].$2.id),
               fetching: watch.fetching.value.contains(items[i].$2.id),
               isFavorite: hub.isFavorite(items[i].$1, items[i].$2),

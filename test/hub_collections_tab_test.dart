@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nox_iptv/models/archive_models.dart';
+import 'package:nox_iptv/screens/archive_catalog_screen.dart';
 import 'package:nox_iptv/screens/archive_screen.dart';
 import 'package:nox_iptv/screens/hub_folder_screen.dart';
 import 'package:nox_iptv/screens/settings/hub_collections_pane.dart';
@@ -124,13 +125,14 @@ String? _focusedPoster(WidgetTester tester) => tester
     .firstOrNull
     ?.title;
 
-Widget _app(ArchiveService service, StorageService storage, Widget home) =>
+Widget _app(ArchiveService service, StorageService storage, Widget home,
+        {AppPreferences? prefs}) =>
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ArchiveService>.value(value: service),
         Provider<StorageService>.value(value: storage),
         ChangeNotifierProvider<AppPreferences>.value(
-            value: AppPreferences(storage)..isTelevision = true),
+            value: prefs ?? (AppPreferences(storage)..isTelevision = true)),
       ],
       child: MaterialApp(
           navigatorObservers: [appRouteObserver],
@@ -188,6 +190,94 @@ void main() {
     await service.setCollectionsHideRows(false);
     await tester.pumpAndSettle();
     expect(find.text('Netflix Movies'), findsWidgets);
+
+    await tester.pumpWidget(const SizedBox());
+    service.dispose();
+  });
+
+  testWidgets('hold a tile > Expand collection: all its titles in one grid',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final (service, storage) = await _setUp();
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    prefs.isTelevision = true;
+    await service.importCollections('https://x.example/collections.json');
+    await tester.pumpWidget(
+        _app(service, storage, const ArchiveScreen(), prefs: prefs));
+    await tester.pumpAndSettle();
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused, 'archive-card');
+
+    // Hold OK on Netflix: the menu, Expand collection first.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pump(const Duration(milliseconds: 500));
+    for (var k = 0; k < 12; k++) {
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.text('Expand collection'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.enter);
+
+    // Both Netflix catalogs (movies + shows), each title once, first focused;
+    // Prime Video's catalog isn't in it.
+    expect(find.byType(ArchiveCatalogScreen), findsOneWidget);
+    expect(find.text('Streaming   ·   Netflix   ·   6 titles'), findsOneWidget);
+    final titles = tester
+        .widgetList<PosterCard>(find.byType(PosterCard))
+        .map((c) => c.title)
+        .toList();
+    expect(titles, [
+      for (var i = 0; i < 3; i++) 'nf.movies $i',
+      for (var i = 0; i < 3; i++) 'nf.shows $i',
+    ]);
+    expect(_focusedPoster(tester), 'nf.movies 0');
+    expect(tester.widget<PosterCard>(find.byType(PosterCard).first).wideStyle,
+        isFalse);
+
+    // Movies and shows mixed: All / Movies / TV Shows. Up from the top row
+    // = the selected one (All); Right + OK = Movies only, then TV Shows.
+    List<String> shown() => tester
+        .widgetList<PosterCard>(find.byType(PosterCard))
+        .map((c) => c.title)
+        .toList();
+    expect(find.text('Movies'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    expect(_focused, 'archive-grid-filter');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.enter);
+    expect(shown(), [for (var i = 0; i < 3; i++) 'nf.movies $i']);
+    expect(find.text('Streaming   ·   Netflix   ·   3 titles'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.enter);
+    expect(shown(), [for (var i = 0; i < 3; i++) 'nf.shows $i']);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focusedPoster(tester), 'nf.shows 0');
+    // Back to All for the rest of the test.
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    await _press(tester, LogicalKeyboardKey.arrowLeft);
+    await _press(tester, LogicalKeyboardKey.arrowLeft);
+    await _press(tester, LogicalKeyboardKey.enter);
+    expect(shown().length, 6);
+
+    // Wide cards on: 16:9 cards, as in the IPTV expanded catalog.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    prefs.setWideCards(true);
+    await tester.pumpWidget(_app(
+        service,
+        storage,
+        ArchiveCatalogScreen.folder(
+            folder: service.collections.single.folders.first),
+        prefs: prefs));
+    await tester.pumpAndSettle();
+    expect(tester.widget<PosterCard>(find.byType(PosterCard).first).wideStyle,
+        isTrue);
 
     await tester.pumpWidget(const SizedBox());
     service.dispose();

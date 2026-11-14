@@ -32,6 +32,8 @@ class PosterCard extends StatefulWidget {
     this.isFavorite = false,
     this.ready = false,
     this.fetching = false,
+    this.tag,
+    this.tagStrong = false,
     this.onToggleFavorite,
     this.cardWidth = PosterCard.width,
     this.cardPosterHeight = PosterCard.posterHeight,
@@ -137,6 +139,11 @@ class PosterCard extends StatefulWidget {
 
   /// Media Hub: that title is still being checked — outlined "Fetching…".
   final bool fetching;
+
+  /// Media Hub: a release tag in the rating's corner ("Coming soon", or
+  /// "NEW" with [tagStrong]: theme colour), see `hubReleaseTag`.
+  final String? tag;
+  final bool tagStrong;
   final VoidCallback? onToggleFavorite;
 
   /// Override [PosterCard.width]/[PosterCard.posterHeight] per instance —
@@ -477,6 +484,40 @@ class _PosterCardState extends State<PosterCard> {
                                       : scheme.primary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        )
+                      else if (widget.tag != null)
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          right: widget.isFavorite ? 22 : 4,
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: widget.tagStrong
+                                    ? scheme.primary
+                                    : Colors.black.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(4),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black54, blurRadius: 4),
+                                ],
+                              ),
+                              child: Text(
+                                widget.tag!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: widget.tagStrong
+                                        ? scheme.onPrimary
+                                        : scheme.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                         )

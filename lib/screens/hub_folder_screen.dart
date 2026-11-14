@@ -17,6 +17,7 @@ import '../widgets/poster_card.dart';
 import '../widgets/trimmed_logo.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import '../utils/hub_title_order.dart';
 
 /// A collection tile's page (OK on "Netflix" in the Media Hub tab's
 /// Streaming row): the folder's backdrop and title logo, then one poster
@@ -247,31 +248,6 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
     }
   }
 
-  /// A row's name without its leading emoji ("🎬 Netflix" -> "Netflix").
-  static String _plain(String name) {
-    final clean =
-        name.replaceFirst(RegExp(r'^[^\p{L}\p{N}]+', unicode: true), '');
-    return clean.isEmpty ? name : clean;
-  }
-
-  String _rowName(ArchiveRow row) {
-    if (row.customTitle != null) return row.customTitle!;
-    return _plain(row.source.streamOnly || row.source.tracker != null
-        ? tr(row.title)
-        : row.title);
-  }
-
-  /// The row header: its name, plus "(Movies)" / "(TV Shows)" when another
-  /// row on the page has the same name (the pack names both "🎬 Netflix").
-  String _rowTitle(List<ArchiveRow> rows, ArchiveRow row) {
-    final name = _rowName(row);
-    final twin = rows.any((r) => !identical(r, row) && _rowName(r) == name);
-    if (!twin) return name;
-    return row.catalog.type == ArchiveType.movie
-        ? '$name (${tr('Movies')})'
-        : '$name (${tr('TV Shows')})';
-  }
-
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
@@ -409,7 +385,7 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
             padding: const EdgeInsets.fromLTRB(24, 10, 24, 4),
             child: ValueListenableBuilder<int>(
               valueListenable: _focusTick,
-              builder: (_, __, ___) => Text(_rowTitle(rows, row),
+              builder: (_, __, ___) => Text(hubCatalogTitle(rows, row),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -441,6 +417,8 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                   title: meta.name,
                   imageUrl: meta.posterUrl,
                   rating: meta.year,
+                  tag: meta.releaseTag?.label,
+                  tagStrong: meta.releaseTag == HubReleaseTag.isNew,
                   wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
                   wideImageUrl: meta.backgroundUrl,
                   wideLogoUrl: meta.logo,
@@ -583,4 +561,30 @@ class _Hero extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A row's name without its leading emoji ("🎬 Netflix" -> "Netflix").
+String _plainCatalogName(String name) {
+  final clean =
+      name.replaceFirst(RegExp(r'^[^\p{L}\p{N}]+', unicode: true), '');
+  return clean.isEmpty ? name : clean;
+}
+
+String _catalogName(ArchiveRow row) {
+  if (row.customTitle != null) return row.customTitle!;
+  return _plainCatalogName(row.source.streamOnly || row.source.tracker != null
+      ? tr(row.title)
+      : row.title);
+}
+
+/// A tile's catalog name: its own, plus "(Movies)" / "(TV Shows)" when
+/// another of [rows] has the same name (the pack names both "🎬 Netflix").
+/// The tile's page and the expanded collection's Filter use it.
+String hubCatalogTitle(List<ArchiveRow> rows, ArchiveRow row) {
+  final name = _catalogName(row);
+  final twin = rows.any((r) => !identical(r, row) && _catalogName(r) == name);
+  if (!twin) return name;
+  return row.catalog.type == ArchiveType.movie
+      ? '$name (${tr('Movies')})'
+      : '$name (${tr('TV Shows')})';
 }

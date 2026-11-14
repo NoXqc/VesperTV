@@ -39,6 +39,7 @@ import 'settings/media_server_screen.dart';
 import '../utils/desktop_platform.dart';
 import '../widgets/glass_menu.dart';
 import '../widgets/tv_dialog_option.dart';
+import '../utils/hub_title_order.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -160,9 +161,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     _refreshHistoryProgress();
   }
 
-  /// Hold OK on a tile: turn its collection off (it leaves the tab; Settings
+  /// Hold OK on a tile: Expand catalog (every title of the tile's catalogs
+  /// in one grid), turn its collection off (it leaves the tab; Settings
   /// > Media Hub sources > Collections turns it back on), or Home.
-  Future<void> _tileMenu(ArchiveRow row) async {
+  Future<void> _tileMenu(ArchiveRow row, int i) async {
     final collection = row.collection;
     if (collection == null) return;
     final service = context.read<ArchiveService>();
@@ -174,6 +176,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           children: [
             TvDialogOption(
               autofocus: true,
+              onPressed: () => Navigator.of(dialogContext).pop('expand'),
+              child: Text(tr('Expand collection')),
+            ),
+            TvDialogOption(
               onPressed: () => Navigator.of(dialogContext).pop('off'),
               child: Text(tr('Turn off this collection')),
             ),
@@ -192,6 +198,14 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       ),
     );
     if (!mounted || choice == null) return;
+    if (choice == 'expand') {
+      if (i >= row.folders.length) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ArchiveCatalogScreen.folder(
+              folder: row.folders[i], collection: collection.label)));
+      _refreshHistoryProgress();
+      return;
+    }
     if (choice == 'home') {
       await service.setCollectionOnHome(collection.id, !collection.onHome);
       return;
@@ -2075,7 +2089,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                           false) &&
                       _narrow,
                   onTap: () => _openFolder(row, i),
-                  onHold: () => _tileMenu(row),
+                  onHold: () => _tileMenu(row, i),
                   onFocusGained: () {
                     _focusedRowKey = row.key;
                     _lastIndex[row.key] = i;
@@ -2130,6 +2144,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                               : meta.year)
                           : meta.year,
                       progressFraction: row.continuations?[i].progress,
+                      tag: row.continuations == null
+                          ? meta.releaseTag?.label
+                          : null,
+                      tagStrong: row.continuations == null &&
+                          meta.releaseTag == HubReleaseTag.isNew,
                       sourceLabel: row.continuations != null
                           ? (row.upcoming
                               ? tr('Airs {date}', {

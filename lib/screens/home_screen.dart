@@ -1,5 +1,6 @@
 import '../widgets/native_video_hole.dart';
 import '../widgets/glass_menu.dart';
+import '../utils/hub_title_order.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -44,6 +45,7 @@ import '../widgets/tv_dialog_option.dart';
 import '../widgets/video_tap_layer.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import 'archive_catalog_screen.dart';
 import 'hub_folder_screen.dart';
 import 'desktop_player_screen.dart';
 import 'movie_detail_screen.dart';
@@ -114,9 +116,14 @@ class _HomeItem {
     this.programme,
     this.focusImageUrl,
     this.titleLogoUrl,
+    this.expand,
   });
 
   final String key;
+
+  /// A collection tile: hold OK > Expand catalog, every title of its
+  /// catalogs in one grid.
+  final Future<void> Function(BuildContext context)? expand;
 
   /// A collection tile's title logo: the hero shows it instead of the name
   /// (owner, 2026-11-11: the NETFLIX wordmark, not "Netflix" in text).
@@ -394,6 +401,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 open: (ctx) => Navigator.of(ctx).push(MaterialPageRoute(
                     builder: (_) =>
                         HubFolderScreen(folder: f, collection: c.label))),
+                expand: (ctx) => Navigator.of(ctx).push(MaterialPageRoute(
+                    builder: (_) => ArchiveCatalogScreen.folder(
+                        folder: f, collection: c.label))),
               ),
           ],
           id: 'collection|${c.id}',
@@ -789,6 +799,9 @@ class _HomeScreenState extends State<HomeScreen> {
           backdropUrl: i.backdropUrl,
           removeFromHistory: () => list.remove(storage, i.id),
           removeLabel: 'Remove from watch list',
+          // A Media Hub title still to come / just out (hub_title_order).
+          tag: i.hub?.meta.releaseTag?.label,
+          tagHighlight: i.hub?.meta.releaseTag == HubReleaseTag.isNew,
           preview: (i.channel?.isLive ?? false) ? i.channel : null,
           open: (ctx) {
             if (i.hub case final h?) return _openHubTitle(ctx, h);
@@ -1425,15 +1438,24 @@ class _HomeScreenState extends State<HomeScreen> {
     // so a hold then OK turns it off.
     final stopMini =
         HomeScreen.showsMiniPlayer(context) && _miniChannelId() != null;
-    final firstFree = !stopMini && item?.removeFromHistory == null;
+    final firstFree = !stopMini &&
+        item?.removeFromHistory == null &&
+        item?.expand == null &&
+        !(kind == HomeRowKind.collections && homeRow != null);
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
         title: Text(homeRow?.title ?? tr(kind.title)),
         children: [
-          if (kind == HomeRowKind.collections && homeRow != null)
+          if (item?.expand != null)
             TvDialogOption(
               autofocus: !stopMini,
+              onPressed: () => Navigator.of(context).pop('expand'),
+              child: Text(tr('Expand collection')),
+            ),
+          if (kind == HomeRowKind.collections && homeRow != null)
+            TvDialogOption(
+              autofocus: !stopMini && item?.expand == null,
               onPressed: () => Navigator.of(context).pop('unhome'),
               child: Text(tr('Remove from Home')),
             ),
@@ -1483,6 +1505,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (choice == 'stopmini') {
       _miniTimer?.cancel();
       await _stopMini();
+      return;
+    }
+    if (choice == 'expand') {
+      // Like opening the tile's page: a title played from the grid takes
+      // the mini player's place.
+      await _parkMini();
+      if (!mounted) return;
+      await item?.expand?.call(context);
+      // Same return as after a tile's page (focus on the card again).
+      if (mounted) _refocusAfterReturn();
       return;
     }
     if (choice == 'unhome') {
@@ -1626,8 +1658,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // fading for 450 ms per step, on top of the video's
                     // memory traffic, gave half-drawn frames on the
                     // Homatics (owner photos, +782).
-                    cut: NativeVideoSurface.active &&
-                        _miniChannelId() != null),
+                    cut: NativeVideoSurface.active && _miniChannelId() != null),
               ),
             ),
             AnimatedOpacity(

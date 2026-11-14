@@ -2067,6 +2067,28 @@ class ArchiveService extends ChangeNotifier {
   final Set<String> _loadingMore = {};
   final Set<String> _exhausted = {};
 
+  /// Every remaining page of [rows], up to [maxPerRow] titles each, the
+  /// rows side by side: the expanded grid's sort and filters need the whole
+  /// catalog (sorting while pages keep arriving moved cards under the
+  /// remote). Stops on a page that brings nothing new, an error, or a row
+  /// already loading.
+  Future<void> loadRest(List<ArchiveRow> rows, {int maxPerRow = 500}) =>
+      Future.wait([
+        for (final row in rows)
+          if (!row.isSearch && row.itemSources == null)
+            _loadRestOf(row, maxPerRow)
+      ]);
+
+  Future<void> _loadRestOf(ArchiveRow row, int max) async {
+    final key = row.key;
+    for (var guard = 0; guard < 40 && !_disposed; guard++) {
+      final have = _items[key]?.length ?? 0;
+      if (have >= max || _exhausted.contains(key)) return;
+      await loadMore(row);
+      if ((_items[key]?.length ?? 0) == have) return;
+    }
+  }
+
   /// Appends [row]'s next page (called as focus nears its end), so a row
   /// keeps scrolling past the pages [refresh] fetched. Not cached: a
   /// refresh starts the row over.

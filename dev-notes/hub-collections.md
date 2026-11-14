@@ -148,6 +148,31 @@ Streaming's Show on Home). `ArchiveService.removeCollection` keeps `{on, home}` 
 `removed` (newest 100); `importCollections` gives a returning id its switches back and forgets them. The pack's
 "only Streaming on" leaves restored ones alone (`rememberedCollectionIds`). `test/hub_collections_test.dart`.
 
+## +784: Expand collection
+Hold OK on a tile (Media Hub tab and Home) > **Expand collection** (first, focused): `ArchiveCatalogScreen.folder`,
+every title of the tile's catalogs in one grid (catalog order, each title once by type + id), `loadFolder` on open,
+`loadMore` on every catalog near the end, hold = favourite / mark watched (`holdHubTitleMenu`). Settings > Interface >
+Tabs > Wide cards gives 16:9 cards here and in the Media Hub's plain Expand catalog too (same as the IPTV expanded
+catalog; a portrait phone keeps posters). `test/hub_collections_tab_test.dart`.
++785: a tile mixing movies and shows gets **All / Movies / TV Shows** at the top right (`_FilterChip`, glass row look);
+Up from the grid's top row = the selected one (explicit, `_columns` from the delegate's formula), Left / Right between
+them, OK picks, Down = first card. Remembered per tile for the app run (`_lastFilter`).
+
+## +786: Coming soon / NEW tags, Sort and Filter in the expanded grids
+Owner: Nuvio / Stremio show newer titles (even in theaters) with a Coming soon tag; users will want Latest / Popular /
+Year. Cinemeta's catalog metas carry `released` (full ISO date, upcoming films included) and `popularity` (checked live
+2026-11-13); AIOMetadata's output not checked. `ArchiveMeta.released` / `popularity` (+ cache), `releaseDate` (date
+part, else Jan 1 of a bare year). `utils/hub_title_order.dart`: `hubReleaseTag` (Coming soon after today, NEW up to 30
+days after; a bare later year = Coming soon), `HubSort` (Default / Newest / Oldest / Most popular (only when titles
+carry a score) / Rating / A to Z; missing values last, stable), `hubGenres`, `hubDecades`. PosterCard `tag` /
+`tagStrong` (top-left, over the year): Media Hub rows (not Continue watching), tile pages, expanded grids, Search,
+Watch list page, discovery panel; Home's watch list via its own tag. Expanded grid (`ArchiveCatalogScreen`, row or
+tile): a header row under the title: Sort ▾, Filter ▾ (Catalog: a tile's catalogs via `hubCatalogTitle`, Genre,
+Decade; one per kind, Clear filters), then All / Movies / TV Shows. Any non-default choice loads the rest of the
+catalog first (`ArchiveService.loadRest`, 500 per catalog, rows side by side) with "Loading every title…". Choices
+kept per tile / row for the app run. Old cached rows get the dates at their next refresh.
+`test/hub_title_order_test.dart`, `test/hub_grid_sort_filter_test.dart`.
+
 ## Not done / to check on a box
 - Performance of the animated WebP on the Formuler (one decoder at a time on TV).
 - The pack's ~130 AIOMetadata catalogs: the tab's refresh still fetches every catalog (2 pages

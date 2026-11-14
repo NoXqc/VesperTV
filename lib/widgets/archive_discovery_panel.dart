@@ -14,6 +14,7 @@ import 'poster_card.dart';
 import 'hold_to_activate.dart';
 import 'dart:convert';
 import 'archive_detail_layout.dart';
+import '../utils/hub_title_order.dart';
 
 Widget _remoteCard(PosterCard card) =>
     HoldToActivate(onTap: card.onTap, child: card);
@@ -327,6 +328,8 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
           title: meta.name,
           imageUrl: meta.posterUrl,
           rating: meta.year,
+          tag: meta.releaseTag?.label,
+          tagStrong: meta.releaseTag == HubReleaseTag.isNew,
           onTap: () async {
             await _open(meta);
             if (current) _focus(row, i);
@@ -577,6 +580,8 @@ class _ArchiveCreditsScreenState extends State<_ArchiveCreditsScreen> {
                       title: items[i].name,
                       imageUrl: items[i].posterUrl,
                       rating: items[i].year,
+                      tag: items[i].releaseTag?.label,
+                      tagStrong: items[i].releaseTag == HubReleaseTag.isNew,
                       onTap: () async {
                         await widget.open(items[i]);
                         if (mounted) node.requestFocus();

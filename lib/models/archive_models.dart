@@ -34,8 +34,7 @@ enum ArchiveType {
   /// Another name an add-on gives a standard type: AIOMetadata's display
   /// type writes "movies" (owner, 2026-11-11: movie tiles listed under
   /// Other / shows). Read as that type, never as a custom one.
-  static ArchiveType? aliasOf(String? s) =>
-      switch (s?.trim().toLowerCase()) {
+  static ArchiveType? aliasOf(String? s) => switch (s?.trim().toLowerCase()) {
         'movies' => ArchiveType.movie,
         'shows' || 'tv shows' => ArchiveType.series,
         _ => null,
@@ -653,7 +652,35 @@ class ArchiveMeta {
     this.imdbId,
     this.trailers = const [],
     this.trailerStreams = const [],
+    this.released,
+    this.popularity,
   }) : originalPosterUrl = posterUrl;
+
+  /// The release date as sent (`released`, ISO 8601: Cinemeta's catalogs
+  /// carry it, upcoming films included); a show's first air date. The
+  /// Coming soon / New tags and the Newest sort read it ([releaseDate]).
+  final String? released;
+
+  /// The source's popularity score (`popularity`, Cinemeta's), higher =
+  /// more popular; null when the source sends none.
+  final double? popularity;
+
+  /// [released] as a calendar date (the day the source names, whatever the
+  /// time zone), else January 1st of a plain [year] ("2027"); null when
+  /// neither reads.
+  DateTime? get releaseDate {
+    final r = released;
+    if (r != null) {
+      final d = DateTime.tryParse(r);
+      if (d != null) return DateTime(d.year, d.month, d.day);
+    }
+    final y = RegExp(r'^\s*(\d{4})\s*$').firstMatch(year ?? '')?.group(1);
+    return y == null ? null : DateTime(int.parse(y));
+  }
+
+  /// Whether [releaseDate] came from a full date (not a bare year).
+  bool get hasReleaseDay =>
+      released != null && DateTime.tryParse(released!) != null;
 
   final String id;
   final ArchiveType type;
@@ -747,11 +774,10 @@ class ArchiveMeta {
     return ArchiveMeta(
       id: id,
       type: type,
-      wireType: wire == null ||
-              wire == type.wire ||
-              ArchiveType.aliasOf(wire) != null
-          ? null
-          : wire,
+      wireType:
+          wire == null || wire == type.wire || ArchiveType.aliasOf(wire) != null
+              ? null
+              : wire,
       imdbId: _str(j['imdb_id']),
       trailers: TrailerLinks.fromMetadata(j),
       trailerStreams: ArchiveStream.trailersFromMetadata(j),
@@ -764,6 +790,12 @@ class ArchiveMeta {
       genres: _strs(j['genres']),
       runtime: _str(j['runtime']),
       rating: _str(j['imdbRating']),
+      released: _str(j['released']),
+      popularity: switch (j['popularity']) {
+        final num n => n.toDouble(),
+        final String t => double.tryParse(t),
+        _ => null,
+      },
       cast: _strs(j['cast']),
       director: _strs(j['director']),
       videos: [
@@ -803,6 +835,8 @@ class ArchiveMeta {
         if (description != null) 'description': description,
         if (genres.isNotEmpty) 'genres': genres,
         if (runtime != null) 'runtime': runtime,
+        if (released != null) 'released': released,
+        if (popularity != null) 'popularity': popularity,
       };
 }
 

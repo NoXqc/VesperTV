@@ -10,6 +10,7 @@ import '../services/vesper_ai/watch_list.dart';
 import '../widgets/poster_card.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import '../utils/hub_title_order.dart';
 
 /// Media Hub > Watch list: the viewer's Media Hub titles on their watch
 /// list (Watch list button on a movie / show page, or Vesper AI), in two
@@ -166,6 +167,8 @@ class _ArchiveWatchListScreenState extends State<ArchiveWatchListScreen> {
                     title: title.meta.name,
                     imageUrl: title.meta.posterUrl,
                     rating: title.meta.rating,
+                    tag: title.meta.releaseTag?.label,
+                    tagStrong: title.meta.releaseTag == HubReleaseTag.isNew,
                     cardWidth: _cardWidth,
                     cardPosterHeight: _posterHeight,
                     focusNode: nodes[i],
