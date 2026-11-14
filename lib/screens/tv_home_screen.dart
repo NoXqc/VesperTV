@@ -1699,15 +1699,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// beta player instead, so returning does not reconnect. Android only —
   /// Windows has its own stack.
   Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
-    // Windows: the preview's player kept playing under Movies (Windows
-    // user, 2026-11-14: "Live TV keeps playing in the background").
+    // Windows / iPhone: the preview's player kept playing under Movies
+    // (Windows user, 2026-11-14: "Live TV keeps playing in the background").
+    // PlaybackService has nothing playing there, so the rest is a no-op.
     if (usesMediaKit) {
       final mini = DesktopMiniPlayer.instance;
       final channel = mini.channel.value;
-      if (channel == null) return;
-      _parkedDesktopChannel = channel;
-      mini.clear();
-      return;
+      if (channel != null) {
+        _parkedDesktopChannel = channel;
+        mini.clear();
+      }
     }
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
