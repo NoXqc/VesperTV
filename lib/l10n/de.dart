@@ -3704,4 +3704,11 @@ const Map<String, String> kDe = {
   "Play a recording here": "Aufnahme hier abspielen",
   "Back 30 s": "30 s zurück",
   "Forward 30 s": "30 s vor",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimalistisch",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Ein schlichter IPTV-Player: der klassische kompakte Guide, einklappende Gruppen, keine Verfeinerte Optik und kein Start, keine Profile, Sports Trak oder Media Hub. Ausschalten stellt alles wieder her. Tabs lassen sich auch einzeln wieder einschalten.",
+  "Removes the Home tab.":
+      "Entfernt den Tab Start.",
 };

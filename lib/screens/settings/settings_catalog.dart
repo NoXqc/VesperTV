@@ -351,6 +351,14 @@ class SettingsCatalog {
                   'Glossy surfaces, reflections and blur. Uses more graphics resources.'),
               value: prefs.refinedFinish,
               onChanged: prefs.setRefinedFinish),
+          SettingsToggle(
+              id: 'minimalist',
+              icon: Icons.crop_square,
+              title: tr('Minimalist'),
+              help: tr(
+                  'A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.'),
+              value: prefs.minimalist,
+              onChanged: (v) => unawaited(prefs.setMinimalist(v))),
           SettingsChoice(
               id: 'ui_size',
               icon: Icons.format_size,
@@ -432,6 +440,13 @@ class SettingsCatalog {
               onChanged: (v) => prefs.setHideProfiles(!v)),
         ]),
         SettingsSection(title: tr('Tabs'), [
+          _tab(
+              'tab_home',
+              Icons.home_outlined,
+              tr('Home'),
+              tr('Removes the Home tab.'),
+              !prefs.hideHome,
+              (v) => prefs.setHideHome(!v)),
           _tab(
               'tab_live',
               Icons.live_tv_outlined,

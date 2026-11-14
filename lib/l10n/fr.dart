@@ -3814,4 +3814,11 @@ const Map<String, String> kFr = {
   "Play a recording here": "Lire un enregistrement ici",
   "Back 30 s": "Reculer de 30 s",
   "Forward 30 s": "Avancer de 30 s",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimaliste",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Un lecteur IPTV simple : le guide classique compact, des groupes qui se replient, pas de Finition raffinée, et ni Accueil, ni profils, ni Sports Trak, ni Media Hub. Désactivez-le pour tout remettre comme avant. Les onglets peuvent aussi être réactivés un par un.",
+  "Removes the Home tab.":
+      "Retire l’onglet Accueil.",
 };

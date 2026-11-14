@@ -175,6 +175,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _onTabChanged('TV Shows');
         return true;
       case 'home':
+        if (prefs.homeHidden) return false;
         _openHome();
         return true;
       case 'hub':
@@ -4469,7 +4470,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ),
           child: Row(
             children: [
-              item(Icons.home_outlined, tr('Home'), _tab == 'Home', _openHome),
+              if (!context.watch<AppPreferences>().homeHidden)
+                item(Icons.home_outlined, tr('Home'), _tab == 'Home',
+                    _openHome),
               for (final tab in _visibleTabs)
                 item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
                   if (_tab == tab) {
@@ -4617,14 +4620,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       children: [
         // Home: profiles strip + rows across the app (HomeScreen). It also
         // replaced this column's profile row (owner, 2026-10-23).
-        _SelectableRow(
-          icon: Icons.home_outlined,
-          label: tr('Home'),
-          selected: _tab == 'Home',
-          collapsed: collapsed,
-          focusNode: _tabFocusNode('Home'),
-          onTap: _openHome,
-        ),
+        if (!context.watch<AppPreferences>().homeHidden)
+          _SelectableRow(
+            icon: Icons.home_outlined,
+            label: tr('Home'),
+            selected: _tab == 'Home',
+            collapsed: collapsed,
+            focusNode: _tabFocusNode('Home'),
+            onTap: _openHome,
+          ),
         _SelectableRow(
           icon: Icons.search,
           label: tr('Search'),

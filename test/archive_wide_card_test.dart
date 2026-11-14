@@ -53,7 +53,7 @@ class _Rows extends ArchiveService {
   @override
   bool isFavorite(ArchiveSource source, ArchiveMeta meta) => false;
   @override
-  Future<void> loadMore(ArchiveRow row) async {}
+  Future<void> loadMore(ArchiveRow row, {bool notify = true}) async {}
 }
 
 PosterCard _focusedCard(WidgetTester tester) =>

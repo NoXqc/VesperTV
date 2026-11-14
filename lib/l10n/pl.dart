@@ -3395,4 +3395,11 @@ const Map<String, String> kPl = {
   "Play a recording here": "Odtwórz tu nagranie",
   "Back 30 s": "30 s do tyłu",
   "Forward 30 s": "30 s do przodu",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimalistyczny",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Prosty odtwarzacz IPTV: klasyczny kompaktowy przewodnik, zwijane grupy, bez Dopracowanego wykończenia i bez Startu, profili, Sports Trak ani Media Hub. Wyłącz, aby przywrócić wszystko jak było. Karty można też włączać ponownie pojedynczo.",
+  "Removes the Home tab.":
+      "Usuwa kartę Start.",
 };

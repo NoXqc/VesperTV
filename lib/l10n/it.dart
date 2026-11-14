@@ -3808,4 +3808,11 @@ const Map<String, String> kIt = {
   "Play a recording here": "Riproduci qui una registrazione",
   "Back 30 s": "Indietro 30 s",
   "Forward 30 s": "Avanti 30 s",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimalista",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Un lettore IPTV semplice: la guida classica compatta, gruppi che si richiudono, niente Finitura raffinata e niente Home, profili, Sports Trak o Media Hub. Disattivalo per rimettere tutto com'era. Le schede si possono anche riattivare una alla volta.",
+  "Removes the Home tab.":
+      "Rimuove la scheda Home.",
 };

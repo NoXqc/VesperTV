@@ -3286,12 +3286,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       collapse: !scrollPage,
       moving: _movingLeague != null,
       onMove: _moveLeague,
-      topCount: prefs.hideMultiview ? 2 : 3,
+      topCount: 1 + (prefs.homeHidden ? 0 : 1) + (prefs.hideMultiview ? 0 : 1),
       leagueCount: _navigationLeagues.take(5).length,
       entries: [
         // The top of the Live TV tabs column, so Sports Mode keeps every
         // destination in its own rail (owner, 2026-10-28).
-        app('home', tr('Home'), Icons.home_outlined, const HomeScreen()),
+        if (!prefs.homeHidden)
+          app('home', tr('Home'), Icons.home_outlined, const HomeScreen()),
         app('search', tr('Search'), Icons.search,
             const SearchScreen(initialScope: 'TV')),
         if (!prefs.hideMultiview)

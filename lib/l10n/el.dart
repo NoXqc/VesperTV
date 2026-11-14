@@ -3763,4 +3763,11 @@ const Map<String, String> kEl = {
   "Play a recording here": "Αναπαραγωγή εγγραφής εδώ",
   "Back 30 s": "Πίσω 30 δλ",
   "Forward 30 s": "Μπροστά 30 δλ",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Μινιμαλιστικό",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Ένα απλό πρόγραμμα IPTV: ο κλασικός συμπαγής οδηγός, ομάδες που κλείνουν, χωρίς Εκλεπτυσμένο φινίρισμα και χωρίς Αρχική, προφίλ, Sports Trak ή Media Hub. Απενεργοποιήστε το για να επιστρέψουν όλα όπως ήταν. Οι καρτέλες μπορούν επίσης να ενεργοποιηθούν ξανά μία μία.",
+  "Removes the Home tab.":
+      "Αφαιρεί την καρτέλα Αρχική.",
 };

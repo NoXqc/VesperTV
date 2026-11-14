@@ -296,6 +296,12 @@ class AppConstants {
   static const String keyHideRecordings = 'vesper_hide_recordings';
   static const String keyHideCatchupGroup = 'vesper_hide_catchup_group';
   static const String keyHideMultiview = 'vesper_hide_multiview';
+  static const String keyHideHome = 'vesper_hide_home';
+
+  /// Settings > Appearance > Minimalist, and the settings it changed (as
+  /// they were), put back when it's turned off.
+  static const String keyMinimalist = 'vesper_minimalist';
+  static const String keyMinimalistBefore = 'vesper_minimalist_before';
 
   /// Favourites (TV, Movies, TV Shows) as one list across playlists,
   /// A-Z, instead of one block per playlist.
