@@ -3809,4 +3809,9 @@ const Map<String, String> kFr = {
       "{count} épisodes marqués comme vus",
   "{count} episodes marked as unwatched":
       "{count} épisodes marqués comme non vus",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Ajouter un enregistrement",
+  "Play a recording here": "Lire un enregistrement ici",
+  "Back 30 s": "Reculer de 30 s",
+  "Forward 30 s": "Avancer de 30 s",
 };

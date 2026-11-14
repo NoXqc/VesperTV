@@ -382,6 +382,95 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
     return (items, sources, rows, inRows);
   }
 
+  /// The last [_view] and what it was made from: build runs on every
+  /// change of the Media Hub and every focus step, and filtering and
+  /// sorting a 2,100-title tile each time froze the UI (owner, 2026-11-14).
+  List<Object?> _viewKey = const [];
+  ({
+    List<ArchiveMeta> all,
+    List<ArchiveRow> rows,
+    bool hasType,
+    List<ArchiveMeta> typed,
+    String? catalog,
+    bool popular,
+    List<ArchiveMeta> items,
+    List<ArchiveSource> sources,
+  })? _lastView;
+
+  /// The grid's titles in order (type, filters, sort), remade only when a
+  /// catalog's titles or a choice changed.
+  ({
+    List<ArchiveMeta> all,
+    List<ArchiveRow> rows,
+    bool hasType,
+    List<ArchiveMeta> typed,
+    String? catalog,
+    bool popular,
+    List<ArchiveMeta> items,
+    List<ArchiveSource> sources,
+  }) _view(ArchiveService service) {
+    final folder = widget.folder;
+    final current = folder != null
+        ? service.folderRows(folder)
+        : [
+            for (final r in service.rows(widget.type!))
+              if (r.key == widget.rowKey) r
+          ];
+    // A catalog's list is replaced (not grown) when pages arrive.
+    final key = <Object?>[
+      for (final r in current) ...[r.key, r.items],
+      _type,
+      _sort,
+      _catalog,
+      _genre,
+      _decade,
+    ];
+    final last = _lastView;
+    if (last != null && key.length == _viewKey.length) {
+      var same = true;
+      for (var i = 0; i < key.length && same; i++) {
+        same = identical(key[i], _viewKey[i]) ||
+            (key[i] is! List && key[i] == _viewKey[i]);
+      }
+      if (same) return last;
+    }
+    final (all, allSources, rows, inRows) = _content(service);
+    // The type switch only when the tile has both kinds.
+    final hasType = folder != null &&
+        all.any((m) => m.type == ArchiveType.movie) &&
+        all.any((m) => m.type == ArchiveType.series);
+    final type = hasType ? _type : null;
+    // The menus offer what the shown kind carries.
+    final ofType = [
+      for (var i = 0; i < all.length; i++)
+        if (type == null || all[i].type == type) i
+    ];
+    final typed = [for (final i in ofType) all[i]];
+    final catalog = rows.any((r) => r.key == _catalog) ? _catalog : null;
+    final keep = [
+      for (final i in ofType)
+        if ((catalog == null || inRows[i].contains(catalog)) &&
+            (_genre == null || all[i].genres.contains(_genre)) &&
+            (_decade == null || hubDecade(all[i]) == _decade))
+          i
+    ];
+    final popular = hubHasPopularity(typed);
+    final sort = _sort == HubSort.popular && !popular ? HubSort.source : _sort;
+    final kept = [for (final i in keep) all[i]];
+    final order = hubSortOrder(kept, sort);
+    _viewKey = key;
+    return _lastView = (
+      all: all,
+      rows: rows,
+      hasType: hasType,
+      typed: typed,
+      catalog: catalog,
+      popular: popular,
+      items: [for (final o in order) kept[o]],
+      sources: [for (final o in order) allSources[keep[o]]],
+    );
+  }
+
   /// Wide cards, as on the IPTV expanded catalog (a portrait phone keeps
   /// posters).
   bool _wide(BuildContext context) {
@@ -413,33 +502,18 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
-    final (all, allSources, rows, inRows) = _content(service);
     final folder = widget.folder;
-    // The type switch only when the tile has both kinds.
-    final hasType = folder != null &&
-        all.any((m) => m.type == ArchiveType.movie) &&
-        all.any((m) => m.type == ArchiveType.series);
-    final type = hasType ? _type : null;
-    // The menus offer what the shown kind carries.
-    final ofType = [
-      for (var i = 0; i < all.length; i++)
-        if (type == null || all[i].type == type) i
-    ];
-    final typed = [for (final i in ofType) all[i]];
-    final catalog = rows.any((r) => r.key == _catalog) ? _catalog : null;
-    final keep = [
-      for (final i in ofType)
-        if ((catalog == null || inRows[i].contains(catalog)) &&
-            (_genre == null || all[i].genres.contains(_genre)) &&
-            (_decade == null || hubDecade(all[i]) == _decade))
-          i
-    ];
-    final popular = hubHasPopularity(typed);
+    final (
+      :all,
+      :rows,
+      :hasType,
+      :typed,
+      :catalog,
+      :popular,
+      :items,
+      :sources
+    ) = _view(service);
     final sort = _sort == HubSort.popular && !popular ? HubSort.source : _sort;
-    final kept = [for (final i in keep) all[i]];
-    final order = hubSortOrder(kept, sort);
-    final items = [for (final o in order) kept[o]];
-    final sources = [for (final o in order) allSources[keep[o]]];
     final filters = [catalog, _genre, _decade].where((x) => x != null).length;
     final loading = folder != null && service.folderLoading(folder);
     if (_narrowed && rows.isNotEmpty && !loading) _loadRest(rows);
@@ -487,7 +561,7 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
                   ArchiveType.movie => tr('Movies'),
                   ArchiveType.series => tr('TV Shows'),
                 },
-                selected: _types[i] == type,
+                selected: _types[i] == (hasType ? _type : null),
                 onSelect: () {
                   if (_types[i] != _type) _changed(() => _type = _types[i]);
                 },

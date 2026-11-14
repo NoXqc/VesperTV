@@ -576,8 +576,8 @@ class PlayerControls extends StatelessWidget {
   final VoidCallback? onToggleMore;
 
   /// Opens Multiview with whatever's currently playing already loaded as
-  /// the first cell — lives in the secondary row, gated on [isLive]
-  /// (Multiview is live-TV only) at the call site, same as Recall/Reload.
+  /// the first cell — lives in the secondary row, gated at the call site
+  /// (live channels and recordings).
   /// Null hides the button entirely, same convention as every other
   /// optional action here; kept as a callback rather than this widget
   /// importing `MultiviewScreen` itself and navigating directly, so this
@@ -699,7 +699,7 @@ class PlayerControls extends StatelessWidget {
         ),
       if (linkedChannel != null)
         _LinkedChannelButton(linkedChannel: linkedChannel!),
-      if (isLive && onOpenMultiview != null)
+      if (onOpenMultiview != null)
         _LabeledIconButton(
           icon: Icons.grid_view,
           label: tr('Open in Multiview'),

@@ -3758,4 +3758,9 @@ const Map<String, String> kEl = {
       "{count} επεισόδια σημειώθηκαν ως προβληθέντα",
   "{count} episodes marked as unwatched":
       "{count} επεισόδια σημειώθηκαν ως μη προβληθέντα",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Προσθήκη εγγραφής",
+  "Play a recording here": "Αναπαραγωγή εγγραφής εδώ",
+  "Back 30 s": "Πίσω 30 δλ",
+  "Forward 30 s": "Μπροστά 30 δλ",
 };

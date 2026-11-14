@@ -78,6 +78,7 @@ class MultiviewScreen extends StatefulWidget {
       {super.key,
       this.initialChannel,
       this.initialChannels = const [],
+      this.initialPosition,
       this.handover});
 
   /// "Open in Multiview" from the full-screen player: its playing player
@@ -94,6 +95,9 @@ class MultiviewScreen extends StatefulWidget {
   /// landing on an empty grid. Null for the normal entry point (the
   /// sidebar's own "Multiview" row), which still starts empty as before.
   final Channel? initialChannel;
+
+  /// Where [initialChannel] (a recording) was in the full-screen player.
+  final Duration? initialPosition;
 
   /// Sports Trak's "Play in Multiview": one screen per checked live game
   /// (up to 4), equal screens.
@@ -594,6 +598,72 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     if (mounted) setState(() {});
   }
 
+  /// A recording (or its start, while it still records) on a screen next
+  /// to live channels: the Knicks game from last night beside tonight's
+  /// fight (Discord, 2026-11-14). It is a local file, so it takes no
+  /// provider connection; only the box's decoder (a 4K recording beside
+  /// other screens can stutter, like a 4K channel).
+  List<RecordingEntry> _recordings() => RecordingService.supported
+      ? [
+          for (final r in RecordingService.instance.items)
+            if (!r.isDownload && r.playable) r
+        ]
+      : const [];
+
+  /// Menu > Add a recording: on a new screen while there is room, else on
+  /// this one.
+  Future<void> _addRecording(int index) async {
+    final list = _recordings();
+    if (list.isEmpty) return;
+    final rect = rollDownAnchorOf(_cells[index].focusNode.context);
+    const width = 420.0;
+    final anchor = rect == null
+        ? null
+        : Rect.fromLTWH(math.max(rect.left + 8, rect.right - width - 8),
+            rect.top, width, 0);
+    final picked = await showRollDownMenu<RecordingEntry>(
+      context,
+      anchor: anchor,
+      centered: false,
+      width: width,
+      title: tr('Recordings'),
+      items: [
+        for (final r in list)
+          RollDownMenuItem(
+              value: r,
+              icon: r.state == RecState.recording
+                  ? Icons.fiber_manual_record
+                  : Icons.play_circle_outline,
+              label: r.title,
+              subtitle: r.channelName),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    final channel = RecordingService.instance.channelFor(picked);
+    if (_slots >= _maxSlots) {
+      await _assignPicked(index, channel);
+      return;
+    }
+    final target = _slots;
+    setState(() => _slots++);
+    _cells[target].focusNode.requestFocus();
+    await _assignPicked(target, channel);
+    if (!mounted || _cells[target].channel != null) return;
+    if (_slots == target + 1) setState(() => _slots--);
+    _cells[index].focusNode.requestFocus();
+  }
+
+  /// Back / Forward 30 s on a recording's screen.
+  Future<void> _seekBy(int index, Duration by) async {
+    final c = _cells[index].controller;
+    if (c == null) return;
+    final end = c.value.duration;
+    var to = c.value.position + by;
+    if (to < Duration.zero) to = Duration.zero;
+    if (end > Duration.zero && to > end) to = end;
+    await c.seekTo(to);
+  }
+
   /// Shown on entering Multiview until the user ticks "Don't show this
   /// again" — replaced the old always-on sidebar caveats (requested
   /// directly), which cost the grid width.
@@ -722,7 +792,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// instead, accepting a brief black flash on the cell actually being
   /// touched, is the safer trade-off once multiview is already this
   /// close to the hardware's real limit.
-  Future<void> _assign(int index, Channel channel) async {
+  Future<void> _assign(int index, Channel channel, {Duration? startAt}) async {
     final cell = _cells[index];
     if (cell.controller != null) {
       final old = cell.controller;
@@ -757,11 +827,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       }
       // The live list's 4K tag, from what this tile really decodes.
       unawaited(Future<void>.delayed(const Duration(seconds: 6), () {
-        if (cell.controller != newController) return;
+        if (cell.controller != newController || !channel.isLive) return;
         final size = newController.value.size;
         Real4kChannels.record(
             channel.id, size.width.round(), size.height.round());
       }));
+      if (startAt != null && startAt > Duration.zero) {
+        await newController.seekTo(startAt);
+      }
       await newController.setVolume(index == _activeCell ? 1.0 : 0.0);
       await newController.play();
       setState(() {
@@ -951,6 +1024,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             rect.top, width, 0);
     final playing = cell.controller?.value.isPlaying ?? false;
     final full = _fullscreen == index;
+    final recordings = _recordings().isNotEmpty;
     final action = await showRollDownMenu<String>(
       context,
       anchor: anchor,
@@ -965,6 +1039,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               label: tr('Add screen')),
         RollDownMenuItem(
             value: 'search', icon: Icons.search, label: tr('Search and add')),
+        if (recordings && !full)
+          RollDownMenuItem(
+              value: 'recording',
+              icon: Icons.video_library_outlined,
+              label: _slots < _maxSlots
+                  ? tr('Add a recording')
+                  : tr('Play a recording here')),
         RollDownMenuItem(
             value: 'change',
             icon: Icons.swap_horiz,
@@ -973,6 +1054,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             value: 'pause',
             icon: playing ? Icons.pause : Icons.play_arrow,
             label: playing ? tr('Pause') : tr('Play')),
+        if (!cell.channel!.isLive) ...[
+          RollDownMenuItem(
+              value: 'back', icon: Icons.replay_30, label: tr('Back 30 s')),
+          RollDownMenuItem(
+              value: 'ahead',
+              icon: Icons.forward_30,
+              label: tr('Forward 30 s')),
+        ],
         if (_main && !_portrait && index != 0 && !full)
           RollDownMenuItem(
               value: 'main',
@@ -1006,8 +1095,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         await _searchAndAdd(index);
       case 'change':
         await _openPicker(index);
+      case 'recording':
+        await _addRecording(index);
       case 'pause':
         await _togglePause(index);
+      case 'back':
+        await _seekBy(index, const Duration(seconds: -30));
+      case 'ahead':
+        await _seekBy(index, const Duration(seconds: 30));
       case 'enlarge':
         _toggleEnlarge(index);
       case 'main':
@@ -1070,7 +1165,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       unawaited(() async {
         for (final (i, channel) in initial.indexed) {
           if (!mounted) return;
-          await _assign(i, channel);
+          await _assign(i, channel,
+              startAt: i == 0 ? widget.initialPosition : null);
         }
       }());
     }
@@ -1138,7 +1234,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     if (!RecordingService.supported) return;
     RecordingService.instance.multiviewChanged([
       for (final c in _cells)
-        if (c.controller != null && c.channel != null) c.channel!.playlistId,
+        if (c.controller != null && c.channel?.playlistId.isNotEmpty == true)
+          c.channel!.playlistId,
     ]);
   }
 

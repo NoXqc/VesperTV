@@ -3390,4 +3390,9 @@ const Map<String, String> kPl = {
       "Odcinki oznaczone jako obejrzane: {count}",
   "{count} episodes marked as unwatched":
       "Odcinki oznaczone jako nieobejrzane: {count}",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Dodaj nagranie",
+  "Play a recording here": "Odtwórz tu nagranie",
+  "Back 30 s": "30 s do tyłu",
+  "Forward 30 s": "30 s do przodu",
 };

@@ -3699,4 +3699,9 @@ const Map<String, String> kDe = {
       "{count} Folgen als gesehen markiert",
   "{count} episodes marked as unwatched":
       "{count} Folgen als ungesehen markiert",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Aufnahme hinzufügen",
+  "Play a recording here": "Aufnahme hier abspielen",
+  "Back 30 s": "30 s zurück",
+  "Forward 30 s": "30 s vor",
 };

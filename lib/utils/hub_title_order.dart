@@ -82,29 +82,29 @@ double? _rating(ArchiveMeta m) => double.tryParse(m.rating ?? '');
 List<int> hubSortOrder(List<ArchiveMeta> items, HubSort sort) {
   final idx = [for (var i = 0; i < items.length; i++) i];
   if (sort == HubSort.source) return idx;
-  int byValue(int a, int b, Comparable<Object?>? Function(ArchiveMeta) of,
-      bool descending) {
-    final x = of(items[a]), y = of(items[b]);
+  // Each title's value read once, not per comparison: a release date is
+  // parsed from text, and a 2,100-title sort compares ~25,000 times.
+  final List<Comparable<Object?>?> values = [
+    for (final m in items)
+      switch (sort) {
+        HubSort.newest || HubSort.oldest => m.releaseDate,
+        HubSort.popular => m.popularity,
+        HubSort.rating => _rating(m),
+        HubSort.aToZ => m.name.toLowerCase(),
+        HubSort.source => null,
+      } as Comparable<Object?>?
+  ];
+  final descending = sort == HubSort.newest ||
+      sort == HubSort.popular ||
+      sort == HubSort.rating;
+  idx.sort((a, b) {
+    final x = values[a], y = values[b];
     if (x == null && y == null) return a.compareTo(b);
     if (x == null) return 1;
     if (y == null) return -1;
     final c = descending ? y.compareTo(x) : x.compareTo(y);
     return c != 0 ? c : a.compareTo(b);
-  }
-
-  int Function(int, int) compare = switch (sort) {
-    HubSort.source => (a, b) => a.compareTo(b),
-    HubSort.newest => (a, b) => byValue(a, b, (m) => m.releaseDate, true),
-    HubSort.oldest => (a, b) => byValue(a, b, (m) => m.releaseDate, false),
-    HubSort.popular => (a, b) => byValue(a, b, (m) => m.popularity, true),
-    HubSort.rating => (a, b) => byValue(a, b, _rating, true),
-    HubSort.aToZ => (a, b) {
-        final c =
-            items[a].name.toLowerCase().compareTo(items[b].name.toLowerCase());
-        return c != 0 ? c : a.compareTo(b);
-      },
-  };
-  idx.sort(compare);
+  });
   return idx;
 }
 

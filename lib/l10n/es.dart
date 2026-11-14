@@ -3796,4 +3796,9 @@ const Map<String, String> kEs = {
       "{count} episodios marcados como vistos",
   "{count} episodes marked as unwatched":
       "{count} episodios marcados como no vistos",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Añadir una grabación",
+  "Play a recording here": "Reproducir una grabación aquí",
+  "Back 30 s": "Atrás 30 s",
+  "Forward 30 s": "Adelante 30 s",
 };

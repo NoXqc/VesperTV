@@ -3803,4 +3803,9 @@ const Map<String, String> kIt = {
       "{count} episodi segnati come visti",
   "{count} episodes marked as unwatched":
       "{count} episodi segnati come non visti",
+  // Multiview: a recording beside live channels
+  "Add a recording": "Aggiungi una registrazione",
+  "Play a recording here": "Riproduci qui una registrazione",
+  "Back 30 s": "Indietro 30 s",
+  "Forward 30 s": "Avanti 30 s",
 };

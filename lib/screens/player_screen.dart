@@ -1148,7 +1148,16 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// screen: this same player again without a reconnect, or that screen's
   /// channel played anew. The platform-view player (native surface off, not
   /// Compatibility video) can't be moved: stopped and reopened as before.
+  /// Live channels, and recordings (Discord, 2026-11-14: last night's game
+  /// beside a live fight); a recording carries on from where it was.
+  static bool _multiviewable(Channel c) =>
+      c.isLive || Channel.isRecordingId(c.rawId);
+
   Future<void> _openMultiview(Channel channel) async {
+    final c = _playback.controller;
+    final resumeAt = !channel.isLive && c != null && c.value.isInitialized
+        ? c.value.position
+        : null;
     // The picture moves to its full-screen tile first (while this screen
     // still shows it), then the controller is handed over: no black gap.
     final candidate =
@@ -1171,7 +1180,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       return;
     }
     Widget page(BuildContext _) => MultiviewScreen(
-        initialChannel: handover == null ? channel : null, handover: handover);
+        initialChannel: handover == null ? channel : null,
+        initialPosition: resumeAt,
+        handover: handover);
     // On a tile, Multiview's own glide is the transition: it opens on the
     // same full-screen picture and closes on it, so the route switches
     // instantly both ways (a page slide would move the picture twice).
@@ -1433,7 +1444,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void openMultiview() {
     final channel = _playback.currentChannel ?? widget.channel;
-    if (channel.isLive && !context.read<AppPreferences>().hideMultiview) {
+    if (_multiviewable(channel) &&
+        !context.read<AppPreferences>().hideMultiview) {
       unawaited(_openMultiview(channel));
     }
   }
@@ -2157,7 +2169,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         playFocusNode: _playFocus,
                                         showActions: _touch,
                                         touchLayout: _touch,
-                                        onOpenMultiview: channel.isLive &&
+                                        onOpenMultiview: _multiviewable(channel) &&
                                                 !prefs.hideMultiview
                                             ? () => _openMultiview(channel)
                                             : null,
@@ -2222,7 +2234,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           linkedChannel: linkedChannel,
                                           onActivity: _resetHideTimer,
                                           onToggleMore: () {},
-                                          onOpenMultiview: channel.isLive &&
+                                          onOpenMultiview: _multiviewable(channel) &&
                                                   !prefs.hideMultiview
                                               ? () => _openMultiview(channel)
                                               : null,

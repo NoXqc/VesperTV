@@ -2072,19 +2072,25 @@ class ArchiveService extends ChangeNotifier {
   /// catalog (sorting while pages keep arriving moved cards under the
   /// remote). Stops on a page that brings nothing new, an error, or a row
   /// already loading.
-  Future<void> loadRest(List<ArchiveRow> rows, {int maxPerRow = 500}) =>
-      Future.wait([
-        for (final row in rows)
-          if (!row.isSearch && row.itemSources == null)
-            _loadRestOf(row, maxPerRow)
-      ]);
+  ///
+  /// Quietly: the app redrew (and the grid re-sorted) after every page, and
+  /// a 2,100-title tile froze the UI for minutes (owner, 2026-11-14). The
+  /// grid shows what it has, sorted, at once; the rest comes in one go.
+  Future<void> loadRest(List<ArchiveRow> rows, {int maxPerRow = 500}) async {
+    await Future.wait([
+      for (final row in rows)
+        if (!row.isSearch && row.itemSources == null)
+          _loadRestOf(row, maxPerRow)
+    ]);
+    _notify();
+  }
 
   Future<void> _loadRestOf(ArchiveRow row, int max) async {
     final key = row.key;
     for (var guard = 0; guard < 40 && !_disposed; guard++) {
       final have = _items[key]?.length ?? 0;
       if (have >= max || _exhausted.contains(key)) return;
-      await loadMore(row);
+      await loadMore(row, notify: false);
       if ((_items[key]?.length ?? 0) == have) return;
     }
   }
@@ -2092,7 +2098,7 @@ class ArchiveService extends ChangeNotifier {
   /// Appends [row]'s next page (called as focus nears its end), so a row
   /// keeps scrolling past the pages [refresh] fetched. Not cached: a
   /// refresh starts the row over.
-  Future<void> loadMore(ArchiveRow row) async {
+  Future<void> loadMore(ArchiveRow row, {bool notify = true}) async {
     final key = row.key;
     if (row.isSearch ||
         row.itemSources != null ||
@@ -2109,7 +2115,7 @@ class ArchiveService extends ChangeNotifier {
         _exhausted.add(key);
       } else {
         _items[key] = [...have, ...fresh];
-        _notify();
+        if (notify) _notify();
       }
     } catch (e) {
       debugPrint('ArchiveService: more of $key failed: $e');
