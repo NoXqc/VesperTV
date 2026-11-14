@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'hold_to_activate.dart';
 import 'glass_menu.dart';
+import 'ink_layer.dart';
 
 /// A [SimpleDialogOption] with a visible D-pad selector. The plain one
 /// draws no focus highlight on the TV theme, so a hold-OK menu showed no
@@ -37,8 +38,12 @@ class _TvDialogOptionState extends State<TvDialogOption> {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      // Own layer + Material: the InkWell's focus fade painted on the menu
+      // panel's Material, so each D-pad step repainted the whole panel
+      // (CLAUDE.md §10 rule 10).
       child: SwallowHeldActivate(
-          child: InkWell(
+          child: InkLayer(
+              child: InkWell(
         autofocus: widget.autofocus,
         onTap: widget.onPressed,
         borderRadius: BorderRadius.circular(10),
@@ -74,7 +79,7 @@ class _TvDialogOptionState extends State<TvDialogOption> {
             child: widget.child ?? const SizedBox.shrink(),
           ),
         ),
-      )),
+      ))),
     );
   }
 }

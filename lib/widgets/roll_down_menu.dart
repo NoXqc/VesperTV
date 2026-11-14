@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/app_preferences.dart';
 import 'hold_to_activate.dart';
 import 'glass_menu.dart';
+import 'ink_layer.dart';
 import '../utils/refined_finish.dart';
 
 /// One choice in a [showRollDownMenu].
@@ -65,26 +66,30 @@ Future<T?> showRollDownMenu<T>(
   required List<RollDownMenuItem<T>> items,
   bool centered = true,
   double width = 280,
-}) =>
-    showGeneralDialog<T>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      // No full-screen dimming over Multiview's videos: one more layer
-      // for a GPU already busy putting them on screen (GlassBlur.motion).
-      barrierColor: GlassBlur.live ? Colors.black38 : Colors.transparent,
-      transitionDuration: GlassBlur.motion(const Duration(milliseconds: 200)),
-      pageBuilder: (ctx, animation, _) => SwallowHeldActivate(
-        child: _RollDownMenu<T>(
-          anchor: anchor,
-          animation: animation,
-          title: title,
-          items: items,
-          centered: centered,
-          width: width,
-        ),
+}) {
+  // The glass is the page frozen and blurred once (GlassFrost), not a live
+  // blur redone on every frame of the reveal and every step.
+  final frost = GlassFrost.capture(context);
+  return frost.during(showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    // No full-screen dimming over Multiview's videos: one more layer
+    // for a GPU already busy putting them on screen (GlassBlur.motion).
+    barrierColor: GlassBlur.live ? Colors.black38 : Colors.transparent,
+    transitionDuration: GlassBlur.motion(const Duration(milliseconds: 200)),
+    pageBuilder: (ctx, animation, _) => frost.scope(SwallowHeldActivate(
+      child: _RollDownMenu<T>(
+        anchor: anchor,
+        animation: animation,
+        title: title,
+        items: items,
+        centered: centered,
+        width: width,
       ),
-    );
+    )),
+  ));
+}
 
 class _RollDownMenu<T> extends StatelessWidget {
   const _RollDownMenu({
@@ -319,7 +324,8 @@ class _RollDownActionButtonState extends State<_RollDownActionButton> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
+    return InkLayer(
+        child: InkWell(
       onFocusChange: (f) => setState(() => _focused = f),
       onTap: widget.onTap,
       borderRadius: BorderRadius.circular(20),
@@ -351,6 +357,6 @@ class _RollDownActionButtonState extends State<_RollDownActionButton> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

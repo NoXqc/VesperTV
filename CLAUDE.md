@@ -289,6 +289,13 @@ inaccurate. Recoverable from commit c18de49.)
   star `context.select`s it (`PlaylistManager.favoritesVersion`, `isChannelFavorited`): the catalog warm-up
   notifies up to every 400 ms, and a root `context.watch<PlaylistManager>` rebuilt the movie / show pages,
   Expand catalog and Search on each (+774). `select` asserts inside a LayoutBuilder: select in `build`.
+  (15) Hold menus / roll-downs (`showGlassMenu`, `showRollDownMenu`): the glass is the page captured
+  small and blurred ONCE on open (`GlassFrost`), never a live BackdropFilter; rows (`TvDialogOption`)
+  sit on an `InkLayer`; Refined finish's focused-row glass (`MinimalGlassFocus`: group rows, TvMenuTile,
+  ModeButton) is a tint, not a blur (Home row menu photo, +782). (16) Home's backdrop cuts instead
+  of crossfading while the mini player plays on the native surface: the two full-screen fading
+  pictures + the video's memory traffic gave half-drawn frames (black lower half, jagged edge) on
+  the Homatics; not HWC (Disable HW overlays didn't help), one decoder only (+783).
   Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button

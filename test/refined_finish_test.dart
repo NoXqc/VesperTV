@@ -154,7 +154,8 @@ void main() {
       expect(tester.getRect(find.byKey(tileKey)), bounds);
       expect(tester.getRect(find.byKey(panelKey)), panelBounds);
       expect(focus.hasFocus, isTrue);
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      // Refined focus is a frosted tint, never a live blur (frame cost).
+      expect(find.byType(BackdropFilter), findsNothing);
       final context = tester.element(find.byKey(tileKey));
       final original = BoxDecoration(
           borderRadius: BorderRadius.circular(8),

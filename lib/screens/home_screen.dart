@@ -1,3 +1,4 @@
+import '../widgets/native_video_hole.dart';
 import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
@@ -1618,7 +1619,15 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ValueListenableBuilder<int>(
                 valueListenable: _focusTick,
                 builder: (_, __, ___) => _Backdrop(
-                    item: phone ? null : _focused, wallpaper: _wallpaper),
+                    item: phone ? null : _focused,
+                    wallpaper: _wallpaper,
+                    // A cut, not a crossfade, while the mini player's video
+                    // plays on the native surface: two full-screen pictures
+                    // fading for 450 ms per step, on top of the video's
+                    // memory traffic, gave half-drawn frames on the
+                    // Homatics (owner photos, +782).
+                    cut: NativeVideoSurface.active &&
+                        _miniChannelId() != null),
               ),
             ),
             AnimatedOpacity(
@@ -1868,8 +1877,11 @@ class _HomeScreenState extends State<HomeScreen> {
 /// Full-screen art of the focused card, cross-faded, darkened toward the
 /// rows and the left edge so text always reads.
 class _Backdrop extends StatelessWidget {
-  const _Backdrop({required this.item, this.wallpaper});
+  const _Backdrop({required this.item, this.wallpaper, this.cut = false});
   final _HomeItem? item;
+
+  /// Switch the art at once (see the caller).
+  final bool cut;
 
   /// The viewer's Home wallpaper: behind any card without art of its own,
   /// in place of a live channel's glow (owner, 2026-11-10).
@@ -1924,7 +1936,7 @@ class _Backdrop extends StatelessWidget {
     }
     return Stack(fit: StackFit.expand, children: [
       AnimatedSwitcher(
-        duration: const Duration(milliseconds: 450),
+        duration: cut ? Duration.zero : const Duration(milliseconds: 450),
         switchInCurve: Curves.easeOut,
         child: child,
       ),

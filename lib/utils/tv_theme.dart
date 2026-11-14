@@ -1,5 +1,4 @@
 import 'refined_finish.dart';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -170,18 +169,20 @@ class MinimalGlassFocus extends StatelessWidget {
         fit: StackFit.passthrough,
         children: [
           Positioned.fill(
+            // A frosted tint, not a live BackdropFilter: the blur was redone
+            // by the GPU on every frame anything on screen moved (Movies /
+            // TV Shows hero art, posters loading, each D-pad step), and
+            // behind a group row it only blurred the column's own smooth
+            // glass (native video can't be blurred at all). CLAUDE.md §10
+            // rule 13, 2026-11-13.
             child: active
-                ? BackdropFilter(
-                    enabled: GlassBlur.live,
-                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.025),
-                        borderRadius: BorderRadius.circular(borderRadius),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            width: 1.5),
-                      ),
+                ? DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          width: 1.5),
                     ),
                   )
                 : const SizedBox.shrink(),

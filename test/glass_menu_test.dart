@@ -158,7 +158,9 @@ void main() {
       final first = find.byKey(const ValueKey('first'));
       final state = tester.state(first);
       final focus = FocusManager.instance.primaryFocus;
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      // The glass is a frozen capture (GlassFrost), never a live blur that
+      // re-ran on every frame behind the menu.
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(Theme.of(tester.element(first)).colorScheme.brightness,
           Brightness.dark);
       expect(Theme.of(tester.element(first)).colorScheme.primary, Colors.white,
@@ -170,7 +172,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.state(first), same(state));
       expect(FocusManager.instance.primaryFocus, same(focus));
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsNothing);
       if (!light) await preview(tester, 'channel-menu-tv');
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();

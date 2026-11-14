@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:ui' as ui show Image, PictureRecorder;
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../utils/refined_finish.dart';
 import 'ink_layer.dart';
@@ -15,17 +19,216 @@ Future<T?> showGlassMenu<T>({
   bool useSafeArea = true,
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
-}) =>
-    showDialog<T>(
-      context: context,
-      builder: builder,
-      barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor ?? Colors.black38,
-      barrierLabel: barrierLabel,
-      useSafeArea: useSafeArea,
-      useRootNavigator: useRootNavigator,
-      routeSettings: routeSettings,
+}) {
+  final frost = GlassFrost.capture(context);
+  return frost.during(showDialog<T>(
+    context: context,
+    builder: (context) => frost.scope(builder(context)),
+    barrierDismissible: barrierDismissible,
+    barrierColor: barrierColor ?? Colors.black38,
+    barrierLabel: barrierLabel,
+    useSafeArea: useSafeArea,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+  ));
+}
+
+/// The page under a menu, captured small and blurred ONCE when the menu
+/// opens: the panel's frosted glass. A live BackdropFilter re-blurred the
+/// screen on every frame the menu drew (each D-pad step's focus fade, and
+/// every frame anything behind moved: Home's hero, live scores, the mini
+/// player), the same cost as the old Settings / Who's watching blurs
+/// (CLAUDE.md §10 rule 13; Home's row hold menu, owner photo 2026-11-13).
+/// Native video (a SurfaceView behind the Flutter view) isn't in the
+/// capture: it shows through the panel's dark fill as before.
+class GlassFrost {
+  GlassFrost._();
+
+  /// The capture's scale: 1/5 of logical pixels, blurred with sigma 2.4
+  /// there = the old live sigma 12, and drawn scaled up (smooths further).
+  static const _scale = 0.2;
+  static const _sigma = 12 * _scale;
+
+  final ValueNotifier<_Frost?> _frost = ValueNotifier(null);
+  bool _closed = false;
+
+  /// Starts the capture now, before the menu's route is pushed (the scene is
+  /// read synchronously; only its raster is async), so the menu itself is
+  /// never in it. Nothing is captured over moving video ([GlassBlur.live]
+  /// false: no blur at all there) or when no page boundary is found; the
+  /// panel then keeps its plain look until the capture lands.
+  static GlassFrost capture(BuildContext context) {
+    final frost = GlassFrost._();
+    if (GlassBlur.live) frost._start(context);
+    return frost;
+  }
+
+  void _start(BuildContext context) {
+    try {
+      final screen = MediaQuery.maybeSizeOf(context);
+      RenderRepaintBoundary? page;
+      RenderObject? r = context.findRenderObject();
+      // The outermost boundary that covers the screen: the whole page (a
+      // card's own boundary is only the card).
+      while (r != null) {
+        if (r is RenderRepaintBoundary &&
+            r.attached &&
+            r.hasSize &&
+            (screen == null ||
+                (r.size.width >= screen.width - 1 &&
+                    r.size.height >= screen.height - 1))) {
+          page = r;
+        }
+        r = r.parent;
+      }
+      if (page == null) return;
+      if (kDebugMode && page.debugNeedsPaint) return;
+      final origin = page.localToGlobal(Offset.zero);
+      final size = page.size;
+      unawaited(page.toImage(pixelRatio: _scale).then((raw) async {
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawImage(
+            raw,
+            Offset.zero,
+            Paint()
+              ..imageFilter = ImageFilter.blur(
+                  sigmaX: _sigma, sigmaY: _sigma, tileMode: TileMode.clamp));
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(raw.width, raw.height);
+        picture.dispose();
+        raw.dispose();
+        if (_closed) {
+          image.dispose();
+          return;
+        }
+        _frost.value = _Frost(image, origin & size);
+      }).catchError((Object _) {}));
+    } catch (_) {
+      // No frost: the panel keeps its plain look.
+    }
+  }
+
+  /// [child] with this capture available to its [GlassMenuSurface]; the
+  /// capture is released when the menu's route is gone (after its closing
+  /// fade, which still paints the panel).
+  Widget scope(Widget child) => _FrostOwner(
+      onDispose: _release,
+      child: _GlassFrostScope._(frost: _frost, child: child));
+
+  /// [menu]'s result. A capture still rastering when the menu closes is
+  /// dropped when it lands.
+  Future<T?> during<T>(Future<T?> menu) =>
+      menu.whenComplete(() => _closed = true);
+
+  void _release() {
+    _closed = true;
+    final image = _frost.value?.image;
+    _frost.value = null;
+    image?.dispose();
+  }
+}
+
+/// Calls [onDispose] when the menu's page leaves the tree.
+class _FrostOwner extends StatefulWidget {
+  const _FrostOwner({required this.onDispose, required this.child});
+  final VoidCallback onDispose;
+  final Widget child;
+
+  @override
+  State<_FrostOwner> createState() => _FrostOwnerState();
+}
+
+class _FrostOwnerState extends State<_FrostOwner> {
+  @override
+  void dispose() {
+    widget.onDispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _Frost {
+  const _Frost(this.image, this.rect);
+  final ui.Image image;
+
+  /// Where the captured page sits on screen (logical pixels).
+  final Rect rect;
+}
+
+/// Hands a menu's [GlassFrost] capture to the [GlassMenuSurface] inside.
+class _GlassFrostScope extends InheritedWidget {
+  const _GlassFrostScope._({required this.frost, required super.child});
+  final ValueListenable<_Frost?> frost;
+
+  @override
+  bool updateShouldNotify(_GlassFrostScope oldWidget) =>
+      frost != oldWidget.frost;
+}
+
+/// Draws the part of the frozen, blurred page that is under this box.
+class _FrostPainter extends CustomPainter {
+  _FrostPainter(this.frost, this.box) : super(repaint: frost);
+  final ValueListenable<_Frost?> frost;
+  final RenderBox? Function() box;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final f = frost.value;
+    final b = box();
+    if (f == null || b == null || !b.attached) return;
+    // The panel's rect on screen, through any transform (a roll-down's
+    // reveal), in the capture's pixels.
+    final global =
+        MatrixUtils.transformRect(b.getTransformTo(null), Offset.zero & size);
+    final sx = f.image.width / f.rect.width;
+    final sy = f.image.height / f.rect.height;
+    final src = Rect.fromLTRB(
+        (global.left - f.rect.left) * sx,
+        (global.top - f.rect.top) * sy,
+        (global.right - f.rect.left) * sx,
+        (global.bottom - f.rect.top) * sy);
+    canvas.drawImageRect(f.image, src, Offset.zero & size,
+        Paint()..filterQuality = FilterQuality.low);
+  }
+
+  @override
+  bool shouldRepaint(_FrostPainter old) => old.frost != frost;
+}
+
+/// The frost behind [child]: the menu's capture when there is one, else a
+/// live BackdropFilter (a GlassMenuSurface not opened through
+/// [showGlassMenu] / [GlassFrost], e.g. Sports Trak's panel).
+class _FrostedBackdrop extends StatefulWidget {
+  const _FrostedBackdrop({required this.child});
+  final Widget child;
+
+  @override
+  State<_FrostedBackdrop> createState() => _FrostedBackdropState();
+}
+
+class _FrostedBackdropState extends State<_FrostedBackdrop> {
+  final _key = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = context.getInheritedWidgetOfExactType<_GlassFrostScope>();
+    if (scope == null || !GlassBlur.live) {
+      return BackdropFilter(
+        enabled: GlassBlur.live,
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: widget.child,
+      );
+    }
+    return CustomPaint(
+      key: _key,
+      painter: _FrostPainter(scope.frost,
+          () => _key.currentContext?.findRenderObject() as RenderBox?),
+      child: widget.child,
     );
+  }
+}
 
 /// Shared glass surface for context menus, including anchored roll-down menus.
 /// One clipped blur per panel; interactive children retain their focus nodes.
@@ -34,6 +237,8 @@ class GlassMenuSurface extends StatelessWidget {
 
   final Widget child;
   final double radius;
+
+  static ThemeData? _menuThemeFor, _menuTheme;
 
   static bool of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_GlassMenuScope>() != null;
@@ -94,27 +299,34 @@ class GlassMenuSurface extends StatelessWidget {
 
     final accent = readableAccent(theme.colorScheme.primary);
     // Menus retain the chosen accent on both light and dark app themes.
-    final menuTheme = theme.copyWith(
-      colorScheme: theme.colorScheme.copyWith(
-        brightness: Brightness.dark,
-        primary: accent,
-        onPrimary:
-            ThemeData.estimateBrightnessForColor(accent) == Brightness.light
-                ? Colors.black
-                : Colors.white,
-        primaryContainer: readableAccent(theme.colorScheme.primaryContainer),
-        secondary: readableAccent(theme.colorScheme.secondary),
-        tertiary: readableAccent(theme.colorScheme.tertiary),
-        surface: const Color(0xFF17191F),
-        onSurface: Colors.white,
-        onSurfaceVariant: Colors.white70,
-      ),
-      textTheme: theme.textTheme
-          .apply(bodyColor: Colors.white, displayColor: Colors.white),
-      iconTheme: theme.iconTheme.copyWith(color: Colors.white70),
-      disabledColor: Colors.white38,
-      dividerColor: Colors.white12,
-    );
+    // Same app theme in = the same menu theme out: its button styles hold
+    // closures, so a fresh copy never compares equal and `Theme` rebuilt
+    // every row under it on any rebuild (CLAUDE.md §10 rules 2 / 8).
+    final menuTheme = identical(theme, _menuThemeFor)
+        ? _menuTheme!
+        : _menuTheme = theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              brightness: Brightness.dark,
+              primary: accent,
+              onPrimary: ThemeData.estimateBrightnessForColor(accent) ==
+                      Brightness.light
+                  ? Colors.black
+                  : Colors.white,
+              primaryContainer:
+                  readableAccent(theme.colorScheme.primaryContainer),
+              secondary: readableAccent(theme.colorScheme.secondary),
+              tertiary: readableAccent(theme.colorScheme.tertiary),
+              surface: const Color(0xFF17191F),
+              onSurface: Colors.white,
+              onSurfaceVariant: Colors.white70,
+            ),
+            textTheme: theme.textTheme
+                .apply(bodyColor: Colors.white, displayColor: Colors.white),
+            iconTheme: theme.iconTheme.copyWith(color: Colors.white70),
+            disabledColor: Colors.white38,
+            dividerColor: Colors.white12,
+          );
+    _menuThemeFor = theme;
     return _GlassMenuScope(
       child: Theme(
         data: menuTheme,
@@ -135,9 +347,7 @@ class GlassMenuSurface extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: borderRadius,
-              child: BackdropFilter(
-                enabled: GlassBlur.live,
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: _FrostedBackdrop(
                 child: Material(
                   type: MaterialType.transparency,
                   child: Ink(
@@ -160,7 +370,9 @@ class GlassMenuSurface extends StatelessWidget {
                         stops: const [0, 0.35, 1],
                       ),
                     ),
-                    child: child,
+                    // Own layer: a row's focus step repaints only the rows,
+                    // never the panel's frost, gradient and shadow.
+                    child: RepaintBoundary(child: child),
                   ),
                 ),
               ),
