@@ -193,3 +193,10 @@ the preview with feed focus and collapsed rail; Left opened the rail, Down then
 Right returned to the feed and collapsed it; second OK went full screen and
 Back restored the same playing feed. Pregame injuries centered between each
 team's aligned standings. Evidence PNGs are ignored build/sports-501-device-*.png.
+
+## Next 3 days + a live-only feed (Claude, +790/+791, 2026-11-14)
+- Today in Sports Mode shows Tomorrow and the two days after as their own rows, like regular Sports Trak
+  since +764 (`_showsUpcoming` = Today, in both modes); the Today day menu still picks one day.
+- The feed beside the big video (`_buildFeed`, owner photo) lists only My Teams and Live now
+  (`_feedSections`): games not playing stay in the card rows under it (Down past the end, also from an
+  empty feed). The Guide layout keeps every game (`_guideGames`). No widget test for the feed itself.

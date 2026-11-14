@@ -2094,12 +2094,14 @@ void main() {
       await disposePage(tester);
     });
 
-    testWidgets('Sports Mode keeps its own day only', (tester) async {
+    testWidgets('Sports Mode shows the next days too (owner, +790)',
+        (tester) async {
       await prefs.setSportsMode(true);
       await open(tester, feed: feed());
       await tester.pumpAndSettle();
       expect(card(100), findsOneWidget);
-      expect(card(301), findsNothing);
+      expect(card(301), findsOneWidget);
+      expect(card(304), findsNothing, reason: 'three days only');
       expect(tester.takeException(), isNull);
       await disposePage(tester);
     });

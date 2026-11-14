@@ -240,14 +240,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   List<SportsGame> _games = const [];
 
-  /// Regular Sports Trak on Today: the next [_upcomingDays] days as rows of
-  /// their own under Later today (owner, 2026-11-13: scroll down instead of
-  /// picking each day). (day offset, games), a game shown once.
+  /// Today: the next [_upcomingDays] days as rows of their own under Later
+  /// today (owner, 2026-11-13: scroll down instead of picking each day), in
+  /// Sports Mode too since +790 (cards, guide and the feed beside the video;
+  /// its day menu still picks one day). (day offset, games), a game shown
+  /// once.
   static const _upcomingDays = 3;
   List<(int, List<SportsGame>)> _upcoming = const [];
   String? _upcomingFor;
 
-  bool get _showsUpcoming => !_modeActive && _dayOffset == 0;
+  bool get _showsUpcoming => _dayOffset == 0;
 
   /// What [_upcoming] was loaded for: another day or league is another list.
   String get _upcomingKey => '${_leagueFilter ?? ''}|$_dayOffset';
@@ -2679,7 +2681,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return true;
   }
 
-  List<SportsGame> get _feedGames => [for (final s in _sections) ...s.games];
+  /// The feed beside Sports Mode's big video: My Teams and Live now only
+  /// (owner photo, 2026-11-14: games not playing don't belong beside the
+  /// video). Everything else (Later today, the next days, Final) is in the
+  /// card rows under it (Down past the end).
+  List<_Section> get _feedSections => [
+        for (final s in _sections)
+          if (s.id == 'teams' || s.id == 'live') s
+      ];
+
+  List<SportsGame> get _feedGames =>
+      [for (final s in _feedSections) ...s.games];
+
+  /// Every game of the page, in its rows' order (the Guide layout).
+  List<SportsGame> get _guideGames => [for (final s in _sections) ...s.games];
 
   void _focusFeed({SportsGame? game, bool last = false}) {
     _zone = _firstRowZone;
@@ -2698,7 +2713,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   int _feedItemOf(int index) {
     var item = 0;
     var seen = 0;
-    for (final s in _sections) {
+    for (final s in _feedSections) {
       item++; // its header
       if (index < seen + s.games.length) return item + index - seen;
       item += s.games.length;
@@ -2810,7 +2825,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (key == LogicalKeyboardKey.arrowDown) {
       if (_feedIndex < games.length - 1) {
         _selectFeed(_feedIndex + 1);
-      } else if (games.isNotEmpty) {
+      } else if (_sections.isNotEmpty) {
         _browseCards();
       }
       return KeyEventResult.handled;
@@ -2841,7 +2856,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   static const _guideTopPad = 6.0;
 
   SportsGame? get _guideGame {
-    final games = _feedGames;
+    final games = _guideGames;
     if (games.isEmpty) return null;
     return games.where((g) => _gameKey(g) == _guideKey).firstOrNull ??
         games.first;
@@ -2849,7 +2864,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// Focus the guide on [key] (else the remembered row, else the first).
   void _focusGuide([String? key]) {
-    final games = _feedGames;
+    final games = _guideGames;
     if (games.isEmpty) return;
     bool known(String? k) => k != null && games.any((g) => _gameKey(g) == k);
     final target = known(key)
@@ -2938,7 +2953,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   KeyEventResult _onGuideKey(FocusNode _, KeyEvent event) {
-    final games = _feedGames;
+    final games = _guideGames;
     final selected = _guideGame;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.select ||
@@ -3115,7 +3130,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         onKeyEvent: _onGuideKey,
         onFocusChange: (focused) {
           if (focused && _guideKey == null) {
-            final first = _feedGames.firstOrNull;
+            final first = _guideGames.firstOrNull;
             if (first != null) _selectGuide(_gameKey(first));
           }
         },
@@ -3171,7 +3186,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           Expanded(
             child: items.isEmpty
                 ? Center(
-                    child: Text(tr('No games on this day for your leagues'),
+                    child: Text(
+                        tr('No games from your leagues are live right now.'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white70)))
                 : ListView.builder(
@@ -3469,7 +3485,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: _buildFeed(sections)),
+                              Expanded(child: _buildFeed(_feedSections)),
                               const SizedBox(width: 16),
                               hero!(
                                   part: _HeroPart.video,
