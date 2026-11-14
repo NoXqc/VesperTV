@@ -12,6 +12,7 @@ import '../services/app_preferences.dart';
 import '../services/storage_service.dart';
 import '../services/desktop_stream_setup.dart';
 import '../services/subtitle_tracks.dart';
+import '../utils/app_store.dart';
 import 'tv_menu_tile.dart';
 
 /// Subtitles on Windows (`DesktopPlayerScreen`'s media_kit `Player`) — the
@@ -281,7 +282,10 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
               selected: false,
               icon: Icons.cloud_download_outlined,
               title: tr('Search online subtitles'),
-              subtitle: tr('From your add-ons (Settings > Playlists & sources > Online subtitles)'),
+              subtitle: appStoreBuild
+                  ? tr('From your media server')
+                  : tr(
+                      'From your add-ons (Settings > Playlists & sources > Online subtitles)'),
               result: 'online'),
         _option(sheet,
             selected: false,

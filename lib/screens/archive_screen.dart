@@ -15,6 +15,7 @@ import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_session.dart';
 import '../utils/image_urls.dart';
+import '../utils/app_store.dart';
 import '../utils/route_observer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
@@ -1859,8 +1860,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       ArchiveService service, List<ArchiveRow> rows, ColorScheme scheme) {
     if (service.sources.isEmpty) {
       return _EmptyState(
-        text: tr(
-            'Add a source to browse films and series. Any source that follows the catalog/stream add-on format works.'),
+        text: appStoreBuild
+            ? tr(
+                'Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.')
+            : tr(
+                'Add a source to browse films and series. Any source that follows the catalog/stream add-on format works.'),
         action: tr('Add a source'),
         onAction: _openSources,
         focusNode: _emptyActionNode,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
+import '../../utils/app_store.dart';
 import '../../models/hub_collection.dart';
 import '../../services/archive_api_service.dart';
 import '../../services/archive_service.dart';
@@ -190,8 +191,11 @@ class _HubCollectionsPaneState extends State<HubCollectionsPane> {
               id: 'collections',
               icon: Icons.dashboard_customize_outlined,
               title: tr('Collections'),
-              description: tr(
-                  'Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.'),
+              description: appStoreBuild
+                  ? tr(
+                      'Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server\'s libraries.')
+                  : tr(
+                      'Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.'),
               sections: const [],
             ),
           ),
@@ -200,28 +204,36 @@ class _HubCollectionsPaneState extends State<HubCollectionsPane> {
             focusNode: _node('import'),
             icon: Icons.link,
             title: tr('Add from a link'),
-            subtitle: tr('A Nuvio collections file (.json)'),
+            subtitle: appStoreBuild
+                ? tr('A collections file (.json)')
+                : tr('A Nuvio collections file (.json)'),
             trailing: const SettingValue(),
             onFocusChange: (f) {
               if (f) {
-                _say(tr(
-                    'Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.'));
+                _say(appStoreBuild
+                    ? tr(
+                        'Tiles need their catalogs as libraries on your server. Missing ones are left out.')
+                    : tr(
+                        'Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.'));
               }
             },
             onTap: _typeLink,
           ),
-          SettingRow(
-            focusNode: _node('phone'),
-            icon: Icons.qr_code_2,
-            title: tr('From phone'),
-            subtitle: tr('Send the file link from your phone'),
-            trailing: const SettingValue(),
-            onFocusChange: (f) {
-              if (f) _say(null);
-            },
-            onTap: _fromPhone,
-          ),
-          if (!perfect)
+          // App Store build: they are on their phone already.
+          if (!appStoreBuild)
+            SettingRow(
+              focusNode: _node('phone'),
+              icon: Icons.qr_code_2,
+              title: tr('From phone'),
+              subtitle: tr('Send the file link from your phone'),
+              trailing: const SettingValue(),
+              onFocusChange: (f) {
+                if (f) _say(null);
+              },
+              onTap: _fromPhone,
+            ),
+          // App Store build: bring your own (the pack is a Stremio setup's).
+          if (!perfect && !appStoreBuild)
             SettingRow(
               focusNode: _node('perfect'),
               icon: Icons.auto_awesome_outlined,
@@ -271,16 +283,21 @@ class _HubCollectionsPaneState extends State<HubCollectionsPane> {
       icon: Icons.view_carousel_outlined,
       title: c.label,
       subtitle: [
-        tr('{found} of {n} tiles found in your add-ons',
-            {'found': found, 'n': c.folders.length}),
+        appStoreBuild
+            ? tr('{found} of {n} tiles found on your server',
+                {'found': found, 'n': c.folders.length})
+            : tr('{found} of {n} tiles found in your add-ons',
+                {'found': found, 'n': c.folders.length}),
         if (c.onHome) tr('On Home'),
       ].join(' · '),
       trailing: GlassSwitch(value: c.enabled),
       onFocusChange: (f) {
         if (f) {
           _say(found == 0
-              ? tr(
-                  'None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.')
+              ? appStoreBuild
+                  ? tr('None of its catalogs are libraries on your server yet.')
+                  : tr(
+                      'None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.')
               : tr(
                   'OK for its options: on or off, Home, order, update, remove.'));
         }

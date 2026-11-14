@@ -3704,4 +3704,36 @@ const Map<String, String> kDe = {
   "Play a recording here": "Aufnahme hier abspielen",
   "Back 30 s": "30 s zurück",
   "Forward 30 s": "30 s vor",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "Untertitel für Hörgeschädigte gibt es in diesem Player nicht.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Liest Ihre Quellen neu ein",
+  "A media server or Trakt / Simkl":
+      "Ein Medienserver oder Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Ihr eigener Medienserver oder Ihre Trakt-/Simkl-Listen.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Verbinden Sie Ihren Jellyfin-, Emby- oder Plex-Server oder Ihre Trakt-/Simkl-Listen unter Einstellungen > Media-Hub-Quellen.",
+  "Your media server and Trakt / Simkl lists":
+      "Ihr Medienserver und Ihre Trakt-/Simkl-Listen",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Geben Sie diesen Code mit einer Beschreibung des Problems an den Entwickler weiter, damit Ihr Protokoll gefunden wird.",
+  "From your media server": "Von Ihrem Medienserver",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Eigene Sammlungen für Ihren Server",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Eigene Sammlungen für Ihren Server: Reihen von Kacheln im Media-Hub-Tab, jede öffnet eine Seite mit Bibliotheken Ihres Servers.",
+  "A collections file (.json)":
+      "Eine Sammlungsdatei (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "Kacheln brauchen ihre Kataloge als Bibliotheken auf Ihrem Server. Fehlende werden ausgelassen.",
+  "{found} of {n} tiles found on your server":
+      "{found} von {n} Kacheln auf Ihrem Server gefunden",
+  "None of its catalogs are libraries on your server yet.":
+      "Keiner ihrer Kataloge ist bisher eine Bibliothek auf Ihrem Server.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "Die Kataloge dieser Kachel sind noch keine Bibliotheken auf Ihrem Server.",
 };

@@ -10,6 +10,7 @@ import '../models/archive_library.dart';
 import '../models/channel.dart';
 import '../models/hub_collection.dart';
 import '../utils/title_search.dart';
+import '../utils/app_store.dart';
 import 'archive_api_service.dart';
 import 'archive_cache.dart';
 import 'archive_stream_session.dart';
@@ -271,7 +272,10 @@ class ArchiveService extends ChangeNotifier {
     final prefs = _sourcePrefs();
     return [
       for (final s in _storedSources)
-        if (prefs[s.manifestUrl] case final p?)
+        // App Store build: media servers and Trakt / Simkl only.
+        if (appStoreBuild && s.server == null && s.tracker == null)
+          ...const <ArchiveSource>[]
+        else if (prefs[s.manifestUrl] case final p?)
           s.copyWith(
               enabled: p['enabled'] is bool ? p['enabled'] as bool : null,
               otherChoice: p['other'] is bool ? p['other'] as bool : null)

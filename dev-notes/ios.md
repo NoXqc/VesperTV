@@ -114,6 +114,21 @@ preview it on a box:
 - The playback error "Check your source or debrid account…" drops "or debrid account".
 - No **Check for Updates** row and no launch update check (Apple installs updates).
 - iOS only: no sidebar **Exit VesperTV** row (iOS apps never quit themselves).
+- (2026-11-14, before the first App Store submission) No **Support VesperTV** row (donation
+  links outside Apple's in-app purchase), no **Show betting odds** (the getter is always off, the
+  Vesper AI `betting_odds` setting is hidden), no **Remote tips** (vespertv.app/remote.html is a
+  TV-box guide naming Android / Fire TV). Other platforms' names: every string an iPhone can reach
+  was checked; the Vesper AI closed-captions error and the YouTube WebView error no longer name
+  Windows / Android there. GPL: `APP_STORE_EXCEPTION.md` (dev-notes/app-store-gpl-exception.md).
+- (owner, 2026-11-14) **No Stremio-style add-ons on the App Store build.** The Media Hub is the
+  viewer's own Jellyfin / Emby / Plex server (AIOStreams can serve add-ons as a Jellyfin server) and
+  Trakt / Simkl lists. `ArchiveService.sources` drops every other source (saved ones, e.g. from a
+  Transfer, stay saved but never show or play), `AddonService.addons` is empty (no online subtitle
+  add-ons), `collections` is empty, Media Hub sources' Add page has only Connect Jellyfin / Emby / Plex
+  and Trakt & Simkl (no link field, From phone, Manage from phone, Stremio import, Online subtitles),
+  no Cinemeta built-in entry. No Discord row; Send log says to give the code to the developer.
+- Encryption (owner, 2026-11-14): "standard encryption" on every build, App Store **not in France**
+  (untick France in Pricing and Availability). The plist key waits for Apple's compliance code.
 
 ## Not done / expect on the first test
 

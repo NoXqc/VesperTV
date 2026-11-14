@@ -3395,4 +3395,36 @@ const Map<String, String> kPl = {
   "Play a recording here": "Odtwórz tu nagranie",
   "Back 30 s": "30 s do tyłu",
   "Forward 30 s": "30 s do przodu",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "Napisy dla niesłyszących nie są dostępne w tym odtwarzaczu.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Ponownie odczytuje Twoje źródła",
+  "A media server or Trakt / Simkl":
+      "Serwer multimediów lub Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Twój własny serwer multimediów lub Twoje listy Trakt / Simkl.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Połącz swój serwer Jellyfin, Emby lub Plex albo listy Trakt / Simkl w Ustawienia > Źródła Media Hub.",
+  "Your media server and Trakt / Simkl lists":
+      "Twój serwer multimediów i listy Trakt / Simkl",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Przekaż ten kod deweloperowi razem z opisem, co się stało, aby mógł znaleźć Twój dziennik.",
+  "From your media server": "Z Twojego serwera multimediów",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Własne kolekcje dla Twojego serwera",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Własne kolekcje dla Twojego serwera: rzędy kafelków na karcie Media Hub, każdy otwiera stronę z bibliotekami Twojego serwera.",
+  "A collections file (.json)":
+      "Plik kolekcji (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "Kafelki potrzebują swoich katalogów jako bibliotek na Twoim serwerze. Brakujące są pomijane.",
+  "{found} of {n} tiles found on your server":
+      "Znaleziono {found} z {n} kafelków na Twoim serwerze",
+  "None of its catalogs are libraries on your server yet.":
+      "Żaden z jej katalogów nie jest jeszcze biblioteką na Twoim serwerze.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "Katalogi tego kafelka nie są jeszcze bibliotekami na Twoim serwerze.",
 };

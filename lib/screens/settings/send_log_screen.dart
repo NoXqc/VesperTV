@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
+import '../../utils/app_store.dart';
 import '../../services/app_log.dart';
 import '../../services/playlist_manager.dart';
 import '../../utils/tv_theme.dart';
@@ -115,7 +116,9 @@ class _SendLogScreenState extends State<SendLogScreen> {
                       fontWeight: FontWeight.bold, letterSpacing: 2)),
               const SizedBox(height: 6),
               Text(
-                tr('Mention this code on Reddit or Discord with what happened, so the developer can find your log.'),
+                appStoreBuild
+                    ? tr('Give this code to the developer with what happened, so your log can be found.')
+                    : tr('Mention this code on Reddit or Discord with what happened, so the developer can find your log.'),
                 style: text.bodySmall,
               ),
             ],

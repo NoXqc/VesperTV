@@ -9,6 +9,7 @@ import 'addon_import.dart';
 import 'addon_service.dart';
 import 'archive_service.dart';
 import 'storage_service.dart';
+import '../utils/app_store.dart';
 
 /// What a Media Hub source mainly is, for the sources page's filters.
 enum HubKind { streams, catalogs, server, lists, live, subtitles }
@@ -77,16 +78,17 @@ class HubEntry {
   /// the subtitle add-ons.
   static List<HubEntry> all(ArchiveService archive, AddonService addons) => [
         for (final s in archive.sources) fromSource(s),
-        HubEntry._(
+        if (!appStoreBuild)
+          HubEntry._(
           key: cinemetaKey,
           name: ArchiveCatalogProvider.name,
           kind: HubKind.catalogs,
           tags: const ['catalogs', 'movies', 'shows', 'builtin'],
-          enabled: archive.showCinemetaCatalog,
-          builtIn: true,
-          removable: false,
-          hasUrl: false,
-        ),
+            enabled: archive.showCinemetaCatalog,
+            builtIn: true,
+            removable: false,
+            hasUrl: false,
+          ),
         for (final a in addons.addons) fromAddon(a),
       ];
 

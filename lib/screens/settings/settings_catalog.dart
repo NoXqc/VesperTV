@@ -301,7 +301,9 @@ class SettingsCatalog {
                 id: 'hub_sources',
                 icon: Icons.local_movies_outlined,
                 title: tr('Media Hub sources'),
-                subtitle: tr('Add-on sources for the Media Hub tab'),
+                subtitle: appStoreBuild
+                    ? tr('Your media server and Trakt / Simkl lists')
+                    : tr('Add-on sources for the Media Hub tab'),
                 page: (_) => const ArchiveSourcesScreen()),
             SettingsLink(
                 id: 'trackers',
@@ -312,13 +314,15 @@ class SettingsCatalog {
                 page: (_) => const TrackersScreen()),
             // Online subtitles: both players (Windows' own since its
             // Subtitles button, desktop_subtitles.dart).
-            SettingsLink(
-                id: 'addons',
-                floating: true,
-                icon: Icons.subtitles_outlined,
-                title: tr('Online subtitles'),
-                subtitle: tr('Online subtitles in more languages'),
-                page: (_) => const AddonsScreen()),
+            // App Store build: no subtitle add-ons.
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'addons',
+                  floating: true,
+                  icon: Icons.subtitles_outlined,
+                  title: tr('Online subtitles'),
+                  subtitle: tr('Online subtitles in more languages'),
+                  page: (_) => const AddonsScreen()),
             SettingsLink(
                 id: 'playlist_editor',
                 floating: true,
@@ -961,7 +965,9 @@ class SettingsCatalog {
               value: _storage.getSportsHideEmptyLeagues(),
               onChanged: (v) =>
                   _saveViewer(() => _storage.setSportsHideEmptyLeagues(v))),
-          SettingsToggle(
+          // App Store rules: no gambling content.
+          if (!appStoreBuild)
+            SettingsToggle(
               id: 'sports_odds',
               icon: Icons.trending_up,
               title: tr('Show betting odds'),
@@ -1588,20 +1594,23 @@ class SettingsCatalog {
         description: tr('Tips, support and how to reach us.'),
         sections: [
           SettingsSection([
-            SettingsLink(
-                id: 'remote_tips',
-                floating: true,
-                icon: Icons.settings_remote_outlined,
-                title: tr('Remote tips'),
-                subtitle: tr('Every hold menu and shortcut, on your phone'),
-                page: (_) => const RemoteTipsScreen()),
-            SettingsLink(
-                id: 'discord',
-                floating: true,
-                icon: Icons.forum_outlined,
-                title: tr('Discord'),
-                subtitle: tr('Direct support through Discord'),
-                page: (_) => const CommunityScreen()),
+            // App Store rules: a TV-box remote guide naming other platforms.
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'remote_tips',
+                  floating: true,
+                  icon: Icons.settings_remote_outlined,
+                  title: tr('Remote tips'),
+                  subtitle: tr('Every hold menu and shortcut, on your phone'),
+                  page: (_) => const RemoteTipsScreen()),
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'discord',
+                  floating: true,
+                  icon: Icons.forum_outlined,
+                  title: tr('Discord'),
+                  subtitle: tr('Direct support through Discord'),
+                  page: (_) => const CommunityScreen()),
             SettingsLink(
                 id: 'send_log',
                 floating: true,
@@ -1609,15 +1618,18 @@ class SettingsCatalog {
                 title: tr('Send log'),
                 subtitle: tr('Send the app\'s log to the developer'),
                 page: (_) => const SendLogScreen()),
-            SettingsLink(
-                id: 'support',
-                floating: true,
-                icon: Icons.favorite_outline,
-                title: tr('Support VesperTV'),
-                subtitle: tr('How you can help'),
-                help: tr(
-                    'VesperTV is free, with no ads. See how you can help keep it running.'),
-                page: (_) => const SupportScreen()),
+            // App Store rules: donations only through Apple's in-app
+            // purchase, never a link out.
+            if (!appStoreBuild)
+              SettingsLink(
+                  id: 'support',
+                  floating: true,
+                  icon: Icons.favorite_outline,
+                  title: tr('Support VesperTV'),
+                  subtitle: tr('How you can help'),
+                  help: tr(
+                      'VesperTV is free, with no ads. See how you can help keep it running.'),
+                  page: (_) => const SupportScreen()),
           ]),
         ],
       );
