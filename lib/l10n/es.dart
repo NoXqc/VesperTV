@@ -3833,4 +3833,11 @@ const Map<String, String> kEs = {
       "Ninguno de sus catálogos es todavía una biblioteca de tu servidor.",
   "This tile's catalogs aren't libraries on your server yet.":
       "Los catálogos de este mosaico aún no son bibliotecas de tu servidor.",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimalista",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Un reproductor IPTV sencillo: la guía clásica compacta, grupos que se pliegan, sin Acabado refinado y sin Inicio, perfiles, Sports Trak ni Media Hub. Desactívalo para dejarlo todo como estaba. Las pestañas también se pueden volver a activar una a una.",
+  "Removes the Home tab.":
+      "Quita la pestaña Inicio.",
 };

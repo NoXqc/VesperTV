@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -85,6 +86,11 @@ class AppPreferences extends ChangeNotifier {
 
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
+
+  /// The Home row (tabs column, phone pill, Sports Mode rail) hidden.
+  /// Home stays when it is the only page left ([homeHidden]).
+  late bool hideHome;
+  bool get homeHidden => hideHome && fallbackTab != 'Home';
 
   /// Home's profiles strip is optional, like that viewer's other Home rows.
   bool get hideProfiles => _storage.getHideProfiles();
@@ -344,6 +350,7 @@ class AppPreferences extends ChangeNotifier {
 
   /// [startSection] unless what it names is hidden.
   String get effectiveStartSection => switch (startSection) {
+        'home' when homeHidden => fallbackStartSection,
         'tv' when hideLiveTv => fallbackStartSection,
         'movies' when hideMovies => fallbackStartSection,
         'series' when hideShows => fallbackStartSection,
@@ -478,6 +485,7 @@ class AppPreferences extends ChangeNotifier {
     hideCatchupGroup = _storage.getHideCatchupGroup();
     recentChannelsGroup = _storage.getRecentChannelsGroup();
     hideMultiview = _storage.getHideMultiview();
+    hideHome = _storage.getHideHome();
     videoFit = VideoFit.byName(_storage.getVideoFit());
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
     showGroupCounts = _storage.getShowGroupCounts();
@@ -746,6 +754,100 @@ class AppPreferences extends ChangeNotifier {
   void setHideMultiview(bool value) {
     hideMultiview = value;
     _storage.setHideMultiview(value);
+    notifyListeners();
+  }
+
+  void setHideHome(bool value) {
+    hideHome = value;
+    _storage.setHideHome(value);
+    notifyListeners();
+  }
+
+  /// Settings > Appearance > Minimalist (owner, 2026-11-14): a plain IPTV
+  /// player like TiviMate in one switch. No Refined finish; the classic
+  /// Timeline guide (preview at the top), compact; groups fold away; no
+  /// Home, profiles, Sports Trak or Media Hub; the app opens on TV. Each
+  /// one stays its own setting (a tab can be turned back on by itself).
+  /// Off puts back what these settings were before it was turned on.
+  bool get minimalist => _storage.getMinimalist();
+
+  Future<void> setMinimalist(bool on) async {
+    if (on == minimalist) return;
+    if (on) {
+      await _storage.setMinimalistBefore(jsonEncode({
+        'refinedFinish': refinedFinish,
+        'guideViewMode': guideViewMode,
+        'guideFullVideo': guideFullVideo,
+        'guideCompact': guideCompact,
+        'keepGroupsOpen': keepGroupsOpen,
+        'hideHome': hideHome,
+        'hideProfiles': hideProfiles,
+        'hideSportsTrak': hideSportsTrak,
+        'sportsMode': _storage.getSportsMode(),
+        'hideArchive': hideArchive,
+        'launchWithProfiles': launchWithProfiles,
+        'startSection': _storage.getStartSection(),
+      }));
+      await _storage.setMinimalist(true);
+      refinedFinish = false;
+      await _storage.setRefinedFinish(false);
+      guideViewMode = 'timeline';
+      await _storage.setGuideViewMode('timeline');
+      guideFullVideo = false;
+      await _storage.setGuideFullVideo(false);
+      guideCompact = true;
+      await _storage.setGuideCompact(true);
+      keepGroupsOpen = false;
+      await _storage.setKeepGroupsOpen(false);
+      hideHome = true;
+      await _storage.setHideHome(true);
+      await _storage.setHideProfiles(true);
+      hideSportsTrak = true;
+      await _storage.setHideSportsTrak(true);
+      await _storage.setSportsMode(false);
+      hideArchive = true;
+      await _storage.setHideArchive(true);
+      await _storage.setLaunchWithProfiles(false);
+      if (const {'home', 'hub', 'sports'}.contains(startSection)) {
+        await _storage.setStartSection('tv');
+      }
+      notifyListeners();
+      return;
+    }
+    Map<String, dynamic> before = const {};
+    try {
+      final raw = _storage.getMinimalistBefore();
+      if (raw != null) before = Map<String, dynamic>.from(jsonDecode(raw));
+    } catch (_) {}
+    T was<T>(String key, T fallback) =>
+        before[key] is T ? before[key] as T : fallback;
+    refinedFinish = was('refinedFinish', refinedFinish);
+    await _storage.setRefinedFinish(refinedFinish);
+    guideViewMode = was('guideViewMode', guideViewMode);
+    await _storage.setGuideViewMode(guideViewMode);
+    guideFullVideo = was('guideFullVideo', guideFullVideo);
+    await _storage.setGuideFullVideo(guideFullVideo);
+    guideCompact = was('guideCompact', guideCompact);
+    await _storage.setGuideCompact(guideCompact);
+    keepGroupsOpen = was('keepGroupsOpen', keepGroupsOpen);
+    await _storage.setKeepGroupsOpen(keepGroupsOpen);
+    hideHome = was('hideHome', false);
+    await _storage.setHideHome(hideHome);
+    await _storage.setHideProfiles(was('hideProfiles', false));
+    hideSportsTrak = was('hideSportsTrak', false);
+    await _storage.setHideSportsTrak(hideSportsTrak);
+    await _storage.setSportsMode(!hideSportsTrak && was('sportsMode', false));
+    hideArchive = was('hideArchive', false);
+    await _storage.setHideArchive(hideArchive);
+    await _storage.setLaunchWithProfiles(was('launchWithProfiles', false));
+    final start = before['startSection'];
+    if (start is String) {
+      await _storage.setStartSection(start);
+    } else if (before.containsKey('startSection')) {
+      await _storage.clearStartSection();
+    }
+    await _storage.setMinimalistBefore(null);
+    await _storage.setMinimalist(false);
     notifyListeners();
   }
 }

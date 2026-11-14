@@ -3840,4 +3840,11 @@ const Map<String, String> kIt = {
       "Nessuno dei suoi cataloghi è ancora una libreria del tuo server.",
   "This tile's catalogs aren't libraries on your server yet.":
       "I cataloghi di questo riquadro non sono ancora librerie del tuo server.",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimalista",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Un lettore IPTV semplice: la guida classica compatta, gruppi che si richiudono, niente Finitura raffinata e niente Home, profili, Sports Trak o Media Hub. Disattivalo per rimettere tutto com'era. Le schede si possono anche riattivare una alla volta.",
+  "Removes the Home tab.":
+      "Rimuove la scheda Home.",
 };

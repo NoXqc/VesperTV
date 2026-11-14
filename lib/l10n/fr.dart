@@ -3846,4 +3846,11 @@ const Map<String, String> kFr = {
       "Aucun de ses catalogues n’est encore une bibliothèque de votre serveur.",
   "This tile's catalogs aren't libraries on your server yet.":
       "Les catalogues de cette tuile ne sont pas encore des bibliothèques de votre serveur.",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Minimaliste",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Un lecteur IPTV simple : le guide classique compact, des groupes qui se replient, pas de Finition raffinée, et ni Accueil, ni profils, ni Sports Trak, ni Media Hub. Désactivez-le pour tout remettre comme avant. Les onglets peuvent aussi être réactivés un par un.",
+  "Removes the Home tab.":
+      "Retire l’onglet Accueil.",
 };

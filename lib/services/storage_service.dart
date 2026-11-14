@@ -860,6 +860,19 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideMultiview) ?? false;
   Future<void> setHideMultiview(bool value) =>
       _prefs.setBool(AppConstants.keyHideMultiview, value);
+  bool getHideHome() => _prefs.getBool(AppConstants.keyHideHome) ?? false;
+  Future<void> setHideHome(bool value) =>
+      _prefs.setBool(AppConstants.keyHideHome, value);
+  bool getMinimalist() => _prefs.getBool(AppConstants.keyMinimalist) ?? false;
+  Future<void> setMinimalist(bool value) =>
+      _prefs.setBool(AppConstants.keyMinimalist, value);
+  String? getMinimalistBefore() =>
+      _prefs.getString(AppConstants.keyMinimalistBefore);
+  Future<void> setMinimalistBefore(String? json) => json == null
+      ? _prefs.remove(AppConstants.keyMinimalistBefore)
+      : _prefs.setString(AppConstants.keyMinimalistBefore, json);
+  Future<void> clearStartSection() =>
+      _prefs.remove(AppConstants.keyStartSection);
 
   /// Settings > General: the "Hold > to resume" reminder pill (Android and
   /// Windows). Off hides only the pill; hold-Right still resumes.

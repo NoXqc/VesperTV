@@ -3795,4 +3795,11 @@ const Map<String, String> kEl = {
       "Κανένας από τους καταλόγους της δεν είναι ακόμα βιβλιοθήκη στον διακομιστή σας.",
   "This tile's catalogs aren't libraries on your server yet.":
       "Οι κατάλογοι αυτού του πλακιδίου δεν είναι ακόμα βιβλιοθήκες στον διακομιστή σας.",
+  // Minimalist (Settings > Appearance)
+  "Minimalist":
+      "Μινιμαλιστικό",
+  "A plain IPTV player: the classic compact guide, groups that fold away, no Refined finish, and no Home, profiles, Sports Trak or Media Hub. Turn it off to put everything back as it was. Tabs can also be turned back on one by one.":
+      "Ένα απλό πρόγραμμα IPTV: ο κλασικός συμπαγής οδηγός, ομάδες που κλείνουν, χωρίς Εκλεπτυσμένο φινίρισμα και χωρίς Αρχική, προφίλ, Sports Trak ή Media Hub. Απενεργοποιήστε το για να επιστρέψουν όλα όπως ήταν. Οι καρτέλες μπορούν επίσης να ενεργοποιηθούν ξανά μία μία.",
+  "Removes the Home tab.":
+      "Αφαιρεί την καρτέλα Αρχική.",
 };
