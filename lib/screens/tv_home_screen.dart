@@ -9546,6 +9546,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
     final cursor = widget.initialCursor;
     _cursorSlot = cursor == null ? null : _floorToSlot(cursor);
+    _tickSlot = _floorToSlot(now);
     final initialRow = widget.initialRow;
     _focusedRowIndex =
         initialRow != null && initialRow >= 0 ? initialRow : null;
@@ -9747,6 +9748,26 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // A past (catch-up) window keeps its time; "now" is outside it.
     final anchor = widget.anchor;
     _cursorSlot = anchor == null ? null : _floorToSlot(anchor);
+    if (anchor == null) {
+      // ...and the view goes back to the live half-hour too: it kept the
+      // old group's column, often the half-hour the guide first opened on
+      // (owner photo, 2026-11-14: a group opened at 07:30 at 08:18).
+      if (!_jumpToLive()) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _cursorSlot == null) _jumpToLive();
+        });
+      }
+    } else if (oldGroup != newGroup) {
+      // Another group while looking at the past: it opens at live, on a
+      // fresh window (the remount scrolls it to now).
+      if (hadRowFocus) widget.holdFocus?.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.anchor != null) {
+          widget.onShiftWindow?.call(null, hadRowFocus ? 0 : -1, null);
+        }
+      });
+      return;
+    }
     if (!hadRowFocus) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) focusEntry();
@@ -9770,8 +9791,66 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     _nowTimer = Timer.periodic(_nowTickInterval, (_) {
       if (!mounted) return;
       _checkWindowStale();
+      _followLive();
       setState(() {});
     });
+  }
+
+  /// Scrolls the view to the live half-hour; false before the first layout.
+  bool _jumpToLive() {
+    final slot = _floorToSlot(DateTime.now());
+    _tickSlot = slot;
+    if (!_gridHScroll.hasClients ||
+        !_gridHScroll.position.hasContentDimensions) {
+      return false;
+    }
+    _gridHScroll
+        .jumpTo(_xFor(slot).clamp(0.0, _gridHScroll.position.maxScrollExtent));
+    return true;
+  }
+
+  /// The live half-hour as of the last [_followLive].
+  DateTime? _tickSlot;
+
+  /// The guide follows the clock while it sits at live (no Left/Right
+  /// away from the live column, no drag): when "now" moves into the next
+  /// half-hour the view steps with it, and a focused programme that has
+  /// ended hands focus to the one on now in its row. It used to keep the
+  /// half-hour it opened on, the red line drifting right for hours (owner
+  /// photo, 2026-11-14). Runs on each now tick and back from a covering
+  /// page.
+  void _followLive() {
+    if (widget.anchor != null) return;
+    final now = DateTime.now();
+    final slot = _floorToSlot(now);
+    final last = _tickSlot;
+    _tickSlot = slot;
+    final cursor = _cursorSlot;
+    // Stepped Right onto a half-hour that is now the live one: at live.
+    if (cursor != null && cursor == slot) _cursorSlot = null;
+    if (last != null &&
+        slot != last &&
+        (cursor == null || cursor == last) &&
+        _gridHScroll.hasClients &&
+        _gridHScroll.position.hasContentDimensions) {
+      final pos = _gridHScroll.position;
+      final lastX = _xFor(last).clamp(0.0, pos.maxScrollExtent);
+      // Within 5 minutes of the old live column: not dragged elsewhere.
+      if ((pos.pixels - lastX).abs() <= _pixelsPerMinute * 5) {
+        _cursorSlot = null;
+        _gridHScroll.jumpTo(_xFor(slot).clamp(0.0, pos.maxScrollExtent));
+      }
+    }
+    final row = _focusedRowIndex;
+    final program = _focusedProgram;
+    if (_cursorSlot == null &&
+        row != null &&
+        row < widget.channels.length &&
+        program != null &&
+        !program.stop.isAfter(now) &&
+        _gridFocusScope.hasFocus) {
+      _focusRowAt(row, now, 2);
+    }
   }
 
   /// See [_windowStart]'s doc comment. Triggered with an hour of margin
@@ -9808,6 +9887,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // fullscreen (this guide sitting covered, hence this timer paused)
     // for long enough to go stale itself.
     _checkWindowStale();
+    _followLive();
     _startNowTimer();
   }
 
