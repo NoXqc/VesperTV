@@ -1264,7 +1264,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           () => NativeMultiviewTiles.release(id)));
       _tileControllers[kept] = false;
     }
-    unawaited(WakelockPlus.disable());
+    // A screen that went full screen is now the main player (adoptLive just
+    // enabled its wakelock, before this dispose ran): releasing it here left
+    // the picture playing with nothing keeping the screen on, and a Fire TV
+    // Cube fell into its screensaver ~5 min later (Send log LOG-F2AHJU:
+    // Multiview -> full screen, 16 min without a key). Native zaps reuse the
+    // controller, so nothing re-enabled it. The main player's own stop()
+    // releases it.
+    if (kept == null) unawaited(WakelockPlus.disable());
     super.dispose();
   }
 
