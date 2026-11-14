@@ -3623,9 +3623,6 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         .showSnackBar(SnackBar(content: Text(tr('Favourites cleared.'))));
   }
 
-  /// A computer closes its players before the window (AppExit.quit).
-  void _closeApp() => unawaited(AppExit.full());
-
   /// A window can't be minimized while it's *in* `fullScreen` mode at all
   /// — confirmed directly: a bare `windowManager.minimize()` call did
   /// nothing. Exiting fullscreen first is what actually makes the
@@ -4499,8 +4496,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           child: Row(
             children: [
               if (!context.watch<AppPreferences>().homeHidden)
-                item(Icons.home_outlined, tr('Home'), _tab == 'Home',
-                    _openHome),
+                item(
+                    Icons.home_outlined, tr('Home'), _tab == 'Home', _openHome),
               for (final tab in _visibleTabs)
                 item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
                   if (_tab == tab) {
@@ -4756,9 +4753,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // (see main.dart's WindowOptions) with the title bar hidden
         // entirely, so there's no OS minimize *or* close button at all
         // anymore, and Alt+F4 was the only way out. Minimize sends the
-        // window to the taskbar, Close quits normally via _closeApp
-        // (windowManager.close: SystemNavigator.pop does nothing on
-        // Windows) — neither touches playback or playlists.
+        // window to the taskbar; Exit VesperTV (below) quits through
+        // AppExit.full (SystemNavigator.pop does nothing on Windows).
         if (isDesktop) ...[
           _SelectableRow(
             icon: Icons.remove,
@@ -4779,13 +4775,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               onTap: () => DesktopWindow.setWindowed(!windowed),
             ),
           ),
-          _SelectableRow(
-            icon: Icons.close,
-            label: tr('Close'),
-            selected: false,
-            collapsed: collapsed,
-            onTap: _closeApp,
-          ),
+          // No Close row: it did what Exit VesperTV below does
+          // (AppExit.full), so computers showed two exits (owner,
+          // 2026-11-14).
         ],
         // Deliberately at the very bottom, one row on its own — this kills
         // the app, so it shouldn't be one accidental press away from the

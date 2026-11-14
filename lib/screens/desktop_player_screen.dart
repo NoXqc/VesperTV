@@ -334,11 +334,6 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
   }
 
-  /// False when this screen is reusing a session handed off by
-  /// [DesktopMiniPlayer] (see [initState]) — [dispose] must never tear
-  /// down a `Player` it didn't create itself.
-  bool _ownsPlayer = true;
-
   /// True once [_handleBack] has handed the live session to
   /// [DesktopMiniPlayer] — [dispose] must not also dispose it in that
   /// case, even though this screen did create it.
@@ -387,7 +382,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (widget.existingPlayer != null && widget.existingController != null) {
       _player = widget.existingPlayer!;
       _videoController = widget.existingController!;
-      _ownsPlayer = false;
+      // Ours now: DesktopMiniPlayer.take emptied the holder, so dispose
+      // tears it down unless Back hands it back. (It was skipped for a
+      // taken player: Stop left the stream playing as sound only, one more
+      // per channel picked after it. Windows user, +798, 2026-11-14.)
       DesktopLiveRecovery.of(_player).watch(widget.channel);
     } else {
       _player = newDesktopPlayer(bigCache: true);
@@ -886,9 +884,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _playPauseFocus.dispose();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
-    if (_ownsPlayer && !_handedOffToMiniPlayer) {
-      DesktopLiveRecovery.disposePlayer(_player);
-    }
+    if (!_handedOffToMiniPlayer) DesktopLiveRecovery.disposePlayer(_player);
     super.dispose();
   }
 
@@ -1785,10 +1781,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     event.logicalKey == LogicalKeyboardKey.mediaRewind)) {
               if (!_isLive || _inCatchup) {
                 _skip(Duration(
-                    seconds: event.logicalKey ==
-                            LogicalKeyboardKey.mediaFastForward
-                        ? 10
-                        : -10));
+                    seconds:
+                        event.logicalKey == LogicalKeyboardKey.mediaFastForward
+                            ? 10
+                            : -10));
                 _flashControls();
               }
               return KeyEventResult.handled;
