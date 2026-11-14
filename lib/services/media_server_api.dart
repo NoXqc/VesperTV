@@ -8,6 +8,7 @@ import '../models/archive_models.dart';
 import 'archive_api_service.dart';
 import 'media_server_errors.dart';
 import 'plex_api.dart';
+import 'stream_headers.dart';
 
 export 'media_server_errors.dart';
 
@@ -182,19 +183,40 @@ class MediaServerApi {
     return [
       for (final v in (j['Items'] as List? ?? const []))
         if (v is Map && v['Id'] != null)
-          if (switch ('${v['CollectionType'] ?? ''}'.toLowerCase()) {
-            'movies' => ArchiveType.movie,
-            'tvshows' => ArchiveType.series,
-            _ => null,
-          }
-              case final type?)
-            ArchiveCatalog(
-              type: type,
-              id: '${v['Id']}',
-              name: '${v['Name'] ?? ''}'.trim(),
-              searchable: true,
-            ),
+          if (_aioCatalog(v['Path']) case final aio)
+            if (switch ('${v['CollectionType'] ?? ''}'.toLowerCase()) {
+                      'movies' => ArchiveType.movie,
+                      'tvshows' => ArchiveType.series,
+                      _ => null,
+                    } ??
+                    aio?.type
+                case final type?)
+              ArchiveCatalog(
+                type: type,
+                id: '${v['Id']}',
+                name: '${v['Name'] ?? ''}'.trim(),
+                searchable: true,
+                addonCatalogId: aio?.id,
+                // A catalog its add-on lists only with a genre picked
+                // (AIOMetadata's "not in home"): never a row, a tile can
+                // still show it.
+                homeHidden: v['aiostreams'] is Map &&
+                    (v['aiostreams'] as Map)['genreRequired'] == true,
+              ),
     ];
+  }
+
+  /// The add-on catalog an AIOStreams library serves, from its path
+  /// `/aiostreams/{type}/{instance}.{catalog id}`; null for any other
+  /// library.
+  static ({ArchiveType? type, String id})? _aioCatalog(Object? path) {
+    final m = RegExp(r'^/aiostreams/([^/]+)/[^/.]+\.([^/]+)$')
+        .firstMatch('${path ?? ''}');
+    if (m == null) return null;
+    return (
+      type: ArchiveType.fromWire(m[1]),
+      id: m[2]!,
+    );
   }
 
   /// One page of a library, newest first (a search: by name).
@@ -217,13 +239,25 @@ class MediaServerApi {
       'ImageTypeLimit': '1',
       'StartIndex': '$skip',
       'Limit': '$catalogPageSize',
-      if (search == null) ...{
-        'SortBy': 'DateCreated,SortName',
-        'SortOrder': 'Descending',
-      } else ...{
+      // A tile narrowed to a genre (Jellyfin's genre filter; AIOStreams
+      // passes it to the add-on as the catalog's genre). A genre-only
+      // catalog AIOStreams serves lists nothing without one: "None" is
+      // AIOMetadata's no-genre option (checked on a real server).
+      if (catalog.extra['genre'] ??
+              (catalog.homeHidden && catalog.addonCatalogId != null
+                  ? 'None'
+                  : null)
+          case final genre?)
+        'Genres': genre,
+      if (search != null) ...{
         'SearchTerm': search,
         'SortBy': 'SortName',
+      } else if (catalog.addonCatalogId == null) ...{
+        'SortBy': 'DateCreated,SortName',
+        'SortOrder': 'Descending',
       },
+      // An add-on catalog served by AIOStreams keeps the add-on's order
+      // (Popular by popularity, Top 10 as ranked).
     };
     final j = await _getAuthed(
         s, '/Users/${s.server!.userId}/Items?${Uri(queryParameters: q).query}');
@@ -279,21 +313,115 @@ class MediaServerApi {
     );
   }
 
-  /// The direct stream of a movie or episode item: the original file as
-  /// stored on the server (no transcoding), with the token in the URL so
-  /// both players can open it as is.
+  /// The versions of a movie or episode item, each the original file (no
+  /// transcoding) with the token in the URL so both players can open it as
+  /// is. PlaybackInfo lists them: a Jellyfin/Emby title with several files,
+  /// or a configuration served by AIOStreams' Jellyfin API (one version per
+  /// stream its add-ons found, up to 25, in the user's sort order). A
+  /// server that can't answer it, or one version, plays the item's default
+  /// file as before.
   Future<List<ArchiveStream>> streams(ArchiveSource s, String itemId) async {
     if (s.server!.kind == MediaServerKind.plex) return _plex.streams(s, itemId);
     final login = s.server!;
     final key = login.kind == MediaServerKind.jellyfin ? 'ApiKey' : 'api_key';
-    return [
-      ArchiveStream(
-        url: '${s.baseUrl}/Videos/${Uri.encodeComponent(itemId)}/stream'
-            '?static=true&$key=${Uri.encodeComponent(login.token)}',
-        name: s.name,
-        title: login.kind.label,
-      ),
+    String link([String? sourceId]) =>
+        '${s.baseUrl}/Videos/${Uri.encodeComponent(itemId)}/stream'
+        '?static=true'
+        '${sourceId == null ? '' : '&MediaSourceId=${Uri.encodeComponent(sourceId)}'}'
+        '&$key=${Uri.encodeComponent(login.token)}';
+    final plain = [
+      ArchiveStream(url: link(), name: s.name, title: login.kind.label),
     ];
+    final List<Map> sources;
+    try {
+      sources = await _mediaSources(s, itemId);
+    } catch (_) {
+      return plain;
+    }
+    // AIOStreams adds its own block to each version: the add-on stream's
+    // name and description, exactly as the add-on shows them.
+    final aio = sources.any((m) => m['aiostreams'] is Map);
+    // A notice ("No streams found", "Load versions") is not a file.
+    final files = [
+      for (final m in sources)
+        if (m['Type'] != 'Placeholder') m
+    ];
+    if (files.isEmpty) return aio ? const [] : plain;
+    if (!aio && files.length == 1) return plain;
+    final versions = [
+      for (final m in files)
+        if (_version(s, m, link) case final v?) v
+    ];
+    return versions.isEmpty && !aio ? plain : versions;
+  }
+
+  /// AIOStreams runs the user's add-ons on this request, which can take a
+  /// while.
+  static const _versionsTimeout = Duration(seconds: 40);
+
+  Future<List<Map>> _mediaSources(ArchiveSource s, String itemId) async {
+    final login = s.server!;
+    final uri = Uri.parse(
+        '${s.baseUrl}/Items/${Uri.encodeComponent(itemId)}/PlaybackInfo'
+        '?UserId=${Uri.encodeComponent(login.userId)}');
+    final j = await _json(
+        await _client
+            .post(uri,
+                headers: _headers(login.kind, login.deviceId, login.token),
+                body: jsonEncode({
+                  'UserId': login.userId,
+                  'IsPlayback': false,
+                  'AutoOpenLiveStream': false,
+                }))
+            .timeout(_versionsTimeout),
+        uri);
+    final list = j['MediaSources'];
+    return list is List ? list.whereType<Map>().toList() : const [];
+  }
+
+  /// One version as a stream. An AIOStreams version plays its own link
+  /// (followed once like any add-on link, `archive_playback._resolve`),
+  /// named as the add-on names it; a server file plays through the server.
+  ArchiveStream? _version(
+      ArchiveSource s, Map m, String Function([String?]) link) {
+    final id = _str(m['Id']);
+    final aio = m['aiostreams'];
+    if (aio is Map) {
+      final path = _str(m['Path']);
+      final uri = path == null ? null : Uri.tryParse(path);
+      if (uri == null ||
+          !(uri.scheme == 'http' || uri.scheme == 'https') ||
+          uri.host.isEmpty) {
+        return null; // a YouTube trailer or nothing playable
+      }
+      return ArchiveStream(
+        url: path!,
+        name: _str(aio['name']) ?? _str(m['Name']) ?? s.name,
+        title: _str(aio['description']),
+        fileName: _str(aio['filename']),
+        bingeGroup: _str(aio['bingeGroup']),
+        sizeBytes: _bytes(aio['size']) ?? _bytes(m['Size']),
+        requestHeaders: streamRequestHeaders(m['RequiredHttpHeaders']),
+      );
+    }
+    if (id == null) return null;
+    final container = _str(m['Container']);
+    return ArchiveStream(
+      url: link(id),
+      name: s.name,
+      title: [
+        s.server!.kind.label,
+        if (_str(m['Name']) case final name?) name,
+        if (container != null) container.toUpperCase(),
+      ].join(' · '),
+      fileName: _str(m['Path'])?.split(RegExp(r'[/\\]')).last,
+      sizeBytes: _bytes(m['Size']),
+    );
+  }
+
+  static int? _bytes(Object? v) {
+    final n = v is num ? v.toInt() : int.tryParse('${v ?? ''}');
+    return n == null || n <= 0 ? null : n;
   }
 
   static String? _str(Object? v) {

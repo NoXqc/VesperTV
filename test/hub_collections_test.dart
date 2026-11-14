@@ -291,6 +291,100 @@ void main() {
           reason: 'an off collection comes back off');
     });
 
+    test('tiles find the libraries AIOStreams serves as a Jellyfin server',
+        () async {
+      // AIOStreams' Jellyfin API: each catalog of the configuration is a
+      // library naming it ([ArchiveCatalog.addonCatalogId]).
+      const server = ArchiveSource(
+        manifestUrl: 'https://aio.example/jellyfin#u1',
+        name: 'AIOStreams',
+        server: MediaServerLogin(
+            kind: MediaServerKind.jellyfin,
+            userId: 'u1',
+            token: 't',
+            deviceId: 'd'),
+        catalogs: [
+          ArchiveCatalog(
+              type: ArchiveType.movie,
+              id: 'lib-nf-movies',
+              name: 'Netflix Movies',
+              addonCatalogId: 'tmdb.discover.movie.streaming.netflix',
+              homeHidden: true),
+          ArchiveCatalog(
+              type: ArchiveType.series,
+              id: 'lib-nf-shows',
+              name: 'Netflix Shows',
+              addonCatalogId: 'tmdb.discover.series.streaming.netflix'),
+          // A plain library (a real Jellyfin) is never a tile's catalog.
+          ArchiveCatalog(
+              type: ArchiveType.movie,
+              id: 'tmdb.discover.movie.streaming.netflix',
+              name: 'Home videos'),
+        ],
+      );
+      final (service, _) = await _service(source: server);
+      addTearDown(service.dispose);
+      await service.importCollections('https://x.example/a.json');
+      final netflix = service.collections.single.folders.first;
+      final found = service.folderCatalogs(netflix);
+      expect(found.map((sc) => sc.$1.name), ['AIOStreams', 'AIOStreams']);
+      expect(found.map((sc) => sc.$2.id), ['lib-nf-movies', 'lib-nf-shows']);
+      // Survives storage (and Transfer).
+      final back = ArchiveSource.fromJson(server.toJson());
+      expect(back.catalogs.first.addonCatalogId,
+          'tmdb.discover.movie.streaming.netflix');
+      expect(back.catalogs.first.homeHidden, isTrue);
+    });
+
+    test('tiles find AIOMetadata catalogs inside an AIOStreams add-on',
+        () async {
+      // AIOStreams renames the catalogs it carries `{instance}.{id}`.
+      const aioStreams = ArchiveSource(
+        manifestUrl: 'https://aio.example/stremio/u/p/manifest.json',
+        name: 'NoXStreams',
+        addonId: 'com.aiostreams.viren070.22daa904-396',
+        catalogs: [
+          ArchiveCatalog(
+              type: ArchiveType.movie,
+              id: '564e3b0.tmdb.discover.movie.streaming.netflix',
+              name: 'Netflix Movies',
+              homeHidden: true),
+          ArchiveCatalog(
+              type: ArchiveType.series,
+              id: '564e3b0.tmdb.discover.series.streaming.netflix',
+              name: 'Netflix Shows'),
+        ],
+      );
+      final (service, _) = await _service(source: aioStreams);
+      addTearDown(service.dispose);
+      await service.importCollections('https://x.example/a.json');
+      final netflix = service.collections.single.folders.first;
+      expect(service.folderCatalogs(netflix).map((sc) => sc.$2.id), [
+        '564e3b0.tmdb.discover.movie.streaming.netflix',
+        '564e3b0.tmdb.discover.series.streaming.netflix',
+      ]);
+    });
+
+    test('another add-on with a dotted catalog id is not read that way',
+        () async {
+      const other = ArchiveSource(
+        manifestUrl: 'https://other.example/manifest.json',
+        name: 'Other',
+        addonId: 'org.other',
+        catalogs: [
+          ArchiveCatalog(
+              type: ArchiveType.movie,
+              id: '564e3b0.tmdb.discover.movie.streaming.netflix',
+              name: 'Look-alike'),
+        ],
+      );
+      final (service, _) = await _service(source: other);
+      addTearDown(service.dispose);
+      await service.importCollections('https://x.example/a.json');
+      expect(service.folderCatalogs(service.collections.single.folders.first),
+          isEmpty);
+    });
+
     test('a genre narrows the catalog; no manifest id still matches', () async {
       final old = ArchiveSource(
           manifestUrl: _aio.manifestUrl,

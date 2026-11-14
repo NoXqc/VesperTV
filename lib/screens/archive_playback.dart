@@ -97,10 +97,12 @@ ArchiveStreamOption preferredArchiveStream(
 /// once ([resolveRedirects] — every request the player makes for a big file
 /// then goes straight to the CDN). A media server's link is direct already.
 /// [_track] keeps the original link: `ArchiveReadyWatch` must re-ask the
-/// add-on, not the "being downloaded" clip it redirected to.
-Future<ResolvedLink> _resolve(ArchiveStreamOption o) => o.source.server != null
-    ? Future.value(ResolvedLink(o.stream.url))
-    : resolveLink(o.stream.url, headers: o.stream.requestHeaders);
+/// add-on, not the "being downloaded" clip it redirected to. A version
+/// AIOStreams' Jellyfin API serves is an add-on link, off the server.
+Future<ResolvedLink> _resolve(ArchiveStreamOption o) =>
+    o.source.server != null && o.stream.url.startsWith(o.source.baseUrl)
+        ? Future.value(ResolvedLink(o.stream.url))
+        : resolveLink(o.stream.url, headers: o.stream.requestHeaders);
 
 /// [archiveProviderFailed]: the link answered with the provider's error
 /// clip. Said plainly instead of playing a clip that looks like our error.

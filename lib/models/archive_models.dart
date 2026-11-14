@@ -67,11 +67,17 @@ class ArchiveCatalog {
     this.wireType,
     this.homeHidden = false,
     this.requestType,
+    this.addonCatalogId,
   });
 
   final ArchiveType type;
   final String id;
   final String name;
+
+  /// The add-on catalog a media server library serves: AIOStreams' Jellyfin
+  /// API turns each catalog of a configuration into a library and names it
+  /// in the library's path. Collection tiles find the library by it.
+  final String? addonCatalogId;
 
   /// The add-on's own name for [type] when it uses another one ("movies",
   /// [ArchiveType.aliasOf]): sent in `/catalog/` requests only, so the
@@ -133,6 +139,7 @@ class ArchiveCatalog {
               wireType: wireType,
               homeHidden: homeHidden,
               requestType: requestType,
+              addonCatalogId: addonCatalogId,
             );
 
   /// [id] plus [extra]: unique per row, used for cache rows and row keys.
@@ -153,6 +160,7 @@ class ArchiveCatalog {
         if (years.isNotEmpty) 'years': years,
         if (homeHidden) 'homeHidden': true,
         if (requestType != null) 'requestType': requestType,
+        if (addonCatalogId != null) 'addonCatalogId': addonCatalogId,
       };
 
   /// Reads both a manifest entry (`extra: [{name: search}, …]`) and the
@@ -198,6 +206,7 @@ class ArchiveCatalog {
       ],
       wireType: wire == type.wire || alias ? null : wire,
       requestType: alias ? wire : j['requestType']?.toString(),
+      addonCatalogId: j['addonCatalogId']?.toString(),
       homeHidden: j['homeHidden'] == true ||
           extras.any((e) =>
               e is Map && e['name'] == 'genre' && e['isRequired'] == true) ||

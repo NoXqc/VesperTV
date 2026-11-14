@@ -442,6 +442,7 @@ class ArchiveService extends ChangeNotifier {
   /// never updated before (owner, 2026-10-27).
   Future<void> _recheckCustomSources({bool all = false}) async {
     for (final s in sources) {
+      if (all && s.enabled && s.server != null) await _refreshLibraries(s);
       if (!s.enabled || s.server != null || s.tracker != null) continue;
       if (!all &&
           (s.streamOnly ||
@@ -450,6 +451,32 @@ class ArchiveService extends ChangeNotifier {
         continue;
       }
       await _refreshManifest(s);
+    }
+  }
+
+  /// A media server's libraries, re-read on explicit Refresh: an AIOStreams
+  /// configuration's catalogs (or a server's libraries) change after it was
+  /// added. Kept as saved when the server can't answer or lists none.
+  Future<void> _refreshLibraries(ArchiveSource s) async {
+    try {
+      final fresh =
+          await _servers.libraries(s).timeout(const Duration(seconds: 15));
+      if (fresh.isEmpty) return;
+      final current = _storedSources;
+      final index = current.indexWhere((p) => p.manifestUrl == s.manifestUrl);
+      if (index < 0) return;
+      final saved = current[index];
+      final updated = saved.copyWith(catalogs: fresh);
+      if (jsonEncode(updated.toJson()) != jsonEncode(saved.toJson())) {
+        current[index] = updated;
+        await _saveSources(current);
+      }
+      debugPrint('ArchiveLibraries: source=${s.key} '
+          'libraries=${fresh.length} '
+          'addon=${fresh.where((c) => c.addonCatalogId != null).length}');
+    } catch (e) {
+      debugPrint('ArchiveLibraries: source=${s.key} '
+          'failed=${e.runtimeType}; keeping saved libraries');
     }
   }
 
@@ -1830,16 +1857,31 @@ class ArchiveService extends ChangeNotifier {
       _indexViewer = _storage.viewerGeneration;
       final map = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
       for (final s in enabledSources) {
-        if (s.server != null || s.tracker != null || s.isLiveTv) continue;
+        if (s.tracker != null || s.isLiveTv) continue;
         for (final c in s.catalogs) {
           if (c.searchOnly) continue;
-          map.putIfAbsent('${c.wire}|${c.id}', () => []).add((s, c));
+          // A media server's library counts when it serves an add-on
+          // catalog (AIOStreams' Jellyfin API), under that catalog's id.
+          final id = s.server == null ? c.id : c.addonCatalogId;
+          if (id == null) continue;
+          map.putIfAbsent('${c.wire}|$id', () => []).add((s, c));
+          // AIOStreams as an add-on renames the catalogs it carries
+          // `{instance}.{id}` (AIOMetadata's inside it): also under the id.
+          if (s.server == null && _isAioStreams(s)) {
+            if (_aioInstance.firstMatch(c.id)?[1] case final inner?) {
+              map.putIfAbsent('${c.wire}|$inner', () => []).add((s, c));
+            }
+          }
         }
       }
       _byCatalogId = map;
     }
     return _byCatalogId;
   }
+
+  static bool _isAioStreams(ArchiveSource s) =>
+      s.addonId?.startsWith('com.aiostreams.') ?? false;
+  static final _aioInstance = RegExp(r'^[0-9a-z]{4,16}\.(.+)$');
 
   /// The installed catalog [src] names: from the enabled add-on whose
   /// manifest id is [HubCollectionSource.addonId], else from any add-on
@@ -1864,7 +1906,8 @@ class ArchiveService extends ChangeNotifier {
               years: c.years,
               wireType: c.wireType,
               homeHidden: c.homeHidden,
-              requestType: c.requestType),
+              requestType: c.requestType,
+              addonCatalogId: c.addonCatalogId),
     );
   }
 
