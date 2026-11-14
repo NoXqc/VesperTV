@@ -3814,4 +3814,36 @@ const Map<String, String> kFr = {
   "Play a recording here": "Lire un enregistrement ici",
   "Back 30 s": "Reculer de 30 s",
   "Forward 30 s": "Avancer de 30 s",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "Les sous-titres codés ne sont pas offerts dans ce lecteur.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Relit vos sources",
+  "A media server or Trakt / Simkl":
+      "Un serveur multimédia ou Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Votre propre serveur multimédia, ou vos listes Trakt / Simkl.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Connectez votre serveur Jellyfin, Emby ou Plex, ou vos listes Trakt / Simkl, dans Paramètres > Sources Media Hub.",
+  "Your media server and Trakt / Simkl lists":
+      "Votre serveur multimédia et vos listes Trakt / Simkl",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Donnez ce code au développeur avec ce qui s’est passé, pour qu’il retrouve votre journal.",
+  "From your media server": "Depuis votre serveur multimédia",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Apportez vos propres collections pour votre serveur",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Apportez vos propres collections pour votre serveur : des rangées de tuiles dans l’onglet Media Hub, chacune ouvrant une page des bibliothèques de votre serveur.",
+  "A collections file (.json)":
+      "Un fichier de collections (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "Les tuiles ont besoin que leurs catalogues soient des bibliothèques de votre serveur. Celles qui manquent sont omises.",
+  "{found} of {n} tiles found on your server":
+      "{found} tuiles sur {n} trouvées sur votre serveur",
+  "None of its catalogs are libraries on your server yet.":
+      "Aucun de ses catalogues n’est encore une bibliothèque de votre serveur.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "Les catalogues de cette tuile ne sont pas encore des bibliothèques de votre serveur.",
 };

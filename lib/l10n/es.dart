@@ -3801,4 +3801,36 @@ const Map<String, String> kEs = {
   "Play a recording here": "Reproducir una grabación aquí",
   "Back 30 s": "Atrás 30 s",
   "Forward 30 s": "Adelante 30 s",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "Los subtítulos ocultos no están disponibles en este reproductor.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Vuelve a leer tus fuentes",
+  "A media server or Trakt / Simkl":
+      "Un servidor multimedia o Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Tu propio servidor multimedia, o tus listas de Trakt / Simkl.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Conecta tu servidor Jellyfin, Emby o Plex, o tus listas de Trakt / Simkl, en Ajustes > Fuentes de Media Hub.",
+  "Your media server and Trakt / Simkl lists":
+      "Tu servidor multimedia y tus listas de Trakt / Simkl",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Da este código al desarrollador junto con lo que pasó, para que encuentre tu registro.",
+  "From your media server": "Desde tu servidor multimedia",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Trae tus propias colecciones para tu servidor",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Trae tus propias colecciones para tu servidor: filas de mosaicos en la pestaña Media Hub, cada uno abre una página con bibliotecas de tu servidor.",
+  "A collections file (.json)":
+      "Un archivo de colecciones (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "Los mosaicos necesitan sus catálogos como bibliotecas en tu servidor. Los que faltan se omiten.",
+  "{found} of {n} tiles found on your server":
+      "{found} de {n} mosaicos encontrados en tu servidor",
+  "None of its catalogs are libraries on your server yet.":
+      "Ninguno de sus catálogos es todavía una biblioteca de tu servidor.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "Los catálogos de este mosaico aún no son bibliotecas de tu servidor.",
 };

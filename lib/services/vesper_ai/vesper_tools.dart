@@ -44,6 +44,7 @@ import '../stream_languages.dart';
 import '../subtitle_tracks.dart';
 import '../vod_buffering.dart';
 import 'watch_list.dart';
+import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 import '../../utils/video_hdr_report.dart';

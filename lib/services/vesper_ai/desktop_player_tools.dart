@@ -337,7 +337,7 @@ Future<Map<String, Object?>> _desktopSetSubtitles(VesperToolbox box,
     return embedded(tracks[n - 1]);
   }
   if (asked == 'cc' || asked.contains('closed caption')) {
-    throw VesperToolError('Closed captions are not available on Windows.');
+    throw VesperToolError('Closed captions are not available in this player.');
   }
   final code = trackLanguageCode(asked);
   if (code == null) throw VesperToolError('Which language, or off?');

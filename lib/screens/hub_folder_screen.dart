@@ -10,6 +10,7 @@ import '../models/hub_collection.dart';
 import '../services/app_preferences.dart';
 import '../services/archive_service.dart';
 import '../utils/desktop_platform.dart';
+import '../utils/app_store.dart';
 import '../utils/image_urls.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
@@ -341,8 +342,11 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                                     child: Text(
                                       installed
                                           ? tr('Nothing here yet.')
-                                          : tr(
-                                              "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs."),
+                                          : appStoreBuild
+                                              ? tr(
+                                                  "This tile's catalogs aren't libraries on your server yet.")
+                                              : tr(
+                                                  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs."),
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
                                           color: Colors.white70),

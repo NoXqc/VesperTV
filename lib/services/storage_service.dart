@@ -11,6 +11,7 @@ import '../models/profile_copy.dart';
 import 'profile_photos.dart';
 import 'local_playlist_files.dart';
 import 'sync_profile_match.dart' show syncProfileNameKey;
+import '../utils/app_store.dart';
 import '../utils/constants.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
@@ -966,7 +967,8 @@ class StorageService {
   /// Betting odds on Sports Trak game cards and stats (off by default, per
   /// viewer).
   bool getSportsShowOdds() =>
-      _prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? false;
+      !appStoreBuild &&
+      (_prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? false);
   Future<void> setSportsShowOdds(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsShowOdds), value);
   bool getSportsHideRedZone() =>

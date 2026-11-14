@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../utils/display_title.dart';
+import '../utils/app_store.dart';
 import 'storage_service.dart';
 
 /// A Stremio-protocol add-on the user turned on. Only its `subtitles`
@@ -99,6 +100,7 @@ class AddonService {
   static final Map<String, String?> _imdbCache = {};
 
   List<Addon> get addons {
+    if (appStoreBuild) return const [];
     final raw = _storage.getAddonsJson();
     if (raw == null) return _defaults;
     try {

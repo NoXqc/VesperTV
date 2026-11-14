@@ -652,7 +652,9 @@ String _subtitleSizeKey(double scale) => _subtitleScales.entries
 /// The settings this device has (Android-only ones left out on a computer).
 List<_AiSetting> get _visibleSettings => [
       for (final s in _aiSettings)
-        if (!s.androidOnly || !usesMediaKitTarget) s
+        if ((!s.androidOnly || !usesMediaKitTarget) &&
+            !(appStoreBuild && s.key == 'betting_odds'))
+          s
     ];
 
 _AiSetting _settingFor(String key) {

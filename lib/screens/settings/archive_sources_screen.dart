@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/l10n.dart';
+import '../../utils/app_store.dart';
 import '../../models/archive_models.dart';
 import '../../models/hub_collection.dart';
 import '../../services/addon_import.dart';
@@ -230,18 +231,22 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
 
   List<(_Pane, IconData, String)> _railItems(List<HubEntry> entries) {
     int count(_Pane p) => entries.where((e) => _inFilter(p, e)).length;
+    // App Store build: media servers and Trakt / Simkl only (no add-ons).
+    final addons = !appStoreBuild;
     return [
       (_Pane.add, Icons.add_circle_outline, tr('Add a source')),
       (_Pane.all, Icons.apps, tr('All')),
-      (_Pane.streams, Icons.play_circle_outline, tr('Streams')),
-      (_Pane.catalogs, Icons.video_library_outlined, tr('Catalogs & lists')),
+      if (addons) (_Pane.streams, Icons.play_circle_outline, tr('Streams')),
+      if (addons || count(_Pane.catalogs) > 0)
+        (_Pane.catalogs, Icons.video_library_outlined, tr('Catalogs & lists')),
       if (count(_Pane.servers) > 0)
         (_Pane.servers, Icons.dns_outlined, tr('Media servers')),
       if (count(_Pane.live) > 0) (_Pane.live, Icons.live_tv, tr('Live TV')),
-      (_Pane.subtitles, Icons.subtitles_outlined, tr('Subtitles')),
+      if (addons)
+        (_Pane.subtitles, Icons.subtitles_outlined, tr('Subtitles')),
       (_Pane.collections, Icons.dashboard_customize_outlined,
           tr('Collections')),
-      (_Pane.phone, Icons.phonelink, tr('Manage from phone')),
+      if (addons) (_Pane.phone, Icons.phonelink, tr('Manage from phone')),
       (_Pane.rows, Icons.view_agenda_outlined, tr('Customize Media Hub')),
       (_Pane.advanced, Icons.tune, tr('Advanced')),
     ];
@@ -538,7 +543,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             focusNode: _toolNode('refresh'),
             icon: Icons.refresh,
             title: tr('Refresh Media Hub'),
-            subtitle: tr('Reads every add-on again: new catalogs, logos, versions'),
+            subtitle: appStoreBuild
+                ? tr('Reads your sources again')
+                : tr('Reads every add-on again: new catalogs, logos, versions'),
             onFocusChange: (f) {
               if (f) {
                 _help.value =
@@ -617,7 +624,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         SettingRow(
           icon: Icons.add_circle_outline,
           title: tr('Add a source'),
-          subtitle: tr('A link, Stremio, a media server or Trakt / Simkl'),
+          subtitle: appStoreBuild
+              ? tr('A media server or Trakt / Simkl')
+              : tr('A link, Stremio, a media server or Trakt / Simkl'),
           trailing: const SettingValue(),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => SettingsScaffold(
@@ -654,7 +663,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         SettingRow(
           icon: Icons.dashboard_customize_outlined,
           title: tr('Collections'),
-          subtitle: tr('Rows of tiles, like Nuvio'),
+          subtitle: appStoreBuild
+              ? tr('Bring your own collections for your server')
+              : tr('Rows of tiles, like Nuvio'),
           trailing: const SettingValue(),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => SettingsScaffold(
@@ -1426,25 +1437,29 @@ class _AddSourceState extends State<_AddSource> {
 
   @override
   Widget build(BuildContext context) {
+    final addons = !appStoreBuild;
     final tools = <(String, IconData, String, String, VoidCallback)>[
-      ('phone', Icons.qr_code_2, tr('From phone'),
-          tr('Scan, paste the link on your phone'), _fromPhone),
-      if (widget.onManageFromPhone != null)
+      if (addons)
+        ('phone', Icons.qr_code_2, tr('From phone'),
+            tr('Scan, paste the link on your phone'), _fromPhone),
+      if (addons && widget.onManageFromPhone != null)
         ('manage', Icons.phonelink, tr('Manage from phone'),
             tr('Your whole list on your phone'), widget.onManageFromPhone!),
-      ('stremio', Icons.move_down, tr('Import from Stremio'),
-          tr('Sign in once, pick your add-ons'),
-          () => _push(const StremioImportScreen())),
+      if (addons)
+        ('stremio', Icons.move_down, tr('Import from Stremio'),
+            tr('Sign in once, pick your add-ons'),
+            () => _push(const StremioImportScreen())),
       ('server', Icons.dns_outlined, tr('Connect Jellyfin / Emby / Plex'),
           tr('Your own media server'), () => _push(const MediaServerScreen())),
       ('trackers', Icons.playlist_add_check, tr('Trakt & Simkl'),
           tr('Your lists in the Media Hub'),
           () => openSettingsPage(context, (_) => const TrackersScreen(),
               floating: true)),
-      ('subs', Icons.subtitles_outlined, tr('Online subtitles'),
-          tr('OpenSubtitles, or any subtitle add-on'),
-          () => openSettingsPage(context, (_) => const AddonsScreen(),
-              floating: true)),
+      if (addons)
+        ('subs', Icons.subtitles_outlined, tr('Online subtitles'),
+            tr('OpenSubtitles, or any subtitle add-on'),
+            () => openSettingsPage(context, (_) => const AddonsScreen(),
+                floating: true)),
     ];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -1457,47 +1472,52 @@ class _AddSourceState extends State<_AddSource> {
                     id: 'add',
                     icon: Icons.add_circle_outline,
                     title: tr('Add a source'),
-                    description: tr('An add-on link ends with manifest.json.'),
+                    description: addons
+                        ? tr('An add-on link ends with manifest.json.')
+                        : tr(
+                            'Your own media server, or your Trakt / Simkl lists.'),
                     sections: const [])),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
-            child: TvTextFieldGate(
-              focusNode: _linkFocus,
-              builder: (context, readOnly) => TextField(
-                controller: _link,
+          if (addons) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+              child: TvTextFieldGate(
                 focusNode: _linkFocus,
-                readOnly: readOnly,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) {
-                  _addFocus.requestFocus();
-                  _add();
-                },
-                onTap: () => _say(tr('Several links at once work too.')),
-                decoration: InputDecoration(
-                  labelText: tr('Source link (ends with manifest.json)'),
-                  helperText: tr('Several links at once work too.'),
-                  prefixIcon: const Icon(Icons.link),
+                builder: (context, readOnly) => TextField(
+                  controller: _link,
+                  focusNode: _linkFocus,
+                  readOnly: readOnly,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) {
+                    _addFocus.requestFocus();
+                    _add();
+                  },
+                  onTap: () => _say(tr('Several links at once work too.')),
+                  decoration: InputDecoration(
+                    labelText: tr('Source link (ends with manifest.json)'),
+                    helperText: tr('Several links at once work too.'),
+                    prefixIcon: const Icon(Icons.link),
+                  ),
                 ),
               ),
             ),
-          ),
-          SettingRow(
-            key: const ValueKey('source-add'),
-            focusNode: _addFocus,
-            icon: Icons.add,
-            title: tr('Add'),
-            subtitle: tr('Checks the link, then adds it'),
-            trailing: _adding
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : null,
-            onFocusChange: (f) {
-              if (f) _say(tr('Several links at once work too.'));
-            },
-            onTap: _add,
-          ),
-          SettingsSectionTitle(tr('Other ways')),
+            SettingRow(
+              key: const ValueKey('source-add'),
+              focusNode: _addFocus,
+              icon: Icons.add,
+              title: tr('Add'),
+              subtitle: tr('Checks the link, then adds it'),
+              trailing: _adding
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : null,
+              onFocusChange: (f) {
+                if (f) _say(tr('Several links at once work too.'));
+              },
+              onTap: _add,
+            ),
+            SettingsSectionTitle(tr('Other ways')),
+          ],
           for (final (id, icon, title, subtitle, onTap) in tools)
             SettingRow(
               key: ValueKey('source-tool-$id'),

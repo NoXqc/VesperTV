@@ -8,6 +8,7 @@ import '../models/media_file_info.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../models/youtube_embed.dart';
 import '../services/device_memory_service.dart';
+import '../utils/app_store.dart';
 import '../widgets/youtube_platform_view.dart';
 
 /// Official YouTube UI only. Deliberately separate from movie history, watched
@@ -187,7 +188,7 @@ class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                            _error == -1
+                                            _error == -1 && !appStoreBuild
                                                 ? tr(
                                                     'YouTube playback needs Android System WebView or Microsoft Edge WebView2.')
                                                 : tr(

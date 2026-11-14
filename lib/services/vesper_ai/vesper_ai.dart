@@ -476,8 +476,8 @@ class VesperAi {
       'watchlist' => tr('Nothing is playing.'),
       'player' when '$error'.contains('rewound') =>
         tr('This channel cannot be rewound.'),
-      'player' when '$error'.contains('Windows') =>
-        tr('Not available on Windows yet.'),
+      'player' when '$error'.contains('Closed captions') =>
+        tr('Closed captions are not available in this player.'),
       'player' when '$error'.contains('next episode') => tr('No next episode.'),
       'player' when '$error'.contains('previous episode') =>
         tr('No previous episode.'),

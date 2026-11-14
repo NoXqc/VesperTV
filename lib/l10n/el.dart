@@ -3763,4 +3763,36 @@ const Map<String, String> kEl = {
   "Play a recording here": "Αναπαραγωγή εγγραφής εδώ",
   "Back 30 s": "Πίσω 30 δλ",
   "Forward 30 s": "Μπροστά 30 δλ",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "Οι κλειστοί υπότιτλοι δεν είναι διαθέσιμοι σε αυτό το πρόγραμμα αναπαραγωγής.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Διαβάζει ξανά τις πηγές σας",
+  "A media server or Trakt / Simkl":
+      "Ένας διακομιστής πολυμέσων ή Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Ο δικός σας διακομιστής πολυμέσων ή οι λίστες σας στο Trakt / Simkl.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Συνδέστε τον διακομιστή σας Jellyfin, Emby ή Plex ή τις λίστες σας στο Trakt / Simkl, στις Ρυθμίσεις > Πηγές Media Hub.",
+  "Your media server and Trakt / Simkl lists":
+      "Ο διακομιστής πολυμέσων σας και οι λίστες σας στο Trakt / Simkl",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Δώστε αυτόν τον κωδικό στον προγραμματιστή μαζί με το τι συνέβη, ώστε να βρεθεί το αρχείο καταγραφής σας.",
+  "From your media server": "Από τον διακομιστή πολυμέσων σας",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Φέρτε τις δικές σας συλλογές για τον διακομιστή σας",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Φέρτε τις δικές σας συλλογές για τον διακομιστή σας: σειρές πλακιδίων στην καρτέλα Media Hub, το καθένα ανοίγει μια σελίδα με βιβλιοθήκες του διακομιστή σας.",
+  "A collections file (.json)":
+      "Ένα αρχείο συλλογών (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "Τα πλακίδια χρειάζονται τους καταλόγους τους ως βιβλιοθήκες στον διακομιστή σας. Όσα λείπουν παραλείπονται.",
+  "{found} of {n} tiles found on your server":
+      "Βρέθηκαν {found} από {n} πλακίδια στον διακομιστή σας",
+  "None of its catalogs are libraries on your server yet.":
+      "Κανένας από τους καταλόγους της δεν είναι ακόμα βιβλιοθήκη στον διακομιστή σας.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "Οι κατάλογοι αυτού του πλακιδίου δεν είναι ακόμα βιβλιοθήκες στον διακομιστή σας.",
 };

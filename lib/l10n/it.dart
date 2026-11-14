@@ -3808,4 +3808,36 @@ const Map<String, String> kIt = {
   "Play a recording here": "Riproduci qui una registrazione",
   "Back 30 s": "Indietro 30 s",
   "Forward 30 s": "Avanti 30 s",
+  // Vesper AI on the iPhone / computer player
+  "Closed captions are not available in this player.":
+      "I sottotitoli per non udenti non sono disponibili in questo lettore.",
+  // App Store build (media servers and Trakt / Simkl only)
+  "Reads your sources again":
+      "Rilegge le tue fonti",
+  "A media server or Trakt / Simkl":
+      "Un server multimediale o Trakt / Simkl",
+  "Your own media server, or your Trakt / Simkl lists.":
+      "Il tuo server multimediale, o le tue liste Trakt / Simkl.",
+  "Connect your Jellyfin, Emby or Plex server, or your Trakt / Simkl lists, in Settings > Media Hub sources.":
+      "Collega il tuo server Jellyfin, Emby o Plex, o le tue liste Trakt / Simkl, in Impostazioni > Fonti Media Hub.",
+  "Your media server and Trakt / Simkl lists":
+      "Il tuo server multimediale e le tue liste Trakt / Simkl",
+  "Give this code to the developer with what happened, so your log can be found.":
+      "Dai questo codice allo sviluppatore insieme a cosa è successo, così potrà trovare il tuo registro.",
+  "From your media server": "Dal tuo server multimediale",
+  // App Store build: collections for the viewer's server
+  "Bring your own collections for your server":
+      "Porta le tue collezioni per il tuo server",
+  "Bring your own collections for your server: rows of tiles on the Media Hub tab, each opening a page of your server's libraries.":
+      "Porta le tue collezioni per il tuo server: file di riquadri nella scheda Media Hub, ognuno apre una pagina con le librerie del tuo server.",
+  "A collections file (.json)":
+      "Un file di collezioni (.json)",
+  "Tiles need their catalogs as libraries on your server. Missing ones are left out.":
+      "I riquadri hanno bisogno dei loro cataloghi come librerie sul tuo server. Quelli mancanti vengono omessi.",
+  "{found} of {n} tiles found on your server":
+      "{found} di {n} riquadri trovati sul tuo server",
+  "None of its catalogs are libraries on your server yet.":
+      "Nessuno dei suoi cataloghi è ancora una libreria del tuo server.",
+  "This tile's catalogs aren't libraries on your server yet.":
+      "I cataloghi di questo riquadro non sono ancora librerie del tuo server.",
 };

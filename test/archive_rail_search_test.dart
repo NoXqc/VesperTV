@@ -40,7 +40,7 @@ class _Service extends ArchiveService {
   @override
   bool canSearch(ArchiveType type) => searchable;
   @override
-  Future<void> loadMore(ArchiveRow row) async {}
+  Future<void> loadMore(ArchiveRow row, {bool notify = true}) async {}
   @override
   bool isFavorite(ArchiveSource source, ArchiveMeta meta) => false;
 }
