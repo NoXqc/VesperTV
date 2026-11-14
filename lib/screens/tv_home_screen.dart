@@ -6141,83 +6141,89 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         border:
             Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1.5),
       ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            // `channel` (`PlaybackService.currentChannel`) is always null
-            // on Windows — that service is never touched by
-            // `DesktopPlayerScreen`/`DesktopMiniPlayer` (see their own
-            // doc comments) — so this plain pane used to permanently read
-            // "Select a channel to start watching" there even with a
-            // live channel actually minimized, the exact same gap the
-            // Timeline guide's own preview box had before it was fixed to
-            // watch `DesktopMiniPlayer` directly. Reported directly as
-            // the same bug on this ("Live", non-timeline) guide view —
-            // reusing that already-fixed box here instead of duplicating
-            // its Windows-vs-not branching a second time. See its own doc
-            // comment for why rendering `DesktopMiniPlayer`'s video here
-            // is safe (no second simultaneous stream/audio consumer):
-            // `media_kit`'s texture-based rendering tolerates more than
-            // one `Video` widget on the same controller, and in practice
-            // only one is ever actually mounted at a time anyway.
-            child: _buildTimelinePreviewBox(channel),
-          ),
-          if (channel != null)
+      child: LayoutBuilder(builder: (context, box) {
+        // The description card stays right of the list (it covered the
+        // list when the groups column was open: owner photo, 2026-11-14).
+        final cardWidth = math.min(440.0, box.maxWidth - 380 - 24);
+        return Stack(
+          children: [
+            Positioned.fill(
+              // `channel` (`PlaybackService.currentChannel`) is always null
+              // on Windows — that service is never touched by
+              // `DesktopPlayerScreen`/`DesktopMiniPlayer` (see their own
+              // doc comments) — so this plain pane used to permanently read
+              // "Select a channel to start watching" there even with a
+              // live channel actually minimized, the exact same gap the
+              // Timeline guide's own preview box had before it was fixed to
+              // watch `DesktopMiniPlayer` directly. Reported directly as
+              // the same bug on this ("Live", non-timeline) guide view —
+              // reusing that already-fixed box here instead of duplicating
+              // its Windows-vs-not branching a second time. See its own doc
+              // comment for why rendering `DesktopMiniPlayer`'s video here
+              // is safe (no second simultaneous stream/audio consumer):
+              // `media_kit`'s texture-based rendering tolerates more than
+              // one `Video` widget on the same controller, and in practice
+              // only one is ever actually mounted at a time anyway.
+              child: _buildTimelinePreviewBox(channel),
+            ),
+            if (channel != null)
+              Positioned(
+                // A couple px further in than before — right up against the
+                // pane's own new rounded corner (above), an 8px inset let the
+                // button's circular edge clip visually into the curve.
+                top: 12,
+                right: 12,
+                child: IconButton.filledTonal(
+                  tooltip: tr('Full screen'),
+                  icon: const Icon(Icons.fullscreen),
+                  onPressed: () => Navigator.of(context).push(
+                      PlayerGlideRoute.open(context.read<PlaybackService>(),
+                          (_) => PlayerScreen(channel: channel))),
+                ),
+              ),
             Positioned(
-              // A couple px further in than before — right up against the
-              // pane's own new rounded corner (above), an 8px inset let the
-              // button's circular edge clip visually into the curve.
-              top: 12,
-              right: 12,
-              child: IconButton.filledTonal(
-                tooltip: tr('Full screen'),
-                icon: const Icon(Icons.fullscreen),
-                onPressed: () => Navigator.of(context).push(
-                    PlayerGlideRoute.open(context.read<PlaybackService>(),
-                        (_) => PlayerScreen(channel: channel))),
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 380,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.62),
+                // The video is behind the list: Refined finish rows stay
+                // see-through, as in the full-video Timeline guide.
+                child: RefinedFinishBackdrop(
+                  translucent: true,
+                  child: _buildLiveList(playlist),
+                ),
               ),
             ),
-          Positioned(
-            top: 0,
-            bottom: 0,
-            left: 0,
-            width: 380,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.62),
-              // The video is behind the list: Refined finish rows stay
-              // see-through, as in the full-video Timeline guide.
-              child: RefinedFinishBackdrop(
-                translucent: true,
-                child: _buildLiveList(playlist),
+            // The description sits right of the list, over the video, and
+            // follows the highlighted channel (the playing one otherwise).
+            if (cardWidth >= 220)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                width: cardWidth,
+                height: 190,
+                child: IgnorePointer(
+                  child: ValueListenableBuilder<Channel?>(
+                    valueListenable: _liveListFocused,
+                    builder: (context, focused, _) {
+                      final shown = focused ?? channel;
+                      if (shown == null) return const SizedBox.shrink();
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _ProgramDetails(channel: shown, epg: epg),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
-          ),
-          // The description sits right of the list, over the video, and
-          // follows the highlighted channel (the playing one otherwise).
-          Positioned(
-            right: 12,
-            bottom: 12,
-            width: 440,
-            height: 190,
-            child: IgnorePointer(
-              child: ValueListenableBuilder<Channel?>(
-                valueListenable: _liveListFocused,
-                builder: (context, focused, _) {
-                  final shown = focused ?? channel;
-                  if (shown == null) return const SizedBox.shrink();
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.62),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: _ProgramDetails(channel: shown, epg: epg),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 
@@ -9151,6 +9157,8 @@ class _ProgramDetails extends StatelessWidget {
           const SizedBox(height: 8),
           if (current != null) ...[
             Text(current.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white, fontSize: 16)),
             const SizedBox(height: 4),
             Builder(builder: (context) {
@@ -9187,6 +9195,8 @@ class _ProgramDetails extends StatelessWidget {
             Text(
                 tr('Next: {title} ({p})',
                     {'title': next.title, 'p': timeFormat.format(next.start)}),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white54, fontSize: 12)),
           ],
         ],
@@ -9817,14 +9827,15 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// A wheel over the channel names: the grid takes it.
   void _scrollFromLabels(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    GestureBinding.instance.pointerSignalResolver.register(event,
-        (e) => _scrollGridBy((e as PointerScrollEvent).scrollDelta.dy));
+    GestureBinding.instance.pointerSignalResolver.register(
+        event, (e) => _scrollGridBy((e as PointerScrollEvent).scrollDelta.dy));
   }
 
   void _scrollGridBy(double dy) {
     if (dy == 0 || !_gridVScroll.hasClients) return;
     final pos = _gridVScroll.position;
-    final to = (pos.pixels + dy).clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    final to =
+        (pos.pixels + dy).clamp(pos.minScrollExtent, pos.maxScrollExtent);
     if (to != pos.pixels) _gridVScroll.jumpTo(to);
   }
 
