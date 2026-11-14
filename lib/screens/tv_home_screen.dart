@@ -6386,7 +6386,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 : (i == 0 ? _firstLiveChannelFocusNode : null),
         onTap: () =>
             isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
-        onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
+        onLongPress: () =>
+            isMoving ? _endChannelMove() : _showChannelOptions(channel),
         leading: SizedBox(
           width: _liveLogoSize,
           height: _liveLogoSize,
@@ -6418,23 +6419,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Icon(Icons.swap_vert, color: Colors.amber),
                 ),
-              // For a duplicate feed within this same group (e.g.
-              // the same channel in HD and HEVC) — see
-              // AppConstants.keyHiddenChannels's doc comment.
-              IconButton(
-                icon: const Icon(Icons.visibility_off_outlined,
-                    color: Colors.white70),
-                tooltip: tr('Hide this channel'),
-                onPressed: () => _toggleHiddenWithFeedback(context, channel),
-              ),
-              IconButton(
-                tooltip: channel.isFavorite
-                    ? tr('Remove from Favourites')
-                    : tr('Add to Favourites'),
-                icon: Icon(channel.isFavorite ? Icons.star : Icons.star_border,
-                    color: channel.isFavorite ? Colors.amber : Colors.white70),
-                onPressed: () => _toggleFavoriteWithFeedback(context, channel),
-              ),
+              // No hide / favourite buttons (owner, 2026-11-14): both are
+              // in the hold OK menu (_showChannelOptions), like the
+              // Timeline guide.
             ],
           ),
         ),
