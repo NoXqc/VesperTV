@@ -757,6 +757,10 @@ class StorageService {
   Future<void> setNativeVideoSurface(bool value) =>
       _prefs.setBool(AppConstants.keyNativeVideoSurface, value);
 
+  bool getUiTexture() => _prefs.getBool(AppConstants.keyUiTexture) ?? true;
+  Future<void> setUiTexture(bool value) =>
+      _prefs.setBool(AppConstants.keyUiTexture, value);
+
   bool getMatchFrameRate() =>
       _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
   Future<void> setMatchFrameRate(bool value) =>
@@ -819,6 +823,27 @@ class StorageService {
       _prefs.getBool(AppConstants.keyShowGroupCounts) ?? false;
   Future<void> setShowGroupCounts(bool value) =>
       _prefs.setBool(AppConstants.keyShowGroupCounts, value);
+
+  bool getKeepGroupsOpen() =>
+      _prefs.getBool(AppConstants.keyKeepGroupsOpen) ?? false;
+  Future<void> setKeepGroupsOpen(bool value) =>
+      _prefs.setBool(AppConstants.keyKeepGroupsOpen, value);
+  bool getGroupsFollowFocus() =>
+      _prefs.getBool(AppConstants.keyGroupsFollowFocus) ?? false;
+  Future<void> setGroupsFollowFocus(bool value) =>
+      _prefs.setBool(AppConstants.keyGroupsFollowFocus, value);
+  bool getPreviewBadges() =>
+      _prefs.getBool(AppConstants.keyPreviewBadges) ?? true;
+  Future<void> setPreviewBadges(bool value) =>
+      _prefs.setBool(AppConstants.keyPreviewBadges, value);
+  bool getPanelKeepOpen() =>
+      _prefs.getBool(AppConstants.keyPanelKeepOpen) ?? false;
+  Future<void> setPanelKeepOpen(bool value) =>
+      _prefs.setBool(AppConstants.keyPanelKeepOpen, value);
+  bool getPanelZapOnMove() =>
+      _prefs.getBool(AppConstants.keyPanelZapOnMove) ?? false;
+  Future<void> setPanelZapOnMove(bool value) =>
+      _prefs.setBool(AppConstants.keyPanelZapOnMove, value);
   bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
   Future<void> setHideArchive(bool value) =>
       _prefs.setBool(AppConstants.keyHideArchive, value);
@@ -944,6 +969,10 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? false;
   Future<void> setSportsShowOdds(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsShowOdds), value);
+  bool getSportsHideRedZone() =>
+      _prefs.getBool(_vk(AppConstants.keySportsHideRedZone)) ?? false;
+  Future<void> setSportsHideRedZone(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsHideRedZone), value);
 
   /// Play a reminded game on its channel when it starts (per viewer, off).
   bool getSportsAutoPlay() =>
@@ -1672,6 +1701,7 @@ class StorageService {
     AppConstants.keyAudioDelayMs,
     AppConstants.keyVideoMediaOverlay,
     AppConstants.keyNativeVideoSurface,
+    AppConstants.keyUiTexture,
     AppConstants.keyMatchFrameRate,
     AppConstants.keyMatch5060Only,
     AppConstants.keyMatchResolution,

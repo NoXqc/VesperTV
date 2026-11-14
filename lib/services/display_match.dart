@@ -94,6 +94,24 @@ class DisplayMatch {
     } catch (_) {}
   }
 
+  /// The playing stream's frame rate: what it declares, else what the first
+  /// frames' timestamps say (FrameRateProbe). Null while neither is known.
+  /// A .ts live stream's video track rarely carries a rate, so the quality
+  /// badges ask here when the track has none (owner photo, 2026-11-14).
+  static Future<double?> frameRateOf(VideoPlayerHdrController c) async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final s = await _sample(SubtitleTracks.playerIdOf(c));
+      if (s == null) return null;
+      final declared = (s['frameRate'] as num?)?.toDouble() ?? -1;
+      final pts = (s['ptsFps'] as num?)?.toDouble() ?? -1;
+      final fps = declared > 0 ? declared : pts;
+      return fps > 0 ? fps : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<Object?, Object?>?> _sample(int playerId) => _stats
       .invokeMapMethod<Object?, Object?>('getStats', {'playerId': playerId});
 

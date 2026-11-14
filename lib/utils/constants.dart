@@ -302,6 +302,21 @@ class AppConstants {
   static const String keyMixFavoritePlaylists = 'vesper_mix_favorite_playlists';
   static const String keyShowGroupCounts = 'vesper_show_group_counts';
 
+  /// Settings > Interface > Live TV (device-only, off by default): the TV
+  /// tab's groups column stays open beside the channels after a group is
+  /// picked; moving through the groups shows each one's channels without
+  /// OK (a Windows keyboard user's request, 2026-11-14).
+  static const String keyKeepGroupsOpen = 'vesper_keep_groups_open';
+  static const String keyGroupsFollowFocus = 'vesper_groups_follow_focus';
+
+  /// HD / FHD / 4K + frame rate pills on the guide's preview (on by default).
+  static const String keyPreviewBadges = 'vesper_preview_badges';
+
+  /// Full-screen player's side panel (Left): stays open after a channel is
+  /// picked; switches channel as the highlight moves (both off by default).
+  static const String keyPanelKeepOpen = 'vesper_panel_keep_open';
+  static const String keyPanelZapOnMove = 'vesper_panel_zap_on_move';
+
   /// Settings > Backup & restore: weekly automatic backup on/off (off by
   /// default) and the last one's time (ms since epoch; never backed up).
   static const String keyAutoBackup = 'vesper_auto_backup';
@@ -371,6 +386,14 @@ class AppConstants {
   /// device-only; AppPreferences.nativeVideoSurface). MainActivity reads it
   /// as `flutter.vesper_native_video_surface` — keep the two in step.
   static const String keyNativeVideoSurface = 'vesper_native_video_surface';
+
+  /// Advanced > Device fixes > Draw the menus inside the app window: with the
+  /// native video surface, Flutter draws into a TextureView (inside the app
+  /// window) instead of its own SurfaceView layer. Read by MainActivity as
+  /// `flutter.vesper_ui_texture`: keep the two in step. On by default since
+  /// +789 (every box ran it until +745; the SurfaceView layer tore on the
+  /// Homatics at 4K HDR).
+  static const String keyUiTexture = 'vesper_ui_texture';
 
   /// Settings > Playback > Frame rate & resolution (device-only; DisplayMatch).
   static const String keyMatchFrameRate = 'vesper_match_frame_rate';
@@ -454,6 +477,9 @@ class AppConstants {
   static const String keySportsHideEmptyLeagues =
       'vesper_sports_hide_empty_leagues';
   static const String keySportsShowOdds = 'vesper_sports_show_odds';
+
+  /// Settings > Sports Trak: hide the NFL RedZone button (per viewer).
+  static const String keySportsHideRedZone = 'vesper_sports_hide_redzone';
   static const String keySportsCardSize = 'vesper_sports_card_size';
   static const String keySportsLayout = 'vesper_sports_layout';
   static const String keySportsAutoPlay = 'vesper_sports_auto_play';

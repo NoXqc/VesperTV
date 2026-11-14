@@ -96,6 +96,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "41c22bc49d5e2581",
+    "category": "Live TV",
+    "title": "See a group's channels without OK",
+    "answer": "Settings → Appearance → Live TV → Show channels while moving through groups: the group you stop on fills the channel list while you stay in the groups; OK or → enters it. Keep groups open leaves the groups beside the channels once you are in them.",
+    "controls": "↑ ↓ in the groups",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
@@ -219,7 +227,7 @@
     "id": "e6de9b283101b4b8",
     "category": "Full screen",
     "title": "Side panel",
-    "answer": "Last channels, My Teams and Live now, without leaving the video. OK on one switches to it; Back closes the panel. Phone: swipe right to open, swipe left to close.",
+    "answer": "Last channels, My Teams and Live now, without leaving the video. OK on one switches to it; Back closes the panel. Phone: swipe right to open, swipe left to close. Settings → Playback → Live TV: Keep the side panel open leaves it open after OK (OK on the channel already playing closes it), and Switch channels while moving in the side panel plays the row you stop on.",
     "controls": "← LIVE",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -603,7 +611,7 @@
     "id": "35ccff28c7c77e2a",
     "category": "Sports Trak",
     "title": "Pick its channel",
-    "answer": "NFL Sundays.",
+    "answer": "NFL Sundays. Hide this button removes it; Settings → Sports Trak → NFL RedZone button brings it back.",
     "controls": "Hold OK on the RedZone pill",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -931,7 +939,7 @@
     "id": "7b60e5009aeab80e",
     "category": "Settings",
     "title": "Filter Group Management",
-    "answer": "TV, Movies and TV Shows each have their own search. Type US to show groups starting with US; the list narrows with each letter. Show results / Hide results affects only those matches. Clear search restores every group. The keyboard's Search key moves to Show results, or Clear search if there are no matches.",
+    "answer": "TV, Movies and TV Shows each have their own search. Type ent to show every group with a word starting \"ent\" (US| Entertainment, Entertainment HD...), even when the provider put a prefix in front; the list narrows with each letter. Show results / Hide results affects only those matches. Clear search restores every group. The keyboard's Search key moves to Show results, or Clear search if there are no matches.",
     "controls": "OK on Search groups",
     "url": "https://vespertv.app/remote.html#Settings"
   },
@@ -1056,7 +1064,7 @@
     "url": "https://vespertv.app/remote.html#Sync"
   },
   {
-    "id": "90de2ea5b4093d85",
+    "id": "d0540e5ac4eb3385",
     "category": "Sync",
     "title": "Sync device limit: 4 devices",
     "answer": "Each sync supports 4 devices in total. Link codes and the recovery code all lead to the same sync, so generating another code does not reset the count. If you see “This sync already has 3 devices”, open Sync on one linked device and choose Stop syncing on this device, then try linking again. A device unused for 30 days frees its place automatically. A device returning after losing its place needs to link again if the sync is full.",
@@ -1083,8 +1091,16 @@
     "id": "724d50b4ac049aab",
     "category": "Windows",
     "title": "Back",
-    "answer": "",
-    "controls": "Esc",
+    "answer": "Like Back on a remote: leaves full screen for the guide (a live channel keeps playing in the preview), closes menus and walks back through the columns. Backspace in a text box still deletes.",
+    "controls": "Esc Backspace",
+    "url": "https://vespertv.app/remote.html#Windows"
+  },
+  {
+    "id": "f45cffdfae91e41f",
+    "category": "Windows",
+    "title": "Change channel",
+    "answer": "In full screen, the channel above or below in the list you opened it from (Page Up / Page Down too). The player bar shows the new channel for a few seconds. Enter puts you on the player bar; Esc returns to the picture.",
+    "controls": "↑ ↓ LIVE",
     "url": "https://vespertv.app/remote.html#Windows"
   },
   {

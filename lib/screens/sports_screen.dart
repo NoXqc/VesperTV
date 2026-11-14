@@ -775,6 +775,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           : const SizedBox.shrink(),
                       onTap: () => Navigator.of(context).pop(c),
                     ),
+                  TvMenuTile(
+                    icon: Icons.visibility_off_outlined,
+                    title: tr('Hide this button'),
+                    subtitle: tr('Settings > {tab} brings it back.',
+                        {'tab': AppConstants.sportsTabName}),
+                    onTap: () => Navigator.of(context).pop('hide'),
+                  ),
                 ],
               ),
             ),
@@ -783,14 +790,26 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       ),
     );
     if (picked == null || !mounted) return;
+    if (picked == 'hide') {
+      await _storage.setSportsHideRedZone(true);
+      if (!mounted) return;
+      setState(() {});
+      // The focused button is gone: the one before it.
+      _chipNode('networks').requestFocus();
+      return;
+    }
     await _picks.setRedZone(picked is Channel ? picked.id : null);
     if (!mounted) return;
     setState(() => _redZone = picked is Channel ? picked : auto);
   }
 
-  /// Only with all leagues or the NFL shown.
+  /// Only with all leagues or the NFL shown, and not hidden (Settings >
+  /// Sports Trak > NFL RedZone button, or Hide this button in its hold
+  /// menu: a viewer found it distracting, 2026-11-14).
   bool get _showRedZone =>
-      _redZone != null && (_leagueFilter == null || _leagueFilter == 'nfl');
+      _redZone != null &&
+      (_leagueFilter == null || _leagueFilter == 'nfl') &&
+      !_storage.getSportsHideRedZone();
 
   SportsGame? _defaultHero(List<SportsGame> games) {
     if (games.isEmpty) return null;

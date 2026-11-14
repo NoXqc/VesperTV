@@ -120,6 +120,21 @@ class AppPreferences extends ChangeNotifier {
   /// movies or shows each group holds, beside its name (off by default).
   late bool showGroupCounts;
 
+  /// Settings > Interface > Live TV: the TV tab's groups column stays open
+  /// beside the channels after a pick ([keepGroupsOpen]); moving through
+  /// the groups shows each one's channels without OK ([groupsFollowFocus]).
+  late bool keepGroupsOpen;
+  late bool groupsFollowFocus;
+
+  /// HD / FHD / 4K + frame rate on the guide's preview (on by default).
+  late bool previewBadges;
+
+  /// The full-screen player's side panel stays open after a pick
+  /// ([panelKeepOpen]); the channel switches as its highlight moves
+  /// ([panelZapOnMove], which keeps it open too).
+  late bool panelKeepOpen;
+  late bool panelZapOnMove;
+
   /// OK on a live channel also opens the Data pool card (stream details,
   /// `widgets/data_pool_card.dart`). Settings > General, off by default.
   late bool dataPool;
@@ -466,6 +481,11 @@ class AppPreferences extends ChangeNotifier {
     videoFit = VideoFit.byName(_storage.getVideoFit());
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
     showGroupCounts = _storage.getShowGroupCounts();
+    keepGroupsOpen = _storage.getKeepGroupsOpen();
+    groupsFollowFocus = _storage.getGroupsFollowFocus();
+    previewBadges = _storage.getPreviewBadges();
+    panelKeepOpen = _storage.getPanelKeepOpen();
+    panelZapOnMove = _storage.getPanelZapOnMove();
     dataPool = _storage.getDataPool();
     TimeFormat.use24h = _storage.getTime24h();
   }
@@ -666,6 +686,36 @@ class AppPreferences extends ChangeNotifier {
   void setShowGroupCounts(bool value) {
     showGroupCounts = value;
     _storage.setShowGroupCounts(value);
+    notifyListeners();
+  }
+
+  void setKeepGroupsOpen(bool value) {
+    keepGroupsOpen = value;
+    _storage.setKeepGroupsOpen(value);
+    notifyListeners();
+  }
+
+  void setGroupsFollowFocus(bool value) {
+    groupsFollowFocus = value;
+    _storage.setGroupsFollowFocus(value);
+    notifyListeners();
+  }
+
+  void setPreviewBadges(bool value) {
+    previewBadges = value;
+    _storage.setPreviewBadges(value);
+    notifyListeners();
+  }
+
+  void setPanelKeepOpen(bool value) {
+    panelKeepOpen = value;
+    _storage.setPanelKeepOpen(value);
+    notifyListeners();
+  }
+
+  void setPanelZapOnMove(bool value) {
+    panelZapOnMove = value;
+    _storage.setPanelZapOnMove(value);
     notifyListeners();
   }
 

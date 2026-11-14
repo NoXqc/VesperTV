@@ -1611,6 +1611,22 @@ class PlaylistManager extends ChangeNotifier {
   /// manual assignment (`Channel.epgIdOverride`) needs *that* id to
   /// survive this filter on the next refresh, not its own unassignable
   /// provider id.
+  /// Every enabled playlist's guides, for [EpgService]: its own EPG URL,
+  /// then its extra guides in their order (Settings > EPG > More guides,
+  /// the playlist editor, Vesper AI). The order is the priority: a channel
+  /// an earlier guide fills keeps it ([EpgService] drops it from later
+  /// guides). One list for the startup timer and the EPG settings page:
+  /// the page used to rebuild it without the extra guides.
+  List<EpgSource> epgSources() => [
+        for (final p in profiles)
+          if (p.enabled)
+            for (final url in {
+              if (p.epgUrl?.isNotEmpty ?? false) p.epgUrl!,
+              ...p.extraEpgUrls,
+            })
+              (url: url, knownChannelIds: knownChannelIdsFor(p.id)),
+      ];
+
   Set<String> knownChannelIdsFor(String playlistId) {
     final session = _sessionFor(playlistId);
     if (session == null) return const {};

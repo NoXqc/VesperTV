@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -98,23 +100,16 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
 
   /// Every enabled playlist's EPG source — same shape `main.dart`'s own
   /// app-wide auto-refresh timer builds fresh on each tick.
-  List<EpgSource> _sources() {
-    final playlist = context.read<PlaylistManager>();
-    return playlist.profiles
-        .where((p) => p.enabled && (p.epgUrl?.isNotEmpty ?? false))
-        .map((p) => (
-              url: p.epgUrl!,
-              knownChannelIds: playlist.knownChannelIdsFor(p.id)
-            ))
-        .toList();
-  }
+  List<EpgSource> _sources() => context.read<PlaylistManager>().epgSources();
 
   Future<void> _applyInterval(int minutes) async {
     setState(() => _refreshInterval = minutes);
     final storage = context.read<StorageService>();
     await storage.setRefreshInterval(minutes);
     if (mounted) {
-      context.read<EpgService>().startAutoRefresh(minutes, _sources);
+      // The manager's own method, not this page's: the timer outlives it.
+      context.read<EpgService>().startAutoRefresh(
+          minutes, context.read<PlaylistManager>().epgSources);
     }
   }
 
@@ -163,8 +158,8 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-          // A multi-pane tool: the glass panel spans the screen.
-          wide: true,
+              // A multi-pane tool: the glass panel spans the screen.
+              wide: true,
               title: tr('EPG'),
               bottom: TabBar(
                 controller: _tabController,
@@ -439,12 +434,169 @@ class _CustomEpgSectionState extends State<_CustomEpgSection> {
             label: Text(tr('Save EPG URL')),
             onPressed: () => _save(selected!),
           ),
+          const SizedBox(height: 20),
+          _ExtraGuides(profile: selected),
         ],
         const SizedBox(height: 4),
         Text(
           tr('Pick a playlist, then paste a third-party XMLTV link. Leave it blank to use the guide of that playlist. A channel is only filled in when the ids in the feed match the playlist.'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
+      ],
+    );
+  }
+}
+
+/// More XMLTV guides for one playlist, on top of its own (a Windows viewer,
+/// 2026-11-14: the provider's guide plus a Canadian one). They load after
+/// the playlist's guide, in this order, and a channel an earlier guide
+/// already fills keeps it ([EpgService]), so these only fill the gaps. The
+/// same list the playlist editor and Vesper AI edit: five at most.
+class _ExtraGuides extends StatefulWidget {
+  const _ExtraGuides({required this.profile});
+
+  final PlaylistProfile profile;
+
+  @override
+  State<_ExtraGuides> createState() => _ExtraGuidesState();
+}
+
+class _ExtraGuidesState extends State<_ExtraGuides> {
+  static const _max = 5;
+  final _controller = TextEditingController();
+  final _fieldFocus = FocusNode(debugLabel: 'extra-epg-field');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _fieldFocus.dispose();
+    super.dispose();
+  }
+
+  void _say(String message) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _save(List<String> urls, {bool refresh = false}) async {
+    final manager = context.read<PlaylistManager>();
+    final epg = context.read<EpgService>();
+    await manager.updatePlaylist(widget.profile.copyWith(extraEpgUrls: urls));
+    // refreshAll reads every enabled playlist's guides again, in order.
+    if (refresh && widget.profile.enabled) unawaited(epg.refreshAll());
+  }
+
+  Future<void> _add() async {
+    final url = _controller.text.trim();
+    final uri = Uri.tryParse(url);
+    final urls = widget.profile.extraEpgUrls;
+    if (uri == null ||
+        !(uri.scheme == 'http' || uri.scheme == 'https') ||
+        uri.host.isEmpty) {
+      _say(tr('Enter a full http(s):// link to an XMLTV file.'));
+      return;
+    }
+    if (url == widget.profile.epgUrl || urls.contains(url)) {
+      _say(tr('This guide is already in the list.'));
+      return;
+    }
+    if (urls.length >= _max) {
+      _say(tr('Five extra guides at most.'));
+      return;
+    }
+    _controller.clear();
+    await _save([...urls, url], refresh: true);
+    if (mounted) _say(tr('Guide added. Updating the guide…'));
+  }
+
+  Future<void> _remove(String url) async {
+    await _save([...widget.profile.extraEpgUrls]..remove(url), refresh: true);
+    if (mounted) _say(tr('Guide removed.'));
+  }
+
+  /// One step earlier = it fills its channels before the guides below it.
+  Future<void> _moveUp(int i) async {
+    final urls = [...widget.profile.extraEpgUrls];
+    final url = urls.removeAt(i);
+    urls.insert(i - 1, url);
+    await _save(urls, refresh: true);
+  }
+
+  /// The host and the file, enough to tell guides apart without the
+  /// account details a provider link can carry in its query.
+  static String _shortName(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) return url;
+    final file = uri.pathSegments.where((s) => s.isNotEmpty).lastOrNull;
+    return file == null ? uri.host : '${uri.host} / $file';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = widget.profile.extraEpgUrls;
+    final text = Theme.of(context).textTheme;
+    // The playlist's own guide is 1 when it has one.
+    final first = (widget.profile.epgUrl?.isNotEmpty ?? false) ? 2 : 1;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tr('More guides for this playlist'), style: text.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          tr('They load after the guide of the playlist, in this order. A channel an earlier guide already fills keeps it, so these only fill the gaps. A channel is filled when the ids in the feed match it, or once you assign it a guide channel.'),
+          style: text.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        for (final (i, url) in urls.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 28,
+                    child: Text('${i + first}.', style: text.bodyMedium)),
+                Expanded(
+                  child: Text(_shortName(url),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium),
+                ),
+                if (i > 0)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_upward),
+                    tooltip: tr('Move up'),
+                    onPressed: () => _moveUp(i),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: tr('Remove'),
+                  onPressed: () => _remove(url),
+                ),
+              ],
+            ),
+          ),
+        if (urls.length < _max) ...[
+          const SizedBox(height: 4),
+          TvTextFieldGate(
+            focusNode: _fieldFocus,
+            builder: (context, readOnly) => TextField(
+              controller: _controller,
+              focusNode: _fieldFocus,
+              readOnly: readOnly,
+              decoration: InputDecoration(
+                labelText: tr('Another guide (XMLTV) URL'),
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusScope.of(context).nextFocus(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.add),
+            label: Text(tr('Add guide')),
+            onPressed: _add,
+          ),
+        ],
       ],
     );
   }

@@ -571,6 +571,32 @@ class SettingsCatalog {
             ],
           ],
           SettingsToggle(
+              id: 'keep_groups_open',
+              icon: Icons.view_sidebar_outlined,
+              title: tr('Keep groups open'),
+              help: tr(
+                  "The TV tab's groups stay open beside the channels after you pick one."),
+              value: prefs.keepGroupsOpen,
+              onChanged: prefs.setKeepGroupsOpen),
+          // Remote and keyboard only, like Preview on highlight.
+          if (prefs.isTelevision || isDesktopTarget)
+            SettingsToggle(
+                id: 'groups_follow_focus',
+                icon: Icons.low_priority,
+                title: tr('Show channels while moving through groups'),
+                help: tr(
+                    'The channels of the group you move onto show right away, without pressing OK.'),
+                value: prefs.groupsFollowFocus,
+                onChanged: prefs.setGroupsFollowFocus),
+          SettingsToggle(
+              id: 'preview_badges',
+              icon: Icons.hd_outlined,
+              title: tr('Quality on the preview'),
+              help: tr(
+                  "HD, FHD or 4K and the frame rate in a corner of the guide's preview."),
+              value: prefs.previewBadges,
+              onChanged: prefs.setPreviewBadges),
+          SettingsToggle(
               id: 'group_counts',
               icon: Icons.pin_outlined,
               title: tr('Show group counts'),
@@ -815,6 +841,22 @@ class SettingsCatalog {
                       await VodBuffering.setLiveBufferDefault(ms);
                     })),
             SettingsToggle(
+                id: 'panel_keep_open',
+                icon: Icons.view_sidebar_outlined,
+                title: tr('Keep the side panel open'),
+                help: tr(
+                    'Left in the full-screen player opens the side panel (Last channels, My Teams, Live now). On: it stays open after you pick a channel. Back closes it.'),
+                value: prefs.panelKeepOpen,
+                onChanged: prefs.setPanelKeepOpen),
+            SettingsToggle(
+                id: 'panel_zap_on_move',
+                icon: Icons.swap_vert,
+                title: tr('Switch channels while moving in the side panel'),
+                help: tr(
+                    'The channel changes when the highlight stops on it, without pressing OK. The side panel stays open.'),
+                value: prefs.panelZapOnMove,
+                onChanged: prefs.setPanelZapOnMove),
+            SettingsToggle(
                 id: 'catchup_keep_playing',
                 icon: Icons.history_toggle_off,
                 title: tr('Keep playing after the programme'),
@@ -980,6 +1022,15 @@ class SettingsCatalog {
               value: _storage.getSportsPreferQuality(),
               onChanged: (v) =>
                   _saveViewer(() => _storage.setSportsPreferQuality(v))),
+          SettingsToggle(
+              id: 'sports_redzone',
+              icon: Icons.sports_football,
+              title: tr('NFL RedZone button'),
+              help: tr(
+                  'The RedZone button beside Standings, shown when a playlist has an NFL RedZone channel. Saved for this viewer.'),
+              value: !_storage.getSportsHideRedZone(),
+              onChanged: (v) =>
+                  _saveViewer(() => _storage.setSportsHideRedZone(!v))),
         ]),
         SettingsSection(title: tr('Goals alert'), [
           if (defaultTargetPlatform == TargetPlatform.android &&
@@ -1614,6 +1665,25 @@ class SettingsCatalog {
                         content: Text(tr(
                             'Close the app completely and open it again to apply this change.'))));
                   }),
+            // The half-drawn frames on the Homatics (black lower part, a
+            // jagged edge) while a channel plays in the guide or on Home:
+            // the menus' own layer was blended by the graphics chip
+            // (dumpsys: CLIENT composition) on top of drawing them.
+            if (Platform.isAndroid && prefs.nativeVideoSurface)
+              SettingsToggle(
+                  id: 'ui_texture',
+                  icon: Icons.texture,
+                  title: tr('Draw the menus inside the app window'),
+                  help: tr(
+                      'On by default. Off gives the menus their own layer, which some boxes draw more smoothly, but others then show half-drawn frames (a black lower part with a jagged edge) while a channel plays in the guide or on Home. Restart the app after changing it.'),
+                  value: _storage.getUiTexture(),
+                  onChanged: (v) => _save(() async {
+                        await _storage.setUiTexture(v);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+                            content: Text(tr(
+                                'Close the app completely and open it again to apply this change.'))));
+                      })),
             if (isDesktop)
               SettingsToggle(
                   id: 'software_video',

@@ -432,9 +432,29 @@ class EpgService extends ChangeNotifier {
         debugPrint('EpgService: channels not ready for refresh: $e');
       }
       _readCatchupDays();
+      // One pass per URL, its playlists' channel ids together (an empty set
+      // = no filter): two playlists sharing a guide downloaded it twice,
+      // and the second pass dropped the first one's rows as stale.
+      final merged = <String, Set<String>?>{};
       for (final source in sources) {
-        final count = await _refreshOne(source.url,
-            knownChannelIds: source.knownChannelIds);
+        if (source.url.isEmpty) continue;
+        final unfiltered = source.knownChannelIds.isEmpty;
+        if (!merged.containsKey(source.url)) {
+          merged[source.url] = unfiltered ? null : {...source.knownChannelIds};
+        } else if (unfiltered) {
+          merged[source.url] = null;
+        } else {
+          merged[source.url]?.addAll(source.knownChannelIds);
+        }
+      }
+      // In order = priority: a channel an earlier guide filled is left out
+      // of the later ones (a playlist's own guide first, then its extra
+      // guides), so a second guide only fills the gaps instead of mixing
+      // two schedules into one row.
+      final covered = <String>{};
+      for (final entry in merged.entries) {
+        final count = await _refreshOne(entry.key,
+            knownChannelIds: entry.value ?? const <String>{}, covered: covered);
         if (count != null) anySucceeded = true;
       }
       _scheduleRetry(failed: !anySucceeded && sources.isNotEmpty);
@@ -479,8 +499,12 @@ class EpgService extends ChangeNotifier {
   /// playlist actually has. Empty [knownChannelIds] disables filtering
   /// entirely rather than risking an empty guide if this ever races ahead
   /// of the playlist's own channels finishing their load.
+  ///
+  /// [covered]: channels an earlier guide of the same refresh filled. They
+  /// are skipped here, and this guide's own channels are added to it (on a
+  /// failed download, the ones it filled last time: its old rows stay).
   Future<int?> _refreshOne(String url,
-      {required Set<String> knownChannelIds}) async {
+      {required Set<String> knownChannelIds, Set<String>? covered}) async {
     if (url.isEmpty) return null;
     error = null;
     notifyListeners();
@@ -509,9 +533,12 @@ class EpgService extends ChangeNotifier {
       final result = await _parseXmltvStream(
         await _autoGunzip(streamedResponse.stream),
         knownChannelIds: effectiveFilter,
+        skipChannelIds: covered == null || covered.isEmpty ? null : covered,
         onRows: (rows) => _db.insertBatch(rows, url, gen),
         sourceUrl: url,
       ).timeout(const Duration(minutes: 10));
+      _filledBySource[url] = result.filled;
+      covered?.addAll(result.filled);
       _sourceChannels[url] = List.unmodifiable(result.channels.values);
       // First-seen wins on a duplicate id across sources — an arbitrary
       // but harmless tie-break; these are just display labels for a
@@ -533,11 +560,16 @@ class EpgService extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       debugPrint('EpgService error: $e');
+      covered?.addAll(_filledBySource[url] ?? const <String>{});
       return null;
     } finally {
       client.close();
     }
   }
+
+  /// The channels each guide stored programmes for in its last refresh
+  /// this run ([_refreshOne]'s `covered`).
+  final Map<String, Set<String>> _filledBySource = {};
 
   /// Transparently decompresses gzip — plenty of third-party XMLTV sources
   /// (large ones especially) are served as `.xml.gz` to save bandwidth,
@@ -584,10 +616,12 @@ class EpgService extends ChangeNotifier {
         int stored,
         Map<String, String> channelNames,
         Map<String, EpgChannelInfo> channels,
-        Map<String, EpgProgram> nowPlaying
+        Map<String, EpgProgram> nowPlaying,
+        Set<String> filled
       })> _parseXmltvStream(
     Stream<List<int>> byteStream, {
     Set<String>? knownChannelIds,
+    Set<String>? skipChannelIds,
     required Future<void> Function(List<EpgRow> rows) onRows,
     required String sourceUrl,
   }) async {
@@ -608,6 +642,8 @@ class EpgService extends ChangeNotifier {
     // way [channelNames] is (one entry per channel, not per programme),
     // so keeping it unfiltered costs nothing worth guarding against.
     final nowPlaying = <String, EpgProgram>{};
+    // Channels this guide stored a programme for ([skipChannelIds]).
+    final filled = <String>{};
     final now = DateTime.now();
     final minStopMs =
         now.subtract(AppConstants.epgPastRetention).millisecondsSinceEpoch;
@@ -650,6 +686,10 @@ class EpgService extends ChangeNotifier {
         if (knownChannelIds != null && !knownChannelIds.contains(channelId)) {
           return;
         }
+        // An earlier (higher-priority) guide already fills this channel.
+        if (skipChannelIds != null && skipChannelIds.contains(channelId)) {
+          return;
+        }
         final startMs = start.millisecondsSinceEpoch;
         final stopMs = stop.millisecondsSinceEpoch;
         if (startMs >= maxStartMs) return;
@@ -658,6 +698,7 @@ class EpgService extends ChangeNotifier {
                 stopMs <= _minStopMsFor(channelId, now))) {
           return;
         }
+        filled.add(channelId);
         pending.add((
           channelId: channelId,
           startMs: startMs,
@@ -789,7 +830,8 @@ class EpgService extends ChangeNotifier {
       stored: stored,
       channelNames: channelNames,
       channels: channels,
-      nowPlaying: nowPlaying
+      nowPlaying: nowPlaying,
+      filled: filled
     );
   }
 

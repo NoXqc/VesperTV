@@ -266,8 +266,13 @@ inaccurate. Recoverable from commit c18de49.)
   `RefinedFinish.apply` memoizes (its button styles hold closures), or `Theme` rebuilds everything under
   it (a 1.2 s frame per group change). (3) Per-D-pad-step state (guide focus `_guideFocus`, live list
   `_liveListFocused`) lives in a ValueNotifier, never a TvHomeScreen setState. (4) The transparent
-  Flutter view of the native video surface stays `RenderMode.surface` (`MainActivity.getRenderMode`):
-  Flutter's default texture mode drew every frame twice (Android's own frames 61 ms). (5) Side-column
+  Flutter view of the native video surface is a TextureView again by default since +789 (Advanced >
+  Device fixes > Draw the menus inside the app window, `flutter.vesper_ui_texture` in
+  `MainActivity.getRenderMode`). The SurfaceView mode (+745..+788, chosen when texture mode's Android
+  frames took 61 ms) put the menus on their own layer, which the Homatics' GPU blended (dumpsys
+  SurfaceFlinger: CLIENT): at 4K HDR10 output frames showed half-drawn (black lower part, jagged edge).
+  As a TextureView: video + window both DEVICE, Flutter raster 17-26 ms, Android frames 23 ms median.
+  Check `dumpsys SurfaceFlinger` for a CLIENT layer before changing it back. (5) Side-column
   scrolls jump (`_ensureVisible`); columns and the background are separate RepaintBoundaries.
   (6) Channel logos decode at their box size (`memCacheWidth` only: with a height too, Flutter's exact
   resize stretched wide logos into squares); full-size logos filled the image cache and re-decoded on
@@ -295,7 +300,12 @@ inaccurate. Recoverable from commit c18de49.)
   ModeButton) is a tint, not a blur (Home row menu photo, +782). (16) Home's backdrop cuts instead
   of crossfading while the mini player plays on the native surface: the two full-screen fading
   pictures + the video's memory traffic gave half-drawn frames (black lower half, jagged edge) on
-  the Homatics; not HWC (Disable HW overlays didn't help), one decoder only (+783).
+  the Homatics; not HWC (Disable HW overlays didn't help), one decoder only (+783). The deeper cause
+  was the menus' own SurfaceView layer being GPU-blended: see (4) (+789). (17) A computer keyboard's
+  Esc / Backspace = Back through `DesktopBackKey` (a late key handler calling the root navigator's
+  `maybePop`): a screen that handles Esc itself wins, and a `PopScope` decides. A page with custom
+  back logic must route it through its PopScope (`DesktopPlayerScreen` is `canPop: false` ->
+  `_handleBack`, or a live channel was dropped instead of handed to the mini player).
   Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button

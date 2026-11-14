@@ -103,9 +103,29 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
   final Stopwatch _held = Stopwatch();
   static const _holdDuration = Duration(milliseconds: 550);
 
+  /// Settings > Playback > Live TV (a Windows keyboard viewer,
+  /// 2026-11-14): the panel stays open after a pick ([_keepOpen]), and the
+  /// channel switches when the highlight rests on a row ([_zapOnMove],
+  /// which keeps the panel open too).
+  late final bool _zapOnMove = context.read<AppPreferences>().panelZapOnMove;
+  late final bool _keepOpen =
+      _zapOnMove || context.read<AppPreferences>().panelKeepOpen;
+  Timer? _zapTimer;
+
+  /// Last channels while the panel stays open: frozen when it opens, with
+  /// the channel that was playing first, so switching doesn't reorder the
+  /// rows under the highlight and that channel stays one step away.
+  List<Channel>? _recentFrozen;
+
   @override
   void initState() {
     super.initState();
+    if (_keepOpen) {
+      final frozen = [widget.current, ..._freshRecent()];
+      _recentFrozen = frozen;
+      // The highlight starts on the last channel, as without the setting.
+      if (frozen.length > 1) _index[_PanelTab.recent] = 1;
+    }
     final cached = _lastPlaying;
     if (cached != null &&
         cached.channelId == widget.current.id &&
@@ -122,7 +142,20 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
   }
 
   @override
+  void didUpdateWidget(PlayerSidePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A switch from the open panel: keep the keys here (a new stream can
+    // move focus in the player behind it).
+    if (_keepOpen && oldWidget.current.id != widget.current.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_focus.hasFocus) _focus.requestFocus();
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    _zapTimer?.cancel();
     _poll?.cancel();
     _focus.dispose();
     _scroll.dispose();
@@ -148,7 +181,9 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         _PanelTab.live => tr('Live now'),
       };
 
-  List<Channel> get _recent {
+  List<Channel> get _recent => _recentFrozen ?? _freshRecent();
+
+  List<Channel> _freshRecent() {
     final seen = <String>{widget.current.id};
     final out = <Channel>[];
     for (final c in context.read<PlaybackService>().recentlyPlayed) {
@@ -304,6 +339,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
 
   void _switchTab(_PanelTab tab) {
     if (tab == _shown) return;
+    _zapTimer?.cancel();
     if (_scroll.hasClients) _scroll.jumpTo(0);
     // This game keeps its row (the playing source at first).
     _select(tab, tab == _PanelTab.game ? _index[tab]! : 0);
@@ -315,7 +351,10 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     if (next >= 0 && next < tabs.length) _switchTab(tabs[next]);
   }
 
-  Future<void> _activate() async {
+  /// [fromMove]: the highlight rested on a row with Switch channels while
+  /// moving on: plays it, never closes, says nothing when it can't play.
+  Future<void> _activate({bool fromMove = false}) async {
+    _zapTimer?.cancel();
     final tab = _shown;
     final i = _index[tab]!;
     Channel? channel;
@@ -324,7 +363,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       if (p == null || i >= p.sources.length) return;
       channel = p.sources[i].channel;
       if (channel.id == widget.current.id) {
-        widget.onClose();
+        if (!fromMove) widget.onClose();
         return;
       }
       // Like Sports Trak: watching another listed source makes it this
@@ -342,6 +381,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       channel =
           _matches[SportsChannelPicks.eventKey(game)]?.firstOrNull?.channel;
       if (channel == null) {
+        if (fromMove) return;
         final why = SportsChannelMatcher.sharedWhyNoMatch(game);
         setState(() =>
             _message = why?.reason ?? tr('No channel found for this game'));
@@ -349,8 +389,24 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       }
     }
     if (channel == null) return;
-    widget.onClose();
+    if (!_keepOpen) {
+      widget.onClose();
+    } else if (channel.id == widget.current.id) {
+      // OK on what's already playing: done browsing.
+      if (!fromMove) widget.onClose();
+      return;
+    }
     await _play(channel);
+  }
+
+  /// Switch channels while moving: the row the highlight rests on plays
+  /// after a short pause (one stream per stop, not one per step).
+  void _scheduleZap() {
+    if (!_zapOnMove) return;
+    _zapTimer?.cancel();
+    _zapTimer = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) unawaited(_activate(fromMove: true));
+    });
   }
 
   /// Hold OK on a game: its box score / stats over the stream, see-through.
@@ -393,7 +449,11 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       unawaited(SportsChannelPicks.load(context.read<StorageService>())
           .pickForGame(g, channel.id));
     }
-    widget.onClose();
+    if (_keepOpen) {
+      _focus.requestFocus();
+    } else {
+      widget.onClose();
+    }
     if (channel.id != widget.current.id) await _play(channel);
   }
 
@@ -450,11 +510,17 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     }
     final tab = _shown;
     if (key == LogicalKeyboardKey.arrowUp) {
-      if (_index[tab]! > 0) _select(tab, _index[tab]! - 1);
+      if (_index[tab]! > 0) {
+        _select(tab, _index[tab]! - 1);
+        _scheduleZap();
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowDown) {
-      if (_index[tab]! < _count - 1) _select(tab, _index[tab]! + 1);
+      if (_index[tab]! < _count - 1) {
+        _select(tab, _index[tab]! + 1);
+        _scheduleZap();
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
@@ -594,6 +660,10 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
               child: _twoLines(
                   c.name, epg.getCurrentProgram(c.epgId)?.title ?? ''),
             ),
+            if (c.id == widget.current.id) ...[
+              const SizedBox(width: 6),
+              _watchingTag(accent),
+            ],
           ],
         );
       });
@@ -650,19 +720,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                 Expanded(child: _twoLines(c.name, sub)),
                 if (c.id == widget.current.id) ...[
                   const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: accent),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(tr('Watching').toUpperCase(),
-                        style: TextStyle(
-                            color: accent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800)),
-                  ),
+                  _watchingTag(accent),
                 ],
               ],
             );
@@ -677,6 +735,17 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       ],
     );
   }
+
+  Widget _watchingTag(Color accent) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(color: accent),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(tr('Watching').toUpperCase(),
+            style: TextStyle(
+                color: accent, fontSize: 10, fontWeight: FontWeight.w800)),
+      );
 
   Widget _list(int count, Color accent, Widget Function(int i) row) =>
       ListView.builder(

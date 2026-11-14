@@ -195,6 +195,76 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   DateTime? _livePausedAt;
   final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
 
+  /// Enter on a live channel focuses Play / Pause: the keyboard's way into
+  /// the bar, since Up / Down on the picture change channel.
+  final FocusNode _playPauseFocus =
+      FocusNode(debugLabel: 'desktop-player-play-pause');
+
+  /// Keys that change a live channel from the picture: Up / Page Up / CH+ =
+  /// the channel above in the list, Down / Page Down / CH- = below (same
+  /// directions as Android's player and the guide).
+  static final Map<LogicalKeyboardKey, int> _zapKeys = {
+    LogicalKeyboardKey.arrowUp: -1,
+    LogicalKeyboardKey.pageUp: -1,
+    LogicalKeyboardKey.channelUp: -1,
+    LogicalKeyboardKey.arrowDown: 1,
+    LogicalKeyboardKey.pageDown: 1,
+    LogicalKeyboardKey.channelDown: 1,
+  };
+
+  /// Up / Down on a live channel (a Windows keyboard viewer, 2026-11-14):
+  /// the previous / next channel of the list it was opened from
+  /// ([PlaybackService.zapList], set by the guide), else its own group;
+  /// wraps at either end and skips copies with the same id, like Android's
+  /// `PlayerScreen._zapChannel`. From catch-up it steps from the live
+  /// channel and leaves catch-up.
+  void _zapChannel(int step) {
+    final current = _currentChannel;
+    if (!current.isLive) return;
+    int indexIn(List<Channel> l) {
+      final exact = l.indexWhere((c) => identical(c, current));
+      return exact >= 0 ? exact : l.indexWhere((c) => c.id == current.id);
+    }
+
+    var list = context.read<PlaybackService>().zapList ?? const <Channel>[];
+    var i = indexIn(list);
+    if (i < 0) {
+      list = context.read<PlaylistManager>().visibleChannels(
+          playlistId: current.playlistId,
+          groupTitle: current.group,
+          category: 'tv');
+      i = indexIn(list);
+    }
+    if (i < 0) return;
+    for (var n = 1; n < list.length; n++) {
+      final c = list[(i + step * n) % list.length];
+      if (c.id == current.id) continue;
+      _flashControls();
+      unawaited(_switchTo(c));
+      return;
+    }
+  }
+
+  /// Shows the bar (the new channel's name and programme) for 3 s after a
+  /// zap when it was hidden; a bar the viewer opened stays as it was.
+  Timer? _zapHud;
+  void _flashControls() {
+    if (_touch) return;
+    final flashing = _zapHud != null;
+    if (_controlsVisible && !flashing) return;
+    _zapHud?.cancel();
+    setState(() => _controlsVisible = true);
+    _zapHud = Timer(const Duration(seconds: 3), () {
+      _zapHud = null;
+      if (mounted) setState(() => _controlsVisible = false);
+    });
+  }
+
+  void _stopZapHud() {
+    _zapHud?.cancel();
+    _zapHud = null;
+  }
+
   void _openPanel() {
     if (!_isLive) return;
     setState(() {
@@ -812,6 +882,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     WatchGameOffer.current.removeListener(_onWatchOfferChanged);
     _watchTimer?.cancel();
     _watchFocus.dispose();
+    _zapHud?.cancel();
+    _playPauseFocus.dispose();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (_ownsPlayer && !_handedOffToMiniPlayer) {
@@ -1144,6 +1216,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 onPressed: () => _skip(const Duration(seconds: -10)),
               ),
             IconButton(
+              focusNode: _playPauseFocus,
               tooltip: playing ? tr('Pause') : tr('Play'),
               iconSize: 40,
               color: Colors.white,
@@ -1615,14 +1688,27 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         context.select<AppPreferences, bool>((p) => p.playerClock);
     final size = MediaQuery.sizeOf(context);
     return PopScope(
-      // Back with the side panel open closes it first.
-      canPop: !_panelOpen && !_scheduleOpen && !_sourceBackGuard.blocksBack,
+      // Every Back (Esc / Backspace via DesktopBackKey, the system's) goes
+      // through _handleBack, so a live channel is handed to the mini player
+      // like the top-left arrow does: a plain pop stopped it. The side
+      // panel and the schedule close first.
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _sourceBackGuard.blocksBack) return;
         if (_scheduleOpen) {
           _closeSchedule();
-        } else {
+        } else if (_panelOpen) {
           _closePanel();
+        } else if (!_touch &&
+            _rootFocus.hasFocus &&
+            !_rootFocus.hasPrimaryFocus) {
+          // Arrowing along the bar (Enter put focus there): Back first
+          // returns to the picture, where Up / Down change channel.
+          _stopZapHud();
+          setState(() => _controlsVisible = false);
+          _rootFocus.requestFocus();
+        } else {
+          _handleBack();
         }
       },
       child: Scaffold(
@@ -1662,6 +1748,41 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               _DesktopVolume.toggleMute(context, _player);
               return KeyEventResult.handled;
             }
+            final zap = _zapKeys[event.logicalKey];
+            if (zap != null &&
+                event is! KeyUpEvent &&
+                // Not while arrowing along the player bar's buttons.
+                _rootFocus.hasPrimaryFocus &&
+                _isLive &&
+                !_panelOpen &&
+                !_scheduleOpen &&
+                !_inPip &&
+                !_pipStarting) {
+              // One channel per press: a held key's repeats would open a
+              // stream per repeat.
+              if (event is KeyDownEvent) _zapChannel(zap);
+              return KeyEventResult.handled;
+            }
+            if (event is KeyDownEvent &&
+                !_touch &&
+                _isLive &&
+                _rootFocus.hasPrimaryFocus &&
+                !_panelOpen &&
+                !_scheduleOpen &&
+                [
+                  LogicalKeyboardKey.select,
+                  LogicalKeyboardKey.enter,
+                  LogicalKeyboardKey.numpadEnter
+                ].contains(event.logicalKey)) {
+              _stopZapHud();
+              setState(() => _controlsVisible = true);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _playPauseFocus.context != null) {
+                  _playPauseFocus.requestFocus();
+                }
+              });
+              return KeyEventResult.handled;
+            }
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 // Not while arrowing along the player bar's buttons.
@@ -1683,6 +1804,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               if (_currentChannel.mediaFileInfo != null) {
                 _fileInfoRequests.value++;
               }
+              _stopZapHud();
               setState(() => _controlsVisible = !_controlsVisible);
               _armTouchHide();
             },

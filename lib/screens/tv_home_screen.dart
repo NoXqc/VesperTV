@@ -23,6 +23,7 @@ import '../services/perf_diagnostics.dart';
 import '../services/startup_quiet.dart';
 import '../services/app_exit.dart';
 import '../services/desktop_live_recovery.dart';
+import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
 import '../services/app_update_service.dart';
 import '../services/desktop_window.dart';
@@ -1901,6 +1902,36 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       (!usesMediaKitTarget || isIosTarget) &&
       !context.read<AppPreferences>().hideCatchupGroup;
 
+  /// Settings > Interface > Live TV > Show channels while moving through
+  /// groups (a Windows keyboard viewer, 2026-11-14): the group the remote or
+  /// keyboard stops on fills the channels column after a short pause, while
+  /// focus stays in the groups. OK still enters it ([_onGroupSelected]).
+  ///
+  /// The pause is longer than a normal step between presses: a group change
+  /// costs ~0.65 s on the Homatics (SlowFrame build=645ms), and at 0.3 s
+  /// nearly every group passed on the way loaded, holding up the next
+  /// press (owner, +787: "very slow").
+  Timer? _groupFollowTimer;
+  static const _groupFollowDelay = Duration(milliseconds: 700);
+
+  void _onGroupHighlighted(String group) {
+    if (_tab != 'TV' || _movingGroupKey != null) return;
+    if (!context.read<AppPreferences>().groupsFollowFocus) return;
+    _groupFollowTimer?.cancel();
+    _groupFollowTimer = Timer(_groupFollowDelay, () {
+      if (!mounted || !_col1Scope.hasFocus || _selectedGroup == group) return;
+      setState(() {
+        _selectedGroup = group;
+        _guideFocus.value = (null, null);
+      });
+      if (group == _catchupGroupSentinel || group == _recentGroupSentinel) {
+        // Xtream live lists load lazily per playlist (after launch).
+        unawaited(context.read<PlaylistManager>().ensureLiveChannelsLoaded());
+      }
+      if (_liveListController.hasClients) _liveListController.jumpTo(0);
+    });
+  }
+
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
   /// hand), null for the sentinels ("All", "Favourites") — Favorites-tab
@@ -2525,6 +2556,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     GuideKey.unregister(this);
     HardwareKeyboard.instance.removeHandler(_noteKey);
     _focusPreviewTimer?.cancel();
+    _groupFollowTimer?.cancel();
     _focusPreviewHistory?.cancel();
     WatchList.instance.changes.removeListener(_watchListChanged);
     _returnBackGuard?.cancel();
@@ -2940,6 +2972,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // left running forever with nothing pointed at it anymore. See
       // DesktopMiniPlayer.clear's own doc comment.
       DesktopMiniPlayer.instance.clear();
+      // Up / Down in the player follow this exact list (as on Android).
+      context.read<PlaybackService>().zapList =
+          _currentLiveChannels(context.read<PlaylistManager>());
       Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => DesktopPlayerScreen(channel: channel)));
       return;
@@ -3020,6 +3055,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // The target platform (not dart:io), so Android tests on a Windows PC
     // take the Android path, like _previewOrOpenCatchup.
     if (usesMediaKitTarget) {
+      // Up / Down in the player follow this exact list (as on Android).
+      context.read<PlaybackService>().zapList =
+          _currentLiveChannels(context.read<PlaylistManager>());
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
         final session = mini.take();
@@ -3635,6 +3673,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Left/Right binding override just below for why the depth-2 column's
     // own key handling needs to know about it too.
     final showTimelineGuide = _tab == 'TV' && prefs.guideViewMode == 'timeline';
+    final groupsHeld = _groupsHeldOpen;
     final playbackState = context.watch<PlaybackService>();
     final playing = playbackState.currentChannel;
     // A catch-up programme shows where live does (it is that channel).
@@ -3686,7 +3725,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 Positioned.fill(
                   child: ColoredBox(
                     color: Colors.black,
-                    child: _buildTimelinePreviewBox(liveChannel),
+                    // The whole screen: the player's own badges, not these.
+                    child: _buildTimelinePreviewBox(liveChannel, badges: false),
                   ),
                 ),
               if (_fullArt)
@@ -3967,15 +4007,18 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                           _collapsible(
                                             depth: 1,
                                             expandedWidth: _groupsWidth,
+                                            held: groupsHeld,
                                             child: _fullVideoScrim(_groupsScope(
                                                 playlist, isBrowseTab,
-                                                collapsed: _focusDepth > 1)),
+                                                collapsed: _focusDepth > 1 &&
+                                                    !groupsHeld)),
                                           ),
                                           VerticalDivider(
                                               width: 1,
                                               color: (_hidesPassedColumns ||
                                                           _fullArt) &&
-                                                      _focusDepth > 1
+                                                      _focusDepth > 1 &&
+                                                      !groupsHeld
                                                   ? Colors.transparent
                                                   : null),
                                           Expanded(
@@ -3984,7 +4027,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                   columnsWidth: _columnWidth(
                                                           0, _tabsWidth) +
                                                       _columnWidth(
-                                                          1, _groupsWidth),
+                                                          1, _groupsWidth,
+                                                          held: groupsHeld),
                                                   child: _contentScope(playlist,
                                                       epg, isBrowseTab))),
                                         ],
@@ -4462,12 +4506,24 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool get _hidesPassedColumns =>
       _fullVideo || context.read<AppPreferences>().isTelevision;
 
+  /// Settings > Interface > Live TV > Keep groups open: the TV tab's
+  /// groups stay open beside the channels instead of folding away once
+  /// focus moves into them (a Windows keyboard viewer, 2026-11-14: big
+  /// playlists, browsing group after group).
+  bool get _groupsHeldOpen =>
+      _tab == 'TV' &&
+      !_compact &&
+      _focusDepth == 2 &&
+      context.read<AppPreferences>().keepGroupsOpen;
+
   double get _tabsWidth => _compactUi ? 136 : (_largeUi ? 200 : 160);
   double get _groupsWidth => _compactUi ? 220 : (_largeUi ? 320 : 260);
 
   /// Where [_collapsible]'s width animation ends for the column at [depth].
-  double _columnWidth(int depth, double expandedWidth) =>
-      _focusDepth > depth ? (_hidesPassedColumns ? 0 : 56) : expandedWidth;
+  double _columnWidth(int depth, double expandedWidth, {bool held = false}) =>
+      _focusDepth > depth && !held
+          ? (_hidesPassedColumns ? 0 : 56)
+          : expandedWidth;
 
   /// A column that animates between [expandedWidth] and a narrow icon-only
   /// strip (or nothing, [_hidesPassedColumns]) once D-pad focus has moved
@@ -4477,8 +4533,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     required double expandedWidth,
     required Widget child,
     double collapsedWidth = 56,
+    bool held = false,
   }) {
-    final collapsed = _focusDepth > depth;
+    final collapsed = _focusDepth > depth && !held;
     if (_hidesPassedColumns) collapsedWidth = 0;
     // Touch/mouse: a tap on a collapsed strip opens it back up instead of
     // hitting one of its look-alike icons. Always the same wrappers (only
@@ -5026,6 +5083,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         focusNode: _firstGroupRowFocusNode,
                         onTap: () => _onGroupSelected(_favoritesGroupSentinel),
                         onLongPress: _confirmClearFavorites,
+                        onHighlight: () =>
+                            _onGroupHighlighted(_favoritesGroupSentinel),
                       ),
                     ),
                     // Hold Select = shortcut to Settings > General's channel-history
@@ -5057,6 +5116,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                           focusNode: _catchupRowFocusNode,
                           onTap: () => _onGroupSelected(_catchupGroupSentinel),
                           onLongPress: _showCatchupPlaylists,
+                          onHighlight: () =>
+                              _onGroupHighlighted(_catchupGroupSentinel),
                         ),
                       ),
                     // Channels the providers added lately (Settings > Tabs).
@@ -5068,6 +5129,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         collapsed: collapsed,
                         fontSize: _groupFontSize,
                         onTap: () => _onGroupSelected(_recentGroupSentinel),
+                        onHighlight: () =>
+                            _onGroupHighlighted(_recentGroupSentinel),
                       ),
                     // The viewer's own groups (any playlist's channels): above every
                     // playlist's groups, never hidden with one.
@@ -5086,6 +5149,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         isFavorited: false,
                         isPendingHide: false,
                         onTap: () => _onGroupSelected(title),
+                        onHighlight: () => _onGroupHighlighted(title),
                         onLongPress: () => _showMyGroupOptions(title),
                         moving:
                             _movingGroupKey == _groupKey(_myGroupsId, title),
@@ -5120,6 +5184,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             .contains(_groupKey(group.playlistId, group.title)),
                         onTap: () => _onGroupSelected(group.title,
                             playlistId: group.playlistId),
+                        onHighlight: () => _onGroupHighlighted(group.title),
                         onLongPress: () =>
                             _showGroupOptions(group.playlistId, group.title),
                         moving: _movingGroupKey ==
@@ -5382,7 +5447,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// channel actually minimized (reported directly on both guide views,
   /// separately — this exact box, sitting right next to a working resume
   /// pill saying otherwise, reading as "the mini player doesn't work").
-  Widget _buildTimelinePreviewBox(Channel? channel) {
+  Widget _buildTimelinePreviewBox(Channel? channel, {bool badges = true}) {
+    // Settings > Interface > Live TV > Quality on the preview.
+    final showBadges = badges && context.watch<AppPreferences>().previewBadges;
     if (usesMediaKit) {
       // A real video feed, unlike the first pass at this box — unlike
       // `video_player_hdr`'s platform views (see `LiveResumeHint`'s own
@@ -5437,6 +5504,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   if (controller != null)
                     DesktopReconnectingBadge(
                         recovery: DesktopLiveRecovery.of(controller.player)),
+                  if (controller != null && showBadges)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: IgnorePointer(
+                        child: DesktopQualityBadges(
+                            key: ObjectKey(controller.player),
+                            player: controller.player),
+                      ),
+                    ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -5515,7 +5592,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // covering most of the preview. Tapping the bare video now jumps
         // to fullscreen instead of a separate button.
         child: VideoPlayerPane(
-            key: ValueKey(channel.id), showEpgBar: false, showControls: false),
+            key: ValueKey(channel.id),
+            showEpgBar: false,
+            showControls: false,
+            showBadges: showBadges),
       ),
     );
   }
@@ -7190,12 +7270,17 @@ class _SelectableRow extends StatefulWidget {
     this.trailing,
     this.fontSize,
     this.focusNode,
+    this.onHighlight,
   });
 
   final String label;
   final bool selected;
   final bool collapsed;
   final VoidCallback onTap;
+
+  /// Called when the row gets focus (groups column: Show channels while
+  /// moving through groups).
+  final VoidCallback? onHighlight;
   final VoidCallback? onLongPress;
   final IconData? icon;
   final Widget? leading;
@@ -7344,6 +7429,7 @@ class _SelectableRowState extends State<_SelectableRow> {
               onFocusChange: (f) {
                 setState(() => _focused = f);
                 if (f) _ensureVisible(context);
+                if (f) widget.onHighlight?.call();
               },
               child: Padding(
                 padding: EdgeInsets.symmetric(
@@ -7509,10 +7595,15 @@ class _GroupRow extends StatefulWidget {
     this.onMoveDone,
     this.focusOnBuild = false,
     this.onFocusedOnBuild,
+    this.onHighlight,
   });
 
   final IconData icon;
   final String label;
+
+  /// Called when the row gets focus (Show channels while moving through
+  /// groups).
+  final VoidCallback? onHighlight;
 
   /// Channels/movies/shows in the group, shown after its name (Settings >
   /// Interface > Tabs > Show group counts); null = no count.
@@ -7691,6 +7782,7 @@ class _GroupRowState extends State<_GroupRow> {
           onFocusChange: (f) {
             setState(() => _focused = f);
             if (f) _ensureVisible(context);
+            if (f && !widget.moving) widget.onHighlight?.call();
             // Clicked/tapped away mid-move: treat as done.
             if (!f && widget.moving) widget.onMoveDone?.call();
           },

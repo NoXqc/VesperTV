@@ -87,6 +87,7 @@ import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
 import 'services/desktop_audio.dart';
+import 'services/desktop_back_key.dart';
 import 'services/desktop_stream_setup.dart';
 import 'services/vesper_ai/mcp_bridge.dart';
 import 'services/hub_remote.dart';
@@ -453,6 +454,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // screen, so this lives at the app root rather than wherever the
     // Minimize button happens to be.
     if (isDesktop) windowManager.addListener(this);
+    // Esc / Backspace = Back on a computer keyboard.
+    if (isDesktop) DesktopBackKey.install(_navigatorKey);
   }
 
   @override
@@ -1399,18 +1402,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// `EpgService.startAutoRefresh` tick — see `EpgService.refresh`'s doc
   /// comment for why each playlist's own channel ids matter here.
   /// A playlist's extra guides (playlist editor) come after its own.
-  List<EpgSource> _epgSources() => [
-        for (final p in _playlistManager.profiles)
-          if (p.enabled)
-            for (final url in {
-              if (p.epgUrl?.isNotEmpty ?? false) p.epgUrl!,
-              ...p.extraEpgUrls,
-            })
-              (
-                url: url,
-                knownChannelIds: _playlistManager.knownChannelIdsFor(p.id)
-              ),
-      ];
+  List<EpgSource> _epgSources() => _playlistManager.epgSources();
 
   void _showToast(String message) {
     _scaffoldMessengerKey.currentState?.showSnackBar(

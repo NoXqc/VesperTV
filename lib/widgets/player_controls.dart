@@ -11,6 +11,7 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
+import '../services/display_match.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/addon_service.dart';
@@ -46,7 +47,13 @@ class VideoPlayerPane extends StatelessWidget {
       this.showEpgBar = true,
       this.showControls = true,
       this.fit = VideoFit.fit,
+      this.showBadges = false,
       this.switchButtonFocusNode});
+
+  /// HD / FHD / 4K + frame rate pills in the top-right corner, for the
+  /// small previews (Settings > Interface > Live TV > Quality on the
+  /// preview); the full-screen player has them in its bar.
+  final bool showBadges;
 
   /// How the picture is sized in the pane — the fullscreen player's
   /// picture button (fit, stretched, crop, zooms). Not clipped here: the
@@ -262,6 +269,13 @@ class VideoPlayerPane extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ),
+                  if (showBadges)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: IgnorePointer(
+                          child: _QualityBadge(controller: controller)),
                     ),
                   if (showControls)
                     Positioned(
@@ -1613,7 +1627,13 @@ class _QualityBadgeState extends State<_QualityBadge> {
       if (!mounted || height == null) return;
       final label =
           qualityLabelForTrack(height: height, width: selected?.width);
-      final frameRate = selected?.frameRate?.round();
+      var frameRate = selected?.frameRate?.round();
+      // A .ts stream's track rarely says: the player's measured rate.
+      if (frameRate == null || frameRate <= 0) {
+        frameRate =
+            (await DisplayMatch.frameRateOf(widget.controller))?.round();
+        if (!mounted) return;
+      }
       if (label != _label || frameRate != _frameRate) {
         setState(() {
           _label = label;

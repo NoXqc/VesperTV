@@ -100,7 +100,18 @@ class MainActivity : FlutterActivity() {
      * (owner, 2026-11-12). A transparent FlutterSurfaceView goes on top (setZOrderOnTop) and the
      * compositor stacks it over the video SurfaceView.
      */
-    override fun getRenderMode(): RenderMode = RenderMode.surface
+    override fun getRenderMode(): RenderMode {
+        // Advanced > Device fixes > Draw the menus inside the app window (on by default since
+        // +789, as until +745): a TextureView. With the menus on their own SurfaceView layer the
+        // Homatics' GPU blended that layer on top of drawing it (dumpsys SurfaceFlinger: CLIENT)
+        // and at 4K HDR10 output frames showed half-drawn while a channel played (owner photos,
+        // 2026-11-14; 8-bit SDR output hid it). As a TextureView: video + window, both DEVICE,
+        // Flutter raster 17-26 ms instead of 32-52 ms, Android frames 23 ms median.
+        val texture = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            .getBoolean("flutter.vesper_ui_texture", true)
+        Log.i("VesperNativeSurface", "startup: menus drawn on a ${if (texture) "TextureView" else "SurfaceView"}")
+        return if (texture) RenderMode.texture else RenderMode.surface
+    }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (!voiceBridge.onPermissionResult(requestCode, grantResults) &&
