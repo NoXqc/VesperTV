@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,7 +43,12 @@ class SportsModeLivePanel extends StatefulWidget {
     this.onRight,
     this.current,
     this.liveGames,
+    this.onHighlight,
   });
+
+  /// The remote stayed on a channel (Settings > Preview on highlight, as in
+  /// the full Live TV): play it in the preview. Null = OK only (Multiview).
+  final void Function(Channel channel, List<Channel> list)? onHighlight;
 
   /// Multiview: one group per game playing now (its matched channels) under
   /// Favourites, for a quick channel swap (owner, 2026-11-03). Null = none.
@@ -174,8 +181,55 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     if (mounted) setState(() {});
   }
 
+  /// Settings > Show channels while moving through groups: the group the
+  /// remote stops on opens in the guide, focus stays in the groups (as in
+  /// the full Live TV, same pause). Settings > Preview on highlight: the
+  /// channel the remote stops on plays.
+  Timer? _followTimer;
+  Timer? _highlightTimer;
+  static const _followDelay = Duration(milliseconds: 700);
+  static const _highlightDelay = Duration(milliseconds: 800);
+
+  void _scheduleFollow() {
+    _followTimer?.cancel();
+    if (!context.read<AppPreferences>().groupsFollowFocus) return;
+    final index = _groupIndex;
+    _followTimer = Timer(_followDelay, () {
+      if (!mounted || !_groupsNode.hasFocus || _groupIndex != index) return;
+      if (index >= _groups.length) return;
+      final key = _groups[index].key;
+      if (key == _fullKey || key == _openKey) return;
+      _openGroup(index, focus: false);
+    });
+  }
+
+  void _scheduleHighlight() {
+    _highlightTimer?.cancel();
+    final onHighlight = widget.onHighlight;
+    if (onHighlight == null ||
+        _liveSummary ||
+        !context.read<AppPreferences>().guideFocusPreview) {
+      return;
+    }
+    final index = _channelIndex;
+    final key = _openKey;
+    _highlightTimer = Timer(_highlightDelay, () {
+      if (!mounted ||
+          !_guideNode.hasFocus ||
+          _channelIndex != index ||
+          _openKey != key ||
+          index >= _channels.length) {
+        return;
+      }
+      _lastChannelIndex = index;
+      onHighlight(_channels[index], List.of(_channels));
+    });
+  }
+
   @override
   void dispose() {
+    _followTimer?.cancel();
+    _highlightTimer?.cancel();
     _groupsNode.dispose();
     _guideNode.dispose();
     _groupsScroll.dispose();
@@ -313,7 +367,7 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     });
   }
 
-  void _openGroup(int index) {
+  void _openGroup(int index, {bool focus = true}) {
     if (index < 0 || index >= _groups.length) return;
     final group = _groups[index];
     if (group.key == _fullKey) {
@@ -337,7 +391,11 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
               : 0;
     });
     if (_guideScroll.hasClients) _guideScroll.jumpTo(0);
-    _focusGuide();
+    if (focus) {
+      _focusGuide();
+    } else {
+      _keepVisible(_guideScroll, _channelIndex, _channelExtent);
+    }
   }
 
   bool _isActivate(LogicalKeyboardKey key) =>
@@ -371,6 +429,7 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
       _groupIndex = (_groupIndex + step).clamp(0, _groups.length - 1);
       _stepTick.value++;
       _keepVisible(_groupsScroll, _groupIndex, _groupExtent);
+      _scheduleFollow();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
@@ -452,6 +511,7 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
       _stepTick.value++;
       _lastChannelIndex = _channelIndex;
       _keepVisible(_guideScroll, _channelIndex, _channelExtent);
+      _scheduleHighlight();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {

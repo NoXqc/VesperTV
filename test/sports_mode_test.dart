@@ -1970,6 +1970,9 @@ void main() {
     for (var i = 0; i < 20; i++) {
       await press(tester, LogicalKeyboardKey.arrowDown);
     }
+    // Exit is the last row, the Sports Mode switch just above it.
+    expect(getFocus(), 'sports-chip-mode:exit');
+    await press(tester, LogicalKeyboardKey.arrowUp);
     expect(getFocus(), 'sports-chip-mode:toggle');
     await press(tester, LogicalKeyboardKey.select);
     expect(find.byType(SportsModeToggle), findsOneWidget);

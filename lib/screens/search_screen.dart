@@ -66,8 +66,11 @@ class SearchScreen extends StatefulWidget {
 /// gets the same fix.
 class _ResultRow {
   _ResultRow(this.label, this.rowKey, this.firstFocusNode, this.children,
-      {this.section, this.hasSource = false});
+      {this.section, this.hasSource = false, required this.posterHeight});
   final String label;
+
+  /// Its cards' artwork height (logos are shorter than posters).
+  final double posterHeight;
 
   /// A heading drawn above this row ("Media Hub"), starting a group.
   final String? section;
@@ -86,6 +89,14 @@ class _ResultRow {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  /// Result cards (and their titles) at the TV home's browse size: bigger
+  /// on a computer, and 1.2x more with Interface size Large. They were the
+  /// TV-tuned size everywhere, and channel names a small 8 pt (Windows
+  /// user, 2026-11-14). Set each build.
+  double _scale = 1;
+  double get _cardWidth => PosterCard.width * _scale;
+  double get _posterHeight => PosterCard.posterHeight * _scale;
+
   final _controller = TextEditingController();
   final _searchFieldFocus = FocusNode();
 
@@ -558,6 +569,8 @@ class _SearchScreenState extends State<SearchScreen> {
     context.select<PlaylistManager, int>(
         (p) => _query.trim().isEmpty ? 0 : p.notifyCount);
     final playlist = context.read<PlaylistManager>();
+    _scale = (isDesktop ? 1.26 : 1.0) *
+        (context.select<AppPreferences, bool>((p) => p.largeUi) ? 1.2 : 1.0);
     final scheme = Theme.of(context).colorScheme;
     final q = _query.trim().toLowerCase();
     final rows = q.isEmpty ? const <_ResultRow>[] : _buildRows(playlist, q);
@@ -830,6 +843,8 @@ class _SearchScreenState extends State<SearchScreen> {
               title: items[i].$2.name,
               sourceLabel: items[i].$1.name,
               imageUrl: items[i].$2.posterUrl,
+              cardWidth: _cardWidth,
+              cardPosterHeight: _posterHeight,
               rating: items[i].$2.year,
               tag: items[i].$2.releaseTag?.label,
               tagStrong: items[i].$2.releaseTag == HubReleaseTag.isNew,
@@ -846,6 +861,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
         section: rows.isEmpty ? tr('Media Hub') : null,
         hasSource: true,
+        posterHeight: _posterHeight,
       ));
     }
     return rows;
@@ -871,8 +887,10 @@ class _SearchScreenState extends State<SearchScreen> {
           sourceLabel: _sourceNames?[items[i].playlistId],
           imageUrl: items[i].logoUrl,
           rating: isPoster ? items[i].rating : null,
-          cardWidth: isPoster ? PosterCard.width : 64,
-          cardPosterHeight: isPoster ? PosterCard.posterHeight : 64,
+          // Logos: as wide as a poster (so the name gets the same size),
+          // a short box.
+          cardWidth: _cardWidth,
+          cardPosterHeight: isPoster ? _posterHeight : 64 * _scale,
           fit: isPoster ? BoxFit.cover : BoxFit.contain,
           isFavorite:
               context.read<PlaylistManager>().isChannelFavorited(items[i].id),
@@ -886,7 +904,8 @@ class _SearchScreenState extends State<SearchScreen> {
           },
         ),
     ];
-    return _ResultRow(label, rowKey, firstFocusNode, children);
+    return _ResultRow(label, rowKey, firstFocusNode, children,
+        posterHeight: isPoster ? _posterHeight : 64 * _scale);
   }
 
   _ResultRow _buildSeriesRow(
@@ -901,6 +920,8 @@ class _SearchScreenState extends State<SearchScreen> {
           title: items[i].name,
           sourceLabel: _sourceNames?[items[i].playlistId],
           imageUrl: items[i].coverUrl,
+          cardWidth: _cardWidth,
+          cardPosterHeight: _posterHeight,
           isFavorite:
               context.read<PlaylistManager>().isSeriesFavorited(items[i].id),
           onToggleFavorite: () => _holdSeries(items[i]),
@@ -911,7 +932,14 @@ class _SearchScreenState extends State<SearchScreen> {
           },
         ),
     ];
-    return _ResultRow(label, rowKey, firstFocusNode, children);
+    return _ResultRow(label, rowKey, firstFocusNode, children,
+        posterHeight: _posterHeight);
+  }
+
+  /// Row titles grow with the cards (not past them).
+  TextScaler _labelScaler(BuildContext context) {
+    final base = MediaQuery.textScalerOf(context);
+    return _scale == 1 ? base : TextScaler.linear(base.scale(1) * _scale);
   }
 
   Widget _buildResultRows(List<_ResultRow> rows) {
@@ -951,6 +979,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Row(
                     children: [
                       Text(row.section!,
+                          textScaler: _labelScaler(context),
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -972,6 +1001,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(row.label,
+                    textScaler: _labelScaler(context),
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -979,11 +1009,12 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: PosterCard.height +
+                height: row.posterHeight +
+                    PosterCard.titleHeight * _scale +
                     12 +
                     (_sourceNames == null && !row.hasSource
                         ? 0
-                        : PosterCard.sourceHeight),
+                        : PosterCard.sourceHeight * _scale),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 10),

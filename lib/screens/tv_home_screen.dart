@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
@@ -367,6 +368,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (_tab != tab || resetFavorites) {
       _onTabChanged(tab, restoreLiveFocus: false);
     }
+    // Back from Media Hub on Windows: its preview channel again.
+    if (_tab == 'TV') _resumeParkedDesktop();
     _timelineFilterController.clear();
     setState(() {
       _focusDepth = 0;
@@ -1681,6 +1684,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
+    if (tab == 'TV') _resumeParkedDesktop();
     if (_isBrowseTab(tab) ||
         (tab == 'Home' && !HomeScreen.showsMiniPlayer(context))) {
       unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
@@ -1695,6 +1699,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// beta player instead, so returning does not reconnect. Android only —
   /// Windows has its own stack.
   Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
+    // Windows: the preview's player kept playing under Movies (Windows
+    // user, 2026-11-14: "Live TV keeps playing in the background").
+    if (usesMediaKit) {
+      final mini = DesktopMiniPlayer.instance;
+      final channel = mini.channel.value;
+      if (channel == null) return;
+      _parkedDesktopChannel = channel;
+      mini.clear();
+      return;
+    }
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
     // Catch-up parks like live; the pill then offers its live channel.
@@ -1713,6 +1727,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     await playback.stop();
     // stop() clears the pending channel, so set it after.
     playback.setPendingResumeChannel(resumeTo);
+  }
+
+  /// Windows: the preview channel [_parkLiveChannel] stopped, played again
+  /// when the TV tab comes back ([_resumeParkedDesktop]).
+  Channel? _parkedDesktopChannel;
+
+  void _resumeParkedDesktop() {
+    final parked = _parkedDesktopChannel;
+    if (parked == null) return;
+    _parkedDesktopChannel = null;
+    if (DesktopMiniPlayer.instance.channel.value == null) {
+      DesktopMiniPlayer.instance.play(parked);
+    }
   }
 
   /// Left inside the poster grid should still move card-to-card normally.
@@ -5504,6 +5531,23 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   if (controller != null)
                     DesktopReconnectingBadge(
                         recovery: DesktopLiveRecovery.of(controller.player)),
+                  // Stop: nothing plays, the app stays open (Windows user,
+                  // 2026-11-14: only quitting stopped a channel).
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        iconSize: 18,
+                        visualDensity: VisualDensity.compact,
+                        tooltip: tr('Stop playback'),
+                        icon: const Icon(Icons.stop, color: Colors.white),
+                        onPressed: DesktopMiniPlayer.instance.clear,
+                      ),
+                    ),
+                  ),
                   if (controller != null && showBadges)
                     Positioned(
                       top: 8,
@@ -9782,6 +9826,20 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     jumpToIfLaidOut(_labelVScroll, _gridVScroll.offset);
   }
 
+  /// A wheel over the channel names: the grid takes it.
+  void _scrollFromLabels(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    GestureBinding.instance.pointerSignalResolver.register(event,
+        (e) => _scrollGridBy((e as PointerScrollEvent).scrollDelta.dy));
+  }
+
+  void _scrollGridBy(double dy) {
+    if (dy == 0 || !_gridVScroll.hasClients) return;
+    final pos = _gridVScroll.position;
+    final to = (pos.pixels + dy).clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    if (to != pos.pixels) _gridVScroll.jumpTo(to);
+  }
+
   void _onGuideRowsLoaded() {
     if (mounted) setState(() {});
   }
@@ -10347,17 +10405,28 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
             children: [
               SizedBox(
                 width: _channelColumnWidth,
-                child: ClipRect(
-                  child: ListView.builder(
-                    controller: _labelVScroll,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: widget.channels.length,
-                    itemExtent: _rowHeight,
-                    itemBuilder: (context, i) => _ChannelLabel(
-                        channel: widget.channels[i],
-                        playlistTag: _playlistTagFor(i),
-                        moving:
-                            widget.channels[i].id == widget.movingChannelId),
+                // The names only follow the grid: a mouse wheel or a
+                // trackpad over them scrolls the grid (Windows user,
+                // 2026-11-14: the scrollbar showed, the list never moved).
+                child: Listener(
+                  onPointerSignal: _scrollFromLabels,
+                  onPointerPanZoomUpdate: (e) => _scrollGridBy(-e.panDelta.dy),
+                  child: ClipRect(
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(scrollbars: false),
+                      child: ListView.builder(
+                        controller: _labelVScroll,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: widget.channels.length,
+                        itemExtent: _rowHeight,
+                        itemBuilder: (context, i) => _ChannelLabel(
+                            channel: widget.channels[i],
+                            playlistTag: _playlistTagFor(i),
+                            moving: widget.channels[i].id ==
+                                widget.movingChannelId),
+                      ),
+                    ),
                   ),
                 ),
               ),

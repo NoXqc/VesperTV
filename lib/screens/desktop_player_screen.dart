@@ -737,8 +737,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// What Vesper AI drives while this screen is open.
   late final _control = _ScreenControl(this);
 
-  /// Vesper AI's "stop": closes the player without handing a live channel
-  /// to the mini player.
+  /// Vesper AI's "stop" and the bar's Stop: closes the player without
+  /// handing a live channel to the mini player.
   void _stopAndClose() {
     if (!mounted) return;
     _catchupPlayer?.dispose();
@@ -1005,6 +1005,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     await _openMedia(live);
   }
 
+  static final _mediaKeys = {
+    LogicalKeyboardKey.mediaPlayPause,
+    LogicalKeyboardKey.mediaPlay,
+    LogicalKeyboardKey.mediaPause,
+  };
+
   void _togglePlay(bool playing) {
     if (playing) {
       if (_isLive && !_inCatchup) _livePausedAt = DateTime.now();
@@ -1202,6 +1208,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 icon: const Icon(Icons.refresh, color: Colors.white),
                 tooltip: tr('Reload channel'),
                 onPressed: _reload,
+              ),
+            // Back keeps a live channel playing in the guide's preview;
+            // Stop ends it (Windows user, 2026-11-14).
+            if (_isLive)
+              IconButton(
+                icon: const Icon(Icons.stop, color: Colors.white),
+                tooltip: tr('Stop playback'),
+                onPressed: _stopAndClose,
               ),
             if (_previousEpisode != null)
               IconButton(
@@ -1746,6 +1760,37 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.keyM) {
               _DesktopVolume.toggleMute(context, _player);
+              return KeyEventResult.handled;
+            }
+            // Space and the keyboard's media keys: play / pause, like most
+            // desktop players (owner, 2026-11-14). Space on a focused bar
+            // button still presses that button.
+            if (event is KeyDownEvent &&
+                (_mediaKeys.contains(event.logicalKey) ||
+                    (event.logicalKey == LogicalKeyboardKey.space &&
+                        _rootFocus.hasPrimaryFocus))) {
+              final playing = _player.state.playing;
+              final key = event.logicalKey;
+              if (!(key == LogicalKeyboardKey.mediaPlay && playing) &&
+                  !(key == LogicalKeyboardKey.mediaPause && !playing)) {
+                _togglePlay(playing);
+                _flashControls();
+              }
+              return KeyEventResult.handled;
+            }
+            // The keyboard's Fast forward / Rewind keys: 10 s, like the
+            // bar's buttons (movies, episodes, catch-up).
+            if (event is! KeyUpEvent &&
+                (event.logicalKey == LogicalKeyboardKey.mediaFastForward ||
+                    event.logicalKey == LogicalKeyboardKey.mediaRewind)) {
+              if (!_isLive || _inCatchup) {
+                _skip(Duration(
+                    seconds: event.logicalKey ==
+                            LogicalKeyboardKey.mediaFastForward
+                        ? 10
+                        : -10));
+                _flashControls();
+              }
               return KeyEventResult.handled;
             }
             final zap = _zapKeys[event.logicalKey];

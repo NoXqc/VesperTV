@@ -2631,6 +2631,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (mounted && _liveOpen) _livePanel.currentState?.focusLast();
   }
 
+  /// The guide's channel the remote stayed on (Preview on highlight): the
+  /// preview plays it, as the first OK does; OK then goes full screen.
+  void _previewLive(Channel channel, List<Channel> list) {
+    if (_previewGame == null && _previewChannel?.id == channel.id) return;
+    if (!_desktopSports) {
+      context.read<PlaybackService>().zapList = list;
+    }
+    unawaited(_setPreview(null, channel));
+  }
+
   /// Sports Mode root Back leaves the app like the TV home's
   /// ([AppExit.back]: warm on Android, asks first on a computer).
   Future<void> _confirmModeExit() async {
@@ -3354,6 +3364,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             enabled: _movingLeague == null,
             selected: true,
             onTap: _openSportsModeSettings),
+        // The full Live TV's Exit row, last (a Windows user, 2026-11-14).
+        // Never on an iPhone (iOS apps don't quit themselves).
+        if (!isIosTarget)
+          SportsModeRailEntry(
+              id: 'exit',
+              label: tr('Exit {appName}', {'appName': AppConstants.appName}),
+              icon: Icons.power_settings_new,
+              focusNode: _chipNode('mode:exit'),
+              enabled: _movingLeague == null,
+              onTap: () => unawaited(AppExit.full())),
       ],
       onEnterContent: () => _liveOpen
           ? _livePanel.currentState?.focusLast()
@@ -3364,6 +3384,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ? SportsModeLivePanel(
               key: _livePanel,
               onPlay: _playLive,
+              onHighlight: _previewLive,
               onLeft: () => _modeShell.currentState?.focusRail(),
               onRight: () =>
                   _feedVisible ? _focusFeed() : _focusZone(_zone, sections),
