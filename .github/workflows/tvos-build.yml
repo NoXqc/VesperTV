@@ -163,10 +163,15 @@ jobs:
           # flutter-tvos build staged in tvos/Flutter, so the release build
           # runs right before the archive (flutter-tvos doc/publish-app.md).
           flutter-tvos build tvos --release --no-codesign 2>&1 | tee out/build-release.log
+          # Archived unsigned: automatic signing first makes a development
+          # profile, which needs a registered Apple TV ("Your team has no
+          # devices", run 43743103746). The export signs it for App Store
+          # Connect through the API key (cloud signing), no device needed.
           xcodebuild -workspace tvos/Runner.xcworkspace -scheme Runner \
             -configuration Release -sdk appletvos -destination 'generic/platform=tvOS' \
             -archivePath "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             "${auth[@]}" archive > out/archive.log 2>&1 || true
           grep -E "error:|ARCHIVE" out/archive.log || true
           [ -d "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" ] || { tail -60 out/archive.log; exit 1; }
