@@ -28,6 +28,7 @@ import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
+import 'services/apple_tv_menu.dart';
 import 'services/apple_tv_storage.dart';
 import 'services/app_exit.dart';
 import 'services/remote_buttons.dart';
@@ -899,6 +900,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // (libmpv crashed on close with players still open, Linux).
       AppExit.beforeQuit = disposeAllDesktopPlayers;
       AppExit.askFirst = () => _preferences.askBeforeExit;
+      AppExit.hint = (message) => _scaffoldMessengerKey.currentState
+          ?.showSnackBar(SnackBar(content: Text(message)));
       AppExit.afterWarm = () {
         if (!mounted || !_ready) return;
         if (_profileSelection != null) {
@@ -1660,7 +1663,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           debugShowCheckedModeBanner: false,
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
-          navigatorObservers: [appRouteObserver],
+          navigatorObservers: [appRouteObserver, AppleTvMenu.observer],
           // macOS: Esc (Flutter's DismissIntent) is Back when nothing
           // closer handles it. Dialogs, menus and screens with their own
           // Esc key handling still win; maybePop honours every PopScope.

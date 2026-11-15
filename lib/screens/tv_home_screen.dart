@@ -23,6 +23,7 @@ import '../services/back_press_swallow.dart';
 import '../services/perf_diagnostics.dart';
 import '../services/startup_quiet.dart';
 import '../services/app_exit.dart';
+import '../services/apple_tv_menu.dart';
 import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
@@ -2582,6 +2583,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   @override
   void dispose() {
+    AppleTvMenu.setAtRoot(false);
     GuideKey.unregister(this);
     HardwareKeyboard.instance.removeHandler(_noteKey);
     _focusPreviewTimer?.cancel();
@@ -2642,6 +2644,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    if (isAppleTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reportAppleTvRoot());
+    }
     if (_startupSportsCovered) {
       _startupSportsCovered = false;
       setState(() => _videoHiddenForSports = false);
@@ -3659,7 +3664,25 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (hidden && last != null) return last;
     final built = PerfDiagnostics.timedSync('homeBuild', () => _build(context));
     _lastBuilt = built;
+    if (isAppleTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reportAppleTvRoot());
+    }
     return built;
+  }
+
+  /// Apple TV: whether the Siri Remote's Menu should leave the app now, the
+  /// way Back would from here ([_backToSportsOrExit]); AppleTvMenu.
+  void _reportAppleTvRoot() {
+    if (!mounted) return;
+    AppleTvMenu.setAtRoot(ModalRoute.of(context)?.isCurrent == true &&
+        TickerMode.valuesOf(context).enabled &&
+        !_compact &&
+        _focusDepth == 0 &&
+        _movingChannel == null &&
+        _movingGroupKey == null &&
+        !(context.read<AppPreferences>().sportsMode &&
+            Navigator.of(context).canPop()) &&
+        !ProfileGate.wouldReturnToSelector);
   }
 
   Widget _build(BuildContext context) {
@@ -4252,6 +4275,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   @override
   void didPushNext() {
+    AppleTvMenu.setAtRoot(false);
     ++_browseFocusRequest;
     _previewCovered = true;
     _releasePreviewHint?.call();

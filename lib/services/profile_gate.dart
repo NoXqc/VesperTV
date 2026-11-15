@@ -23,6 +23,11 @@ class ProfileGate {
     _show = null;
   }
 
+  /// True when Back at the top screen would open the selector instead of
+  /// leaving the app (Apple TV's Menu button: AppleTvMenu).
+  static bool get wouldReturnToSelector =>
+      _show != null && (_enabled?.call() ?? false);
+
   /// True when Back was handled by opening the selector.
   static bool backToSelector() {
     final show = _show;

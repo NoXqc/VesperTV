@@ -3847,4 +3847,6 @@ const Map<String, String> kIt = {
       "Un lettore IPTV semplice: la guida classica compatta, gruppi che si richiudono, niente Finitura raffinata e niente Home, profili, Sports Trak o Media Hub. Disattivalo per rimettere tutto com'era. Le schede si possono anche riattivare una alla volta.",
   "Removes the Home tab.":
       "Rimuove la scheda Home.",
+  "Press Menu again to go to the Apple TV Home screen.":
+      "Premi di nuovo Menu per tornare alla schermata Home di Apple TV.",
 };
