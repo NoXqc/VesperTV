@@ -72,6 +72,11 @@ class _SmokeAppState extends State<_SmokeApp> {
   @override
   void initState() {
     super.initState();
+    // As the app (desktop_stream_setup.dart): mpv can't create its disk
+    // cache inside the sandbox ("Failed to create file cache", then no
+    // streams for .ts / MKV); the demuxer cache stays in memory.
+    unawaited(
+        (_player.platform as NativePlayer).setProperty('cache-on-disk', 'no'));
     _player.stream.log.listen((l) =>
         debugPrint('Smoke mpv: [${l.prefix}] ${l.level}: ${l.text.trim()}'));
     _player.stream.error.listen((e) {

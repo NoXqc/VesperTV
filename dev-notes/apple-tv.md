@@ -42,9 +42,11 @@ Xcode only, so everything runs on the GitHub Mac runner
 - `appStoreBuild` stays true on Apple TV (same App Store rules).
 - `DeviceTypeService.isTelevision()` answers true on Apple TV (no Kotlin
   channel), so the app takes the Android TV layout.
-- For now Apple TV plays through the Android stack's Dart side
-  (`video_player_hdr` -> `VideoPlayerPlatform`) with `video_player_tvos`
-  (Apple's player: HLS and MP4, not raw .ts or MKV). Step 4 replaces it.
+- Player: media_kit (the computers' / iPhone's `DesktopPlayerScreen`
+  stack, non-touch layout) once libmpv loaded at startup
+  (`appleTvMediaKitReady`, main.dart). If it didn't, the Android stack's
+  Dart side (`video_player_hdr` -> `VideoPlayerPlatform`) with
+  `video_player_tvos` (Apple's player: HLS and MP4, not raw .ts or MKV).
 - A tvOS build loads only plugins with a `tvos:` entry; any other plugin
   throws `MissingPluginException` when called (the app's Kotlin channels,
   media_kit, flutter_inappwebview, file_selector). Ports in pubspec.yaml:
@@ -53,18 +55,51 @@ Xcode only, so everything runs on the GitHub Mac runner
   They declare only `tvos:`, so other platforms never load them.
 - Siri Remote: swipes = arrow keys (held = repeat ~80 ms), click = Enter,
   Menu = `popRoute` (Back), Play/Pause = mediaPlayPause. Long press on
-  Select is not documented: check the hold menus on a real box. Menu on the
-  top screen must exit to the Apple TV Home screen (App Review).
+  Select is not documented: check the hold menus on a real box.
+- Menu on the top screen must leave to the Apple TV Home screen (App
+  Review). The engine makes every Menu press Back, so `VesperViewController`
+  (tvos/Runner/AppDelegate.swift, set in Main.storyboard) lets a Menu press
+  go up the responder chain (the system then leaves the app) when Dart said
+  so ahead over `vespertv/tvos` (`services/apple_tv_menu.dart`): the TV home
+  reports after each build whether Back would exit (tabs column, nothing
+  above, no profile selector; `_reportAppleTvRoot`), any route push clears
+  it (`AppleTvMenu.observer`), and Back reaching a top screen anyway
+  (Sports Mode, Who's watching) arms the next Menu press for 10 s with a
+  hint (`AppExit.warm`). Not tried on a box yet: if `next?.pressesBegan`
+  doesn't leave, the fallback is the arm path only.
 
-## Player (step 4)
+## Player (libmpv)
 
-media_kit's iOS video code (media_kit_video `ios/Classes/plugin`: libmpv ->
-OpenGL ES -> CVPixelBuffer -> FlutterTexture, plus a software path) is the
-base: fork it with a `tvos:` entry. libmpv for tvOS from
-[MPVKit](https://github.com/mpvkit/MPVKit) (LGPL build; media-kit's
-libmpv-darwin-build has no tvOS). MPVKit says it is "only suitable for
-learning": pin one release. Fallback: AetherEngine (LGPL, FFmpeg +
-VideoToolbox, no libass).
+- `tools/tvos/build_mpv_framework.sh` (tvOS workflow, cached by the
+  script's hash): MPVKit 1.0.0's LGPL static tvOS libraries (libmpv, FFmpeg
+  8/9, libass, dav1d, libplacebo, MoltenVK, gnutls/openssl...) linked into
+  one dynamic `Mpv.framework` per slice (device arm64, simulator arm64),
+  `-force_load` libmpv, only `mpv_*` exported (54), ~32 MB each, as
+  `Mpv.xcframework`. media-kit's own libmpv builds have no tvOS.
+- `third_party/media_kit_video_tvos`: media_kit_video 1.3.1's iOS plugin
+  code unchanged (libmpv -> OpenGL ES -> CVPixelBuffer -> Flutter texture;
+  software rendering on the simulator) with a tvOS podspec vendoring the
+  framework and linking it into the pod itself (`OTHER_LDFLAGS`).
+- media_kit picks libmpv by `Platform.operatingSystem` (no `'tvos'`): the
+  Runner sets `LIBMPV_LIBRARY_PATH=Mpv.framework/Mpv` before the Dart VM
+  starts (AppDelegate `init`), which every lookup reads first;
+  `MediaKit.ensureInitialized(libmpv:)` gets it too.
+- CI smoke test `lib/tvos_player_smoke.dart` (`-t`, run by
+  `tools/tvos/sim_run.sh smoke`): HLS, raw .ts and MKV samples 25 s each,
+  player state + mpv warnings every 2 s, screenshots.
+- MPVKit calls itself "only suitable for learning": pinned to 1.0.0.
+  Fallback if it fails on a box: AetherEngine (LGPL, FFmpeg +
+  VideoToolbox, no libass).
+- Still to check on a real Apple TV: the OpenGL ES (hardware) path,
+  VideoToolbox decode, 4K HDR, memory. `newDesktopPlayer(bigCache:)` keeps
+  Apple TV at media_kit's 32 MiB cache like iPhone.
+
+## App icon and Top Shelf
+
+`assets/icon/gen_tvos_icons.py` (repo root) writes the layered App Icon
+(Small 400x240 and App Store Large 1280x768, @2x; Back = warm backdrop,
+Middle = gold glow, Front = V + star) and Top Shelf images (1920x720, wide
+2320x720, @2x) into `tvos/Runner/Assets.xcassets/AppIcon.brandassets`.
 
 ## Storage (done on the branch)
 
