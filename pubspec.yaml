@@ -100,6 +100,10 @@ dependencies:
   package_info_plus_tvos: ^0.0.2
   url_launcher_tvos: ^0.0.1
   video_player_tvos: ^0.0.1
+  # media_kit's video output on Apple TV + libmpv built on CI
+  # (third_party/media_kit_video_tvos/README.md).
+  media_kit_video_tvos:
+    path: third_party/media_kit_video_tvos
   # Apple TV storage (services/apple_tv_storage.dart) replaces the path and
   # settings stores; already in the tree through path_provider and
   # shared_preferences.

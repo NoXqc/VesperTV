@@ -29,15 +29,22 @@ bool get isDesktopTarget =>
 /// keeping the touch layout. Layout, window and mouse decisions stay on
 /// [isDesktop].
 ///
-/// Not on Apple TV ([isAppleTv]): media_kit has no tvOS build, so for now
-/// it takes the Android TV stack with Apple's player (video_player_tvos).
-bool get usesMediaKit => isDesktop || (Platform.isIOS && !isAppleTv);
+/// Apple TV ([isAppleTv]) too once its libmpv loaded at startup
+/// ([appleTvMediaKitReady]); without it, the Android TV stack with Apple's
+/// player (video_player_tvos), which can't open raw .ts or MKV.
+bool get usesMediaKit =>
+    isDesktop || (Platform.isIOS && (!isAppleTv || appleTvMediaKitReady));
+
+/// Apple TV: media_kit found its libmpv (`Mpv.framework`, built by the
+/// tvOS workflow: third_party/media_kit_video_tvos) at startup (main.dart).
+bool appleTvMediaKitReady = false;
 
 /// [usesMediaKit] by Flutter's target platform, for the code paths that
 /// already follow [isDesktopTarget] so widget tests pick either stack.
 bool get usesMediaKitTarget =>
     isDesktopTarget ||
-    (defaultTargetPlatform == TargetPlatform.iOS && !isAppleTv);
+    (defaultTargetPlatform == TargetPlatform.iOS &&
+        (!isAppleTv || appleTvMediaKitReady));
 
 /// iPhone / iPad by Flutter's target platform: the media_kit player with a
 /// touch layout instead of the computer's mouse bar.

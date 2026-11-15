@@ -147,7 +147,18 @@ Future<void> _main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  if (usesMediaKit) {
+  if (isAppleTv) {
+    // media_kit picks libmpv's file by Platform.operatingSystem and has no
+    // 'tvos' entry: give it the iOS framework path. If libmpv is missing,
+    // Apple TV keeps Apple's player (usesMediaKit stays false).
+    try {
+      MediaKit.ensureInitialized(libmpv: 'Mpv.framework/Mpv');
+      appleTvMediaKitReady = true;
+      debugPrint('MediaKit: libmpv loaded on Apple TV');
+    } catch (e) {
+      debugPrint('MediaKit: no libmpv on Apple TV, Apple player instead: $e');
+    }
+  } else if (usesMediaKit) {
     // Only ever used by DesktopPlayerScreen — see its own doc comment and
     // pubspec.yaml's media_kit comment. Every other platform keeps using
     // video_player_hdr exclusively and never touches this at all. macOS
