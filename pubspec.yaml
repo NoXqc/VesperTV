@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.68+802
+version: 1.0.68+805
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -165,6 +165,9 @@ flutter_launcher_icons:
 # matching what video_player_hdr: ^1.2.0 resolves to above) — needs manual
 # re-sync if that version ever changes.
 dependency_overrides:
+  # sqflite_tvos 0.0.2 + sqflite's privacy manifest (third_party/sqflite_tvos/VESPERTV.md).
+  sqflite_tvos:
+    path: third_party/sqflite_tvos
   # media_kit 1.2.6 + an Apple TV ('tvos') libmpv entry, nothing else
   # (third_party/media_kit/VESPERTV.md).
   media_kit:
