@@ -90,6 +90,16 @@ dependencies:
   # See lib/services/phone_pairing_service.dart.
   qr_flutter: ^4.1.0
   cryptography: ^2.9.0
+  # Apple TV (flutter-tvos engine, dev-notes/apple-tv.md): the tvOS halves
+  # of the plugins above. Each declares only a `tvos:` platform, so Android,
+  # iPhone and the computers never load them.
+  shared_preferences_tvos: ^0.0.2
+  path_provider_tvos: ^0.0.3
+  sqflite_tvos: ^0.0.2
+  wakelock_plus_tvos: ^0.0.1
+  package_info_plus_tvos: ^0.0.2
+  url_launcher_tvos: ^0.0.1
+  video_player_tvos: ^0.0.1
   flutter_localizations:
     sdk: flutter
 

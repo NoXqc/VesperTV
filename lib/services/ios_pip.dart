@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../models/channel.dart';
+import '../utils/desktop_platform.dart';
 
 /// iPhone / iPad picture-in-picture (`vespertv/pip`, `VesperPip` in
 /// `ios/Runner/AppDelegate.swift`). iOS only floats Apple's own player, so
@@ -19,8 +20,8 @@ class IosPip {
   /// seconds (0 for live).
   static void Function(bool restore, double position)? onStopped;
 
-  /// The PiP button shows on iOS only.
-  static bool get available => Platform.isIOS;
+  /// The PiP button shows on iPhone / iPad only (not Apple TV).
+  static bool get available => Platform.isIOS && !isAppleTv;
 
   static void _listen() {
     if (_listening) return;

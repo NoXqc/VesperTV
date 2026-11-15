@@ -28,16 +28,29 @@ bool get isDesktopTarget =>
 /// stack (`DesktopPlayerScreen`, `DesktopMiniPlayer`, Multiview) while
 /// keeping the touch layout. Layout, window and mouse decisions stay on
 /// [isDesktop].
-bool get usesMediaKit => isDesktop || Platform.isIOS;
+///
+/// Not on Apple TV ([isAppleTv]): media_kit has no tvOS build, so for now
+/// it takes the Android TV stack with Apple's player (video_player_tvos).
+bool get usesMediaKit => isDesktop || (Platform.isIOS && !isAppleTv);
 
 /// [usesMediaKit] by Flutter's target platform, for the code paths that
 /// already follow [isDesktopTarget] so widget tests pick either stack.
 bool get usesMediaKitTarget =>
-    isDesktopTarget || defaultTargetPlatform == TargetPlatform.iOS;
+    isDesktopTarget ||
+    (defaultTargetPlatform == TargetPlatform.iOS && !isAppleTv);
 
 /// iPhone / iPad by Flutter's target platform: the media_kit player with a
 /// touch layout instead of the computer's mouse bar.
-bool get isIosTarget => defaultTargetPlatform == TargetPlatform.iOS;
+bool get isIosTarget =>
+    defaultTargetPlatform == TargetPlatform.iOS && !isAppleTv;
+
+/// Apple TV, built with the community flutter-tvos engine. Its Dart VM
+/// reports `Platform.isIOS` (and Flutter's target platform iOS) too, so
+/// everything above that means "iPhone / iPad" excludes it. Read through
+/// `operatingSystem`: the engine's own `Platform.isTvOS` doesn't exist in
+/// the stock SDK this project analyses and tests with. Apple TV keeps the
+/// App Store rules ([appStoreBuild]) and uses the TV layout.
+bool get isAppleTv => Platform.operatingSystem == 'tvos';
 
 /// media_kit's `Video` widget pauses its player when the app goes to the
 /// background and never resumes it. On an iPhone, Home or the lock screen
@@ -47,4 +60,5 @@ bool get mediaKitPausesInBackground => !isIosTarget;
 
 /// No system Back button or key here (a computer, an iPhone): screens that
 /// rely on it show their own back arrow.
-bool get needsBackArrow => isDesktop || Platform.isIOS;
+/// Not on Apple TV: the Siri Remote's Back (Menu) button pops the route.
+bool get needsBackArrow => isDesktop || (Platform.isIOS && !isAppleTv);

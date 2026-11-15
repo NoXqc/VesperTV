@@ -620,6 +620,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.0"
+  package_info_plus_tvos:
+    dependency: "direct main"
+    description:
+      name: package_info_plus_tvos
+      sha256: "22b3c6c56c0283b915c1f9e78712a37808f79724a87d057856b4ea3e71f898b7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   path:
     dependency: "direct main"
     description:
@@ -668,6 +676,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
+  path_provider_tvos:
+    dependency: "direct main"
+    description:
+      name: path_provider_tvos
+      sha256: "0ace599821a8a283a79339cad41bcda12f7941d1f4bb0973d5d419b87e1fdb47"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.3"
   path_provider_windows:
     dependency: transitive
     description:
@@ -860,6 +876,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.2"
+  shared_preferences_tvos:
+    dependency: "direct main"
+    description:
+      name: shared_preferences_tvos
+      sha256: a7890624e9321fbc4a2567107eeda84fd40235be2521342257f3ed4ff5c769a7
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   shared_preferences_web:
     dependency: transitive
     description:
@@ -937,6 +961,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.2"
+  sqflite_tvos:
+    dependency: "direct main"
+    description:
+      name: sqflite_tvos
+      sha256: "813406594b2566571a8f9db744110fbc7b90c433bd258bc21d6fa5f85ddc022a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   sqlite3:
     dependency: transitive
     description:
@@ -1065,6 +1097,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
+  url_launcher_tvos:
+    dependency: "direct main"
+    description:
+      name: url_launcher_tvos
+      sha256: "2d5af4398b76a990e7efc263a32b662845b9f9d0a172e6f58f3b99d73e1a9929"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   url_launcher_web:
     dependency: transitive
     description:
@@ -1128,6 +1168,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.9.0"
+  video_player_tvos:
+    dependency: "direct main"
+    description:
+      name: video_player_tvos
+      sha256: "74966f0cac2aadd6d0b3f7f41ad17446ce7a3aa178ae90e72fb8e3b088e60587"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   video_player_web:
     dependency: transitive
     description:
@@ -1168,6 +1216,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.7.0"
+  wakelock_plus_tvos:
+    dependency: "direct main"
+    description:
+      name: wakelock_plus_tvos
+      sha256: eee98db65f84389fcd03c62e9ab122207b00929a244ea2c54f2dd43a905d32f0
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   web:
     dependency: transitive
     description:

@@ -51,7 +51,8 @@ Notes from 2026-11-06 (owner + Claude). Nothing here is built or decided yet.
 
 ## Apple TV
 
-Flutter has no official tvOS support. Out of reach for now.
+Flutter has no official tvOS support; the community flutter-tvos engine
+does. Plan and status: `dev-notes/apple-tv.md`.
 
 ## App Store rules that matter
 

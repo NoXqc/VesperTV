@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/l10n.dart';
+import '../../utils/desktop_platform.dart';
 
 /// One thing the recognizer reported ([VoiceInput.listen]).
 class VoiceEvent {
@@ -40,7 +41,8 @@ class VoiceInput {
   VoidCallback? onAssist;
 
   /// A platform with the voice bridge.
-  static bool get _native => Platform.isAndroid || Platform.isIOS;
+  static bool get _native =>
+      Platform.isAndroid || (Platform.isIOS && !isAppleTv);
 
   bool _handlerSet = false;
   void _ensureHandler() {
