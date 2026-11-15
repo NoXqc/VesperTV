@@ -100,6 +100,11 @@ dependencies:
   package_info_plus_tvos: ^0.0.2
   url_launcher_tvos: ^0.0.1
   video_player_tvos: ^0.0.1
+  # Apple TV storage (services/apple_tv_storage.dart) replaces the path and
+  # settings stores; already in the tree through path_provider and
+  # shared_preferences.
+  path_provider_platform_interface: ^2.1.0
+  shared_preferences_platform_interface: ^2.4.0
   flutter_localizations:
     sdk: flutter
 

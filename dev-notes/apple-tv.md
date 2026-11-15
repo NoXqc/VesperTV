@@ -66,11 +66,25 @@ libmpv-darwin-build has no tvOS). MPVKit says it is "only suitable for
 learning": pin one release. Fallback: AetherEngine (LGPL, FFmpeg +
 VideoToolbox, no libass).
 
-## Storage (step 5)
+## Storage (done on the branch)
 
-tvOS guarantees ~500 KB of NSUserDefaults; Caches (the guide and catalog
-databases, posters) can be purged. Keep logins / sources / profiles /
-settings small and in prefs; treat the databases as re-downloadable.
+A physical Apple TV lets apps write only to Caches and tmp (Documents is
+read-only; the simulator allows it, so only a box shows it), NSUserDefaults
+is meant for ~500 KB, and tvOS may empty Caches when space runs low while
+the app isn't running. `services/apple_tv_storage.dart`, installed by
+`AppLog.capture(setup:)` before the log file opens (Apple TV only):
+
+- `AppleTvPaths`: path_provider's Documents -> `Caches/Documents`,
+  Application Support -> `Caches/Support`. Every caller and plugin (catalog
+  DB, guide DB, Media Hub cache, backups, recordings.json, photos,
+  wallpapers, log) follows without changes. sqflite_tvos already keeps its
+  default databases path in Caches.
+- `AppleTvPrefsStore`: SharedPreferences in `Caches/Support/vesper_prefs.json`
+  (no size limit), plus a copy in NSUserDefaults
+  (`flutter.vesper_appletv_prefs_copy`) while the JSON is under 400 KB. The
+  file wins; the copy restores settings and logins when Caches was emptied.
+  Over 400 KB the copy is removed (cloud sync is then the way back).
+  `test/apple_tv_storage_test.dart`.
 
 ## Test box
 

@@ -28,6 +28,7 @@ import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
+import 'services/apple_tv_storage.dart';
 import 'services/app_exit.dart';
 import 'services/remote_buttons.dart';
 import 'services/startup_quiet.dart';
@@ -107,7 +108,15 @@ void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
 
 // AppLog keeps print/errors for Settings > Send log; the binding must be
 // initialized inside its zone (same zone as runApp).
-Future<void> main() => AppLog.capture(_main);
+Future<void> main() =>
+    AppLog.capture(_main, setup: isAppleTv ? _appleTvSetup : null);
+
+/// Apple TV: writable folders and settings storage before anything opens a
+/// file (`services/apple_tv_storage.dart`).
+Future<void> _appleTvSetup() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppleTvStorage.install();
+}
 
 Future<void> _main() async {
   PerfDiagnostics.markLaunch();

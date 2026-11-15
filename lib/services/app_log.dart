@@ -42,11 +42,16 @@ class AppLog {
 
   /// Runs [body] (the whole of `main`) with print and uncaught errors
   /// captured. `ensureInitialized` must run inside [body] (same zone as
-  /// `runApp`).
-  static Future<void> capture(Future<void> Function() body) async {
+  /// `runApp`). [setup] runs first, in the same zone, before the log file
+  /// opens (Apple TV moves the app's folders there: AppleTvStorage).
+  static Future<void> capture(
+    Future<void> Function() body, {
+    Future<void> Function()? setup,
+  }) async {
     final done = Completer<void>();
     runZonedGuarded(
       () async {
+        if (setup != null) await setup();
         await _openFile();
         final flutterError = FlutterError.onError;
         FlutterError.onError = (details) {
