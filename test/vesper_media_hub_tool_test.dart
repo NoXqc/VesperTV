@@ -95,7 +95,39 @@ class _Hub implements VesperHub {
         if (type != ArchiveType.movie &&
             'severance'.contains(query.toLowerCase()))
           show,
+        if (type != ArchiveType.series &&
+            'the odyssey'.contains(query.toLowerCase()))
+          ...odysseys,
       ];
+
+  // Three titles sharing a name and a year (owner, 2026-11-15).
+  final odysseys = [
+    HubTitle(
+        _addon.manifestUrl,
+        const ArchiveMeta(
+            id: 'tt33764258',
+            type: ArchiveType.movie,
+            name: 'The Odyssey',
+            year: '2026',
+            description: 'Odysseus makes the long journey home.',
+            cast: ['Matt Damon', 'Tom Holland', 'Anne Hathaway'],
+            director: ['Christopher Nolan'])),
+    HubTitle(
+        _addon.manifestUrl,
+        const ArchiveMeta(
+            id: 'tt40000001',
+            type: ArchiveType.movie,
+            name: 'The Odyssey',
+            year: '2026',
+            cast: ['Someone Else'])),
+    HubTitle(
+        _server.manifestUrl,
+        const ArchiveMeta(
+            id: 'tt40000002',
+            type: ArchiveType.movie,
+            name: 'the odyssey',
+            year: '2026')),
+  ];
 
   @override
   Future<HubTitle?> details(HubTitle title) async => title == show
@@ -327,5 +359,32 @@ void main() {
         'playback', jsonEncode({'maxHeight': 1080}));
     expect(
         hubBestStream(storage, _Hub().options)?.stream.name, contains('1080p'));
+  });
+
+  test('search and info tell apart titles sharing a name', () async {
+    final r = await box
+        .call('media_hub', {'action': 'search', 'query': 'the odyssey'});
+    final titles = (r['titles'] as List).cast<Map>();
+    expect(titles, hasLength(3));
+    expect(titles.first['cast'], contains('Matt Damon'));
+    expect(titles.first['director'], ['Christopher Nolan']);
+    expect(titles.first['imdb'], 'tt33764258');
+    final info = await box
+        .call('media_hub', {'action': 'info', 'ref': titles.first['ref']});
+    expect(info['description'], contains('Odysseus'));
+    expect(info['cast'], hasLength(3));
+  });
+
+  test('watchlist add by a shared name asks which one', () async {
+    var r =
+        await box.call('watchlist', {'action': 'add', 'name': 'The Odyssey'});
+    expect(r['added'], false);
+    final choose = (r['choose'] as List).cast<Map>();
+    expect(choose, hasLength(3));
+    expect(WatchList.instance.load(storage), isEmpty);
+    r = await box
+        .call('watchlist', {'action': 'add', 'ref': choose.first['ref']});
+    expect(r['added'], true);
+    expect(WatchList.instance.load(storage).single.title, 'The Odyssey');
   });
 }

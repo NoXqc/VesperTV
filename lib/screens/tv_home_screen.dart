@@ -7,7 +7,8 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/rendering.dart'
+    show RenderAbstractViewport, ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 import 'package:media_kit_video/media_kit_video.dart';
@@ -2451,19 +2452,21 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // already focused in the groups column (so returning to a previously-
     // browsed group still restores where you left off, same as before).
     if (target == 1 && _col1Scope.focusedChild == null) {
-      _firstGroupRowFocusNode.requestFocus();
+      _focusFirstGroupRow();
       return;
     }
     scope.requestFocus();
     // Safety net: a scope whose remembered child can't take focus any more
     // silently ignores this, and Back from the guide looked stuck (owner,
-    // Fire Stick, after toggling the full-video guide; not reproducible).
-    // Land on the column's first row instead.
+    // Fire Stick, after toggling the full-video guide; a user after the
+    // Playlists jump, LOG-34J43F: the remembered row had scrolled out of
+    // the lazy list). Land on the selected group's row, else the first.
     if (target == 1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _col1Scope.hasFocus || !_col2Scope.hasFocus) return;
-        _firstGroupRowFocusNode.requestFocus();
+        _refocusGroupsColumn();
       });
+      WidgetsBinding.instance.scheduleFrame();
     }
   }
 
@@ -4861,6 +4864,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       {required bool collapsed,
       required int rowsAbove,
       String? currentPlaylistId}) {
+    _jumpColumn = groups;
+    _jumpRowsAbove = rowsAbove;
     if (allGroups.map((g) => g.playlistId).toSet().length < 2) return null;
     return _SelectableRow(
       icon: Icons.playlist_play,
@@ -4963,59 +4968,150 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         return;
       }
     }
-    // Jump (a hidden playlist was just shown again first).
-    final stillHidden = storage.getHiddenPlaylistGroups(category);
-    final visible =
-        allGroups.where((g) => !stillHidden.contains(g.playlistId)).toList();
-    final visibleIds = <String>[];
-    for (final g in visible) {
-      if (!visibleIds.contains(g.playlistId)) visibleIds.add(g.playlistId);
-    }
-    final first = visible.firstWhere((g) => g.playlistId == id);
-    // One playlist divider sits above every playlist's run but the first.
+    // Jump (a hidden playlist was just shown again first) to its first
+    // group as the column lists it (Sort groups applies), once the column
+    // has rebuilt. It used the provider's order and skipped own groups: on
+    // a sorted or custom column the row was never built, nothing took
+    // focus, and the remote went dead (JcknDew, LOG-34J43F, 2026-11-15).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _jumpToGroupRow(first,
-          rowsBefore: rowsAbove + visible.indexOf(first),
-          dividersBefore: visibleIds.indexOf(id));
+      final first = _jumpColumn.where((g) => g.playlistId == id).firstOrNull;
+      if (first == null) {
+        _focusFirstGroupRow();
+        return;
+      }
+      _jumpToGroupRow(first);
     });
+  }
+
+  /// The groups column as last built, in its own order, and the rows above
+  /// its first group (fixed rows, own groups, the Playlists row). Set by
+  /// [_playlistsRow] on every build of either groups column.
+  List<M3uGroup> _jumpColumn = const [];
+  int _jumpRowsAbove = 0;
+
+  double get _groupDividerHeight =>
+      _compactUi ? 40.0 : (_largeUi ? 62.0 : 50.0);
+
+  /// Where [index] (in [_jumpColumn]) should scroll to sit one row below
+  /// the top. Measured from a built group row when there is one (exact),
+  /// else estimated from the top of the list.
+  double _groupRowOffset(int index) {
+    final column = _jumpColumn;
+    final dividers = List<int>.filled(column.length, 0);
+    for (var i = 1; i < column.length; i++) {
+      dividers[i] = dividers[i - 1] +
+          (column[i].playlistId != column[i - 1].playlistId ? 1 : 0);
+    }
+    final indexOf = <String, int>{
+      for (var i = 0; i < column.length; i++)
+        _groupKey(column[i].playlistId, column[i].title): i,
+    };
+    var rowHeight = 44.0;
+    final playlistsBox = _playlistsRowFocusNode.context?.findRenderObject();
+    if (playlistsBox is RenderBox && playlistsBox.hasSize) {
+      rowHeight = playlistsBox.size.height;
+    }
+    for (final entry in _GroupRowState.built.entries) {
+      final i = indexOf[entry.key];
+      if (i == null || !entry.value.mounted) continue;
+      final box = entry.value.context.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      final viewport = RenderAbstractViewport.maybeOf(box);
+      if (viewport == null) continue;
+      rowHeight = box.size.height;
+      final at = viewport.getOffsetToReveal(box, 0).offset;
+      return at +
+          (index - i) * rowHeight +
+          (dividers[index] - dividers[i]) * _groupDividerHeight -
+          rowHeight;
+    }
+    return (_jumpRowsAbove + index) * rowHeight +
+        dividers[index] * _groupDividerHeight -
+        rowHeight;
   }
 
   /// Scrolls the groups list so [group]'s row gets built, then focuses it
   /// ([_focusGroupKeyOnBuild]) and brings it near the top. The list is lazy
-  /// and has no fixed extent, so the offset is estimated from the measured
-  /// row height (the Playlists row is the same kind of row) plus the
-  /// dividers; the list's cache area absorbs the small error.
-  void _jumpToGroupRow(M3uGroup group,
-      {required int rowsBefore, required int dividersBefore}) {
-    final rowBox = _playlistsRowFocusNode.context?.findRenderObject();
-    final rowHeight =
-        rowBox is RenderBox && rowBox.hasSize ? rowBox.size.height : 44.0;
-    final dividerHeight = _compactUi ? 40.0 : (_largeUi ? 62.0 : 50.0);
-    if (_groupsScroll.hasClients) {
-      final estimate =
-          rowsBefore * rowHeight + dividersBefore * dividerHeight - rowHeight;
-      _groupsScroll.jumpTo(estimate < 0 ? 0 : estimate);
-    }
+  /// with rows of differing heights: the first scroll is an estimate, then
+  /// each frame re-measures from a row that did build until the target
+  /// builds. Gives up on the column's first row, never on no focus at all.
+  void _jumpToGroupRow(M3uGroup group) {
     final key = _groupKey(group.playlistId, group.title);
+    final index =
+        _jumpColumn.indexWhere((g) => _groupKey(g.playlistId, g.title) == key);
+    if (index < 0) {
+      _focusFirstGroupRow();
+      return;
+    }
+    _scrollGroupsTo(_groupRowOffset(index));
     setState(() => _focusGroupKeyOnBuild = key);
-    // Frame 1: the row builds and focuses itself; frame 2: position it.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_focusGroupKeyOnBuild == key) {
-          // Estimate missed (row never built): don't let it grab focus
-          // later out of nowhere.
-          setState(() => _focusGroupKeyOnBuild = null);
-          return;
-        }
+    _settleGroupJump(key, index, 6);
+  }
+
+  void _scrollGroupsTo(double offset) {
+    if (!_groupsScroll.hasClients) return;
+    final pos = _groupsScroll.position;
+    _groupsScroll.jumpTo(offset.clamp(0.0, pos.maxScrollExtent));
+  }
+
+  void _settleGroupJump(String key, int index, int triesLeft) {
+    void check() {
+      if (!mounted) return;
+      if (_focusGroupKeyOnBuild != key) {
+        // Focused itself: position it. Zero duration = jump (§10).
         final row = FocusManager.instance.primaryFocus?.context;
         if (row != null && row.mounted) {
-          // Zero duration = jump, never animate (CLAUDE.md §10).
           Scrollable.ensureVisible(row, alignment: 0.15);
         }
-      });
+        return;
+      }
+      if (triesLeft <= 0 || index >= _jumpColumn.length) {
+        // Don't let it grab focus later out of nowhere.
+        setState(() => _focusGroupKeyOnBuild = null);
+        _focusFirstGroupRow();
+        return;
+      }
+      _scrollGroupsTo(_groupRowOffset(index));
+      _settleGroupJump(key, index, triesLeft - 1);
+    }
+
+    // Frame 1: the row builds and focuses itself (its own post-frame
+    // callback); frame 2: check.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => check());
+      WidgetsBinding.instance.scheduleFrame();
     });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// The groups column's first row, scrolled to when it isn't built (a
+  /// lazy list drops rows scrolled far away: requestFocus did nothing).
+  void _focusFirstGroupRow() {
+    if (_firstGroupRowFocusNode.context != null) {
+      _firstGroupRowFocusNode.requestFocus();
+      return;
+    }
+    _scrollGroupsTo(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _firstGroupRowFocusNode.requestFocus();
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Back / Left into the groups column when its remembered row is gone
+  /// (scrolled out of the lazy list and disposed): the selected group's
+  /// row on Live TV, else the first row.
+  void _refocusGroupsColumn() {
+    final selected = _selectedGroup;
+    if (_tab == 'TV' && selected != null) {
+      final group = _jumpColumn.where((g) => g.title == selected).firstOrNull;
+      if (group != null) {
+        _jumpToGroupRow(group);
+        return;
+      }
+    }
+    _focusFirstGroupRow();
   }
 
   Future<void> _showLiveGroupSort() async {
@@ -5070,7 +5166,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
     final playlistsRow = _playlistsRow(allGroups, groups, playlist,
         collapsed: collapsed,
-        rowsAbove: 3 + (_showCatchupGroup ? 1 : 0) + (_showRecentGroup ? 1 : 0),
+        rowsAbove: 3 +
+            (_showCatchupGroup ? 1 : 0) +
+            (_showRecentGroup ? 1 : 0) +
+            playlist.userGroups.length,
         currentPlaylistId: currentPlaylistId);
 
     return Column(
@@ -7670,8 +7769,19 @@ class _GroupRowState extends State<_GroupRow> {
 
   static const _longPressDuration = Duration(milliseconds: 550);
 
+  /// Rows built right now, by their key (`_groupKey`): the Playlists jump
+  /// measures where a built row really sits to correct its scroll estimate.
+  static final Map<String, _GroupRowState> built = {};
+
+  String? get _rowKey => switch (widget.key) {
+        final ValueKey<String> k => k.value,
+        _ => null,
+      };
+
   @override
   void dispose() {
+    final key = _rowKey;
+    if (key != null && built[key] == this) built.remove(key);
     _longPressTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
@@ -7686,6 +7796,8 @@ class _GroupRowState extends State<_GroupRow> {
   @override
   void initState() {
     super.initState();
+    final key = _rowKey;
+    if (key != null) built[key] = this;
     _maybeFocusOnBuild();
   }
 
@@ -10102,6 +10214,18 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         widget.holdFocus?.requestFocus();
         shift(usual ? null : target, rowIndex,
             target == _floorToSlot(now) ? null : target);
+        return true;
+      }
+      // The live window was fixed when this guide mounted, and it only
+      // remounts with an hour left ([_checkWindowStale]): a guide left open
+      // for hours stopped an hour ahead (owner + user, 2026-11-15; Who's
+      // watching and back "fixed" it). A fresh window reaches further.
+      if (shift != null &&
+          widget.anchor == null &&
+          target.isBefore(now.add(_windowAfter))) {
+        widget.holdFocus?.requestFocus();
+        shift(null, rowIndex, target,
+            scrollTop: _gridVScroll.hasClients ? _gridVScroll.offset : null);
         return true;
       }
       return false;

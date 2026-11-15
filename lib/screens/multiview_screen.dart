@@ -493,6 +493,22 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     return KeyEventResult.handled;
   }
 
+  /// Header buttons: a focused one fills with the theme's accent and gets
+  /// its outline (the default focus tint was hard to see, user reports
+  /// 2026-11-15).
+  static ButtonStyle _headerButtonStyle(Color accent) => ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused)
+                ? accent.withValues(alpha: 0.3)
+                : null),
+        side: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused)
+                ? BorderSide(color: accent, width: 2)
+                : null),
+        overlayColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused) ? Colors.transparent : null),
+      );
+
   /// Add screen: a new empty screen, focused, with the channel picker open.
   /// Backing out of the picker takes the empty screen away again.
   Future<void> _addScreen() async {
@@ -1315,6 +1331,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // Below a phone's status bar (the back arrow sat under the clock,
     // owner 2026-11-02); the gradient still reaches the top edge.
     final inset = MediaQuery.paddingOf(context);
+    final buttonStyle =
+        _headerButtonStyle(Theme.of(context).colorScheme.primary);
     final header = Container(
       padding: EdgeInsets.fromLTRB(
           4 + inset.left, 4 + inset.top, 12 + inset.right, 16),
@@ -1347,6 +1365,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           children: [
             IconButton(
               tooltip: tr('Back'),
+              style: buttonStyle,
               focusNode: _headerFirst,
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => unawaited(_leave()),
@@ -1359,6 +1378,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             const SizedBox(width: 12),
             if (!_portrait && _fullscreen == null)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _toggleMainLayout,
                 icon: Icon(_main ? Icons.view_quilt : Icons.grid_view,
                     color: Colors.white, size: 18),
@@ -1367,6 +1387,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               ),
             if (_main && _canSwap && _fullscreen == null)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _enterSwapMode,
                 icon:
                     const Icon(Icons.swap_vert, color: Colors.white, size: 18),
@@ -1375,6 +1396,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               ),
             if (_slots < _maxSlots && _fullscreen == null && !_main)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _addScreen,
                 icon: const Icon(Icons.add_box_outlined,
                     color: Colors.white, size: 18),
@@ -1794,6 +1816,7 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
                 ? widget.controller!.value.aspectRatio
                 : 16 / 9) *
             widget.widthBoost;
+    final accent = Theme.of(context).colorScheme.primary;
     return Align(
       alignment: widget.alignment,
       child: _MaybeAspect(
@@ -1807,15 +1830,26 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
             if (f) widget.onFocused?.call();
           },
           child: Container(
+            // Focus in the theme's accent, thicker + a glow: a white
+            // 3 px line was hard to see over video (user reports,
+            // 2026-11-15). The audio screen keeps its amber line.
             decoration: BoxDecoration(
               border: widget.bare
                   ? null
                   : Border.all(
-                      color: widget.active
-                          ? Colors.amber
-                          : (_focused ? Colors.white : Colors.white24),
-                      width: widget.active || _focused ? 3 : 1,
+                      color: _focused
+                          ? accent
+                          : (widget.active ? Colors.amber : Colors.white24),
+                      width: _focused ? 4 : (widget.active ? 3 : 1),
                     ),
+              boxShadow: _focused && !widget.bare
+                  ? [
+                      BoxShadow(
+                          color: accent.withValues(alpha: 0.55),
+                          blurRadius: 14,
+                          spreadRadius: 1),
+                    ]
+                  : null,
               borderRadius: BorderRadius.circular(widget.bare ? 0 : 8),
             ),
             clipBehavior: Clip.antiAlias,

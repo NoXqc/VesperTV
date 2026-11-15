@@ -1172,7 +1172,9 @@ final List<VesperTool> vesperTools = [
         'from search or from this list, a name, or "current" for what is '
         'playing), or clear it. Titles come from the IPTV playlists or from '
         'Media Hub (source: "media_hub"); by name, the playlists are tried '
-        'first, then Media Hub. Use it for lists like "a movie night list for '
+        'first, then Media Hub. Several Media Hub titles with that name = '
+        'a choose list instead (add the right one by ref; media_hub info '
+        'shows cast and director). Prefer a ref from search. Use it for lists like "a movie night list for '
         'Friday": search, then add each pick with a short note.',
     schema: {
       'type': 'object',
@@ -1248,6 +1250,26 @@ final List<VesperTool> vesperTools = [
             (source == 'iptv'
                 ? (await box.findLive(name, limit: 1)).firstOrNull
                 : null);
+      }
+      if (item == null &&
+          action == 'add' &&
+          name.isNotEmpty &&
+          source != 'iptv' &&
+          box.hub != null &&
+          !box.prefs.hideArchive) {
+        // Same name and year from several sources or productions: never
+        // add one at random; the AI compares them (cast, director) first.
+        final same = await _sameNamedHubTitles(box.hub!, name);
+        if (same.isNotEmpty) {
+          return {
+            'added': false,
+            'choose': [for (final t in same) _describeHubTitle(box, t)],
+            'note': '${same.length} Media Hub titles are called '
+                '"${same.first.meta.name}". Pick the right one (media_hub '
+                'info on a ref shows its cast and director), then add it by '
+                'ref.',
+          };
+        }
       }
       if (item == null &&
           name.isNotEmpty &&
