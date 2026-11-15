@@ -121,6 +121,23 @@ the app isn't running. `services/apple_tv_storage.dart`, installed by
   Over 400 KB the copy is removed (cloud sync is then the way back).
   `test/apple_tv_storage_test.dart`.
 
+## TestFlight (prepared, not run yet)
+
+Run "tvOS build" by hand with **testflight** ticked (Actions tab): a release
+build staged right before a signed `xcodebuild archive`, exported with
+`tvos/ExportOptions.plist` (upload), through the same four secrets as the
+iPhone job. Before the first run:
+
+1. App Store Connect > VesperTV > add the **tvOS** platform (same bundle id
+   `app.vespertv.player`, one listing for iPhone, iPad and Apple TV).
+2. Bump `+N` in pubspec.yaml if this version's Apple TV train has seen it.
+3. Internal TestFlight only: flutter-tvos signs its engine with an Apple
+   Distribution certificate from the keychain, which this runner doesn't
+   have (Xcode cloud-signs through the API key). External testers and App
+   Review reject an unsigned engine (ITMS-91065). For those, export the
+   Apple Distribution certificate as a .p12 into two more secrets and import
+   it into a temporary keychain before the build.
+
 ## Test box
 
 Apple TV 4K 2nd gen (2021) or 3rd gen (2022). Not the Apple TV HD

@@ -13,11 +13,24 @@
 # - Player smoke test: lib/tvos_player_smoke.dart plays an HLS, a raw .ts and
 #   an MKV sample through media_kit on the simulator (screenshots + log).
 # - Compiles a release (AOT) device build without signing, to catch what
-#   only breaks there. Not installable; TestFlight comes later.
+#   only breaks there. Not installable.
+# - By hand with "testflight" ticked: instead of the simulator steps, a signed
+#   release archive uploaded to App Store Connect, like the iPhone's
+#   (ios-build.yml): same four secrets, Xcode signs through the API key.
+#   Apple TV must first be added as a platform on the VesperTV app record in
+#   App Store Connect. flutter-tvos can't sign its engine without an Apple
+#   Distribution certificate in the keychain (cloud signing has none here):
+#   internal TestFlight works, external testers / review would fail
+#   (ITMS-91065) until that certificate is imported on the runner.
 name: tvOS build
 
 on:
   workflow_dispatch:
+    inputs:
+      testflight:
+        description: Sign and upload to TestFlight (Apple TV)
+        type: boolean
+        default: false
   push:
     branches: [claude/tvos-test]
 
@@ -87,6 +100,7 @@ jobs:
           done
 
       - name: Build the app for the Apple TV simulator
+        if: ${{ !inputs.testflight }}
         shell: bash
         env:
           LANG: en_US.UTF-8
@@ -97,10 +111,11 @@ jobs:
           exit $rc
 
       - name: Run the app on the Apple TV simulator
+        if: ${{ !inputs.testflight }}
         run: bash tools/tvos/sim_run.sh app 15 45 90
 
       - name: Build the player smoke test
-        if: always()
+        if: ${{ always() && !inputs.testflight }}
         shell: bash
         env:
           LANG: en_US.UTF-8
@@ -109,17 +124,60 @@ jobs:
           flutter-tvos build tvos --simulator --debug -t lib/tvos_player_smoke.dart 2>&1 | tee out/build-smoke.log | tail -5
 
       - name: Run the player smoke test (HLS, .ts, MKV)
-        if: always()
+        if: ${{ always() && !inputs.testflight }}
         run: bash tools/tvos/sim_run.sh smoke 12 20 37 45 62 70 80
 
       - name: Release device build (unsigned compile check)
-        if: always()
+        if: ${{ always() && !inputs.testflight }}
         shell: bash
         env:
           LANG: en_US.UTF-8
         run: |
           set -o pipefail
           flutter-tvos build tvos --release --no-codesign 2>&1 | tee out/build-release.log | tail -5
+
+      # ---- Signed upload (TestFlight) ----------------------------------------
+      # Each upload needs a build number App Store Connect hasn't seen for
+      # this version on Apple TV: the +N in pubspec.yaml.
+      - name: Signed archive and upload to App Store Connect
+        if: ${{ inputs.testflight }}
+        shell: bash
+        env:
+          LANG: en_US.UTF-8
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -o pipefail
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY TEAM_ID; do
+            [ -n "${!v}" ] || { echo "Missing secret for $v (dev-notes/ios.md, TestFlight)"; exit 1; }
+          done
+          key="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY" > "$key"
+          auth=(-allowProvisioningUpdates
+                -authenticationKeyPath "$key"
+                -authenticationKeyID "$ASC_KEY_ID"
+                -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          # The Xcode project builds no Dart: it embeds what the last
+          # flutter-tvos build staged in tvos/Flutter, so the release build
+          # runs right before the archive (flutter-tvos doc/publish-app.md).
+          flutter-tvos build tvos --release --no-codesign 2>&1 | tee out/build-release.log
+          xcodebuild -workspace tvos/Runner.xcworkspace -scheme Runner \
+            -configuration Release -sdk appletvos -destination 'generic/platform=tvOS' \
+            -archivePath "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            "${auth[@]}" archive > out/archive.log 2>&1 || true
+          grep -E "error:|ARCHIVE" out/archive.log || true
+          [ -d "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" ] || { tail -60 out/archive.log; exit 1; }
+          cp tvos/ExportOptions.plist "$RUNNER_TEMP/ExportOptions.plist"
+          plutil -replace teamID -string "$TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          # destination=upload: the export sends the build to App Store Connect.
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            "${auth[@]}" 2>&1 | tee out/export.log
+          rm -f "$key"
 
       - uses: actions/upload-artifact@v4
         if: always()
