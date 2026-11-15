@@ -306,8 +306,8 @@ fill in my missing EPG on playlist XYZ", or fill playlist B's gaps from playlist
   links (before, after) per channel + extra guides (before, after); undo keeps links changed since.
 - Test seams: `EpgService.debugSetSourceChannels`; `refreshAll` does nothing without a sources provider (tests).
 - Tests: `test/guide_matching_test.dart`, `test/epg_matching_tool_test.dart`.
-- Not done: the relay's `INSTRUCTIONS` (VPS, `tools/pair_relay/ai_link.py`) still only name `playlist_editor`; the
-  tool description and the overview topic cover it. AI apps cache the tool list: reconnect after updating.
+- Relay `INSTRUCTIONS` (`tools/pair_relay/ai_link.py`) name playlist_editor, epg_matching and my_groups since
+  2026-11-14 (deployed on the VPS that day, backup `ai_link.py.bak.<timestamp>`, only pair-relay restarted). AI apps cache the tool list: reconnect after updating.
 
 ## Catch-up with recent app changes (Claude, 2026-11-14, branch `claude/ai-catchup`, unreleased)
 

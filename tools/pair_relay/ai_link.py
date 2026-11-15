@@ -64,7 +64,10 @@ INSTRUCTIONS = (
     "tools act on the viewer's TV right now: search before playing, keep "
     "messages on the TV short. Plays and changes may need the viewer to "
     "press OK on the TV. Before cleaning up or editing a playlist, call "
-    "vesper_help with topic playlist_editor (rules, limits, undo)."
+    "vesper_help with topic playlist_editor (rules, limits, undo). TV guides "
+    "(EPG links, a playlist's extra guides and their order, filling missing "
+    "guide data) are tool epg_matching: read vesper_help topic epg_matching "
+    "first. Moving or copying channels into groups is tool my_groups."
 )
 
 
