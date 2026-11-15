@@ -31,7 +31,9 @@ VesperTV tools act on the viewer's TV right now.
   fallbacks), every change undoable. Read topic "playlist_editor" first.
 - epg_matching: fill in missing TV guide data: add an XMLTV guide link (or
   another playlist's guide) to a playlist, then link the channels without
-  guide data to it, every change undoable. Read topic "epg_matching" first.
+  guide data to it; add, remove and reorder a playlist's guides (more
+  guides per playlist, loaded in order), every change undoable. Read topic
+  "epg_matching" first.
 - settings: read or change the app's settings (playback, startup, look and
   language, guide, tabs, Sports Trak); clear histories (searches and
   channels, Continue Watching, Media Hub, the watch list); update_guide
@@ -46,7 +48,10 @@ PLAYLIST EDITOR (tool playlist_editor)
 What it edits: the TV's editor layer over each playlist (the same one as
 Settings > Playlists & sources > Playlist editor on the TV and its phone/PC
 page). The provider's playlist is never changed. Live TV channels only (not
-movies / shows). Edits are per viewer profile.
+movies / shows). Edits are per viewer profile. Not here: a playlist's TV
+guides (EPG links, More guides and their order, channel guide links) are
+tool epg_matching; moving or copying channels into another group (own or
+any playlist's) is tool my_groups.
 
 Always:
 1. Look first: action "list" (rules, counts, fallbacks, recent AI changes)
@@ -139,10 +144,20 @@ the same as Settings > EPG > channel matching on the TV (per playlist, the
 same for every viewer). The provider's playlist is never changed.
 
 Guides: each playlist has its own guide (n 1, "Main guide") and up to five
-extra guides ("Extra guide 1".."5"). An XMLTV link the viewer pastes (EPG
-providers give one, .xml or .xml.gz) is added with add_guide. Links can
-only point at a channel of the playlist's guides; link adds another
-playlist's guide by itself when a link needs it.
+extra guides ("Extra guide 1".."5", the TV's Settings > EPG > More guides).
+An XMLTV link the viewer pastes (EPG providers give one, .xml or .xml.gz)
+is added with add_guide, at the end. Links can only point at a channel of
+the playlist's guides; link adds another playlist's guide by itself when a
+link needs it.
+
+Order = priority: the guides load in status order and a channel the first
+guide fills keeps that guide's programmes; a later guide only fills the
+channels still empty (no mixing of two schedules on one row). So a better
+guide for channels that already have (poor or wrong) data goes above the
+guide that fills them now: move_guide. status shows filled = how many
+channels each guide gave programmes to in the last update. The playlist's
+own guide always loads first; when it is the poor one, link those channels
+to the extra guide's ids instead (link).
 
 Typical request: "here is my EPG link, fill in the missing guide on
 playlist XYZ":
@@ -170,7 +185,8 @@ playlist XYZ":
 Actions
 - status [playlist]: guide_updating, guide_updated, per playlist: guides
   (n, name, host, channels = how many channels that guide lists; 0 = not
-  loaded in this app run yet), live_channels, without_guide, linked,
+  loaded in this app run yet, filled = channels it gave programmes to in
+  the last update), live_channels, without_guide, linked,
   linked_automatically; ai_changes (latest 10, with ids).
 - suggest playlist [from_playlist] [group] [query] [show] [offset] [limit]:
   channels shown in Live TV with no guide data now (dividers and dated
@@ -184,6 +200,9 @@ Actions
   updates the guide. At most five extra guides per playlist.
 - remove_guide playlist guide: removes extra guide n (from status). The
   playlist's own guide (n 1) can't be removed here.
+- move_guide playlist guide to [steps]: moves extra guide n to top,
+  bottom, up / down (steps) or a position n (2 = right after the own
+  guide). The guide reloads with the new order about 20 s later.
 - link playlist sure true [group] [query] [from_playlist]: links every sure
   suggestion. link links [{channel_id, guide_id}]: those (guide_id from
   suggest / find_guide of that playlist, or of from_playlist). Channels

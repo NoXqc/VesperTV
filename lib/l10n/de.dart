@@ -3743,4 +3743,9 @@ const Map<String, String> kDe = {
       "Ein schlichter IPTV-Player: der klassische kompakte Guide, einklappende Gruppen, keine Verfeinerte Optik und kein Start, keine Profile, Sports Trak oder Media Hub. Ausschalten stellt alles wieder her. Tabs lassen sich auch einzeln wieder einschalten.",
   "Removes the Home tab.":
       "Entfernt den Tab Start.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Start ausblenden",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Eine KI-App möchte die Reihenfolge der TV-Guides von {playlist} ändern.",
 };

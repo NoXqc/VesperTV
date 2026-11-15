@@ -3802,4 +3802,9 @@ const Map<String, String> kEl = {
       "Ένα απλό πρόγραμμα IPTV: ο κλασικός συμπαγής οδηγός, ομάδες που κλείνουν, χωρίς Εκλεπτυσμένο φινίρισμα και χωρίς Αρχική, προφίλ, Sports Trak ή Media Hub. Απενεργοποιήστε το για να επιστρέψουν όλα όπως ήταν. Οι καρτέλες μπορούν επίσης να ενεργοποιηθούν ξανά μία μία.",
   "Removes the Home tab.":
       "Αφαιρεί την καρτέλα Αρχική.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Απόκρυψη Αρχικής",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει τη σειρά των οδηγών TV του {playlist}.",
 };

@@ -3434,4 +3434,9 @@ const Map<String, String> kPl = {
       "Prosty odtwarzacz IPTV: klasyczny kompaktowy przewodnik, zwijane grupy, bez Dopracowanego wykończenia i bez Startu, profili, Sports Trak ani Media Hub. Wyłącz, aby przywrócić wszystko jak było. Karty można też włączać ponownie pojedynczo.",
   "Removes the Home tab.":
       "Usuwa kartę Start.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Ukryj Start",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Aplikacja AI chce zmienić kolejność przewodników TV playlisty {playlist}.",
 };

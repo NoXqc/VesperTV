@@ -3840,4 +3840,9 @@ const Map<String, String> kEs = {
       "Un reproductor IPTV sencillo: la guía clásica compacta, grupos que se pliegan, sin Acabado refinado y sin Inicio, perfiles, Sports Trak ni Media Hub. Desactívalo para dejarlo todo como estaba. Las pestañas también se pueden volver a activar una a una.",
   "Removes the Home tab.":
       "Quita la pestaña Inicio.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Ocultar Inicio",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Una app de IA quiere cambiar el orden de las guías de TV de {playlist}.",
 };

@@ -571,6 +571,11 @@ class EpgService extends ChangeNotifier {
   /// this run ([_refreshOne]'s `covered`).
   final Map<String, Set<String>> _filledBySource = {};
 
+  /// How many channels guide [url] filled in its last refresh this run
+  /// (null = not refreshed yet). A later guide only fills the channels the
+  /// guides before it left empty.
+  int? filledCount(String url) => _filledBySource[url]?.length;
+
   /// Transparently decompresses gzip — plenty of third-party XMLTV sources
   /// (large ones especially) are served as `.xml.gz` to save bandwidth,
   /// and a plain file host (unlike a real web server) commonly serves that

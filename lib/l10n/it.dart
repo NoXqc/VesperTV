@@ -3847,4 +3847,9 @@ const Map<String, String> kIt = {
       "Un lettore IPTV semplice: la guida classica compatta, gruppi che si richiudono, niente Finitura raffinata e niente Home, profili, Sports Trak o Media Hub. Disattivalo per rimettere tutto com'era. Le schede si possono anche riattivare una alla volta.",
   "Removes the Home tab.":
       "Rimuove la scheda Home.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Nascondi Home",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Un'app di IA vuole cambiare l'ordine delle guide TV di {playlist}.",
 };

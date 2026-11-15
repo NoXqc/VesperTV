@@ -309,6 +309,32 @@ fill in my missing EPG on playlist XYZ", or fill playlist B's gaps from playlist
 - Not done: the relay's `INSTRUCTIONS` (VPS, `tools/pair_relay/ai_link.py`) still only name `playlist_editor`; the
   tool description and the overview topic cover it. AI apps cache the tool list: reconnect after updating.
 
+## Catch-up with recent app changes (Claude, 2026-11-14, branch `claude/ai-catchup`, unreleased)
+
+Owner: "look through our recent changes and apply what's missing to our AI MCP connector (the playlist editor's
+multiple EPG sources isn't part of its functions, and maybe more)". Swept the commits since the tools were last
+touched (+739..+802):
+- **More guides / guide priority (+787):** guides load in order and an earlier one keeps the channels it fills
+  (`EpgService._runRefresh` `covered`). `epg_matching` gains `move_guide` (guide n, to top / bottom / up / down /
+  position; the own guide stays first, TV confirm, undoable) and `status` shows each guide's `filled` (new
+  `EpgService.filledCount`) + an `order` note. `revertGuides` now restores the whole old list when the extras are
+  still exactly as the change left them (a pure reorder had no add / remove to undo). The tool description,
+  overview and `playlist_editor` (description + manual) point to epg_matching for guides, so "add a second EPG to
+  playlist X" finds it.
+- **Editor Move / Copy to group (+c464dcc):** `my_groups` add takes `playlist` (a provider group of any enabled
+  playlist, by its title) and `copy: true` (`PlaylistManager.placeChannels`); remove = `unplaceChannels` (moves to
+  provider groups and copies too), or with `group` only that copy (`removeCopyFrom`); move takes `group` for a copy
+  and finds a channel moved into another playlist's group.
+- **Settings (+749..+799):** `minimalist`, `hide_home`, `keep_groups_open`, `groups_follow_focus`, `preview_badges`,
+  `panel_keep_open`, `panel_zap_on_move`, `catchup_keep_playing`, `redzone_button`, `goal_alert_delay` (0 / 15 / 30
+  / 60; `_AiSetting.shown` names "{n} seconds" in the TV's confirm). New TV texts in 6 languages: "Hide Home", the
+  guide-order confirm.
+- Tests: epg_matching (reorder + undo), my_groups (copy / move into a provider group), settings (the new keys,
+  Minimalist on/off restores).
+- Not done: mark movies / shows watched (the poster hold menu, +780: `title_hold_menu.dart` helpers need a
+  BuildContext; would need a VesperHost method), Multiview (recordings beside live, +794), Media Hub Sort / Filter
+  and Expand collection (UI only). AI apps must reconnect the connector (with VesperTV open) to see the new actions.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by
