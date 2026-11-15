@@ -61,7 +61,8 @@ class _SmokeApp extends StatefulWidget {
 }
 
 class _SmokeAppState extends State<_SmokeApp> {
-  final _player = Player();
+  final _player = Player(
+      configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
   late final _controller = VideoController(_player);
   int _index = 0;
   String _error = '';
@@ -71,6 +72,8 @@ class _SmokeAppState extends State<_SmokeApp> {
   @override
   void initState() {
     super.initState();
+    _player.stream.log.listen((l) =>
+        debugPrint('Smoke mpv: [${l.prefix}] ${l.level}: ${l.text.trim()}'));
     _player.stream.error.listen((e) {
       debugPrint('Smoke: ${_samples[_index].$1} error: $e');
       setState(() => _error = e);

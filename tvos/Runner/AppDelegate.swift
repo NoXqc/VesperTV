@@ -3,6 +3,14 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  override init() {
+    // media_kit finds libmpv by Platform.operatingSystem and has no 'tvos'
+    // entry; every lookup (media_kit_video's too) reads this variable first.
+    // Set before the Dart VM starts. third_party/media_kit_video_tvos.
+    setenv("LIBMPV_LIBRARY_PATH", "Mpv.framework/Mpv", 1)
+    super.init()
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
