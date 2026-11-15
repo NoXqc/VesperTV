@@ -300,6 +300,24 @@ const Map<String, String> kEs = {
   'Don\'t show this again': "No volver a mostrar",
   'OK': "OK",
   'Couldn\'t start that channel': "No se pudo iniciar ese canal",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Este dispositivo no puede decodificar tantas pantallas Full HD a la vez. Cierra una pantalla o elige una versión HD o SD de un canal.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Con 3 o 4 pantallas, los canales en 720p van más fluidos.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "La pantalla {n} pasa a una copia en 720p: {name}",
+  'Multiview frame saver':
+      "Ahorro de fotogramas en Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Las pantallas de Multiview sin sonido omiten un fotograma de cada dos (un canal de 50 fps se ve a 25), así el dispositivo puede decodificar más pantallas a la vez. La pantalla con sonido siempre muestra todos los fotogramas. Auto: solo cuando el dispositivo no da abasto.",
+  'Always':
+      "Siempre",
+  'Auto (on)':
+      "Auto (activo)",
+  'Frame saver':
+      "Ahorro de fotogramas",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Ahorro de fotogramas activo: las pantallas sin sonido omiten un fotograma de cada dos para que el dispositivo dé abasto.",
   'Full screen': "Pantalla completa",
   'Windowed': "En ventana",
   '4 screens': "4 pantallas",

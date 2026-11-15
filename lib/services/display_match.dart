@@ -31,9 +31,13 @@ class DisplayMatch {
 
   /// Called once the main player started [c]; [isCurrent] says whether it
   /// is still the playing one (a channel change cancels the match).
+  /// [rateOnly]: Multiview's screen with the sound sets the refresh rate but
+  /// never the resolution (a small screen's 720p isn't the TV's picture).
   static Future<void> start(StorageService storage, VideoPlayerHdrController c,
-      bool Function() isCurrent) async {
+      bool Function() isCurrent,
+      {bool rateOnly = false}) async {
     if (!enabled(storage)) return;
+    if (rateOnly && !storage.getMatchFrameRate()) return;
     try {
       final id = SubtitleTracks.playerIdOf(c);
       final wantRate = storage.getMatchFrameRate();
@@ -71,7 +75,7 @@ class DisplayMatch {
         'height': height,
         'rate': storage.getMatchFrameRate(),
         'only5060': storage.getMatch5060Only(),
-        'resolution': storage.getMatchResolution(),
+        'resolution': !rateOnly && storage.getMatchResolution(),
       });
       if (mode != null && mode != 'same') _requested = true;
       debugPrint('DisplayMatch: video ${width}x$height '

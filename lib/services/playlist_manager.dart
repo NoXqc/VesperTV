@@ -23,6 +23,7 @@ import 'local_playlist_files.dart';
 import 'tmdb_enrichment_service.dart';
 import 'user_groups.dart';
 import 'channel_copy_fallback.dart';
+import 'playlist_edits.dart';
 import 'perf_diagnostics.dart';
 
 /// Holds every playlist's parsed catalog, group visibility, and the
@@ -1233,6 +1234,40 @@ class PlaylistManager extends ChangeNotifier {
       }
     }
     return out;
+  }
+
+  /// Multiview's lighter copies (`MultiviewScreen._lighterCopy`): [channel]'s
+  /// quality copies ([channelCopyKey]), its own playlist first, then the
+  /// other enabled playlists, each with what it was last measured at (the
+  /// editor's stream test or a Multiview screen; null = never measured).
+  /// Names can't be trusted for this: on one provider "FOX NEWS HD" was
+  /// 720p but "BBC NEWS HD" 1080p and "TSN 2 RAW" 368p (2026-11-15).
+  List<(Channel, ProbeResult?)> measuredCopiesOf(Channel channel) {
+    final own = _sessionFor(channel.playlistId);
+    final out = <(Channel, ProbeResult?)>[];
+    final seen = <String>{channel.url};
+    for (final s in [
+      if (own != null) own,
+      for (final o in _enabledSessionsSortedFor('tv'))
+        if (!identical(o, own)) o,
+    ]) {
+      for (final c in ChannelCopyFallback.copiesOf(channel, s.allLiveChannels)) {
+        if (!seen.add(c.url)) continue;
+        final p = s.edits.probes[c.rawId];
+        out.add((c, p != null && !p.isStale ? p : null));
+      }
+    }
+    return out;
+  }
+
+  /// Saves what [channel] really played at (a Multiview screen, a copy
+  /// test), beside the playlist editor's own stream tests. Written straight
+  /// to storage: re-applying the edits would redo every channel's name.
+  Future<void> recordMeasured(Channel channel, ProbeResult r) async {
+    final s = _sessionFor(channel.playlistId);
+    if (s == null) return;
+    s.edits.probes[channel.rawId] = r;
+    await _storage.setPlaylistEditsJson(s.profile.id, s.edits.encode());
   }
 
   bool _merging = false;

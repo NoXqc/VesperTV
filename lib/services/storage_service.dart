@@ -529,6 +529,13 @@ class StorageService {
   Future<void> setMultiviewHideTips(bool value) =>
       _prefs.setBool(AppConstants.keyMultiviewHideTips, value);
 
+  /// Multiview's frame saver (device-only): 'auto' = only when the box can't
+  /// decode every screen, 'always', 'off'.
+  String getMultiviewFrameSaver() =>
+      _prefs.getString(AppConstants.keyMultiviewFrameSaver) ?? 'auto';
+  Future<void> setMultiviewFrameSaver(String value) =>
+      _prefs.setString(AppConstants.keyMultiviewFrameSaver, value);
+
   /// Settings > General: open the last live channel fullscreen right after
   /// the splash (Android; Windows always does). Off = the "Hold > to resume"
   /// pill only.

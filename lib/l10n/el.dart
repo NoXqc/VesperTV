@@ -296,6 +296,24 @@ const Map<String, String> kEl = {
   "Don't show this again": "Να μην εμφανιστεί ξανά",
   "OK": "OK",
   "Couldn't start that channel": "Δεν ήταν δυνατή η έναρξη του καναλιού",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Αυτή η συσκευή δεν μπορεί να αποκωδικοποιήσει τόσες οθόνες Full HD ταυτόχρονα. Κλείστε μια οθόνη ή επιλέξτε μια έκδοση HD ή SD ενός καναλιού.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Με 3 ή 4 οθόνες, τα κανάλια 720p παίζουν πιο ομαλά.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Η οθόνη {n} παίζει τώρα ένα αντίγραφο 720p: {name}",
+  'Multiview frame saver':
+      "Εξοικονόμηση καρέ Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Οι οθόνες Multiview χωρίς ήχο παραλείπουν ένα καρέ στα δύο (ένα κανάλι 50 fps παίζει στα 25), ώστε η συσκευή να αποκωδικοποιεί περισσότερες οθόνες ταυτόχρονα. Η οθόνη με τον ήχο δείχνει πάντα όλα τα καρέ. Αυτόματο: μόνο όταν η συσκευή δεν προλαβαίνει.",
+  'Always':
+      "Πάντα",
+  'Auto (on)':
+      "Αυτόματο (ενεργό)",
+  'Frame saver':
+      "Εξοικονόμηση καρέ",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Εξοικονόμηση καρέ ενεργή: οι οθόνες χωρίς ήχο παραλείπουν ένα καρέ στα δύο για να προλαβαίνει η συσκευή.",
   "Full screen": "Πλήρης οθόνη",
   "Windowed": "Σε παράθυρο",
   "4 screens": "4 οθόνες",
