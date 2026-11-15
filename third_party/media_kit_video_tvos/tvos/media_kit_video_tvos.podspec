@@ -29,5 +29,8 @@ Pod::Spec.new do |s|
     'DEFINES_MODULE'               => 'YES',
     'GCC_WARN_INHIBIT_ALL_WARNINGS' => 'YES',
     'GCC_PREPROCESSOR_DEFINITIONS' => '"$(inherited)" GL_SILENCE_DEPRECATION COREVIDEO_SILENCE_GL_DEPRECATION',
+    # The vendored framework is only linked into the app by CocoaPods; this
+    # pod's own Swift calls mpv_* too (as media_kit_video's iOS podspec).
+    'OTHER_LDFLAGS'                => '"$(inherited)" -framework Mpv',
   }
 end
