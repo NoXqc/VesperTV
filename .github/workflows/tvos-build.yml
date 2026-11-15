@@ -53,6 +53,26 @@ jobs:
           cat out/git-status-after-create.txt
           tar -czf out/tvos-project.tgz tvos
 
+      # wakelock_plus 1.8+ declares `tvos:` but keeps its tvOS code in ios/;
+      # flutter-tvos only builds a plugin's tvos/ folder, so the registrant
+      # imported a module that was never built ("Module 'wakelock_plus' not
+      # found"). Apple TV uses the fluttertv.dev port (wakelock_plus_tvos)
+      # instead: drop upstream's tvOS entry in this runner's pub cache only.
+      - name: Use wakelock_plus_tvos, not upstream's tvOS entry
+        shell: bash
+        run: |
+          flutter-tvos pub get
+          for f in ~/.pub-cache/hosted/pub.dev/wakelock_plus-*/pubspec.yaml; do
+            python3 - "$f" <<'EOF'
+          import re, sys
+          p = sys.argv[1]
+          s = open(p).read()
+          t = re.sub(r"\n      tvos:\n        pluginClass: WakelockPlusPlugin", "", s)
+          open(p, "w").write(t)
+          print(p, "patched" if t != s else "unchanged")
+          EOF
+          done
+
       - name: Build for the Apple TV simulator
         shell: bash
         env:
