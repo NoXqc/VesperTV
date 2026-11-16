@@ -10,6 +10,7 @@ import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/audio_delay.dart';
 import '../../services/backup_service.dart';
+import '../../services/content_updates.dart';
 import '../../services/desktop_mini_player.dart';
 import '../../services/desktop_stream_setup.dart';
 import '../../services/device_defaults.dart';
@@ -1250,6 +1251,15 @@ class SettingsCatalog {
                   'When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.'),
               value: prefs.backgroundSync,
               onChanged: prefs.setBackgroundSync),
+          if (ContentUpdates.supported)
+            SettingsToggle(
+                id: 'content_updates',
+                icon: Icons.update,
+                title: tr('Update while VesperTV is closed'),
+                help: tr(
+                    'The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.'),
+                value: prefs.contentUpdates,
+                onChanged: prefs.setContentUpdates),
         ]),
       ],
     );

@@ -1688,8 +1688,11 @@ class PlaylistSession {
   Future<void> warmAllCategories() => _warmCategories(force: false);
 
   /// Re-fetches every non-hidden VOD/series category's items, including
-  /// ones already cached — the "Update content" action.
-  Future<void> refreshAllCategories() => _warmCategories(force: true);
+  /// ones already cached — the "Update content" action. [stop] ends it
+  /// between categories (content updates with the app closed); a stopped
+  /// pass isn't a full sync. True when every category was fetched.
+  Future<bool> refreshAllCategories({bool Function()? stop}) =>
+      _warmCategories(force: true, stop: stop);
 
   /// True when this playlist hasn't had a *full* sync (every non-hidden
   /// category's items, not just category names/live channels) recently
@@ -1702,18 +1705,22 @@ class PlaylistSession {
   }
 
   /// The blocking "Updating..." pass established players like TiviMate and
-  /// MyTVOnline3 do a few times a week rather than on every launch.
-  Future<void> runFullCatalogSync() async {
-    if (!isXtream) return;
+  /// MyTVOnline3 do a few times a week rather than on every launch. True
+  /// when it ran to the end ([stop]: see [refreshAllCategories]).
+  Future<bool> runFullCatalogSync({bool Function()? stop}) async {
+    if (!isXtream) return false;
     await loadFromXtream();
-    await refreshAllCategories();
+    if (stop?.call() ?? false) return false;
+    return refreshAllCategories(stop: stop);
   }
 
-  Future<void> _warmCategories({required bool force}) async {
-    if (isWarmingCatalog) return;
+  Future<bool> _warmCategories(
+      {required bool force, bool Function()? stop}) async {
+    if (isWarmingCatalog) return false;
 
     final api = xtreamApi;
-    if (api == null) return;
+    if (api == null) return false;
+    bool stopped() => stop?.call() ?? false;
 
     if (force) {
       categoryFailureCounts.clear();
@@ -1745,7 +1752,7 @@ class PlaylistSession {
         final maxConcurrent = _categoryConcurrency;
         var vodIndex = 0;
         Future<void> vodWorker() async {
-          while (!serverDown && vodIndex < vodTodo.length) {
+          while (!serverDown && !stopped() && vodIndex < vodTodo.length) {
             final cat = vodTodo[vodIndex++];
             await _loadOneVodCategory(api, cat, force: force);
             vodCatalogDone++;
@@ -1756,7 +1763,9 @@ class PlaylistSession {
 
         var seriesIndex = 0;
         Future<void> seriesWorker() async {
-          while (!serverDown && seriesIndex < seriesTodo.length) {
+          while (!serverDown &&
+              !stopped() &&
+              seriesIndex < seriesTodo.length) {
             final cat = seriesTodo[seriesIndex++];
             await _loadOneSeriesCategory(api, cat, force: force);
             seriesCatalogDone++;
@@ -1776,12 +1785,14 @@ class PlaylistSession {
               (_) => seriesWorker()),
         ]);
       }
-      // Not a full sync when the server was down: try again next launch.
-      if (!serverDown) {
-        await storage.setLastFullSyncAt(profile.id, DateTime.now());
-      }
+      // Not a full sync when the server was down or it was stopped: try
+      // again next launch.
+      if (serverDown || stopped()) return false;
+      await storage.setLastFullSyncAt(profile.id, DateTime.now());
+      return true;
     } catch (e) {
       debugPrint('PlaylistSession[${profile.id}]: catalog warm-up failed: $e');
+      return false;
     } finally {
       isWarmingCatalog = false;
       _notifyWarmupProgress(force: true);

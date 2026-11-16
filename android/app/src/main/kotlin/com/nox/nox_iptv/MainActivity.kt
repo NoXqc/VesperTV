@@ -161,11 +161,13 @@ class MainActivity : FlutterActivity() {
     override fun onStart() {
         super.onStart()
         EpisodeAlertsWork.gate.setVisible(true)
+        ContentUpdateWork.gate.setVisible(true)
         SportsNotifications.onVisible(applicationContext, true)
     }
 
     override fun onStop() {
         EpisodeAlertsWork.gate.setVisible(false)
+        ContentUpdateWork.gate.setVisible(false)
         SportsNotifications.onVisible(applicationContext, false)
         super.onStop()
         phonePip.onStop()
@@ -180,6 +182,11 @@ class MainActivity : FlutterActivity() {
         voiceBridge.dispose()
         semanticsGate.stop()
         super.onDestroy()
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        ContentUpdateWork.disconnect(flutterEngine)
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -217,6 +224,9 @@ class MainActivity : FlutterActivity() {
         EpisodeAlertsWork.connect(applicationContext, flutterEngine,
             { intent?.getBooleanExtra("vespertv_episode_alert", false) == true },
             { intent?.removeExtra("vespertv_episode_alert") })
+
+        // Settings > Startup > Update while VesperTV is closed — see ContentUpdateWorker.
+        ContentUpdateWork.connect(applicationContext, flutterEngine)
 
         // "Notify me" new-episode alerts — see EpisodeNotifier.
         val episodeNotifier = EpisodeNotifier(this)

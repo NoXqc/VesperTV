@@ -1740,6 +1740,9 @@ const Map<String, String> kEl = {
   // Fast startup
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Πατήστε Πίσω για να χρησιμοποιήσετε την εφαρμογή τώρα. Οι Ταινίες και οι Σειρές συνεχίζουν να ενημερώνονται στο παρασκήνιο.",
+  "Update while VesperTV is closed": "Ενημέρωση όταν το VesperTV είναι κλειστό",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "Ο οδηγός και οι λίστες σας ενημερώνονται με το συνηθισμένο πρόγραμμα ακόμα και με την εφαρμογή κλειστή, ώστε να είναι έτοιμα όταν την ανοίξετε. Ορισμένες συσκευές το διακόπτουν σε αναμονή.",
   "Update in the background": "Ενημέρωση στο παρασκήνιο",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Όταν πρέπει να ενημερωθεί το περιεχόμενο, ανοίγει αμέσως η Ζωντανή τηλεόραση και οι Ταινίες και οι Σειρές ενημερώνονται στο παρασκήνιο. Συμπληρώνονται τα επόμενα λεπτά και το τηλεχειριστήριο μπορεί να φαίνεται πιο αργό μέχρι να τελειώσει. Ισχύει από την επόμενη εκκίνηση.",

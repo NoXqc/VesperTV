@@ -453,6 +453,16 @@ class AppConstants {
   /// behind the blocking "Updating Content" screen.
   static const String keyBackgroundSync = 'vesper_background_sync';
 
+  /// Settings > Profiles & startup > Startup: Update while VesperTV is
+  /// closed (Android, opt-in, device-only). An hourly WorkManager job
+  /// (ContentUpdateWorker.kt) refreshes the guide and the playlists due for
+  /// a full sync with the app closed — see `services/content_updates.dart`.
+  static const String keyContentUpdates = 'vesper_content_updates';
+
+  /// When that job next has something due (ms since epoch). Read natively,
+  /// so a run with nothing due doesn't start a Flutter engine.
+  static const String keyContentUpdatesNextDue = 'vesper_content_next_due';
+
   /// Device-wide opt-in: choose a viewer after the splash, before startup routes
   /// or automatic playback. Backups retain it; transfers keep the target choice.
   static const String keyLaunchWithProfiles = 'vesper_launch_with_profiles';

@@ -37,6 +37,7 @@ import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
 import 'services/cloud_sync_service.dart';
+import 'services/content_updates.dart';
 import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
 import 'services/epg_service.dart';
@@ -685,6 +686,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      // An update that ran with the app closed stops once the app is on
+      // screen; it shares the databases and saves sync times (Settings >
+      // Startup > Update while VesperTV is closed).
+      await ContentUpdates.waitForBackgroundRun(_storage);
       PerfDiagnostics.mark('prefs');
       // Cloud sync first: the services below read storage once, so other
       // devices' changes are written before they load (dev-notes/
@@ -1191,6 +1196,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         PerfDiagnostics.mark('epgInit');
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
+        // With the app hidden, the closed-app update runs here.
+        ContentUpdates.attachApp(
+          storage: _storage,
+          refreshGuide: () =>
+              _epgService.refreshOnce(_playlistManager.epgSources()),
+          syncPlaylists: _playlistManager.runDueCatalogSync,
+        );
         // No-op for most launches (no key set, or already refreshed this
         // week) — see PlaylistManager.refreshWhatsNewTmdbIfDue's doc
         // comment for why this is a launch-time due-check rather than an

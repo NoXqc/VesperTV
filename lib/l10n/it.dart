@@ -1791,6 +1791,9 @@ const Map<String, String> kIt = {
   // Fast startup
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Premi Indietro per usare subito l’app. Film e Serie TV continuano ad aggiornarsi in background.",
+  "Update while VesperTV is closed": "Aggiorna quando VesperTV è chiuso",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "La guida e le tue playlist si aggiornano con la solita frequenza anche ad app chiusa, così sono pronte quando la apri. Alcuni box lo mettono in pausa in standby.",
   "Update in the background": "Aggiorna in background",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Quando è il momento di aggiornare i contenuti, apre subito la TV in diretta e aggiorna Film e Serie TV in background. Si completano nei prossimi minuti e il telecomando può risultare più lento fino alla fine. Si applica dal prossimo avvio.",

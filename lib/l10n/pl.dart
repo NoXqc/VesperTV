@@ -1726,6 +1726,9 @@ const Map<String, String> kPl = {
       "Usunięto {group}. Jej kanały wróciły do swoich grup.",
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Naciśnij Wstecz, aby od razu korzystać z aplikacji. Filmy i Seriale nadal aktualizują się w tle.",
+  "Update while VesperTV is closed": "Aktualizuj, gdy VesperTV jest zamknięty",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "Przewodnik i Twoje playlisty aktualizują się według zwykłego harmonogramu nawet przy zamkniętej aplikacji, więc są gotowe po jej otwarciu. Niektóre urządzenia wstrzymują to w trybie czuwania.",
   "Update in the background": "Aktualizuj w tle",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Gdy aktualizacja zawartości jest wymagana, od razu otwórz Live TV i zaktualizuj Filmy i Seriale w tle. Wypełnią się w ciągu kilku następnych minut, a do tego czasu pilot może działać wolniej. Działa od następnego uruchomienia.",

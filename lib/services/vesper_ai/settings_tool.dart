@@ -374,6 +374,15 @@ final List<_AiSetting> _aiSettings = [
       (b, on) => b.prefs.setBackgroundSync(on),
       nextStart: true),
   _switch(
+      'update_while_closed',
+      'startup',
+      'Update while VesperTV is closed',
+      'The guide and playlists update on their usual schedule with the app '
+          'closed.',
+      (b) => b.prefs.contentUpdates,
+      (b, on) => b.prefs.setContentUpdates(on),
+      androidOnly: true),
+  _switch(
       'launch_with_profiles',
       'startup',
       'Launch with profiles selector',
