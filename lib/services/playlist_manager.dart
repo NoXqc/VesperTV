@@ -2881,13 +2881,49 @@ class PlaylistManager extends ChangeNotifier {
   /// every manual "Update Content" trigger, which always re-syncs
   /// everything unconditionally rather than only what's technically stale.
   Future<void> runFullCatalogSync() async {
-    for (final session in _enabledSessionsSorted.where((s) => s.isXtream)) {
-      _foregroundSession = session;
-      notifyListeners();
-      await session.runFullCatalogSync();
+    _fullSyncs++;
+    try {
+      for (final session in _enabledSessionsSorted.where((s) => s.isXtream)) {
+        _foregroundSession = session;
+        notifyListeners();
+        await session.runFullCatalogSync();
+      }
+    } finally {
+      _fullSyncs--;
     }
     _invalidateFavoriteCatalog(clear: true);
     await ensureFavoriteCatalogLoaded();
+  }
+
+  /// Full syncs running: a launch sync may still be going behind the app
+  /// when the closed-app update asks ([runDueCatalogSync] then waits for
+  /// the next run).
+  int _fullSyncs = 0;
+
+  /// Content updates with the app closed (ContentUpdates): only the
+  /// playlists due for a full sync, one at a time. [stop] ends it between
+  /// playlists and categories; a stopped playlist stays due, so the next run
+  /// picks it up. Returns (synced, due).
+  Future<(int, int)> runDueCatalogSync({bool Function()? stop}) async {
+    final due = _enabledSessionsSorted.where((s) => s.needsFullSync()).toList();
+    if (_fullSyncs > 0) return (0, due.length);
+    var synced = 0;
+    _fullSyncs++;
+    try {
+      for (final session in due) {
+        if (stop?.call() ?? false) break;
+        _foregroundSession = session;
+        notifyListeners();
+        if (await session.runFullCatalogSync(stop: stop)) synced++;
+      }
+    } finally {
+      _fullSyncs--;
+    }
+    if (synced > 0) {
+      _invalidateFavoriteCatalog(clear: true);
+      await ensureFavoriteCatalogLoaded();
+    }
+    return (synced, due.length);
   }
 
   /// The catalog database's queue wait ([PerfDiagnostics]).

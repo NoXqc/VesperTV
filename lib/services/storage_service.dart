@@ -643,6 +643,16 @@ class StorageService {
   Future<void> setBackgroundSync(bool value) =>
       _prefs.setBool(AppConstants.keyBackgroundSync, value);
 
+  /// See [AppConstants.keyContentUpdates].
+  bool getContentUpdates() =>
+      _prefs.getBool(AppConstants.keyContentUpdates) ?? false;
+  Future<void> setContentUpdates(bool value) =>
+      _prefs.setBool(AppConstants.keyContentUpdates, value);
+
+  /// See [AppConstants.keyContentUpdatesNextDue]. 0 = check at the next run.
+  Future<void> setContentUpdatesNextDue(DateTime? at) => _prefs.setInt(
+      AppConstants.keyContentUpdatesNextDue, at?.millisecondsSinceEpoch ?? 0);
+
   String? getLiveGroupSort() => _prefs.getString(AppConstants.keyLiveGroupSort);
   Future<void> setLiveGroupSort(String value) =>
       _prefs.setString(AppConstants.keyLiveGroupSort, value);
@@ -1740,6 +1750,8 @@ class StorageService {
     AppConstants.keySplashGreeting,
     AppConstants.keySkippedUpdateVersion,
     AppConstants.keyArchiveReadyWatch,
+    AppConstants.keyContentUpdates,
+    AppConstants.keyContentUpdatesNextDue,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
@@ -1789,6 +1801,7 @@ class StorageService {
     AppConstants.keyWhatsNewSeriesIds,
     AppConstants.keyCloudTransfer,
     AppConstants.keyLastAutoBackup,
+    AppConstants.keyContentUpdatesNextDue,
   };
 
   static bool _backupable(String key) =>

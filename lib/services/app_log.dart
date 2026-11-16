@@ -10,6 +10,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/playlist_profile.dart';
+import 'content_updates.dart';
 import 'device_defaults.dart';
 import 'episode_alerts_background.dart';
 import 'sports_phone_notifications.dart';
@@ -141,6 +142,7 @@ class AppLog {
       out.writeln();
       out.writeln(await EpisodeAlertsBackground.diagnostics());
       out.writeln(await SportsPhoneNotifications.diagnostics());
+      out.writeln(await ContentUpdates.diagnostics());
       out.writeln('== Android logcat (this process)');
       out.writeln(await _logcat());
     }

@@ -1785,6 +1785,9 @@ const Map<String, String> kEs = {
   // Fast startup
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Pulsa Atrás para usar la app ya. Películas y Series siguen actualizándose en segundo plano.",
+  "Update while VesperTV is closed": "Actualizar con VesperTV cerrado",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "La guía y tus listas se actualizan con su frecuencia habitual aunque la app esté cerrada, para que estén listas al abrirla. Algunos dispositivos lo pausan en reposo.",
   "Update in the background": "Actualizar en segundo plano",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Cuando toca actualizar el contenido, abre directamente la TV en vivo y actualiza Películas y Series en segundo plano. Se van completando durante los próximos minutos y el mando puede ir más lento hasta que termine. Se aplica desde el próximo inicio.",

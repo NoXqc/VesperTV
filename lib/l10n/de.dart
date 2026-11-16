@@ -1712,6 +1712,9 @@ const Map<String, String> kDe = {
       "{group} gelöscht. Ihre Sender sind wieder in ihren Gruppen.",
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Drücken Sie Zurück, um die App sofort zu nutzen. Filme und Serien werden im Hintergrund weiter aktualisiert.",
+  "Update while VesperTV is closed": "Aktualisieren, wenn VesperTV geschlossen ist",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "Der Programmführer und deine Playlists werden auch bei geschlossener App im gewohnten Rhythmus aktualisiert und sind beim Öffnen bereit. Manche Boxen pausieren das im Standby.",
   "Update in the background": "Im Hintergrund aktualisieren",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Wenn ein Inhalts-Update fällig ist, öffnet die App sofort Live-TV und aktualisiert Filme und Serien im Hintergrund. Sie füllen sich in den nächsten Minuten, und die Fernbedienung kann bis dahin langsamer reagieren. Gilt ab dem nächsten Start.",

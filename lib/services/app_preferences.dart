@@ -10,6 +10,7 @@ import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import '../utils/video_fit.dart';
 import 'audio_delay.dart';
+import 'content_updates.dart';
 import 'desktop_audio.dart';
 import 'display_match.dart';
 import 'device_defaults.dart';
@@ -444,6 +445,15 @@ class AppPreferences extends ChangeNotifier {
   void setBackgroundSync(bool value) {
     _storage.setBackgroundSync(value);
     notifyListeners();
+  }
+
+  /// Update while VesperTV is closed (Android): see [ContentUpdates].
+  bool get contentUpdates => _storage.getContentUpdates();
+
+  Future<void> setContentUpdates(bool value) async {
+    await _storage.setContentUpdates(value);
+    notifyListeners();
+    await ContentUpdates.schedule(_storage);
   }
 
   /// Read once after the splash; changing it applies on the next launch.
