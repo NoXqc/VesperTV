@@ -185,6 +185,11 @@ class AppConstants {
   static const String keyFavoriteLiveOrder = 'vesper_favorite_live_order';
   static const String keyFavoriteLiveSort = 'vesper_favorite_live_sort';
 
+  /// Per viewer: the identity of each saved live channel (Favourites, own
+  /// groups), so it is found again when the provider changes its id. See
+  /// `SavedLiveChannels`.
+  static const String keySavedLiveKeys = 'vesper_saved_live_keys';
+
   /// The viewer's own live groups, across every playlist (see
   /// `UserGroups` for the JSON). Per viewer, not per playlist.
   static const String keyMyGroups = 'nox_my_groups';

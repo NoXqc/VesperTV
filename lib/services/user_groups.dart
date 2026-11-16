@@ -201,6 +201,32 @@ class UserGroups {
     copies.remove(channelId);
   }
 
+  /// Every channel this places somewhere (own group, provider group, copy).
+  Set<String> get channelIds => {...moves.keys, ...pmoves.keys, ...copies.keys};
+
+  /// The provider changed a channel's id ([from] -> [to], see
+  /// `SavedLiveChannels`): its moves, copies and places in orders follow.
+  /// What [to] already has wins.
+  void renameId(String from, String to) {
+    if (moves.remove(from) case final g?) moves.putIfAbsent(to, () => g);
+    if (pmoves.remove(from) case final r?) pmoves.putIfAbsent(to, () => r);
+    if (copies.remove(from) case final refs?) {
+      final list = copies[to] ??= [];
+      for (final r in refs) {
+        if (!list.contains(r)) list.add(r);
+      }
+    }
+    for (final ids in [...order.values, ...porder.values]) {
+      final at = ids.indexOf(from);
+      if (at < 0) continue;
+      if (ids.contains(to)) {
+        ids.removeAt(at);
+      } else {
+        ids[at] = to;
+      }
+    }
+  }
+
   /// Moves group [title] by [delta] places (clamped). Returns its new
   /// index, or null if it isn't one of these.
   int? moveGroup(String title, int delta) {

@@ -1434,6 +1434,12 @@ class StorageService {
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
+  /// See [AppConstants.keySavedLiveKeys] (per viewer).
+  String? getSavedLiveKeys(String viewerId) => _prefs
+      .getString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId));
+  Future<void> setSavedLiveKeys(String json, String viewerId) => _prefs
+      .setString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId), json);
+
   /// Live Favourites order across playlists (per viewer).
   List<String> getFavoriteLiveOrder() =>
       _prefs.getStringList(_vk(AppConstants.keyFavoriteLiveOrder)) ?? [];

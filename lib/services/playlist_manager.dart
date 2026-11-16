@@ -18,6 +18,7 @@ import 'channel_name_events.dart';
 import 'epg_service.dart';
 import 'live_stream_format.dart';
 import 'playlist_session.dart';
+import 'saved_live_channels.dart';
 import 'storage_service.dart';
 import 'local_playlist_files.dart';
 import 'tmdb_enrichment_service.dart';
@@ -289,22 +290,14 @@ class PlaylistManager extends ChangeNotifier {
       _catalogDb.isSeriesFavorite = (id) => _favoriteSeriesIds.contains(id);
 
       _favoriteIds = _storage.getFavorites();
+      _favoritesViewer = _storage.getActiveViewerId();
       _favoriteSeriesIds = _storage.getFavoriteSeries();
       _activeViewerRestricted = _activeViewerIsRestricted();
       _myGroups.load(_storage.getMyGroups());
 
       _sessions
         ..clear()
-        ..addAll(_storage.getPlaylists().map((profile) => PlaylistSession(
-              profile: profile,
-              storage: _storage,
-              catalogDb: _catalogDb,
-              favoriteIds: () => _favoriteIds,
-              favoriteSeriesIds: () => _favoriteSeriesIds,
-              isRestrictedViewer: () => _activeViewerRestricted,
-              onNotify: notifyListeners,
-              myGroupOf: _myGroupOf,
-            )..onEditsApplied = recomputeMerge));
+        ..addAll(_storage.getPlaylists().map(_newSession));
 
       notifyListeners();
       // Every enabled playlist restores (from its own cache, or a fresh
@@ -427,6 +420,8 @@ class PlaylistManager extends ChangeNotifier {
     _invalidateFavoriteCatalog(clear: true);
     _activeViewerRestricted = _activeViewerIsRestricted();
     _favoriteIds = _storage.getFavorites();
+    _favoritesViewer = _storage.getActiveViewerId();
+    _savedLiveChecked.clear();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
     _myGroups.load(_storage.getMyGroups());
     for (final session in _sessions) {
@@ -474,16 +469,23 @@ class PlaylistManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  PlaylistSession _newSession(PlaylistProfile profile) => PlaylistSession(
-        profile: profile,
-        storage: _storage,
-        catalogDb: _catalogDb,
-        favoriteIds: () => _favoriteIds,
-        favoriteSeriesIds: () => _favoriteSeriesIds,
-        isRestrictedViewer: () => _activeViewerRestricted,
-        onNotify: notifyListeners,
-        myGroupOf: _myGroupOf,
-      )..onEditsApplied = recomputeMerge;
+  PlaylistSession _newSession(PlaylistProfile profile) {
+    late final PlaylistSession session;
+    session = PlaylistSession(
+      profile: profile,
+      storage: _storage,
+      catalogDb: _catalogDb,
+      favoriteIds: () => _favoriteIds,
+      favoriteSeriesIds: () => _favoriteSeriesIds,
+      isRestrictedViewer: () => _activeViewerRestricted,
+      onNotify: notifyListeners,
+      myGroupOf: _myGroupOf,
+    )..onEditsApplied = () {
+        recomputeMerge();
+        _checkSavedLive(session);
+      };
+    return session;
+  }
 
   /// A playlist read another way (M3U <-> Xtream: an Xtream panel's M3U
   /// link goes through its Xtream login, or back to the M3U when that
@@ -2127,6 +2129,7 @@ class PlaylistManager extends ChangeNotifier {
     channel.isFavorite = !_favoriteIds.contains(channel.id);
     if (channel.isFavorite) {
       _favoriteIds.add(channel.id);
+      _rememberSavedLive([channel]);
     } else {
       _favoriteIds.remove(channel.id);
     }
@@ -2335,6 +2338,137 @@ class PlaylistManager extends ChangeNotifier {
 
   final UserGroups _myGroups = UserGroups();
 
+  // --- Saved live channels follow a changed id (SavedLiveChannels) -------
+
+  /// The viewer [_favoriteIds] / [_myGroups] belong to.
+  String _favoritesViewer = AppConstants.mainViewerId;
+
+  /// Per playlist: the live list [_checkSavedLive] last went through.
+  final Map<String, int> _savedLiveChecked = {};
+
+  /// After each live list load (and a viewer switch, via `applyEdits`):
+  /// records the identity of every saved live channel the list has, and
+  /// hands a saved id the list no longer has to the channel that took its
+  /// place, in Favourites, their order and own groups. Once per list.
+  /// Send log: `SavedLive:`.
+  void _checkSavedLive(PlaylistSession s) {
+    final live = s.allLiveChannels;
+    // Mid viewer switch: [applyActiveViewer] checks again.
+    if (live.isEmpty || _favoritesViewer != _storage.getActiveViewerId()) {
+      return;
+    }
+    final mark = identityHashCode(live);
+    if (_savedLiveChecked[s.profile.id] == mark) return;
+    _savedLiveChecked[s.profile.id] = mark;
+    final prefix = '${s.profile.id}::';
+    final saved = {
+      for (final id in _favoriteIds)
+        if (id.startsWith(prefix)) id,
+      for (final id in _myGroups.channelIds)
+        if (id.startsWith(prefix)) id,
+    };
+    final viewer = _favoritesViewer;
+    final keys = SavedLiveChannels.decode(_storage.getSavedLiveKeys(viewer));
+    if (saved.isEmpty && !keys.keys.any((id) => id.startsWith(prefix))) {
+      return;
+    }
+    var keysChanged = false;
+    final here = <String>{};
+    for (final c in live) {
+      if (!saved.contains(c.id)) continue;
+      here.add(c.id);
+      final k = SavedLiveKey.of(c);
+      if (keys[c.id] != k) {
+        keys[c.id] = k;
+        keysChanged = true;
+      }
+    }
+    // Starred movies / shows of this playlist are never in the live list,
+    // and never keyed.
+    final missing = {
+      for (final id in saved)
+        if (!here.contains(id) && keys[id] != null) id: keys[id]!,
+    };
+    final found = SavedLiveChannels.rescue(missing, live);
+    final order = List.of(_storage.getFavoriteLiveOrder());
+    var favoritesChanged = false, orderChanged = false;
+    for (final e in found.entries) {
+      final from = e.key, to = e.value.id;
+      if (_favoriteIds.remove(from)) {
+        _favoriteIds.add(to);
+        favoritesChanged = true;
+      }
+      _myGroups.renameId(from, to);
+      final at = order.indexOf(from);
+      if (at >= 0) {
+        if (order.contains(to)) {
+          order.removeAt(at);
+        } else {
+          order[at] = to;
+        }
+        orderChanged = true;
+      }
+      keys.remove(from);
+      keys[to] = SavedLiveKey.of(e.value);
+      keysChanged = true;
+    }
+    // Unstarred, or out of every group: forget it.
+    final kept = {
+      ...saved.difference(found.keys.toSet()),
+      for (final c in found.values) c.id,
+    };
+    final before = keys.length;
+    keys.removeWhere((id, _) => id.startsWith(prefix) && !kept.contains(id));
+    if (keys.length != before) keysChanged = true;
+    final lost = [
+      for (final e in missing.entries)
+        if (!found.containsKey(e.key)) e.value.name
+    ];
+    // other = not in the live list and never keyed: starred movies / shows,
+    // or a channel lost before this build.
+    if (saved.isNotEmpty) {
+      debugPrint('SavedLive: playlist=${s.profile.id} saved=${saved.length} '
+          'here=${here.length} missing=${missing.length} '
+          'moved=${found.length} '
+          'other=${saved.length - here.length - missing.length}'
+          '${lost.isEmpty ? '' : ' lost=${lost.take(5).join(' | ')}'}');
+    }
+    if (found.isNotEmpty) {
+      s.restampFavorites();
+      notifyListeners();
+    }
+    unawaited(() async {
+      if (keysChanged) {
+        await _storage.setSavedLiveKeys(SavedLiveChannels.encode(keys), viewer);
+      }
+      if (found.isEmpty || _storage.getActiveViewerId() != viewer) return;
+      if (favoritesChanged) await _storage.setFavorites(_favoriteIds);
+      if (orderChanged) {
+        await _storage.setFavoriteLiveOrder(order, viewerId: viewer);
+      }
+      await _storage.setMyGroups(_myGroups.toJson());
+    }());
+  }
+
+  /// Records [channels]' identities as they are saved (starred, put in a
+  /// group), so a new id at the next list load already finds them.
+  void _rememberSavedLive(Iterable<Channel> channels) {
+    final viewer = _favoritesViewer;
+    final keys = SavedLiveChannels.decode(_storage.getSavedLiveKeys(viewer));
+    var changed = false;
+    for (final c in channels) {
+      if (!c.isLive || _sessionFor(c.playlistId) == null) continue;
+      final k = SavedLiveKey.of(c);
+      if (keys[c.id] == k) continue;
+      keys[c.id] = k;
+      changed = true;
+    }
+    if (changed) {
+      unawaited(
+          _storage.setSavedLiveKeys(SavedLiveChannels.encode(keys), viewer));
+    }
+  }
+
   /// A channel's group when the viewer put it somewhere else: an own group,
   /// or the provider group the editor moved it into (that group's title in
   /// its own playlist; a title no group has when it went to another
@@ -2481,6 +2615,7 @@ class PlaylistManager extends ChangeNotifier {
     for (final c in channels) {
       _placeOne(c, dest, copy: copy) ? changed++ : skipped++;
     }
+    _rememberSavedLive(channels);
     if (changed > 0) await _saveMyGroups();
     return (changed: changed, skipped: skipped);
   }
@@ -2678,6 +2813,7 @@ class PlaylistManager extends ChangeNotifier {
   /// provider group when [title] is null (Remove from group).
   Future<void> moveChannelToGroup(Channel channel, String? title) {
     _myGroups.move(channel.id, title);
+    if (title != null) _rememberSavedLive([channel]);
     return _saveMyGroups();
   }
 
