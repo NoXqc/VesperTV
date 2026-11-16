@@ -7600,7 +7600,7 @@ class _SelectableRowState extends State<_SelectableRow> {
                                       const SizedBox(width: 4),
                                     ],
                                     Expanded(
-                                      child: Text(
+                                      child: _WholeWordsText(
                                         widget.label,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
@@ -11832,4 +11832,48 @@ bool _isShortPhoneScreen(BuildContext context) {
       size.width > size.height &&
       !context.read<AppPreferences>().isTelevision &&
       !isDesktopTarget;
+}
+
+/// A row label that never breaks inside a word: a word wider than the row
+/// (bold "Recordings" at a large font size broke into "Recording / s" on a
+/// user's Homatics, 2026-11-16) shrinks the label until it fits instead.
+class _WholeWordsText extends StatelessWidget {
+  const _WholeWordsText(this.text,
+      {required this.maxLines, required this.overflow, required this.style});
+
+  final String text;
+  final int maxLines;
+  final TextOverflow overflow;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(builder: (context, box) {
+      var scale = 1.0;
+      if (box.maxWidth.isFinite) {
+        var widest = 0.0;
+        for (final word in text.split(RegExp(r'\s+'))) {
+          if (word.isEmpty) continue;
+          final painter = TextPainter(
+            text: TextSpan(text: word, style: style),
+            textDirection: TextDirection.ltr,
+            textScaler: scaler,
+            maxLines: 1,
+          )..layout();
+          if (painter.width > widest) widest = painter.width;
+          painter.dispose();
+        }
+        if (widest > box.maxWidth) scale = box.maxWidth / widest;
+      }
+      return Text(
+        text,
+        maxLines: maxLines,
+        overflow: overflow,
+        style: scale < 1
+            ? style.copyWith(fontSize: (style.fontSize ?? 14) * scale * 0.98)
+            : style,
+      );
+    });
+  }
 }

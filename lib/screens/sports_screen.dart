@@ -4066,7 +4066,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                 // the Sports Mode Live TV groups (owner photo, 1.0.51): clip
                 // the sides just past the zoom room, never top/bottom.
                 child: ClipRect(
-                  clipper: const _RowSideClipper(),
+                  clipper: _RowSideClipper(_zoomRoom(context) + 4),
                   child: ListView(
                     controller: _rowScrolls[s.id],
                     scrollDirection: Axis.horizontal,
@@ -4074,7 +4074,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     // Room for the focused card's 1.05 zoom: the page's scroll
                     // view clipped its left edge in Sports Mode (owner photo).
                     padding: _modeActive
-                        ? const EdgeInsets.symmetric(horizontal: 8)
+                        ? EdgeInsets.symmetric(horizontal: _zoomRoom(context))
                         : null,
                     children: [
                       for (final (k, g) in s.games.indexed) ...[
@@ -4131,15 +4131,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 /// A game row's clip: 10 px past each side (the focused card's 1.05 zoom),
 /// unbounded above and below (the zoom and the hold hint).
 class _RowSideClipper extends CustomClipper<Rect> {
-  const _RowSideClipper();
+  const _RowSideClipper(this.margin);
+
+  final double margin;
 
   @override
   Rect getClip(Size size) =>
-      Rect.fromLTRB(-10, -1000, size.width + 10, size.height + 1000);
+      Rect.fromLTRB(-margin, -1000, size.width + margin, size.height + 1000);
 
   @override
-  bool shouldReclip(_RowSideClipper oldClipper) => false;
+  bool shouldReclip(_RowSideClipper oldClipper) => oldClipper.margin != margin;
 }
+
+/// How far a focused game card's 1.05 zoom reaches past its side, plus its
+/// frame. Cards grow with the text size: at a large one the fixed 8-10 px
+/// cut the focused card's left frame off (user photo, Homatics, 2026-11-16).
+double _zoomRoom(BuildContext context) =>
+    (_GameCard.widthOf(context) * 0.025).ceilToDouble() + 4;
 
 /// Between two leagues' blocks in a game row: the league's logo and short
 /// name over a thin line. Not focusable (row navigation is by game).
