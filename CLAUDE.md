@@ -133,7 +133,7 @@ history: read them as notes about past work, and treat any open `cdx-do` item as
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.68 **+802**.)
+  (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.69 **+827**.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -447,6 +447,7 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-17 - release 1.0.69 (beta), +827 (latest):** owner said "/cutr". Android only; Windows stays 1.0.68, Linux 1.0.63 (+702). Live player one bottom info bar, sync fix (an edit on a held key wiped other devices' favourites, `rebaseHeldEdit`), Send-log sync lines, plus +809..+822 (stream badges, movie buffer, Sources, closed-app updates, Multiview decoder, seek bar). Notes: dev-notes/releases/1.0.69.md. Next build > 827.
 - **Claude, 2026-11-16 - Stream badges (`claude/stream-badges`, worktree `VesperTV-claude-badges`, test +812, uncommitted):**
   owner showed Xperience's Nuvio badge packs. Settings > Playback > Movies & TV Shows > **Stream badges**: paste a
   Nuvio / Fusion badge pack address (same URL as Nuvio's Badge URLs; From phone = `PairingKind.badges`); Media Hub
