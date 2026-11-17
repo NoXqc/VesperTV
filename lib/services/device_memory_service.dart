@@ -6,9 +6,17 @@ import 'package:flutter/services.dart';
 /// have").
 class DeviceMemoryInfo {
   const DeviceMemoryInfo(
-      {required this.totalMemBytes, required this.isLowRamDevice});
+      {required this.totalMemBytes,
+      required this.isLowRamDevice,
+      this.availMemBytes,
+      this.lowMemory});
 
   final int totalMemBytes;
+
+  /// Free RAM right now and Android's own "the system is low" flag
+  /// (Send log diagnostics).
+  final int? availMemBytes;
+  final bool? lowMemory;
 
   /// Android's own official "is this a memory-constrained device" flag
   /// (`ActivityManager.isLowRamDevice()`) — accounts for OEM-specific
@@ -32,10 +40,32 @@ class DeviceMemoryService {
       return DeviceMemoryInfo(
         totalMemBytes: result['totalMemBytes'] as int,
         isLowRamDevice: result['isLowRamDevice'] as bool,
+        availMemBytes: result['availMemBytes'] as int?,
+        lowMemory: result['lowMemory'] as bool?,
       );
     } catch (_) {
       return null;
     }
+  }
+
+  /// Why the app's last processes ended, newest first (Android 11+; empty
+  /// elsewhere). Send log only: a low-memory kill leaves no line in the
+  /// app's own log.
+  static Future<List<String>> lastExits() async {
+    try {
+      return await _channel.invokeListMethod<String>('lastExits') ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Send log: `free=812MB of 1918MB low=false`, or null when unknown.
+  static Future<String?> describeFree() async {
+    final info = await getMemoryInfo();
+    final avail = info?.availMemBytes;
+    if (avail == null) return null;
+    return 'free=${avail >> 20}MB of ${info!.totalMemBytes >> 20}MB '
+        'low=${info.lowMemory ?? false}';
   }
 }
 
