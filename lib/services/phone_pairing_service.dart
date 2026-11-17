@@ -45,6 +45,9 @@ enum PairingKind {
   /// [link] for a poster-service pattern (Custom posters, Save not Add).
   poster,
 
+  /// [link] for a stream badge pack address (Stream badges, Save not Add).
+  badges,
+
   /// Settings > Recordings > Network folder: the shared folder, the folder
   /// inside it, user name and password ([PairingResult.server] / [name] /
   /// [username] / [password]).
@@ -53,12 +56,13 @@ enum PairingKind {
   bool get isWifiOnly => this != playlist;
 
   /// One pasted value back ([PairingResult.link]).
-  bool get isLink => this == link || this == apiKey || this == poster;
+  bool get isLink =>
+      this == link || this == apiKey || this == poster || this == badges;
 
   /// The result `mode` this kind accepts (null = 'xtream' or 'm3u').
   String? get mode => switch (this) {
         playlist => null,
-        link || apiKey || poster => 'link',
+        link || apiKey || poster || badges => 'link',
         mediaServer => 'server',
         photo || wallpaper => 'photo',
         networkFolder => 'smb',
@@ -184,6 +188,7 @@ class PhonePairingSession {
         PairingKind.wallpaper => 'wallpaper',
         PairingKind.apiKey => 'key',
         PairingKind.poster => 'poster',
+        PairingKind.badges => 'badges',
         PairingKind.networkFolder => 'smb',
       };
 

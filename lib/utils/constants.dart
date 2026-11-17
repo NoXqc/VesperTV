@@ -52,6 +52,11 @@ class AppConstants {
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Media Hub custom poster URL pattern (ArchivePosters), device-only.
   static const String keyArchivePosterPattern = 'vesper_archive_poster_pattern';
+  // Media Hub stream badge pack (StreamBadges): its address + last download
+  // (ms since epoch), device-only; the pack itself is a file.
+  static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
+  static const String keyStreamBadgesFetched = 'vesper_stream_badges_fetched';
+  static const String keyStreamBadgesOn = 'vesper_stream_badges_on';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.

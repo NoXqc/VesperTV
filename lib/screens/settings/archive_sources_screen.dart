@@ -15,6 +15,7 @@ import '../../services/archive_api_service.dart';
 import '../../services/archive_service.dart';
 import '../../services/hub_remote.dart';
 import '../../services/storage_service.dart';
+import '../../services/stream_badges.dart';
 import '../../services/vesper_ai/mcp_bridge.dart';
 import '../../widgets/archive_row_settings.dart';
 import '../../widgets/glass_menu.dart';
@@ -30,6 +31,7 @@ import 'phone_link_screen.dart';
 import 'settings_catalog.dart' show SettingsCategory;
 import 'settings_menu_screen.dart'
     show SettingsHelpStrip, SettingsPaneHeader, SettingsSectionTitle;
+import 'stream_badges_screen.dart';
 import 'stremio_import_screen.dart';
 import 'trackers_screen.dart';
 
@@ -43,6 +45,7 @@ enum _Pane {
   live,
   subtitles,
   collections,
+  badges,
   phone,
   rows,
   advanced
@@ -246,6 +249,10 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         (_Pane.subtitles, Icons.subtitles_outlined, tr('Subtitles')),
       (_Pane.collections, Icons.dashboard_customize_outlined,
           tr('Collections')),
+      // A badge pack pasted in Add a source lands here (owner: "I can't
+      // toggle them off or on, I don't see it in the sources").
+      if (addons)
+        (_Pane.badges, Icons.local_offer_outlined, tr('Stream badges')),
       if (addons) (_Pane.phone, Icons.phonelink, tr('Manage from phone')),
       (_Pane.rows, Icons.view_agenda_outlined, tr('Customize Media Hub')),
       (_Pane.advanced, Icons.tune, tr('Advanced')),
@@ -323,6 +330,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             _railNode(_Pane.phone).requestFocus();
           }),
       _Pane.collections => HubCollectionsPane(help: _help),
+      _Pane.badges => const StreamBadgesPane(),
       _Pane.phone => _phonePane(),
       _Pane.rows => _rowsPane(),
       _Pane.advanced => _advancedPane(entries),
@@ -672,6 +680,17 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                   title: tr('Collections'),
                   body: const HubCollectionsPane()))),
         ),
+        if (!appStoreBuild)
+          SettingRow(
+            icon: Icons.local_offer_outlined,
+            title: tr('Stream badges'),
+            subtitle: tr('Picture badges on Media Hub sources (4K, HDR, Atmos…)'),
+            trailing: const SettingValue(),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SettingsScaffold(
+                    title: tr('Stream badges'),
+                    body: const StreamBadgesPane(header: false)))),
+          ),
         for (final (type, label) in [
           (ArchiveType.movie, tr('Movies')),
           (ArchiveType.series, tr('TV Shows')),
@@ -1349,7 +1368,12 @@ class _AddSourceState extends State<_AddSource> {
             {'n': await service.importCollections(url)});
         _link.clear();
       } on ArchiveApiException {
-        message = tr('No collections in that file.');
+        // Or a Nuvio badge pack (also a .json): Stream badges.
+        final badges = await StreamBadges.instance.useIfPack(url);
+        if (badges != null) _link.clear();
+        message = badges == null
+            ? tr('No collections in that file.')
+            : tr('Stream badges saved: {n} badges. Turn them on or off under Stream badges.', {'n': badges});
       } catch (_) {
         message = tr("Couldn't reach that link.");
       }

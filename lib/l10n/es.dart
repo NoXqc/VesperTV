@@ -3880,4 +3880,41 @@ const Map<String, String> kEs = {
       "Escribe el nombre de un canal.",
   "Showing the first {n}. Type more to narrow it down.":
       "Solo los primeros {n}. Escribe más para afinar.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Insignias de las fuentes",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Insignias con imagen en las fuentes del Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Guardado. Las fuentes del Media Hub ahora muestran estas insignias.",
+  "This address is not a badge pack.":
+      "Esta dirección no es un paquete de insignias.",
+  "Could not download the badge pack ({error}).":
+      "No se pudo descargar el paquete de insignias ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Muestra insignias con imagen como 4K, Dolby Vision o Atmos en las fuentes del Media Hub. Pega la dirección de un paquete de insignias hecho para Nuvio o Fusion (su URL de insignias).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Sin paquete, las fuentes muestran las etiquetas de VesperTV. Déjalo vacío para desactivarlo.",
+  "Badge pack address":
+      "Dirección del paquete de insignias",
+  "{n} badges in this pack":
+      "{n} insignias en este paquete",
+  "{n} could not be read and are left out.":
+      "{n} no se pudieron leer y quedan fuera.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Insignias de las fuentes guardadas: {n} insignias. Actívalas o desactívalas en Insignias de las fuentes.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Paquete de insignias quitado: las fuentes muestran las etiquetas de VesperTV.",
+  "Show stream badges":
+      "Mostrar insignias de las fuentes",
+  "Change badge pack":
+      "Cambiar paquete de insignias",
+  "Add a badge pack":
+      "Añadir un paquete de insignias",
+  "Its address, typed or from your phone":
+      "Su dirección, escrita o desde tu teléfono",
+  "Remove badge pack":
+      "Quitar paquete de insignias",
+  "Sources show VesperTV's own tags":
+      "Las fuentes muestran las etiquetas de VesperTV",
 };

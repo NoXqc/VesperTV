@@ -131,15 +131,18 @@ void main() {
     expect(find.text('Current stream'), findsOneWidget);
     expect(find.text('File size: 26.3 GB'), findsOneWidget);
     expect(find.text('Size unknown'), findsOneWidget);
-    expect(find.text('4K · Dolby Vision · HDR10+ · HEVC'), findsOneWidget);
+    // Formats are gold tags (a badge pack would draw its own pictures).
+    for (final f in ['4K', 'Dolby Vision', 'HDR10+', 'HEVC']) {
+      expect(find.widgetWithText(GoldTag, f), findsOneWidget);
+    }
     expect(find.textContaining('secret=hidden'), findsNothing);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(find.byType(GoldTag), findsOneWidget);
+    expect(_currentTag, findsOneWidget);
     expect(find.text('Current stream'), findsOneWidget);
     final currentRow = tester
         .widgetList<Container>(find.ancestor(
-            of: find.byType(GoldTag), matching: find.byType(Container)))
+            of: _currentTag, matching: find.byType(Container)))
         .firstWhere((w) =>
             w.decoration is BoxDecoration &&
             (w.decoration! as BoxDecoration).borderRadius ==
@@ -279,7 +282,7 @@ void main() {
                     child: const Text('Open'))))));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    expect(find.byType(GoldTag), findsOneWidget);
+    expect(_currentTag, findsOneWidget);
     expect(find.text('Current stream'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
@@ -287,15 +290,19 @@ void main() {
     expect(find.text('Stream sources'), findsNothing);
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    expect(find.byType(GoldTag), findsOneWidget);
+    expect(_currentTag, findsOneWidget);
     // The retained current row is first; moving down selects the first fresh
     // option, never confuses it with the currently playing source.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(find.byType(GoldTag), findsOneWidget);
+    expect(_currentTag, findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(chosen, same(first));
     expect(tester.takeException(), isNull);
   });
 }
+
+/// The Current stream tag (format tags are GoldTags too).
+final _currentTag = find.byWidgetPredicate(
+    (w) => w is GoldTag && w.label == 'Current stream');

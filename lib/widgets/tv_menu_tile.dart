@@ -57,6 +57,7 @@ class TvMenuTile extends StatefulWidget {
     this.leading,
     required this.title,
     this.subtitle,
+    this.badges,
     this.trailing,
     this.autofocus = false,
     this.enabled = true,
@@ -72,6 +73,9 @@ class TvMenuTile extends StatefulWidget {
   final Widget? leading;
   final String title;
   final String? subtitle;
+
+  /// A row shown above [subtitle] (Media Hub stream badges).
+  final Widget? badges;
 
   /// Overrides the default chevron. Pass `SizedBox.shrink()` for no
   /// trailing content at all, rather than leaving this unset.
@@ -224,15 +228,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
                           : TextOverflow.ellipsis,
                       style:
                           TextStyle(color: _focused ? focusForeground : null)),
-                  subtitle: widget.subtitle == null
-                      ? null
-                      : Text(
-                          widget.subtitle!,
-                          style: TextStyle(
-                              color: _focused
-                                  ? focusForeground.withValues(alpha: 0.85)
-                                  : null),
-                        ),
+                  subtitle: _subtitle(focusForeground),
                   trailing: widget.trailing ??
                       Icon(Icons.chevron_right,
                           size: compact ? 20 : null,
@@ -241,5 +237,26 @@ class _TvMenuTileState extends State<TvMenuTile> {
                 ),
               ),
             )));
+  }
+
+  Widget? _subtitle(Color focusForeground) {
+    final text = widget.subtitle == null
+        ? null
+        : Text(
+            widget.subtitle!,
+            style: TextStyle(
+                color:
+                    _focused ? focusForeground.withValues(alpha: 0.85) : null),
+          );
+    final badges = widget.badges;
+    if (badges == null) return text;
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3), child: badges),
+          if (text != null) text,
+        ]);
   }
 }

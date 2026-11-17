@@ -447,6 +447,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-16 - Stream badges (`claude/stream-badges`, worktree `VesperTV-claude-badges`, test +812, uncommitted):**
+  owner showed Xperience's Nuvio badge packs. Settings > Playback > Movies & TV Shows > **Stream badges**: paste a
+  Nuvio / Fusion badge pack address (same URL as Nuvio's Badge URLs; From phone = `PairingKind.badges`); Media Hub
+  source picker + player source drawer show its pictures (`StreamBadgeRow`), else VesperTV's own format tags as gold
+  `GoldTag`s. Pack patterns are Java regexes: leading `(?i)` -> case-insensitive, Java-only syntax skipped
+  (`streamBadgeRegExp`); matched in an isolate killed after 8 s (a runaway third-party pattern turns the pack off, never
+  freezes the box). Loaded on first use, never at startup; re-downloaded after 24 h. Device-only. Format, drawing rules
+  and measurements: `dev-notes/stream-badges.md`. Next build > 812.
 - **Claude, 2026-11-14 - release 1.0.68 (beta), +802 (latest):** owner said "/cutr and update git and website with the new windows zip". Android **and Windows** (zip built from the same commit; Windows was on 1.0.61, site/README Windows links now point at 1.0.68); Linux stays 1.0.63 (+702). Since 1.0.67: Minimalist switch + Home tab switch, live list rows lose the eye/star (hold OK menu) and the info card no longer covers the list, guide follows the clock, Media Hub Expand collection / Sort and Filter / AIOStreams as a Jellyfin server, Multiview recordings, Sports Mode next 3 days, Windows feedback batch (+797/+798, Stop in full screen disposes the taken player, one Exit row). Analyze 16, 2001 tests; native suite not rerun. Notes: dev-notes/releases/1.0.68.md. Next build > 802.
 - **Claude, 2026-11-13 - release 1.0.67 (beta), +781:** owner said "/cutr". Android only; Windows stays 1.0.61,
   Linux 1.0.63 (+702). Since 1.0.66: the glide to / from full screen reworked after frame-by-frame recordings against

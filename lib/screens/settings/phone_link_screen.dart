@@ -11,7 +11,8 @@ class PhoneLinkScreen extends StatefulWidget {
       {super.key, required this.title, this.kind = PairingKind.link})
       : assert(kind == PairingKind.link ||
             kind == PairingKind.apiKey ||
-            kind == PairingKind.poster);
+            kind == PairingKind.poster ||
+            kind == PairingKind.badges);
 
   final String title;
   final PairingKind kind;

@@ -3887,4 +3887,41 @@ const Map<String, String> kIt = {
       "Scrivi il nome di un canale.",
   "Showing the first {n}. Type more to narrow it down.":
       "Solo i primi {n}. Scrivi di più per restringere.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Badge delle fonti",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Badge con immagini sulle fonti del Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Salvato. Le fonti del Media Hub ora mostrano questi badge.",
+  "This address is not a badge pack.":
+      "Questo indirizzo non è un pacchetto di badge.",
+  "Could not download the badge pack ({error}).":
+      "Impossibile scaricare il pacchetto di badge ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Mostra badge con immagini come 4K, Dolby Vision o Atmos sulle fonti del Media Hub. Incolla l'indirizzo di un pacchetto di badge fatto per Nuvio o Fusion (il loro URL dei badge).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Senza pacchetto, le fonti mostrano le etichette di VesperTV. Lascia vuoto per disattivarlo.",
+  "Badge pack address":
+      "Indirizzo del pacchetto di badge",
+  "{n} badges in this pack":
+      "{n} badge in questo pacchetto",
+  "{n} could not be read and are left out.":
+      "{n} non sono leggibili e sono esclusi.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Badge delle fonti salvati: {n} badge. Attivali o disattivali in Badge delle fonti.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Pacchetto di badge rimosso: le fonti mostrano le etichette di VesperTV.",
+  "Show stream badges":
+      "Mostra i badge delle fonti",
+  "Change badge pack":
+      "Cambia pacchetto di badge",
+  "Add a badge pack":
+      "Aggiungi un pacchetto di badge",
+  "Its address, typed or from your phone":
+      "Il suo indirizzo, digitato o dal telefono",
+  "Remove badge pack":
+      "Rimuovi pacchetto di badge",
+  "Sources show VesperTV's own tags":
+      "Le fonti mostrano le etichette di VesperTV",
 };

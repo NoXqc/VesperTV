@@ -383,6 +383,20 @@ class StorageService {
   Future<void> setArchivePosterPattern(String pattern) =>
       _prefs.setString(AppConstants.keyArchivePosterPattern, pattern);
 
+  /// Settings > Playback > Stream badges — see `StreamBadges`.
+  String getStreamBadgesUrl() =>
+      _prefs.getString(AppConstants.keyStreamBadgesUrl) ?? '';
+  Future<void> setStreamBadgesUrl(String url) =>
+      _prefs.setString(AppConstants.keyStreamBadgesUrl, url);
+  int getStreamBadgesFetched() =>
+      _prefs.getInt(AppConstants.keyStreamBadgesFetched) ?? 0;
+  Future<void> setStreamBadgesFetched(int ms) =>
+      _prefs.setInt(AppConstants.keyStreamBadgesFetched, ms);
+  bool getStreamBadgesOn() =>
+      _prefs.getBool(AppConstants.keyStreamBadgesOn) ?? true;
+  Future<void> setStreamBadgesOn(bool on) =>
+      _prefs.setBool(AppConstants.keyStreamBadgesOn, on);
+
   /// Settings > Media Hub > Debrid accounts — see `DebridApi`.
   String? getRealDebridToken() =>
       _prefs.getString(AppConstants.keyRealDebridToken);
