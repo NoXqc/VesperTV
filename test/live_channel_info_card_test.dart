@@ -214,7 +214,7 @@ void main() {
     });
   }
   testWidgets(
-      'actual player: lowered info, OK Up OK schedule, Down/Back exits control',
+      'actual player (remote, live): one bottom bar, Right OK schedule, Back',
       (tester) async {
     tester.view.physicalSize = const Size(960, 540);
     tester.view.devicePixelRatio = 1;
@@ -247,15 +247,30 @@ void main() {
     }
 
     await press(LogicalKeyboardKey.select);
-    final bg = find.byKey(const ValueKey('live-info-card'));
-    expect(tester.getTopLeft(bg).dy, greaterThanOrEqualTo(48));
+    // The info card at the top stays hidden: the bar at the bottom has it.
+    final card = tester.widget<AnimatedOpacity>(find
+        .ancestor(
+            of: find.byKey(const ValueKey('live-info-card')),
+            matching: find.byType(AnimatedOpacity))
+        .first);
+    expect(card.opacity, 0);
+    final bar = find.byKey(const ValueKey('live-info-bar'));
+    expect(tester.getBottomLeft(bar).dy, 540);
+    Finder inBar(String text) =>
+        find.descendant(of: bar, matching: find.text(text));
+    expect(inBar('Channel One'), findsOneWidget);
+    expect(inBar('My playlist'), findsOneWidget);
+    expect(inBar('Current programme'), findsOneWidget);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'player-play');
+    // Up has nowhere to go without catch-up (the old card's chip is gone).
     await press(LogicalKeyboardKey.arrowUp);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'player-play');
+    await press(LogicalKeyboardKey.arrowRight);
     expect(
-        FocusManager.instance.primaryFocus?.debugLabel, 'player-schedule-chip');
-    await press(LogicalKeyboardKey.arrowDown);
-    expect(FocusManager.instance.primaryFocus?.debugLabel,
-        isNot('player-schedule-chip'));
-    await press(LogicalKeyboardKey.arrowUp);
+        Focus.of(tester.element(inBar('Channel schedule'))).hasFocus, isTrue);
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'player-play');
+    await press(LogicalKeyboardKey.arrowRight);
     await press(LogicalKeyboardKey.select);
     expect(find.byType(ChannelSchedulePanel), findsOneWidget);
     await tester.binding.handlePopRoute();

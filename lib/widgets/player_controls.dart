@@ -1,6 +1,7 @@
 import '../utils/refined_finish.dart';
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -472,7 +473,21 @@ class PlayerControls extends StatelessWidget {
     this.insetForSystemBars = false,
     this.touchLayout = false,
     this.active = true,
+    this.liveInfoBar = false,
+    this.infoBarButtons = false,
+    this.onSchedule,
   });
+
+  /// Remote, live channel: the one bottom info bar ([_buildLiveInfoBar])
+  /// instead of the bar + the info card at the top.
+  final bool liveInfoBar;
+
+  /// [liveInfoBar] after OK: ☆ / Play-Pause / Channel schedule at the end
+  /// of the description line. Off (a zap): display only.
+  final bool infoBarButtons;
+
+  /// The info bar's Channel schedule button.
+  final VoidCallback? onSchedule;
 
   /// False while the bar is hidden: it shows a still of the player's value
   /// instead of following it. The position changes every 100 ms, so the
@@ -851,9 +866,232 @@ class PlayerControls extends StatelessWidget {
     );
   }
 
+  /// [liveInfoBar]'s height at 1x (225 px at 1080p on a 2x box), the same
+  /// with or without its buttons; the system-bar inset comes on top.
+  static const double liveInfoBarHeight = 112;
+
+  /// One bar for a live channel on the remote (owner's Discord poll,
+  /// 2026-11-17: ~90 % for the bottom). The info card at the top and the
+  /// bar under it showed the name, the times and the progress twice and
+  /// took ~370 px of a 1080p picture. Mockups: dev-notes/player-info-bar.md.
+  /// - Line 1: clock | logo, channel, playlist | programme ... time left,
+  ///   REC, quality / FPS / sound.
+  /// - Line 2: start ─ progress ─ end; on a catch-up channel Up reaches it
+  ///   and Left/Right go back in time ([_LiveTimeline]).
+  /// - Line 3: the description. A zap ([infoBarButtons] off): full width
+  ///   and nothing here takes focus, so Up/Down keep zapping. OK: it
+  ///   shortens and ☆ / Play-Pause / Channel schedule appear at its right.
+  Widget _buildLiveInfoBar(BuildContext context) {
+    EpgService? epg;
+    try {
+      epg = context.watch<EpgService>();
+    } on ProviderNotFoundException {
+      epg = null;
+    }
+    PlaybackService? playback;
+    try {
+      playback = context.watch<PlaybackService>();
+    } on ProviderNotFoundException {
+      playback = null;
+    }
+    final live = channel;
+    var playlist = '';
+    if (live != null) {
+      try {
+        // select: the catalog warm-up notifies up to every 400 ms
+        // (CLAUDE.md §10 (14)).
+        playlist = context.select<PlaylistManager, String>(
+            (m) => m.playlistNameFor(live.playlistId).trim());
+      } on ProviderNotFoundException {
+        playlist = '';
+      }
+    }
+    final program = epg?.getCurrentProgram(channelId);
+    final accent = Theme.of(context).colorScheme.primary;
+    final inset = insetForSystemBars
+        ? MediaQuery.viewPaddingOf(context)
+        : EdgeInsets.zero;
+    const strong = TextStyle(
+        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700);
+    const dim = TextStyle(color: Colors.white70, fontSize: 13);
+    final logo = live?.logoUrl;
+    Widget divider() => Container(
+        width: 1,
+        height: 22,
+        margin: const EdgeInsets.symmetric(horizontal: 14),
+        color: Colors.white24);
+
+    final line1 = LayoutBuilder(
+      builder: (context, box) => Row(children: [
+        const PlayerBarClock(
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700)),
+        divider(),
+        if (logo != null && logo.isNotEmpty) ...[
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 64, maxHeight: 22),
+            child: CachedNetworkImage(
+                imageUrl: logo,
+                fit: BoxFit.contain,
+                // Decoded small (CLAUDE.md §10 (6)).
+                memCacheWidth: 160,
+                errorWidget: (_, __, ___) => const SizedBox.shrink()),
+          ),
+          const SizedBox(width: 10),
+        ],
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: box.maxWidth * 0.26),
+          child: Text(title,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: strong),
+        ),
+        if (playlist.isNotEmpty)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 130),
+            child: GoldTag(
+                label: playlist,
+                fontSize: 12,
+                margin: const EdgeInsets.only(left: 10)),
+          ),
+        divider(),
+        Expanded(
+          child: Text(program?.title ?? tr('No program data available'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: program == null ? dim : strong),
+        ),
+        const SizedBox(width: 12),
+        _LiveRemainingLabel(channelId: channelId, style: dim),
+        if (live != null) RecPill(channel: live),
+        _QualityBadge(controller: controller, gold: true),
+        _AudioChannelBadge(controller: controller, gold: true),
+      ]),
+    );
+
+    const timeStyle = TextStyle(color: Colors.white70, fontSize: 13);
+    final line2 =
+        playback != null && live != null && playback.controller == controller
+            ? _LiveTimeline(
+                channel: live,
+                epgId: channelId,
+                playback: playback,
+                onActivity: onActivity,
+                fill: accent,
+                timeStyle: timeStyle)
+            : const SizedBox.shrink();
+
+    // Invisible start / end times: the description lines up with the
+    // progress bar above it.
+    Widget ghostTime(DateTime t) => Visibility(
+        visible: false,
+        maintainSize: true,
+        maintainAnimation: true,
+        maintainState: true,
+        child: Text(TimeFormat.hm.format(t), style: timeStyle));
+    final description =
+        (program?.description ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+    final line3 = Row(children: [
+      if (program != null) ...[
+        ghostTime(program.start),
+        const SizedBox(width: 10),
+      ],
+      Expanded(
+        // Two lines (owner photo, +824: one left room beside the buttons);
+        // 2 x 15.6 fits the 38 px line, the bar keeps its height.
+        child: Text(description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: dim.copyWith(height: 1.2)),
+      ),
+      if (!infoBarButtons && program != null) ...[
+        const SizedBox(width: 10),
+        ghostTime(program.stop),
+      ],
+      if (infoBarButtons) ...[
+        const SizedBox(width: 16),
+        if (onToggleFavorite != null) ...[
+          _InfoBarButton(
+            round: true,
+            label: isFavorite == true
+                ? tr('Remove from favorites')
+                : tr('Add to favorites'),
+            onPressed: () {
+              onActivity?.call();
+              onToggleFavorite!();
+            },
+            child: Icon(isFavorite == true ? Icons.star : Icons.star_border,
+                size: 24,
+                color: isFavorite == true ? Colors.amber : Colors.white),
+          ),
+          const SizedBox(width: 8),
+        ],
+        ValueListenableBuilder<VideoPlayerHdrValue>(
+          valueListenable: _value,
+          builder: (context, value, _) => _InfoBarButton(
+            round: true,
+            focusNode: playFocusNode,
+            label: value.isPlaying ? tr('Pause') : tr('Play'),
+            // The service's toggle: pausing a live channel with catch-up
+            // is a timeshift.
+            onPressed: () {
+              onActivity?.call();
+              if (playback != null && playback.controller == controller) {
+                playback.togglePlayPause();
+              } else if (value.isPlaying) {
+                controller.pause();
+              } else {
+                controller.play();
+              }
+            },
+            child: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow,
+                size: 24, color: Colors.white),
+          ),
+        ),
+        if (onSchedule != null) ...[
+          const SizedBox(width: 12),
+          _InfoBarButton(
+            label: tr('Channel schedule'),
+            onPressed: onSchedule!,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.event_note, size: 17, color: Colors.white),
+              const SizedBox(width: 7),
+              Text(tr('Channel schedule'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ],
+      ],
+    ]);
+
+    return Container(
+      key: const ValueKey('live-info-bar'),
+      height: liveInfoBarHeight + inset.bottom,
+      // 7 + the 1 px top border.
+      padding: EdgeInsets.fromLTRB(
+          20 + inset.left, 7, 20 + inset.right, 8 + inset.bottom),
+      decoration: BoxDecoration(
+        color: RefinedFinish.surface(context, const Color(0xD90D1014)),
+        border: const Border(top: BorderSide(color: Colors.white12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 34, child: line1),
+          SizedBox(height: 24, child: Center(child: line2)),
+          SizedBox(height: 38, child: line3),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (optionsRow) return _buildOptionsRow(context);
+    if (liveInfoBar) return _buildLiveInfoBar(context);
     if (touchLayout) return _buildTouchBar(context);
     final inset = insetForSystemBars
         ? MediaQuery.viewPaddingOf(context)
@@ -1391,6 +1629,89 @@ class PlayerTouchTransport extends StatelessWidget {
 }
 
 /// Catch-up's gold Back to live: the way out of the past, always visible.
+/// A button of the live info bar ([PlayerControls.liveInfoBar]): round
+/// (☆, Play/Pause) or a pill (Channel schedule), an accent ring when
+/// focused. OK acts on the press only: the Homatics remote sends an OK
+/// repeat ~420 ms after a press when the release is late, which would
+/// pause the channel the same OK just opened the bar on.
+class _InfoBarButton extends StatefulWidget {
+  const _InfoBarButton({
+    required this.onPressed,
+    required this.label,
+    required this.child,
+    this.focusNode,
+    this.round = false,
+  });
+
+  final VoidCallback onPressed;
+  final String label;
+  final Widget child;
+  final FocusNode? focusNode;
+  final bool round;
+
+  @override
+  State<_InfoBarButton> createState() => _InfoBarButtonState();
+}
+
+class _InfoBarButtonState extends State<_InfoBarButton> {
+  bool _focused = false;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    if (key != LogicalKeyboardKey.select &&
+        key != LogicalKeyboardKey.enter &&
+        key != LogicalKeyboardKey.numpadEnter &&
+        key != LogicalKeyboardKey.gameButtonA) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) widget.onPressed();
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final focused = _focused;
+    return Focus(
+      focusNode: widget.focusNode,
+      onKeyEvent: _onKey,
+      onFocusChange: (f) => setState(() => _focused = f),
+      child: Semantics(
+        button: true,
+        label: widget.label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onPressed,
+          child: Container(
+            width: widget.round ? 38 : null,
+            height: widget.round ? 38 : 34,
+            padding: widget.round
+                ? null
+                : const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: widget.round ? BoxShape.circle : BoxShape.rectangle,
+              borderRadius: widget.round ? null : BorderRadius.circular(10),
+              color: focused
+                  ? Color.lerp(Colors.black, accent, 0.25)
+                  : Colors.transparent,
+              border: Border.all(
+                  color: focused
+                      ? accent
+                      : widget.round
+                          ? Colors.transparent
+                          : Colors.white38,
+                  width: focused ? 2 : 1.2),
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BackToLiveButton extends StatelessWidget {
   const _BackToLiveButton({required this.onPressed});
 
@@ -1542,9 +1863,10 @@ class _RecallPickerSheet extends StatelessWidget {
 /// cadence for free, no separate timer needed; `context.watch<EpgService>`
 /// additionally keeps it correct across a real EPG data refresh.
 class _LiveRemainingLabel extends StatelessWidget {
-  const _LiveRemainingLabel({required this.channelId});
+  const _LiveRemainingLabel({required this.channelId, this.style});
 
   final String channelId;
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
@@ -1558,7 +1880,7 @@ class _LiveRemainingLabel extends StatelessWidget {
       minutes < 1
           ? tr('Ending now')
           : tr('{minutes} min left', {'minutes': minutes}),
-      style: const TextStyle(color: Colors.white70, fontSize: 12),
+      style: style ?? const TextStyle(color: Colors.white70, fontSize: 12),
     );
   }
 }
@@ -1574,9 +1896,12 @@ class _LiveRemainingLabel extends StatelessWidget {
 /// same "don't show something that can't be trusted" reasoning as
 /// [_AudioTrackButton] hiding for a single-track stream.
 class _QualityBadge extends StatefulWidget {
-  const _QualityBadge({required this.controller});
+  const _QualityBadge({required this.controller, this.gold = false});
 
   final VideoPlayerHdrController controller;
+
+  /// [GoldTag]s instead of the glowing pills (the live info bar).
+  final bool gold;
 
   @override
   State<_QualityBadge> createState() => _QualityBadgeState();
@@ -1651,6 +1976,12 @@ class _QualityBadgeState extends State<_QualityBadge> {
   Widget build(BuildContext context) {
     final label = _label;
     if (label == null) return const SizedBox.shrink();
+    if (widget.gold) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        _goldTag(label),
+        if (_frameRate case final fps?) _goldTag('$fps FPS'),
+      ]);
+    }
     final scheme = Theme.of(context).colorScheme;
     // Same blended duo-tone glow as poster_card.dart's own focus glow —
     // one shadow, not two, for the same compositing-cost reason
@@ -1669,6 +2000,10 @@ class _QualityBadgeState extends State<_QualityBadge> {
     );
   }
 }
+
+/// The live info bar's quality / FPS / sound tags.
+Widget _goldTag(String label) =>
+    GoldTag(label: label, fontSize: 12, margin: const EdgeInsets.only(left: 8));
 
 /// Shared small pill style for [_QualityBadge]/[_AudioChannelBadge] —
 /// extracted once a second badge needed the exact same look rather than
@@ -1714,9 +2049,12 @@ class _InfoPill extends StatelessWidget {
 /// stereo track (`channelCount <= 2`) — not worth a badge for the common
 /// case — or whenever track info isn't available at all.
 class _AudioChannelBadge extends StatefulWidget {
-  const _AudioChannelBadge({required this.controller});
+  const _AudioChannelBadge({required this.controller, this.gold = false});
 
   final VideoPlayerHdrController controller;
+
+  /// A [GoldTag] instead of the glowing pill (the live info bar).
+  final bool gold;
 
   @override
   State<_AudioChannelBadge> createState() => _AudioChannelBadgeState();
@@ -1788,6 +2126,7 @@ class _AudioChannelBadgeState extends State<_AudioChannelBadge> {
   Widget build(BuildContext context) {
     final label = _label;
     if (label == null) return const SizedBox.shrink();
+    if (widget.gold) return _goldTag(label);
     final scheme = Theme.of(context).colorScheme;
     final glowColor = Color.lerp(scheme.primary, scheme.secondary, 0.5)!;
     return _InfoPill(label, glowColor: glowColor);
@@ -2976,12 +3315,18 @@ class _LiveTimeline extends StatefulWidget {
     required this.epgId,
     required this.playback,
     this.onActivity,
+    this.fill,
+    this.timeStyle,
   });
 
   final Channel channel;
   final String epgId;
   final PlaybackService playback;
   final VoidCallback? onActivity;
+
+  /// The bar up to now while not focused (the live info bar: the accent).
+  final Color? fill;
+  final TextStyle? timeStyle;
 
   @override
   State<_LiveTimeline> createState() => _LiveTimelineState();
@@ -3086,7 +3431,9 @@ class _LiveTimelineState extends State<_LiveTimeline> {
                 width: w * at(now),
                 height: focused ? 5 : 3,
                 decoration: BoxDecoration(
-                    color: focused ? scheme.primary : Colors.white70,
+                    color: focused
+                        ? scheme.primary
+                        : widget.fill ?? Colors.white70,
                     borderRadius: BorderRadius.circular(3))),
             if (target != null || focused)
               Positioned(
@@ -3106,15 +3453,15 @@ class _LiveTimelineState extends State<_LiveTimeline> {
     );
     // The target time and the Catch-up hint float above the bar, like
     // [_ScrubBar]'s: beside it they took its width and moved every point.
+    final timeStyle = widget.timeStyle ??
+        const TextStyle(color: Colors.white70, fontSize: 12);
     final row = Stack(clipBehavior: Clip.none, children: [
       Row(children: [
-        Text(hm.format(programme.start),
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(hm.format(programme.start), style: timeStyle),
         const SizedBox(width: 10),
         Expanded(child: bar),
         const SizedBox(width: 10),
-        Text(hm.format(programme.stop),
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(hm.format(programme.stop), style: timeStyle),
       ]),
       if (target != null)
         _FloatingNote(

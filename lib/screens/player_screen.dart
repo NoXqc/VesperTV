@@ -885,6 +885,12 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// sideways, whose width can pass the TV-layout threshold.
   bool _touch = false;
 
+  /// Remote + a live channel: the one bottom info bar
+  /// ([PlayerControls.liveInfoBar]) is both the zap info and the bar; the
+  /// info card at the top stays for catch-up and touch. Refreshed on every
+  /// build like [_touch].
+  bool _infoBar = false;
+
   /// The rotate button forced an orientation (released on leaving).
   bool _rotated = false;
 
@@ -1058,7 +1064,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         _watchFocus.requestFocus();
       } else if (_hasSwitchButton) {
         _switchButtonFocus.requestFocus();
-      } else if (_zapInfoVisible) {
+      } else if (_zapInfoVisible && !_infoBar) {
         _focusScheduleChip();
       }
       return;
@@ -1780,6 +1786,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     // && a linkedChannel to offer), same caching pattern as [_isTvLayout].
     _hasSwitchButton = playback.error != null && linkedChannel != null;
     _touch = !prefs.isTelevision;
+    _infoBar = !_touch && channel.isLive;
+    // A zap shows the info bar too, display only (nothing in it focused).
+    final infoBarShown =
+        _infoBar && (_bottomVisible || (_zapInfoVisible && !_optionsVisible));
     final phoneTouch =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android && _touch;
     final touchLocked = phoneTouch && _touchLocked && !inPip;
@@ -2108,7 +2118,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                           // Touch: the top bar has its own clock.
                           if (prefs.playerClock)
                             PlayerClockPill(
-                                top: 6, visible: !(_touch && _topVisible)),
+                                top: 6,
+                                // The info bar starts with its own clock.
+                                visible:
+                                    !(_touch && _topVisible) && !infoBarShown),
                           if (channel.mediaFileInfo case final info?)
                             MediaFileInfoOverlay(
                               key: ValueKey('file-info-${channel.id}'),
@@ -2133,12 +2146,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                             left: 0,
                             right: 0,
                             child: AnimatedOpacity(
-                              opacity: _zapInfoVisible ? 1 : 0,
+                              opacity: _zapInfoVisible && !_infoBar ? 1 : 0,
                               duration: const Duration(milliseconds: 200),
                               child: IgnorePointer(
-                                ignoring: !_zapInfoVisible,
+                                ignoring: !_zapInfoVisible || _infoBar,
                                 child: ExcludeFocus(
-                                  excluding: !_zapInfoVisible,
+                                  excluding: !_zapInfoVisible || _infoBar,
                                   child: Center(
                                       child: LiveChannelInfoCard(
                                     channel: channel,
@@ -2156,11 +2169,15 @@ class _PlayerScreenState extends State<PlayerScreen>
                           // One bottom layout keeps captions above the actual panel
                           // height, including on phones and with larger text. Only
                           // build the Data pool while visible (it polls the player).
+                          // Over the info bar while it shows.
                           if (controller != null)
-                            Positioned(
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 200),
                               left: 0,
                               right: 0,
-                              bottom: 48,
+                              bottom: infoBarShown
+                                  ? PlayerControls.liveInfoBarHeight + 8
+                                  : 48,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -2204,13 +2221,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 key: _bottomBarKey,
                                 excluding: !_bottomVisible,
                                 child: AnimatedOpacity(
-                                  opacity: _bottomVisible ? 1 : 0,
+                                  opacity:
+                                      _bottomVisible || infoBarShown ? 1 : 0,
                                   duration: const Duration(milliseconds: 200),
                                   child: FocusTraversalGroup(
                                     child: FocusScope(
                                       node: _bottomScope,
                                       child: PlayerControls(
-                                        active: _bottomVisible,
+                                        active: _bottomVisible || infoBarShown,
+                                        liveInfoBar: _infoBar,
+                                        infoBarButtons: _bottomVisible,
+                                        onSchedule: _openSchedule,
                                         insetForSystemBars: true,
                                         controller: controller,
                                         title: channel.name,
@@ -2421,7 +2442,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               // both show.
                               bottom: _skipShowing
                                   ? 262
-                                  : _bottomVisible
+                                  : _bottomVisible || infoBarShown
                                       ? _bottomBarHeight + 8
                                       : 28,
                               showUpHint: !_touch &&
