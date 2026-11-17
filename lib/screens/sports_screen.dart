@@ -3822,14 +3822,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Not a lazy ListView: Down focuses a card in the next row, and with the
     // coming days' rows that row could be off screen and unbuilt, so the
     // focus stayed put (CLAUDE.md §10). Each row is still a lazy list.
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 8, bottom: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (i, s) in sections.indexed)
-            _buildSection(s, preview, _firstRowZone + i),
-        ],
+    // The page clips above and below only: its own clip cut the left frame
+    // off a row's focused first card (1.05 zoom past the page's edge, into
+    // its margin; owner photo, regular Sports Trak, 2026-11-16). The rows
+    // still clip their sides (_RowSideClipper).
+    return ClipRect(
+      clipper: _PageClipper(_zoomRoom(context) + 4),
+      child: SingleChildScrollView(
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(top: 8, bottom: 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, s) in sections.indexed)
+              _buildSection(s, preview, _firstRowZone + i),
+          ],
+        ),
       ),
     );
   }
@@ -4141,6 +4149,21 @@ class _RowSideClipper extends CustomClipper<Rect> {
 
   @override
   bool shouldReclip(_RowSideClipper oldClipper) => oldClipper.margin != margin;
+}
+
+/// The regular Sports Trak page's clip: its top and bottom (rows scroll
+/// under the hero), [margin] past each side for a focused card's zoom.
+class _PageClipper extends CustomClipper<Rect> {
+  const _PageClipper(this.margin);
+
+  final double margin;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(-margin, 0, size.width + margin, size.height);
+
+  @override
+  bool shouldReclip(_PageClipper oldClipper) => oldClipper.margin != margin;
 }
 
 /// How far a focused game card's 1.05 zoom reaches past its side, plus its
