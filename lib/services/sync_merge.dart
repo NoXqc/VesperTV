@@ -461,6 +461,20 @@ SyncSnapshot mergeSync({
   return SyncSnapshot(values, stamps);
 }
 
+/// A held key (`SyncState.deferred`: written at the next launch) the user
+/// has since edited here: their edit applied on top of the value the sync
+/// meant to write ([merged], the base), not instead of it. [held] is what
+/// this device had when the key was held. Lists keep every merged entry
+/// the edit didn't remove; anything else is the edit. Treating the edited
+/// list itself as the change made every entry other devices had added
+/// look removed here: one starred channel on a just-linked TV emptied a
+/// viewer's favourites on all his devices (LOG-CGEYUG, Kal-el23).
+Object? rebaseHeldEdit(Object? held, Object? local, Object? merged) {
+  final lists = (_stringList(local) != null && _stringList(merged) != null) ||
+      (_idList(local) != null && _idList(merged) != null);
+  return lists ? _both(held, local, merged, true) : local;
+}
+
 /// A joining device's value: lists combined, otherwise the server's.
 Object? _join(Object? l, Object? r) {
   if (r == null) return l;
@@ -546,6 +560,42 @@ List<String>? _stringList(Object? tagged) {
   if (tagged is! Map || tagged['t'] != 'l') return null;
   final v = tagged['v'];
   return v is List ? [for (final s in v) '$s'] : null;
+}
+
+/// A synced key as the Send log names it. A viewer's keys end in its long
+/// id, which the log's redaction turns into `<token>` (LOG-LGX8TV: a
+/// profile's favourites showed as "<token>, <token>"): the id's last 4
+/// characters stay.
+String syncKeyLabel(String key) {
+  final at = key.indexOf(AppConstants.viewerKeySuffix);
+  if (at < 0) return key;
+  final id = key.substring(at + AppConstants.viewerKeySuffix.length);
+  final tail = id.length > 4 ? id.substring(id.length - 4) : id;
+  return '${key.substring(0, at)}(profile ..$tail)';
+}
+
+/// For the Send log: how a synced id list changes, in total and per
+/// playlist (ids are `<playlist id>::…`), e.g.
+/// `154 -> 0 (+0 -154) 1792590634437724:154->0`.
+String syncListChange(Object? before, Object? after) {
+  final b = _stringList(before) ?? const <String>[];
+  final a = _stringList(after) ?? const <String>[];
+  Map<String, int> byPlaylist(List<String> ids) {
+    final out = <String, int>{};
+    for (final id in ids) {
+      final at = id.indexOf('::');
+      final p = at < 0 ? '-' : id.substring(0, at);
+      out[p] = (out[p] ?? 0) + 1;
+    }
+    return out;
+  }
+
+  final bs = b.toSet(), as = a.toSet();
+  final pb = byPlaylist(b), pa = byPlaylist(a);
+  final playlists = {...pb.keys, ...pa.keys}.toList()..sort();
+  return '${b.length} -> ${a.length} '
+      '(+${as.difference(bs).length} -${bs.difference(as).length})'
+      '${playlists.map((p) => ' $p:${pb[p] ?? 0}->${pa[p] ?? 0}').join()}';
 }
 
 /// An entry's identity: its `id`, or for a Media Hub history entry (no

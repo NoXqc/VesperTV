@@ -295,6 +295,7 @@ class PlaylistManager extends ChangeNotifier {
       _favoriteSeriesIds = _storage.getFavoriteSeries();
       _activeViewerRestricted = _activeViewerIsRestricted();
       _myGroups.load(_storage.getMyGroups());
+      _logFavorites('start');
 
       _sessions
         ..clear()
@@ -400,6 +401,31 @@ class PlaylistManager extends ChangeNotifier {
   // visibility is a blocklist or an allowlist (see `PlaylistSession
   // ._loadViewerScopedState`'s doc comment).
 
+  /// Send log: whose favourites were just read and how many per playlist
+  /// (LOG-LGX8TV: a tester's favourites were gone after each update while
+  /// he synced 3 devices). `elsewhere` = ids of a playlist this device
+  /// doesn't have.
+  void _logFavorites(String when) {
+    final viewer = _favoritesViewer;
+    final here = {for (final p in _storage.getPlaylists()) p.id};
+    final per = <String, int>{};
+    var elsewhere = 0;
+    for (final id in _favoriteIds) {
+      final at = id.indexOf('::');
+      final p = at < 0 ? '' : id.substring(0, at);
+      if (here.contains(p)) {
+        per[p] = (per[p] ?? 0) + 1;
+      } else {
+        elsewhere++;
+      }
+    }
+    debugPrint('Favorites: $when '
+        'viewer=${viewer == AppConstants.mainViewerId ? 'main' : 'profile ..${viewer.length > 4 ? viewer.substring(viewer.length - 4) : viewer}'} '
+        'n=${_favoriteIds.length}'
+        '${per.entries.map((e) => ' ${e.key}:${e.value}').join()}'
+        '${elsewhere == 0 ? '' : ' elsewhere=$elsewhere'}');
+  }
+
   bool _activeViewerIsRestricted() {
     final activeId = _storage.getActiveViewerId();
     if (activeId == AppConstants.mainViewerId) return false;
@@ -422,6 +448,7 @@ class PlaylistManager extends ChangeNotifier {
     _activeViewerRestricted = _activeViewerIsRestricted();
     _favoriteIds = _storage.getFavorites();
     _favoritesViewer = _storage.getActiveViewerId();
+    _logFavorites('reload');
     _savedLiveChecked.clear();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
     _myGroups.load(_storage.getMyGroups());
@@ -1253,7 +1280,8 @@ class PlaylistManager extends ChangeNotifier {
       for (final o in _enabledSessionsSortedFor('tv'))
         if (!identical(o, own)) o,
     ]) {
-      for (final c in ChannelCopyFallback.copiesOf(channel, s.allLiveChannels)) {
+      for (final c
+          in ChannelCopyFallback.copiesOf(channel, s.allLiveChannels)) {
         if (!seen.add(c.url)) continue;
         final p = s.edits.probes[c.rawId];
         out.add((c, p != null && !p.isStale ? p : null));
