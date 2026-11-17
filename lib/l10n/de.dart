@@ -3751,4 +3751,41 @@ const Map<String, String> kDe = {
       "Start ausblenden",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Eine KI-App möchte die Reihenfolge der TV-Guides von {playlist} ändern.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Quellen-Badges",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Bild-Badges an Media-Hub-Quellen (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Gespeichert. Media-Hub-Quellen zeigen jetzt diese Badges.",
+  "This address is not a badge pack.":
+      "Diese Adresse ist kein Badge-Paket.",
+  "Could not download the badge pack ({error}).":
+      "Das Badge-Paket konnte nicht geladen werden ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Zeigt Bild-Badges wie 4K, Dolby Vision oder Atmos an Media-Hub-Quellen. Füge die Adresse eines Badge-Pakets für Nuvio oder Fusion ein (deren Badge-URL).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Ohne Paket zeigen Quellen die eigenen Tags von VesperTV. Leer lassen zum Ausschalten.",
+  "Badge pack address":
+      "Adresse des Badge-Pakets",
+  "{n} badges in this pack":
+      "{n} Badges in diesem Paket",
+  "{n} could not be read and are left out.":
+      "{n} konnten nicht gelesen werden und fehlen.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Quellen-Badges gespeichert: {n} Badges. Unter Quellen-Badges ein- oder ausschalten.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Badge-Paket entfernt: Quellen zeigen die eigenen Tags von VesperTV.",
+  "Show stream badges":
+      "Quellen-Badges anzeigen",
+  "Change badge pack":
+      "Badge-Paket ändern",
+  "Add a badge pack":
+      "Badge-Paket hinzufügen",
+  "Its address, typed or from your phone":
+      "Seine Adresse, getippt oder vom Handy",
+  "Remove badge pack":
+      "Badge-Paket entfernen",
+  "Sources show VesperTV's own tags":
+      "Quellen zeigen die eigenen Tags von VesperTV",
 };

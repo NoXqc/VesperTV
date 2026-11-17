@@ -9,6 +9,7 @@ import '../services/archive_playback_sources.dart';
 import '../services/archive_stream_size.dart';
 import '../services/storage_service.dart';
 import 'archive_playback_settings.dart';
+import 'stream_badge_row.dart';
 import 'tv_menu_tile.dart';
 
 class ArchiveStreamPicker extends StatefulWidget {
@@ -206,11 +207,9 @@ class _ArchiveStreamPickerState extends State<ArchiveStreamPicker> {
                                   itemBuilder: (_, i) {
                                     final o = options[i];
                                     final id = identity(o);
-                                    final formats = archiveStreamFormats(o);
                                     final size = archiveStreamBytes(o);
-                                    final badges = [
+                                    final details = [
                                       o.source.name,
-                                      ...formats,
                                       if (size > 0)
                                         '${(size / 1000000000).toStringAsFixed(1)} GB',
                                       if (o.stream.subtitles.isNotEmpty)
@@ -229,8 +228,9 @@ class _ArchiveStreamPickerState extends State<ArchiveStreamPicker> {
                                                 o.stream.title ??
                                                 tr('Stream {n}', {'n': i + 1})),
                                         titleMaxLines: 2,
+                                        badges: StreamBadgeRow(option: o),
                                         subtitle: [
-                                          badges.join(' · '),
+                                          details.join(' · '),
                                           if (o.stream.title != null &&
                                               o.stream.name != null)
                                             archiveStreamLabel(o.stream.title!)

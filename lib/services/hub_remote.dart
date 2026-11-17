@@ -9,6 +9,7 @@ import 'addon_import.dart';
 import 'addon_service.dart';
 import 'archive_service.dart';
 import 'storage_service.dart';
+import 'stream_badges.dart';
 import '../utils/app_store.dart';
 
 /// What a Media Hub source mainly is, for the sources page's filters.
@@ -240,7 +241,18 @@ class HubRemote {
                 }
               };
             } on ArchiveApiException {
-              return _error('No collections in that file.');
+              // Or a Nuvio badge pack (also a .json): Stream badges.
+              final badges = await StreamBadges.instance.useIfPack(file);
+              if (badges == null) {
+                return _error('No collections in that file.');
+              }
+              return {
+                'result': {
+                  ..._list(archive, addons),
+                  'summary': 'Saved as the stream badge pack ($badges badges): on the TV, '
+                      'Media Hub sources > Stream badges turns it on or off.',
+                }
+              };
             } catch (_) {
               return _error("That link didn't answer.");
             }

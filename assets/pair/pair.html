@@ -173,6 +173,9 @@
   // box, worded for them; both still send {"mode":"link"}.
   var keyKind = parts[parts.length - 1] === "key";
   var posterKind = parts[parts.length - 1] === "poster";
+  // "badges" (Stream badges): a badge pack address, Save like "poster".
+  var badgeKind = parts[parts.length - 1] === "badges";
+  if (badgeKind) posterKind = true;
   if (keyKind || posterKind) linkKind = true;
   if (linkKind || serverKind || photoKind || smbKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
@@ -227,7 +230,7 @@
       $("link").setAttribute("inputmode", "text");
       document.title = "VesperTV · Send a key";
     }
-    if (posterKind) $("link").placeholder = "https://…/{imdb_id}…";
+    if (posterKind) $("link").placeholder = badgeKind ? "https://…/badges.json" : "https://…/{imdb_id}…";
   }
   if (serverKind) {
     $("form-view").hidden = true;

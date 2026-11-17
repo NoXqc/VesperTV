@@ -35,6 +35,7 @@ import '../../services/vesper_ai/vesper_ai.dart';
 import '../vesper_ai/phone_mic_sheet.dart';
 import 'addons_screen.dart';
 import 'archive_posters_screen.dart';
+import 'stream_badges_screen.dart';
 import 'archive_sources_screen.dart';
 import 'backup_screen.dart';
 import 'check_updates_screen.dart';
@@ -896,6 +897,13 @@ class SettingsCatalog {
                     'Use the largest known file size when starting a title. Resume keeps your selected stream.'),
                 value: archive.autoPlayLargest,
                 onChanged: archive.setAutoPlayLargest),
+          SettingsLink(
+              id: 'stream_badges',
+              floating: true,
+              icon: Icons.local_offer_outlined,
+              title: tr('Stream badges'),
+              subtitle: tr('Picture badges on Media Hub sources (4K, HDR, Atmos…)'),
+              page: (_) => const StreamBadgesScreen()),
           SettingsToggle(
               id: 'auto_trailers',
               icon: Icons.movie_outlined,

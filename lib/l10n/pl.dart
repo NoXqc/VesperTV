@@ -3442,4 +3442,41 @@ const Map<String, String> kPl = {
       "Ukryj Start",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Aplikacja AI chce zmienić kolejność przewodników TV playlisty {playlist}.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Odznaki źródeł",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Odznaki obrazkowe przy źródłach Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Zapisano. Źródła Media Hub pokazują teraz te odznaki.",
+  "This address is not a badge pack.":
+      "Ten adres nie jest pakietem odznak.",
+  "Could not download the badge pack ({error}).":
+      "Nie udało się pobrać pakietu odznak ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Pokazuj odznaki obrazkowe, np. 4K, Dolby Vision lub Atmos, przy źródłach Media Hub. Wklej adres pakietu odznak stworzonego dla Nuvio lub Fusion (ich adres URL odznak).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Bez pakietu źródła pokazują własne tagi VesperTV. Zostaw puste, aby wyłączyć.",
+  "Badge pack address":
+      "Adres pakietu odznak",
+  "{n} badges in this pack":
+      "Odznaki w tym pakiecie: {n}",
+  "{n} could not be read and are left out.":
+      "Nie udało się odczytać: {n}, pominięto je.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Zapisano odznaki źródeł: {n} odznak. Włącz lub wyłącz je w Odznakach źródeł.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Usunięto pakiet odznak: źródła pokazują własne etykiety VesperTV.",
+  "Show stream badges":
+      "Pokazuj odznaki źródeł",
+  "Change badge pack":
+      "Zmień pakiet odznak",
+  "Add a badge pack":
+      "Dodaj pakiet odznak",
+  "Its address, typed or from your phone":
+      "Jego adres, wpisany lub z telefonu",
+  "Remove badge pack":
+      "Usuń pakiet odznak",
+  "Sources show VesperTV's own tags":
+      "Źródła pokazują własne etykiety VesperTV",
 };

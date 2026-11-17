@@ -3810,4 +3810,41 @@ const Map<String, String> kEl = {
       "Απόκρυψη Αρχικής",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Μια εφαρμογή AI θέλει να αλλάξει τη σειρά των οδηγών TV του {playlist}.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Σήματα πηγών",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Σήματα με εικόνα στις πηγές του Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Αποθηκεύτηκε. Οι πηγές του Media Hub δείχνουν τώρα αυτά τα σήματα.",
+  "This address is not a badge pack.":
+      "Αυτή η διεύθυνση δεν είναι πακέτο σημάτων.",
+  "Could not download the badge pack ({error}).":
+      "Δεν ήταν δυνατή η λήψη του πακέτου σημάτων ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Εμφάνιση σημάτων με εικόνα όπως 4K, Dolby Vision ή Atmos στις πηγές του Media Hub. Επικολλήστε τη διεύθυνση ενός πακέτου σημάτων για Nuvio ή Fusion (το URL σημάτων τους).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Χωρίς πακέτο, οι πηγές δείχνουν τις ετικέτες του VesperTV. Αφήστε το κενό για απενεργοποίηση.",
+  "Badge pack address":
+      "Διεύθυνση πακέτου σημάτων",
+  "{n} badges in this pack":
+      "{n} σήματα σε αυτό το πακέτο",
+  "{n} could not be read and are left out.":
+      "{n} δεν διαβάστηκαν και παραλείπονται.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Τα σήματα πηγών αποθηκεύτηκαν: {n} σήματα. Ενεργοποιήστε ή απενεργοποιήστε τα στα Σήματα πηγών.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Το πακέτο σημάτων αφαιρέθηκε: οι πηγές δείχνουν τις ετικέτες του VesperTV.",
+  "Show stream badges":
+      "Εμφάνιση σημάτων πηγών",
+  "Change badge pack":
+      "Αλλαγή πακέτου σημάτων",
+  "Add a badge pack":
+      "Προσθήκη πακέτου σημάτων",
+  "Its address, typed or from your phone":
+      "Η διεύθυνσή του, πληκτρολογημένη ή από το κινητό σας",
+  "Remove badge pack":
+      "Αφαίρεση πακέτου σημάτων",
+  "Sources show VesperTV's own tags":
+      "Οι πηγές δείχνουν τις ετικέτες του VesperTV",
 };

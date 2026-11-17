@@ -3861,4 +3861,41 @@ const Map<String, String> kFr = {
       "Masquer l'Accueil",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Une app d'IA veut changer l'ordre des guides TV de {playlist}.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Badges des sources",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Badges en image sur les sources du Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Enregistré. Les sources du Media Hub affichent maintenant ces badges.",
+  "This address is not a badge pack.":
+      "Cette adresse n'est pas un pack de badges.",
+  "Could not download the badge pack ({error}).":
+      "Impossible de télécharger le pack de badges ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Affichez des badges en image comme 4K, Dolby Vision ou Atmos sur les sources du Media Hub. Collez l'adresse d'un pack de badges fait pour Nuvio ou Fusion (leur URL de badges).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Sans pack, les sources affichent les étiquettes de VesperTV. Laissez vide pour désactiver.",
+  "Badge pack address":
+      "Adresse du pack de badges",
+  "{n} badges in this pack":
+      "{n} badges dans ce pack",
+  "{n} could not be read and are left out.":
+      "{n} n'ont pas pu être lus et sont exclus.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Badges des sources enregistrés : {n} badges. Activez-les ou désactivez-les dans Badges des sources.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Pack de badges retiré : les sources affichent les étiquettes de VesperTV.",
+  "Show stream badges":
+      "Afficher les badges des sources",
+  "Change badge pack":
+      "Changer de pack de badges",
+  "Add a badge pack":
+      "Ajouter un pack de badges",
+  "Its address, typed or from your phone":
+      "Son adresse, tapée ou depuis votre téléphone",
+  "Remove badge pack":
+      "Retirer le pack de badges",
+  "Sources show VesperTV's own tags":
+      "Les sources affichent les étiquettes de VesperTV",
 };
