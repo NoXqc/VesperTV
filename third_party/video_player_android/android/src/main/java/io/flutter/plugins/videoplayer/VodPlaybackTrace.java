@@ -32,6 +32,11 @@ final class VodPlaybackTrace implements AnalyticsListener {
   private boolean disposed;
   private long untilMs;
   private int events;
+  // Send log counters for the whole stream, outside the trace window too
+  // (StatsBridge -> Dart VodStallLog).
+  volatile int underruns;
+  volatile int loadErrors;
+  @androidx.annotation.Nullable volatile String lastLoadError;
   private final Runnable tick = new Runnable() {
     @Override public void run() {
       if (!active()) return;
@@ -93,6 +98,7 @@ final class VodPlaybackTrace implements AnalyticsListener {
     event("playWhenReady reason=" + reason);
   }
   @Override public void onAudioUnderrun(EventTime time, int bytes, long bufferMs, long elapsedMs) {
+    underruns++;
     event("audioUnderrun outputBytes=" + bytes + " outputMs=" + bufferMs
         + " sinceFeedMs=" + elapsedMs);
   }
@@ -106,9 +112,12 @@ final class VodPlaybackTrace implements AnalyticsListener {
       IOException error, boolean wasCanceled) {
     Throwable root = error;
     while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-    event("loadError " + error.getClass().getSimpleName() + "/" + root.getClass().getSimpleName()
+    String what = error.getClass().getSimpleName() + "/" + root.getClass().getSimpleName()
         + " afterMs=" + info.loadDurationMs + " bytes=" + info.bytesLoaded
-        + (wasCanceled ? " canceled" : ""));
+        + (wasCanceled ? " canceled" : "");
+    loadErrors++;
+    lastLoadError = what;
+    event("loadError " + what);
   }
 
   @Override public void onPlayerError(EventTime time, PlaybackException error) {

@@ -72,6 +72,10 @@ class AppPreferences extends ChangeNotifier {
   late bool hideLiveTv;
   late bool hideSportsTrak;
 
+  /// Movies / TV Shows without their What's New carousel and row: they open
+  /// on All (Settings > Appearance > Tabs, owner 2026-11-17).
+  late bool hideWhatsNew;
+
   /// The Extras row (the Archive tab; tabs column / phone "More" page)
   /// hidden.
   late bool hideArchive;
@@ -490,6 +494,7 @@ class AppPreferences extends ChangeNotifier {
     hideShows = _storage.getHideShows();
     hideLiveTv = _storage.getHideLiveTv();
     hideSportsTrak = _storage.getHideSportsTrak();
+    hideWhatsNew = _storage.getHideWhatsNew();
     hideArchive = _storage.getHideArchive();
     hideRecordings = _storage.getHideRecordings();
     hideCatchupGroup = _storage.getHideCatchupGroup();
@@ -671,6 +676,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideShows(bool value) {
     hideShows = value;
     _storage.setHideShows(value);
+    notifyListeners();
+  }
+
+  void setHideWhatsNew(bool value) {
+    hideWhatsNew = value;
+    _storage.setHideWhatsNew(value);
     notifyListeners();
   }
 

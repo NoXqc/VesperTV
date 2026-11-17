@@ -1533,6 +1533,7 @@ const Map<String, String> kEs = {
       "Revisa el enlace aquí y pulsa Añadir.",
   "Hide Movies": "Ocultar Películas",
   "Hide TV Shows": "Ocultar Series",
+  "Hide What's New": "Ocultar Novedades",
   "Hide Recordings": "Ocultar grabaciones",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Escribir una clave con un mando es tedioso. Escanea este código con la cámara del teléfono y pega allí la clave: aparecerá aquí para que la revises y la guardes.",
@@ -1545,6 +1546,8 @@ const Map<String, String> kEs = {
       "Quita la pestaña Películas y las películas de la búsqueda.",
   "Removes the TV Shows tab and show search results.":
       "Quita la pestaña Series y las series de la búsqueda.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Quita Novedades de Películas y Series: se abren en Todo.",
   "Removes the Recordings tab.": "Quita la pestaña Grabaciones.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Escribir un enlace largo con el mando es un suplicio. Escanea este código con la cámara del móvil y pega ahí el enlace — aparecerá aquí para que lo revises y lo añadas.",

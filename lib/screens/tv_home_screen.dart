@@ -66,6 +66,8 @@ import '../widgets/rec_cue.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/section_label.dart';
 import '../widgets/update_prompt.dart';
+import '../widgets/sports_trak_name.dart';
+import '../widgets/whole_words_text.dart';
 import '../widgets/settings_scaffold.dart';
 import 'catalog_sync_screen.dart';
 import 'group_catalog_screen.dart';
@@ -1609,6 +1611,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   static bool _isBrowseTab(String tab) => tab == 'Movies' || tab == 'TV Shows';
 
+  /// Settings > Appearance > Tabs > What's New off.
+  bool get _hideWhatsNew => context.read<AppPreferences>().hideWhatsNew;
+
   /// Android phones/tablets: a browse poster's first tap previews it in
   /// the hero, a second tap opens it (PosterCard.tapToPreview).
   bool get _touchPreview =>
@@ -1664,8 +1669,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _focusDepth = 0;
       _phonePage = _compact ? 1 : 0;
       // Movies/TV Shows open on What's New (owner's request, 2026-10-16;
-      // it was opt-in before). "All" or a category switches to the posters.
-      _showWhatsNew = _isBrowseTab(tab);
+      // it was opt-in before) unless Settings hides it. "All" or a
+      // category switches to the posters.
+      _showWhatsNew = _isBrowseTab(tab) && !_hideWhatsNew;
       _showFavorites = false;
     });
     // The previous tab's slide must not flash behind the new carousel.
@@ -2486,7 +2492,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (_tab == 'TV') {
       _selectedGroup = _favoritesGroupSentinel;
     }
-    _showWhatsNew = _isBrowseTab(_tab);
+    _showWhatsNew = _isBrowseTab(_tab) && !_hideWhatsNew;
     if (_showWhatsNew || _tab == 'Home') {
       _phonePage = 1;
     }
@@ -3721,6 +3727,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // Presentation follows Flutter's platform, so Android widget tests
         // can exercise the same hidden-column layout as a real foldable.
         !isDesktopTarget;
+    if (_showWhatsNew && prefs.hideWhatsNew) _showWhatsNew = false;
     _fullArt = isBrowseTab && _showWhatsNew && !_compact;
 
     return Theme(
@@ -4695,6 +4702,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             _SelectableRow(
               icon: Icons.sports_hockey,
               label: AppConstants.sportsTabName,
+              labelBuilder: (style) => SportsTrakName(style: style),
               selected: false,
               collapsed: collapsed,
               onTap: _openSports,
@@ -5409,6 +5417,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final groups = _browseRailGroups(playlist);
     final allGroups = _browseRailGroups(playlist, includeHiddenPlaylists: true);
     final showCounts = context.watch<AppPreferences>().showGroupCounts;
+    final whatsNew = !context.watch<AppPreferences>().hideWhatsNew;
 
     // Keyed by tab — reported directly, live: simply *scrolling* down the
     // groups column (never tapping/selecting a group at all) in Movies,
@@ -5439,7 +5448,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
     final playlistsRow = _playlistsRow(allGroups, groups, playlist,
         collapsed: collapsed,
-        rowsAbove: 4 + (_watchListFor(_tab).isNotEmpty ? 1 : 0));
+        rowsAbove:
+            (whatsNew ? 4 : 3) + (_watchListFor(_tab).isNotEmpty ? 1 : 0));
 
     return ListView(
       key: ValueKey(_tab),
@@ -5447,20 +5457,22 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       children: [
         // Pinned above the real categories, same shape as the Live TV
         // column's own "Favourites" entry — not a category, a view.
-        _SelectableRow(
-          icon: Icons.new_releases,
-          label: tr("What's New"),
-          selected: _showWhatsNew,
-          collapsed: collapsed,
-          fontSize: _groupFontSize,
-          focusNode: _firstGroupRowFocusNode,
-          onTap: () => setState(() {
-            if (!_showWhatsNew) _whatsNewArt.value = null;
-            _showWhatsNew = true;
-            _showFavorites = false;
-            if (_compact) _phonePage = 2;
-          }),
-        ),
+        // Settings > Appearance > Tabs can hide it.
+        if (whatsNew)
+          _SelectableRow(
+            icon: Icons.new_releases,
+            label: tr("What's New"),
+            selected: _showWhatsNew,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            focusNode: _firstGroupRowFocusNode,
+            onTap: () => setState(() {
+              if (!_showWhatsNew) _whatsNewArt.value = null;
+              _showWhatsNew = true;
+              _showFavorites = false;
+              if (_compact) _phonePage = 2;
+            }),
+          ),
         // Hold Select = clear this tab's Favourites (after a confirm).
         HoldToActivate(
           onTap: showFavorites,
@@ -5471,6 +5483,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             selected: _showFavorites,
             collapsed: collapsed,
             fontSize: _groupFontSize,
+            // The top row when What's New is hidden.
+            focusNode: whatsNew ? null : _firstGroupRowFocusNode,
             onTap: showFavorites,
             onLongPress: _confirmClearFavorites,
           ),
@@ -7404,9 +7418,14 @@ class _SelectableRow extends StatefulWidget {
     this.fontSize,
     this.focusNode,
     this.onHighlight,
+    this.labelBuilder,
   });
 
   final String label;
+
+  /// Draws the label in place of plain [label] text, given the row's label
+  /// style (the Sports Trak tab's small gold "Trak").
+  final Widget Function(TextStyle style)? labelBuilder;
   final bool selected;
   final bool collapsed;
   final VoidCallback onTap;
@@ -7436,6 +7455,11 @@ class _SelectableRow extends StatefulWidget {
 
 class _SelectableRowState extends State<_SelectableRow> {
   bool _focused = false;
+
+  Widget _label(TextStyle style) =>
+      widget.labelBuilder?.call(style) ??
+      WholeWordsText(widget.label,
+          maxLines: 2, overflow: TextOverflow.ellipsis, style: style);
 
   @override
   Widget build(BuildContext context) {
@@ -7600,11 +7624,8 @@ class _SelectableRowState extends State<_SelectableRow> {
                                       const SizedBox(width: 4),
                                     ],
                                     Expanded(
-                                      child: _WholeWordsText(
-                                        widget.label,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                      child: _label(
+                                        TextStyle(
                                           color: foregroundColor,
                                           fontSize: fontSize,
                                           fontWeight: (_focused || isPlaying)
@@ -11832,48 +11853,4 @@ bool _isShortPhoneScreen(BuildContext context) {
       size.width > size.height &&
       !context.read<AppPreferences>().isTelevision &&
       !isDesktopTarget;
-}
-
-/// A row label that never breaks inside a word: a word wider than the row
-/// (bold "Recordings" at a large font size broke into "Recording / s" on a
-/// user's Homatics, 2026-11-16) shrinks the label until it fits instead.
-class _WholeWordsText extends StatelessWidget {
-  const _WholeWordsText(this.text,
-      {required this.maxLines, required this.overflow, required this.style});
-
-  final String text;
-  final int maxLines;
-  final TextOverflow overflow;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
-    return LayoutBuilder(builder: (context, box) {
-      var scale = 1.0;
-      if (box.maxWidth.isFinite) {
-        var widest = 0.0;
-        for (final word in text.split(RegExp(r'\s+'))) {
-          if (word.isEmpty) continue;
-          final painter = TextPainter(
-            text: TextSpan(text: word, style: style),
-            textDirection: TextDirection.ltr,
-            textScaler: scaler,
-            maxLines: 1,
-          )..layout();
-          if (painter.width > widest) widest = painter.width;
-          painter.dispose();
-        }
-        if (widest > box.maxWidth) scale = box.maxWidth / widest;
-      }
-      return Text(
-        text,
-        maxLines: maxLines,
-        overflow: overflow,
-        style: scale < 1
-            ? style.copyWith(fontSize: (style.fontSize ?? 14) * scale * 0.98)
-            : style,
-      );
-    });
-  }
 }

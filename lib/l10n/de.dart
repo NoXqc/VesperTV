@@ -1472,6 +1472,7 @@ const Map<String, String> kDe = {
       "Prüfe den Link hier und drücke dann auf Hinzufügen.",
   "Hide Movies": "Filme ausblenden",
   "Hide TV Shows": "Serien ausblenden",
+  "Hide What's New": "Neuheiten ausblenden",
   "Hide Recordings": "Aufnahmen ausblenden",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Einen Schlüssel mit der Fernbedienung einzutippen ist mühsam. Scanne diesen Code mit der Kamera deines Handys und füge den Schlüssel dort ein – er erscheint hier zur Kontrolle und zum Speichern.",
@@ -1487,6 +1488,8 @@ const Map<String, String> kDe = {
       "Entfernt den Filme-Tab und die Filmsuchergebnisse.",
   "Removes the TV Shows tab and show search results.":
       "Entfernt den Serien-Tab und die Serien-Suchergebnisse.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Entfernt Neuheiten aus Filme und Serien: Sie öffnen sich auf Alle.",
   "Removes the Recordings tab.": "Entfernt den Aufnahmen-Tab.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Einen langen Link mit der Fernbedienung einzutippen ist mühsam. Scanne diesen Code mit der Kamera deines Handys und füge den Link dort ein – er erscheint hier zur Kontrolle und zum Hinzufügen.",

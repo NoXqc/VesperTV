@@ -474,6 +474,13 @@ class SettingsCatalog {
               !prefs.hideShows,
               (v) => prefs.setHideShows(!v)),
           _tab(
+              'tab_whats_new',
+              Icons.new_releases_outlined,
+              tr("What's New"),
+              tr("Removes What's New from Movies and TV Shows: they open on All."),
+              !prefs.hideWhatsNew,
+              (v) => prefs.setHideWhatsNew(!v)),
+          _tab(
               'tab_sports',
               Icons.sports_outlined,
               AppConstants.sportsTabName,
@@ -984,17 +991,17 @@ class SettingsCatalog {
           // App Store rules: no gambling content.
           if (!appStoreBuild)
             SettingsToggle(
-              id: 'sports_odds',
-              icon: Icons.trending_up,
-              title: tr('Show betting odds'),
-              help: tr(
-                  'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
-                  {
-                    'app': AppConstants.appName
-                  }),
-              value: _storage.getSportsShowOdds(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsShowOdds(v))),
+                id: 'sports_odds',
+                icon: Icons.trending_up,
+                title: tr('Show betting odds'),
+                help: tr(
+                    'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
+                    {
+                      'app': AppConstants.appName
+                    }),
+                value: _storage.getSportsShowOdds(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsShowOdds(v))),
         ]),
         SettingsSection(title: tr('Channels'), [
           SettingsLink(

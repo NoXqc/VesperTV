@@ -91,6 +91,19 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     m.put("cushionSlow", player.isCushionSlow());
     m.put("stalls", player.stalls);
     m.put("lastStallMs", player.lastStallMs);
+    // Movie / episode buffering (Dart VodStallLog): where the last freeze began and how much
+    // was buffered then, seek waits apart, audio underruns and failed loads (retried).
+    m.put("lastStallPosMs", player.lastStallPosMs);
+    m.put("lastStallAheadMs", player.lastStallAheadMs);
+    m.put("seekWaits", player.seekWaits);
+    m.put("lastSeekWaitMs", player.lastSeekWaitMs);
+    m.put("underruns", player.audioUnderruns());
+    m.put("loadErrors", player.loadErrors());
+    String loadError = player.lastLoadError();
+    if (loadError != null) m.put("lastLoadError", loadError);
+    m.put("smallRam", BufferBudget.isSmallDeviceKnown());
+    m.put("vodBufferMb", player.onDemandBufferBytes() / (1024 * 1024));
+    m.put("heapMb", Runtime.getRuntime().maxMemory() / (1024 * 1024));
     @Nullable DecoderCounters video = player.getExoPlayer().getVideoDecoderCounters();
     if (video != null) {
       video.ensureUpdated();
