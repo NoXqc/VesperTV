@@ -56,7 +56,10 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
       @NonNull SurfaceProducer surfaceProducer,
       @NonNull VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
-    return new TextureVideoPlayer(
+    // VesperTV patch: Multiview's frame saver (ThinningVideoRenderer), switched from Dart.
+    io.flutter.plugins.videoplayer.FrameThinning thinning =
+        new io.flutter.plugins.videoplayer.FrameThinning();
+    TextureVideoPlayer player = new TextureVideoPlayer(
         events,
         surfaceProducer,
         asset.getMediaItem(),
@@ -114,6 +117,31 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
           // to avoid.
           DefaultRenderersFactory renderersFactory =
               new DefaultRenderersFactory(context) {
+                @Override
+                protected void buildVideoRenderers(
+                    Context rendererContext, int extensionMode,
+                    androidx.media3.exoplayer.mediacodec.MediaCodecSelector selector,
+                    boolean fallback, android.os.Handler handler,
+                    androidx.media3.exoplayer.video.VideoRendererEventListener listener,
+                    long joiningMs, java.util.ArrayList<androidx.media3.exoplayer.Renderer> out) {
+                  // The stock MediaCodec video renderer becomes the thinning one; extension
+                  // renderers stay as they are.
+                  java.util.ArrayList<androidx.media3.exoplayer.Renderer> stock =
+                      new java.util.ArrayList<>();
+                  super.buildVideoRenderers(rendererContext, extensionMode, selector, fallback,
+                      handler, listener, joiningMs, stock);
+                  for (androidx.media3.exoplayer.Renderer r : stock) {
+                    if (r.getClass()
+                        == androidx.media3.exoplayer.video.MediaCodecVideoRenderer.class) {
+                      out.add(io.flutter.plugins.videoplayer.ThinningVideoRenderer.create(
+                          rendererContext, getCodecAdapterFactory(), selector, fallback,
+                          handler, listener, joiningMs, thinning));
+                    } else {
+                      out.add(r);
+                    }
+                  }
+                }
+
                 @Nullable
                 @Override
                 protected AudioSink buildAudioSink(
@@ -144,6 +172,8 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
               .setRenderersFactory(renderersFactory);
           return builder.build();
         });
+    player.frameThinning = thinning;
+    return player;
   }
 
   // TODO: Migrate to stable API, see https://github.com/flutter/flutter/issues/147039.

@@ -53,6 +53,8 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @Nullable SurfaceHolder nativeSurfaceHolder;
   // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
   FrameRateProbe frameRateProbe = new FrameRateProbe();
+  // VesperTV patch: Multiview's frame saver; texture players only (StatsBridge).
+  @Nullable public FrameThinning frameThinning;
   private final boolean nativePassthrough;
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());

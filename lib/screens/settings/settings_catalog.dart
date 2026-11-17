@@ -1761,6 +1761,21 @@ class SettingsCatalog {
                   value: !_storage.getMultiviewHideTips(),
                   onChanged: (v) =>
                       _save(() => _storage.setMultiviewHideTips(!v))),
+            if (!usesMediaKit)
+              SettingsChoice(
+                  id: 'multiview_frame_saver',
+                  icon: Icons.speed,
+                  title: tr('Multiview frame saver'),
+                  help: tr(
+                      'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.'),
+                  options: [
+                    SettingsOption('auto', tr('Auto')),
+                    SettingsOption('always', tr('Always')),
+                    SettingsOption('off', tr('Off')),
+                  ],
+                  selected: _storage.getMultiviewFrameSaver(),
+                  onPick: (v) =>
+                      _save(() => _storage.setMultiviewFrameSaver(v))),
             SettingsToggle(
                 id: 'resume_pill',
                 icon: Icons.touch_app_outlined,

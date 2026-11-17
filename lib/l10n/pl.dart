@@ -286,6 +286,24 @@ const Map<String, String> kPl = {
   "Don't show this again": "Nie pokazuj ponownie",
   "OK": "OK",
   "Couldn't start that channel": "Nie udało się uruchomić tego kanału",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "To urządzenie nie dekoduje naraz tylu ekranów Full HD. Zamknij jeden ekran albo wybierz wersję HD lub SD kanału.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Przy 3 lub 4 ekranach kanały 720p działają najpłynniej.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Ekran {n} gra teraz kopię 720p: {name}",
+  'Multiview frame saver':
+      "Oszczędzanie klatek w Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Ekrany Multiview bez dźwięku pomijają co drugą klatkę (kanał 50 kl./s gra w 25), dzięki czemu urządzenie dekoduje więcej ekranów naraz. Ekran z dźwiękiem zawsze pokazuje wszystkie klatki. Auto: tylko gdy urządzenie nie nadąża.",
+  'Always':
+      "Zawsze",
+  'Auto (on)':
+      "Auto (włączone)",
+  'Frame saver':
+      "Oszczędzanie klatek",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Oszczędzanie klatek włączone: ekrany bez dźwięku pomijają co drugą klatkę, by urządzenie nadążało.",
   "Full screen": "Pełny ekran",
   "Windowed": "W oknie",
   "4 screens": "4 ekrany",

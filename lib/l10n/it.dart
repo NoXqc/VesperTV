@@ -300,6 +300,24 @@ const Map<String, String> kIt = {
   'Don\'t show this again': "Non mostrare più",
   'OK': "OK",
   'Couldn\'t start that channel': "Impossibile avviare il canale",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Questo dispositivo non riesce a decodificare così tanti schermi Full HD insieme. Chiudi uno schermo o scegli una versione HD o SD di un canale.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Con 3 o 4 schermi, i canali a 720p sono i più fluidi.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Lo schermo {n} passa a una copia a 720p: {name}",
+  'Multiview frame saver':
+      "Risparmio fotogrammi Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Gli schermi Multiview senza audio saltano un fotogramma su due (un canale a 50 fps va a 25), così il dispositivo può decodificare più schermi insieme. Lo schermo con l'audio mostra sempre tutti i fotogrammi. Auto: solo quando il dispositivo non tiene il passo.",
+  'Always':
+      "Sempre",
+  'Auto (on)':
+      "Auto (attivo)",
+  'Frame saver':
+      "Risparmio fotogrammi",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Risparmio fotogrammi attivo: gli schermi senza audio saltano un fotogramma su due perché il dispositivo tenga il passo.",
   'Full screen': "Schermo intero",
   'Windowed': "In finestra",
   '4 screens': "4 schermi",

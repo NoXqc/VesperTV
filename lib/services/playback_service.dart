@@ -1504,6 +1504,8 @@ class PlaybackService extends ChangeNotifier {
     _watchRestartLoop(c, channel);
     await c.setVolume(1.0);
     unawaited(WakelockPlus.enable());
+    // A Multiview screen taken full screen: its own rate and resolution.
+    unawaited(DisplayMatch.start(_storage, c, () => controller == c));
     notifyListeners();
     await _storage.setLastChannelId(channel.id);
   }

@@ -280,6 +280,24 @@ const Map<String, String> kDe = {
   "Don't show this again": "Nicht mehr anzeigen",
   "OK": "OK",
   "Couldn't start that channel": "Dieser Sender konnte nicht gestartet werden",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Diese Box kann nicht so viele Full-HD-Bildschirme gleichzeitig dekodieren. Schließe einen Bildschirm oder wähle eine HD- oder SD-Version eines Senders.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Bei 3 oder 4 Bildschirmen laufen 720p-Sender am flüssigsten.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Bildschirm {n} spielt jetzt eine 720p-Kopie: {name}",
+  'Multiview frame saver':
+      "Multiview-Bildsparer",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Stumme Multiview-Bildschirme überspringen jedes zweite Bild (ein 50-fps-Sender läuft mit 25), damit die Box mehr Bildschirme gleichzeitig dekodieren kann. Der Bildschirm mit Ton zeigt immer jedes Bild. Auto: nur wenn die Box nicht mehr mitkommt.",
+  'Always':
+      "Immer",
+  'Auto (on)':
+      "Auto (aktiv)",
+  'Frame saver':
+      "Bildsparer",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Bildsparer aktiv: Stumme Bildschirme überspringen jedes zweite Bild, damit die Box mitkommt.",
   "Full screen": "Vollbild",
   "Windowed": "Fenster",
   "4 screens": "4 Bildschirme",

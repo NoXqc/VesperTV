@@ -9,6 +9,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
 import '../services/app_preferences.dart';
+import '../services/channel_copy_fallback.dart';
+import '../services/playlist_edits.dart';
+import '../services/stream_probe.dart';
+import '../services/display_match.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playback_service.dart'
@@ -475,6 +479,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     for (var i = 0; i < _cellCount; i++) {
       unawaited(_cells[i].controller?.setVolume(i == 0 ? 1.0 : 0.0));
     }
+    _applyFrameSaver();
   }
 
   KeyEventResult _onSwapKey(KeyEvent e) {
@@ -748,7 +753,241 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// offsetSumUs, offsetCount), for the per-10 s deltas in the log line.
   final _lastCounters = <VideoPlayerHdrController, List<int>>{};
 
+  /// Consecutive 10 s samples where the box couldn't decode every screen,
+  /// and whether the viewer was told (once per Multiview session).
+  int _overloadTicks = 0;
+  bool _overloadHinted = false;
+
+  /// Too many screens for the box's hardware decoder (Homatics Box R 4K
+  /// Plus, 2026-11-15, adb): three 1080p50 H.264 screens + one HEVC each
+  /// showed 6-7 fps with 7-27 s buffered: frames 0.2-0.6 s late, ExoPlayer
+  /// flushing to the next keyframe over and over. Same with the native
+  /// surface on or off; closing one H.264 screen = all back to 50 fps. The
+  /// S905X4's H.264 decoder does ~4K30 (about 120 1080p frames a second
+  /// across screens). No player setting fixes it: tell the viewer once.
+  void _checkOverload(int playing, List<int> starvedCells) {
+    final starved = starvedCells.length;
+    if (playing >= 3 && starved >= 2) {
+      _overloadTicks++;
+    } else {
+      _overloadTicks = 0;
+    }
+    if (playing < 3 && _saverEngaged) {
+      _saverEngaged = false;
+      _applyFrameSaver();
+    }
+    if (_overloadTicks < 1 || !mounted) return;
+    if (_frameSaver == 'auto' && !_saverEngaged) {
+      // First the frame saver (after one 10 s sample: an overloaded box
+      // crawls, remote included), then a lighter copy, then the hint.
+      _saverEngaged = true;
+      _overloadTicks = 0;
+      debugPrint('Multiview: frame saver on ($starved of $playing screens '
+          'dropping most frames with a full buffer)');
+      _applyFrameSaver();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(tr('Frame saver on: silent screens skip every other '
+            'frame so this box can keep up.')),
+      ));
+      return;
+    }
+    // The frame saver had 10 s and it's still too much: a silent screen
+    // above 720p moves to a lighter copy of its channel. Frame saver Off =
+    // the viewer wants full quality, so never.
+    if (_overloadTicks < 2) return;
+    if (_frameSaver != 'off' && !_lighterBusy) {
+      final targets = [
+        for (var i = 0; i < _cells.length; i++)
+          if (i != _activeCell &&
+              _cells[i].channel?.isLive == true &&
+              (_heights[i] ?? 0) > 720 &&
+              !_lighterTried.contains(_cells[i].channel!.id))
+            i
+      ]..sort((a, b) {
+          // Struggling screens first, then the ones the saver can't thin.
+          final s = (starvedCells.contains(b) ? 1 : 0) -
+              (starvedCells.contains(a) ? 1 : 0);
+          if (s != 0) return s;
+          return (_tickThinned[a] ?? 0).compareTo(_tickThinned[b] ?? 0);
+        });
+      if (targets.isNotEmpty) {
+        _overloadTicks = 0;
+        unawaited(_lighterCopy(targets.first));
+        return;
+      }
+    }
+    if (_overloadHinted) return;
+    _overloadHinted = true;
+    debugPrint('Multiview: decoder overloaded ($starved of $playing screens '
+        'dropping most frames with a full buffer)');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      duration: const Duration(seconds: 10),
+      content: Text(tr('This box can\'t decode this many full-HD screens at '
+          'once. Close a screen, or pick an HD or SD version of a channel.')),
+    ));
+  }
+
+  /// Each screen's decoded height (10 s samples) and frames the saver skipped
+  /// in the last sample.
+  final _heights = <int, int>{};
+  final _tickThinned = <int, int>{};
+
+  /// Lighter copies: channel ids already tried this session, ids of copies
+  /// put on a screen (their "720p" tag), and one search at a time.
+  final _lighterTried = <String>{};
+  final _lighter = <String>{};
+  bool _lighterBusy = false;
+  bool _tipShown = false;
+
+  /// Controllers whose decoded size was saved ([PlaylistManager.recordMeasured]).
+  final _measured = <VideoPlayerHdrController>{};
+
+  /// Moves screen [index] to a copy of its channel measured at 360-720p:
+  /// a box's decoder budget is shared by every screen, and a 720p frame is
+  /// under half a 1080p one (Homatics, 2026-11-15: three 1080p50/60
+  /// screens choked it, 720p copies fit). Copies already measured first;
+  /// else up to 4 unknown ones get the editor's stream test (one extra
+  /// connection for a few seconds each), most likely-720p names first.
+  Future<void> _lighterCopy(int index) async {
+    final channel = _cells[index].channel;
+    if (channel == null) return;
+    _lighterBusy = true;
+    _lighterTried.add(channel.id);
+    try {
+      final pm = context.read<PlaylistManager>();
+      final copies = pm.measuredCopiesOf(channel);
+      bool fits(ProbeResult? p) =>
+          p != null &&
+          p.ok &&
+          p.height != null &&
+          p.height! >= 340 &&
+          p.height! <= 720;
+      final known = [
+        for (final (c, p) in copies)
+          if (fits(p)) (c, p!.height!)
+      ]..sort((a, b) => b.$2.compareTo(a.$2));
+      Channel? pick = known.firstOrNull?.$1;
+      if (pick == null) {
+        // HD, unlabelled, SD names before FHD/4K ones.
+        int order(Channel c) {
+          final r = ChannelCopyFallback.qualityRank(c.sourceName);
+          return r <= 3 ? 3 - r : r;
+        }
+
+        final unknown = [
+          for (final (c, p) in copies)
+            if (p == null) c
+        ]..sort((a, b) => order(a).compareTo(order(b)));
+        final probe = StreamProbe();
+        for (final c in unknown.take(4)) {
+          if (!mounted || _cells[index].channel?.id != channel.id) return;
+          final r = await probe.probe(c);
+          debugPrint('Multiview: copy test ${c.name}: ${r.label}');
+          unawaited(pm.recordMeasured(c, r));
+          if (StreamProbe.isRefusal(r)) break;
+          if (fits(r)) {
+            pick = c;
+            break;
+          }
+        }
+      }
+      if (!mounted || _cells[index].channel?.id != channel.id) return;
+      if (pick == null) {
+        debugPrint('Multiview: no 720p copy of ${channel.name} '
+            '(${copies.length} copies)');
+        return;
+      }
+      debugPrint('Multiview: screen ${index + 1} ${channel.name} -> '
+          'lighter copy ${pick.name}');
+      _lighter.add(pick.id);
+      _lighterTried.add(pick.id);
+      await _assign(index, pick);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(tr('Screen {n} now plays a 720p copy: {name}',
+            {'n': index + 1, 'name': pick.name})),
+      ));
+    } finally {
+      _lighterBusy = false;
+    }
+  }
+
+  /// Frame saver (Settings > Playback > Multiview frame saver, or the header
+  /// button): silent screens skip frames nothing depends on before decoding
+  /// (native ThinningVideoRenderer), so 50/60 fps channels decode at 25/30.
+  /// 'auto' engages it when [_checkOverload] sees the decoder fall behind.
+  late String _frameSaver = context.read<StorageService>().getMultiviewFrameSaver();
+  bool _saverEngaged = false;
+  final _thinned = <VideoPlayerHdrController, bool>{};
+  final _lastThinned = <VideoPlayerHdrController, int>{};
+
+  bool get _thinSilent =>
+      _frameSaver == 'always' || (_frameSaver == 'auto' && _saverEngaged);
+
+  void _applyFrameSaver() {
+    for (var i = 0; i < _cells.length; i++) {
+      final c = _cells[i].controller;
+      if (c == null) continue;
+      final want = _thinSilent && i != _activeCell;
+      if (_thinned[c] == want) continue;
+      _thinned[c] = want;
+      unawaited(_stats.invokeMethod<bool>('setFrameThinning', {
+        'playerId': SubtitleTracks.playerIdOf(c),
+        'on': want
+      }).catchError((Object _) => false));
+    }
+  }
+
+  String _frameSaverLabel() => switch (_frameSaver) {
+        'always' => tr('Always'),
+        'off' => tr('Off'),
+        _ => _saverEngaged ? tr('Auto (on)') : tr('Auto'),
+      };
+
+  void _cycleFrameSaver() {
+    final next = switch (_frameSaver) {
+      'auto' => 'always',
+      'always' => 'off',
+      _ => 'auto',
+    };
+    setState(() => _frameSaver = next);
+    unawaited(context.read<StorageService>().setMultiviewFrameSaver(next));
+    _applyFrameSaver();
+  }
+
+  /// Match frame rate (Settings > Playback): the screen with the sound sets
+  /// the TV's refresh rate, never its resolution. Each screen's own vote is
+  /// "50 Hz only if seamless", so without this a 59.94 Hz box stayed at
+  /// 59.94 for 50 fps channels (AMD, Homatics, 2026-11-15).
+  VideoPlayerHdrController? _matchedFor;
+
+  void _matchDisplay() {
+    if (_activeCell >= _cells.length) return;
+    final c = _cells[_activeCell].controller;
+    if (c == null || c == _matchedFor || !c.value.isInitialized) return;
+    _matchedFor = c;
+    unawaited(DisplayMatch.start(context.read<StorageService>(), c,
+        () => mounted && _cells[_activeCell].controller == c,
+        rateOnly: true));
+  }
+
+  static String _codecName(Object? mime) => switch (mime) {
+        'video/avc' => 'H.264',
+        'video/hevc' => 'HEVC',
+        'video/mpeg2' => 'MPEG-2',
+        'video/av01' => 'AV1',
+        'video/x-vnd.on2.vp9' => 'VP9',
+        String m => m,
+        _ => '?',
+      };
+
   Future<void> _logTiles() async {
+    _matchDisplay();
+    _applyFrameSaver();
+    var playing = 0;
+    final starved = <int>[];
     for (var i = 0; i < _cells.length; i++) {
       final c = _cells[i].controller;
       if (c == null || !c.value.isInitialized) continue;
@@ -776,16 +1015,42 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         _lastCounters[c] = now;
         final offsets = now[3] - before[3];
         final early = offsets > 0 ? (now[2] - before[2]) / offsets / 1000 : 0.0;
+        // Starved = the decoder, not the provider: 10+ late frames thrown
+        // away a second while 3+ s are buffered.
+        playing++;
+        if (newDrops >= 100 && n('bufferedMs') >= 3000) starved.add(i);
+        final thinned = n('thinned');
+        final newThinned = thinned - (_lastThinned[c] ?? thinned);
+        _lastThinned[c] = thinned;
+        _tickThinned[i] = newThinned;
+        _heights[i] = n('height');
+        final srcFps = (m['ptsFps'] as num?)?.toDouble() ??
+            (m['frameRate'] as num?)?.toDouble() ??
+            -1;
+        final ch = _cells[i].channel;
+        if (ch != null && ch.isLive && n('height') > 0 && _measured.add(c)) {
+          unawaited(context.read<PlaylistManager>().recordMeasured(
+              ch,
+              ProbeResult(
+                  ok: true,
+                  at: DateTime.now(),
+                  width: n('width'),
+                  height: n('height'),
+                  fps: srcFps > 0 ? srcFps : null,
+                  codec: _codecName(m['mime']))));
+        }
         debugPrint('Multiview: screen ${i + 1} ${_cells[i].channel?.name}: '
             'buffer ${(n('bufferedMs') / 1000).toStringAsFixed(1)} s, '
             'freezes ${n('stalls')} (last ${(n('lastStallMs') / 1000).toStringAsFixed(1)} s), '
             '${fps.toStringAsFixed(1)} fps, dropped +$newDrops, '
-            '${n('height')}p${c.value.isBuffering ? ', buffering now' : ''}'
+            '${n('height')}p${srcFps > 0 ? srcFps.round() : ''} ${_codecName(m['mime'])}'
+            '${c.value.isBuffering ? ', buffering now' : ''}'
             ', ${_tileControllers[c] == true ? 'native' : 'texture'}'
             ', decoder in ${((now[0] - before[0]) / 10).toStringAsFixed(1)}/s'
             ', dropped before decode +${now[1] - before[1]}'
             ', avg ${early.toStringAsFixed(0)} ms early'
-            ', max run ${n('maxConsecutiveDropped')}');
+            ', max run ${n('maxConsecutiveDropped')}'
+            '${m['thinning'] == true ? ', frame saver +$newThinned' : ''}');
       } on MissingPluginException {
         _statsTimer?.cancel();
         return;
@@ -793,6 +1058,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         // Screen changed between the check and the call.
       }
     }
+    _checkOverload(playing, starved);
   }
 
   /// Deliberately the *opposite* order from `PlaybackService
@@ -858,6 +1124,18 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         cell.controller = newController;
       });
       _reportTiles();
+      if (index == _activeCell) _matchDisplay();
+      _applyFrameSaver();
+      if (mounted &&
+          !_tipShown &&
+          _cells.where((c) => c.controller != null).length >= 3) {
+        _tipShown = true;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          duration: const Duration(seconds: 5),
+          content:
+              Text(tr('For 3 or 4 screens, 720p channels play smoothest.')),
+        ));
+      }
     } catch (e) {
       unawaited(newController.dispose());
       // A `.ts` that was really HLS (see learnHlsHost): once more as HLS;
@@ -917,6 +1195,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       if (_cells[index].controller != null)
         _cells[index].controller!.setVolume(1.0),
     ]);
+    if (mounted) {
+      _matchDisplay();
+      _applyFrameSaver();
+    }
   }
 
   /// True while a picker push is already in flight — [HoldToActivate]'s
@@ -1288,6 +1570,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // controller, so nothing re-enabled it. The main player's own stop()
     // releases it.
     if (kept == null) unawaited(WakelockPlus.disable());
+    // Nothing plays any more: the TV goes back to its own mode (a screen
+    // taken full screen matches its own, PlaybackService.adoptLive).
+    if (kept == null && _matchedFor != null) unawaited(DisplayMatch.reset());
     super.dispose();
   }
 
@@ -1401,6 +1686,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                 icon: const Icon(Icons.add_box_outlined,
                     color: Colors.white, size: 18),
                 label: Text(tr('Add screen'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            if (_fullscreen == null)
+              TextButton.icon(
+                style: buttonStyle,
+                onPressed: _cycleFrameSaver,
+                icon: const Icon(Icons.speed, color: Colors.white, size: 18),
+                label: Text('${tr('Frame saver')}: ${_frameSaverLabel()}',
                     style: const TextStyle(color: Colors.white)),
               ),
             const Spacer(),
@@ -1615,11 +1908,36 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           alignment: Alignment.center,
           badge: _swapMode && index == 0
               ? _SwapModeBadge(swaps: _swapCount)
-              : null,
+              : _lighter.contains(cell.channel?.id)
+                  ? const _LighterBadge()
+                  : null,
         ),
       ),
     );
   }
+}
+
+/// A screen moved to a lighter copy of its channel (`_lighterCopy`).
+class _LighterBadge extends StatelessWidget {
+  const _LighterBadge();
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topRight,
+        child: Container(
+          margin: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Text('720p',
+              style: TextStyle(
+                  color: Colors.amber,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
+      );
 }
 
 /// The order Swap mode moves the playing [slots] (cell indices, big one

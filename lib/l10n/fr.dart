@@ -299,6 +299,24 @@ const Map<String, String> kFr = {
   'Don\'t show this again': "Ne plus afficher",
   'OK': "OK",
   'Couldn\'t start that channel': "Impossible de lancer cette chaîne",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Cet appareil ne peut pas décoder autant d'écrans Full HD à la fois. Fermez un écran, ou choisissez une version HD ou SD d'une chaîne.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Avec 3 ou 4 écrans, les chaînes en 720p sont les plus fluides.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "L'écran {n} passe à une copie en 720p : {name}",
+  'Multiview frame saver':
+      "Économiseur d'images Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Les écrans Multiview sans son sautent une image sur deux (une chaîne à 50 i/s passe à 25), pour que l'appareil puisse décoder plus d'écrans à la fois. L'écran avec le son garde toutes ses images. Auto : seulement quand l'appareil n'arrive plus à suivre.",
+  'Always':
+      "Toujours",
+  'Auto (on)':
+      "Auto (actif)",
+  'Frame saver':
+      "Économiseur d'images",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Économiseur d'images actif : les écrans sans son sautent une image sur deux pour que l'appareil suive.",
   'Full screen': "Plein écran",
   'Windowed': "Fenêtré",
   '4 screens': "4 écrans",
