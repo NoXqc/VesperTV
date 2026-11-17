@@ -264,6 +264,20 @@ class PlaybackService extends ChangeNotifier {
     if (!wasPlaying && controller == player) await player?.pause();
   }
 
+  /// The viewer picked another source of the live channel playing (player
+  /// options > Sources): the channel keeps its id, name and guide (like the
+  /// automatic copy fallback), only the stream changes.
+  Future<void> playLiveSource(Channel source) async {
+    final playing = currentChannel;
+    if (playing == null || source.url == playing.url) return;
+    copyFallbackName = source.name;
+    _copyFallbackFor = playing.id;
+    debugPrint('PlaybackService: source picked -> ${source.name}');
+    await play(
+        playing.copyWith(url: source.url, httpHeaders: source.httpHeaders),
+        recordHistory: false);
+  }
+
   void setUpNextQueue(List<Channel>? queue,
       {Future<Channel?> Function(Channel)? resolve}) {
     _upNextQueue = queue;

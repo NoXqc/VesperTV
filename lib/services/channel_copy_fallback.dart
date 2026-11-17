@@ -56,11 +56,16 @@ class ChannelCopyFallback {
     final key = channelCopyKey(channel.name);
     if (key.isEmpty) return const [];
     final score = rank ?? (Channel c) => qualityRank(c.sourceName);
+    // Most of a big pool fails the probe word: the player's Sources drawer
+    // ran channelCopyKey on every channel of every playlist and took
+    // seconds to open on a box (owner, 2026-11-16).
+    final probe = channelCopyProbe(key);
     final copies = [
       for (final c in pool)
         if (c.id != channel.id &&
             c.url != channel.url &&
             c.url.isNotEmpty &&
+            (probe.isEmpty || c.name.toUpperCase().contains(probe)) &&
             channelCopyKey(c.name) == key)
           c
     ];

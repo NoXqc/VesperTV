@@ -182,6 +182,30 @@ void main() {
         isNot(contains(canal)));
   });
 
+  test('player Sources: add another source, then it is listed and tried',
+      () async {
+    final tsn1 = await idOf('CA: TSN 1');
+    final canal = await idOf('CANAL+ SPORT');
+    final channel = manager.channels.firstWhere((c) => c.id == tsn1);
+    final other = manager.channels.firstWhere((c) => c.id == canal);
+    expect(manager.liveSourcesFor(channel).first.id, tsn1);
+    expect(manager.liveSourcesFor(channel).map((c) => c.id),
+        isNot(contains(canal)));
+    expect(await manager.addLiveFallback(channel, other), isTrue);
+    expect(await manager.addLiveFallback(channel, other), isFalse);
+    expect(await manager.addLiveFallback(channel, channel), isFalse);
+    expect(manager.liveSourcesFor(channel).map((c) => c.id).take(2),
+        [tsn1, canal]);
+    // Playing the fallback's stream: the channel's own still comes first.
+    expect(
+        manager
+            .liveSourcesFor(channel.copyWith(url: other.url))
+            .map((c) => c.id)
+            .take(2),
+        [tsn1, canal]);
+    expect(manager.failoverCandidatesFor(channel).first.id, canal);
+  });
+
   test('no on the TV changes nothing', () async {
     host.answer = false;
     final r = await edit({'action': 'hide_no_guide'});

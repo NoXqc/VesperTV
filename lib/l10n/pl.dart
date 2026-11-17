@@ -3442,4 +3442,18 @@ const Map<String, String> kPl = {
       "Ukryj Start",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Aplikacja AI chce zmienić kolejność przewodników TV playlisty {playlist}.",
+  "No other source for this channel.":
+      "Brak innego źródła dla tego kanału.",
+  "Add another source":
+      "Dodaj inne źródło",
+  "Any channel, any playlist: tried first if this one fails":
+      "Dowolny kanał, dowolna playlista: próbowane jako pierwsze, gdy ten zawiedzie",
+  "Another source for {channel}":
+      "Inne źródło dla {channel}",
+  "That source is already on the list.":
+      "To źródło jest już na liście.",
+  "Type a channel name.":
+      "Wpisz nazwę kanału.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Tylko pierwsze {n}. Wpisz więcej, aby zawęzić.",
 };

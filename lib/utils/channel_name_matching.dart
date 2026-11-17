@@ -55,9 +55,9 @@ String _stripLeadingTag(String name) {
 /// distinct from `ESPN` rather than both collapsing to the same token.
 Set<String> normalizedChannelTokens(String name) {
   final withoutTag = _stripLeadingTag(name);
-  final cleaned = withoutTag.toUpperCase().replaceAll(RegExp(r'[^\w+]'), ' ');
+  final cleaned = withoutTag.toUpperCase().replaceAll(_punctuation, ' ');
   return cleaned
-      .split(RegExp(r'\s+'))
+      .split(_spaces)
       .where((t) => t.isNotEmpty && !_qualityTokens.contains(t))
       .toSet();
 }
@@ -84,6 +84,9 @@ String canonicalChannelKey(String name) {
 }
 
 final _lettersThenDigits = RegExp(r'^([A-Z]+)(\d+)$');
+// Compiled once: [channelCopyKey] runs on every channel of every playlist.
+final _punctuation = RegExp(r'[^\w+]');
+final _spaces = RegExp(r'\s+');
 
 /// Resolution/format words that only say which copy of a channel this is.
 const Set<String> _copyTokens = {
@@ -106,8 +109,8 @@ String channelCopyKey(String name) {
   final tag = name.substring(0, name.length - rest.length).toUpperCase();
   final tokens = rest
       .toUpperCase()
-      .replaceAll(RegExp(r'[^\w+]'), ' ')
-      .split(RegExp(r'\s+'))
+      .replaceAll(_punctuation, ' ')
+      .split(_spaces)
       .where((t) => t.isNotEmpty && !_copyTokens.contains(t))
       // `TSN2` == `TSN 2` (Trex lists both spellings, playlist editor
       // test 2026-11-02): letters followed by a number become two words.
@@ -120,5 +123,13 @@ String channelCopyKey(String name) {
     ..sort();
   return tokens.isEmpty
       ? ''
-      : '${tag.replaceAll(RegExp(r'[^\w+]'), '')}|${tokens.join(' ')}';
+      : '${tag.replaceAll(_punctuation, '')}|${tokens.join(' ')}';
+}
+
+/// The longest word of a [channelCopyKey] key (`TSN` in `CA|1 TSN`), '' when
+/// none: every name with that key holds it, upper-cased, so a cheap
+/// `contains` skips most channels before their own [channelCopyKey].
+String channelCopyProbe(String key) {
+  final words = key.substring(key.indexOf('|') + 1).split(' ');
+  return words.fold('', (a, b) => b.length > a.length ? b : a);
 }

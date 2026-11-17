@@ -3751,4 +3751,18 @@ const Map<String, String> kDe = {
       "Start ausblenden",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Eine KI-App möchte die Reihenfolge der TV-Guides von {playlist} ändern.",
+  "No other source for this channel.":
+      "Keine andere Quelle für diesen Sender.",
+  "Add another source":
+      "Weitere Quelle hinzufügen",
+  "Any channel, any playlist: tried first if this one fails":
+      "Jeder Sender, jede Playlist: wird zuerst versucht, wenn dieser ausfällt",
+  "Another source for {channel}":
+      "Weitere Quelle für {channel}",
+  "That source is already on the list.":
+      "Diese Quelle ist schon in der Liste.",
+  "Type a channel name.":
+      "Gib einen Sendernamen ein.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Nur die ersten {n}. Tippe mehr, um einzugrenzen.",
 };

@@ -3861,4 +3861,18 @@ const Map<String, String> kFr = {
       "Masquer l'Accueil",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Une app d'IA veut changer l'ordre des guides TV de {playlist}.",
+  "No other source for this channel.":
+      "Aucune autre source pour cette chaîne.",
+  "Add another source":
+      "Ajouter une autre source",
+  "Any channel, any playlist: tried first if this one fails":
+      "N'importe quelle chaîne, n'importe quelle playlist : essayée en premier si celle-ci échoue",
+  "Another source for {channel}":
+      "Autre source pour {channel}",
+  "That source is already on the list.":
+      "Cette source est déjà dans la liste.",
+  "Type a channel name.":
+      "Tapez le nom d'une chaîne.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Les {n} premières seulement. Tapez-en plus pour préciser.",
 };

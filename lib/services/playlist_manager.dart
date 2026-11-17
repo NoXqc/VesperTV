@@ -17,6 +17,7 @@ import 'catalog_database.dart';
 import 'channel_name_events.dart';
 import 'epg_service.dart';
 import 'live_stream_format.dart';
+import 'playlist_edits.dart';
 import 'playlist_session.dart';
 import 'saved_live_channels.dart';
 import 'storage_service.dart';
@@ -1200,7 +1201,7 @@ class PlaylistManager extends ChangeNotifier {
   /// channels, the manual channel link, then the playlist's other quality
   /// copies, best first. Hidden channels count: a copy hidden by Collapse
   /// copies is exactly what should take over.
-  List<Channel> failoverCandidatesFor(Channel channel) {
+  List<Channel> failoverCandidatesFor(Channel channel, {bool? crossPlaylist}) {
     final session = _sessionFor(channel.playlistId);
     if (session == null) return const [];
     final out = <Channel>[];
@@ -1224,7 +1225,7 @@ class PlaylistManager extends ChangeNotifier {
       add(c);
     }
     // The same channel in the other playlists, in playlist order.
-    if (_storage.getCrossPlaylistFallback()) {
+    if (crossPlaylist ?? _storage.getCrossPlaylistFallback()) {
       for (final other in _enabledSessionsSortedFor('tv')) {
         if (identical(other, session)) continue;
         for (final c in ChannelCopyFallback.copiesOf(
@@ -1235,6 +1236,38 @@ class PlaylistManager extends ChangeNotifier {
       }
     }
     return out;
+  }
+
+  /// Every source of the live [channel] for the player's Sources drawer:
+  /// the channel itself first, then [failoverCandidatesFor] with the other
+  /// playlists always included (the viewer picks; the automatic
+  /// cross-playlist setting only governs failover). [channel] may be
+  /// playing another source's URL: its own comes from the playlist.
+  List<Channel> liveSourcesFor(Channel channel) {
+    final own = resolveChannelLink(
+            (playlistId: channel.playlistId, rawId: channel.rawId)) ??
+        channel;
+    final out = <Channel>[own];
+    for (final c in failoverCandidatesFor(own, crossPlaylist: true)) {
+      if (c.url.isNotEmpty && !out.any((o) => o.url == c.url)) out.add(c);
+    }
+    return out;
+  }
+
+  /// Adds [fallback] to the playlist editor's fallbacks of live [channel]
+  /// (player Sources > Add another source): tried first when [channel]
+  /// fails, and listed in its Sources. False = already there, the channel
+  /// itself, the 10-fallback limit, or a profile that can't edit playlists.
+  Future<bool> addLiveFallback(Channel channel, Channel fallback) async {
+    if (activeViewerRestricted) return false;
+    final session = _sessionFor(channel.playlistId);
+    if (session == null || fallback.id == channel.id) return false;
+    final next = PlaylistEdits.fromJson(session.edits.toJson());
+    final list = [...?next.fallbacks[channel.rawId]];
+    if (list.contains(fallback.id) || list.length >= 10) return false;
+    next.fallbacks[channel.rawId] = [...list, fallback.id];
+    await session.saveEdits(next);
+    return true;
   }
 
   bool _merging = false;

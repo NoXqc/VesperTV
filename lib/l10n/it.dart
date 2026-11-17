@@ -3855,4 +3855,18 @@ const Map<String, String> kIt = {
       "Nascondi Home",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Un'app di IA vuole cambiare l'ordine delle guide TV di {playlist}.",
+  "No other source for this channel.":
+      "Nessun'altra fonte per questo canale.",
+  "Add another source":
+      "Aggiungi un'altra fonte",
+  "Any channel, any playlist: tried first if this one fails":
+      "Qualsiasi canale, qualsiasi playlist: provata per prima se questa non funziona",
+  "Another source for {channel}":
+      "Un'altra fonte per {channel}",
+  "That source is already on the list.":
+      "Questa fonte è già nell'elenco.",
+  "Type a channel name.":
+      "Scrivi il nome di un canale.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Solo i primi {n}. Scrivi di più per restringere.",
 };

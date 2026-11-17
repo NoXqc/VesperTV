@@ -12,6 +12,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
+import '../widgets/live_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
@@ -21,6 +22,7 @@ import '../services/watch_game_offer.dart';
 import '../services/playlist_manager.dart';
 import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
+import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../utils/video_fit.dart';
@@ -565,6 +567,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _onOk() {
+    if (_sourceDrawerOpen) return;
     final segment = _skip.visibleWith(_bottomVisible);
     if (segment != null && !_panelOpen && !_scheduleOpen) {
       _skipSegment(segment);
@@ -802,6 +805,72 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// Live: the playing channel's other sources (quality copies, editor
+  /// fallbacks, the same channel in other playlists), picked by hand; the
+  /// last row adds one (a playlist editor fallback) and reopens the list.
+  Future<void> _openLiveSources() async {
+    final channel = _playback.currentChannel;
+    if (channel == null || !channel.isLive || _sourceDrawerOpen) return;
+    final manager = context.read<PlaylistManager>();
+    _sourceBackGuard.opened();
+    _hideTimer?.cancel();
+    setState(() {
+      _topVisible = false;
+      _bottomVisible = false;
+      _optionsVisible = false;
+      _moreVisible = false;
+    });
+    try {
+      while (mounted && _playback.currentChannel?.id == channel.id) {
+        final playing = _playback.currentChannel!;
+        final sources = manager.liveSourcesFor(playing);
+        final picked = await showLiveSourceDrawer(context,
+            canAdd: !manager.activeViewerRestricted,
+            entries: [
+              for (final c in sources)
+                LiveSourceEntry(
+                  channel: c,
+                  playlist: manager.playlistNameFor(c.playlistId).trim(),
+                  current: c.url == playing.url,
+                ),
+            ]);
+        if (!mounted ||
+            picked == null ||
+            _playback.currentChannel?.id != channel.id) {
+          return;
+        }
+        if (picked != liveSourceAdd) {
+          await _playback.playLiveSource(sources[picked]);
+          return;
+        }
+        await manager.ensureLiveChannelsLoaded();
+        if (!mounted) return;
+        final fallback = await showLiveSourceSearch(context,
+            title: tr('Another source for {channel}',
+                {'channel': sources.first.name}),
+            channels: manager.visibleChannels(category: 'tv'),
+            suggest: channelCopyProbe(channelCopyKey(sources.first.name)),
+            skipUrls: {for (final s in sources) s.url},
+            describe: (c) => [
+                  manager.playlistNameFor(c.playlistId).trim(),
+                  c.group,
+                ].where((s) => s.isNotEmpty).join(' · '));
+        if (!mounted || fallback == null) continue;
+        final added = await manager.addLiveFallback(sources.first, fallback);
+        if (!mounted) return;
+        if (!added) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('That source is already on the list.'))));
+        }
+      }
+    } finally {
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
+    }
+  }
+
   /// Refreshed on every build (see [build]) and read from [_cycleFit]
   /// / [_restoreChrome] / [dispose] — those don't call [build] themselves,
   /// so this caches the last-known answer rather than doing a fresh
@@ -967,6 +1036,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Remote Up (see the class doc's flow). Always handles the key.
   void _remoteUp() {
+    if (_sourceDrawerOpen) return;
     _resetHideTimer();
     if (_optionsScope.hasFocus) {
       _closeOptions();
@@ -1002,6 +1072,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Remote Down (see the class doc's flow). Always handles the key.
   void _remoteDown() {
+    if (_sourceDrawerOpen) return;
     _resetHideTimer();
     if (_optionsScope.hasFocus || _skipFocus.hasFocus || _watchFocus.hasFocus) {
       return;
@@ -1360,7 +1431,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// (Fire Stick) never sends them. Reveals the top bar so the new
   /// channel's name + now/next show.
   void _zapChannel(int step) {
-    if (_panelOpen || _scheduleOpen) return;
+    if (_panelOpen || _scheduleOpen || _sourceDrawerOpen) return;
     // From catch-up, zapping steps from its live channel (and leaves it).
     final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
@@ -1404,6 +1475,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Backup & devices > Remote buttons > Player arrows says (default Left
   /// = side drawer, Right = last channel, Up / Down = zap).
   void _runArrow(PlayerArrow arrow) {
+    // The Sources drawer (or its search) is opening or open: keys pressed
+    // meanwhile reached the player and changed the channel (owner, +816).
+    if (_sourceDrawerOpen) return;
     final action = RemoteButtons.instance.arrowAction(arrow);
     if (action == 'channel_up') {
       _zapChannel(-1);
@@ -1463,7 +1537,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Right on a live channel: back to the channel watched before this one
   /// (the side panel's Last channels list), so Right again flips back.
   void _lastChannel() {
-    if (_panelOpen || _scheduleOpen) return;
+    if (_panelOpen || _scheduleOpen || _sourceDrawerOpen) return;
     final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
     final target = _playback.recentlyPlayed
@@ -2169,10 +2243,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         playFocusNode: _playFocus,
                                         showActions: _touch,
                                         touchLayout: _touch,
-                                        onOpenMultiview: _multiviewable(channel) &&
-                                                !prefs.hideMultiview
-                                            ? () => _openMultiview(channel)
-                                            : null,
+                                        onOpenMultiview:
+                                            _multiviewable(channel) &&
+                                                    !prefs.hideMultiview
+                                                ? () => _openMultiview(channel)
+                                                : null,
                                       ),
                                     ),
                                   ),
@@ -2234,10 +2309,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           linkedChannel: linkedChannel,
                                           onActivity: _resetHideTimer,
                                           onToggleMore: () {},
-                                          onOpenMultiview: _multiviewable(channel) &&
-                                                  !prefs.hideMultiview
-                                              ? () => _openMultiview(channel)
-                                              : null,
+                                          onOpenMultiview:
+                                              _multiviewable(channel) &&
+                                                      !prefs.hideMultiview
+                                                  ? () =>
+                                                      _openMultiview(channel)
+                                                  : null,
                                           leadingOptions: [
                                             if (channel.isLive ||
                                                 playback.catchup != null) ...[
@@ -2246,6 +2323,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                 label: tr('Channels'),
                                                 onPressed: _openPanel,
                                               ),
+                                              if (channel.isLive &&
+                                                  playback.catchup == null)
+                                                PlayerOption(
+                                                  icon: Icons.swap_horiz,
+                                                  label: tr('Sources'),
+                                                  onPressed: _openLiveSources,
+                                                ),
                                             ],
                                             if (prefs.dataPool)
                                               PlayerOption(

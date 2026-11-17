@@ -3810,4 +3810,18 @@ const Map<String, String> kEl = {
       "Απόκρυψη Αρχικής",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Μια εφαρμογή AI θέλει να αλλάξει τη σειρά των οδηγών TV του {playlist}.",
+  "No other source for this channel.":
+      "Δεν υπάρχει άλλη πηγή για αυτό το κανάλι.",
+  "Add another source":
+      "Προσθήκη άλλης πηγής",
+  "Any channel, any playlist: tried first if this one fails":
+      "Οποιοδήποτε κανάλι, οποιαδήποτε λίστα: δοκιμάζεται πρώτη αν αυτή αποτύχει",
+  "Another source for {channel}":
+      "Άλλη πηγή για {channel}",
+  "That source is already on the list.":
+      "Αυτή η πηγή είναι ήδη στη λίστα.",
+  "Type a channel name.":
+      "Πληκτρολογήστε όνομα καναλιού.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Εμφανίζονται τα πρώτα {n}. Πληκτρολογήστε περισσότερα για να περιορίσετε.",
 };

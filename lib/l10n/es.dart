@@ -3848,4 +3848,18 @@ const Map<String, String> kEs = {
       "Ocultar Inicio",
   "An AI app wants to change the order of the TV guides of {playlist}.":
       "Una app de IA quiere cambiar el orden de las guías de TV de {playlist}.",
+  "No other source for this channel.":
+      "No hay otra fuente para este canal.",
+  "Add another source":
+      "Añadir otra fuente",
+  "Any channel, any playlist: tried first if this one fails":
+      "Cualquier canal, cualquier lista: se prueba primero si este falla",
+  "Another source for {channel}":
+      "Otra fuente para {channel}",
+  "That source is already on the list.":
+      "Esa fuente ya está en la lista.",
+  "Type a channel name.":
+      "Escribe el nombre de un canal.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Solo los primeros {n}. Escribe más para afinar.",
 };
