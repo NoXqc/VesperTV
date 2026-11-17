@@ -33,6 +33,7 @@ import 'player_bar_title.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 import '../utils/app_store.dart';
+import '../utils/scrub_steps.dart';
 import '../utils/video_fit.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
@@ -2761,8 +2762,8 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
 /// primitive, so this tracks key down/up timing by hand, the same
 /// technique used for the group-row long-press menu in TvHomeScreen.
 /// The VOD seek bar. Touch/mouse drag it as before; on a remote, Up from
-/// the buttons focuses it and Left/Right scrub a target marker — jumps grow
-/// while the key is held (10 s → 30 s → 1 → 2 → 5 min) — then one seek
+/// the buttons focuses it and Left/Right scrub a target marker — a tap is
+/// 10 s, jumps grow while the key is held ([ScrubSteps]) — then one seek
 /// lands 700 ms after the last press (or at once on OK). One seek instead
 /// of one per step: each seek re-buffers, and IPTV servers are slow to.
 class _ScrubBar extends StatefulWidget {
@@ -2785,10 +2786,17 @@ class _ScrubBar extends StatefulWidget {
 class _ScrubBarState extends State<_ScrubBar> {
   final _focus = FocusNode(debugLabel: 'scrub-bar');
   Duration? _target;
-  int _steps = 0;
+  final _steps = ScrubSteps();
   Timer? _commit;
 
+  /// The seek just sent: the marker stays on it until the player reports a
+  /// position near it (at most [_landingWait]). Without it the marker went
+  /// back to the old position for a moment, then jumped to the new one.
+  Duration? _landing;
+  DateTime? _landingSince;
+
   static const _commitDelay = Duration(milliseconds: 700);
+  static const _landingWait = Duration(seconds: 3);
 
   @override
   void dispose() {
@@ -2797,21 +2805,12 @@ class _ScrubBarState extends State<_ScrubBar> {
     super.dispose();
   }
 
-  /// Seconds per step: the more steps in this scrub, the bigger the jump.
-  static int stepSeconds(int steps) => steps < 3
-      ? 10
-      : steps < 6
-          ? 30
-          : steps < 10
-              ? 60
-              : steps < 15
-                  ? 120
-                  : 300;
-
-  void _move(int sign) {
+  void _move(int sign, {required bool repeat}) {
     widget.onActivity?.call();
-    final from = _target ?? widget.position;
-    final next = from + Duration(seconds: sign * stepSeconds(_steps++));
+    final step = _steps.next(repeat: repeat);
+    if (step == null) return;
+    final from = _target ?? _landed ?? widget.position;
+    final next = from + step * sign;
     setState(() => _target = next < Duration.zero
         ? Duration.zero
         : next > widget.duration
@@ -2824,20 +2823,36 @@ class _ScrubBarState extends State<_ScrubBar> {
   void _seek() {
     _commit?.cancel();
     final target = _target;
-    if (target != null) widget.controller.seekTo(target);
+    if (target != null) {
+      widget.controller.seekTo(target);
+      _landing = target;
+      _landingSince = DateTime.now();
+    }
     if (mounted) setState(() => _target = null);
-    _steps = 0;
+    _steps.reset();
+  }
+
+  /// [_landing] while the player hasn't reached it yet, else null.
+  Duration? get _landed {
+    final landing = _landing;
+    if (landing == null) return null;
+    final near = (widget.position - landing).abs() < const Duration(seconds: 2);
+    if (near || DateTime.now().difference(_landingSince!) > _landingWait) {
+      _landing = null;
+      return null;
+    }
+    return landing;
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
-      _move(-1);
+      _move(-1, repeat: event is KeyRepeatEvent);
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      _move(1);
+      _move(1, repeat: event is KeyRepeatEvent);
       return KeyEventResult.handled;
     }
     if (_target != null &&
@@ -2855,8 +2870,9 @@ class _ScrubBarState extends State<_ScrubBar> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final focused = _focus.hasFocus;
-    final shown = _target ?? widget.position;
+    final shown = _target ?? _landed ?? widget.position;
     final max = widget.duration.inMilliseconds;
+    final value = shown.inMilliseconds.clamp(0, max).toDouble();
     return Focus(
       focusNode: _focus,
       onKeyEvent: _onKey,
@@ -2865,42 +2881,39 @@ class _ScrubBarState extends State<_ScrubBar> {
         if (!has && _target != null) _seek();
         setState(() {});
       },
-      child: Row(children: [
-        Expanded(
-          child: ExcludeFocus(
-            // 24 px instead of Slider's 48: the bar was too tall.
-            child: SizedBox(
-              height: 24,
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: focused ? 5 : 3,
-                  activeTrackColor: focused ? scheme.primary : null,
-                  thumbColor: focused ? Colors.white : null,
-                  thumbShape: RoundSliderThumbShape(
-                      enabledThumbRadius: focused ? 9 : 6),
-                  overlayShape: SliderComponentShape.noOverlay,
-                ),
-                child: Slider(
-                  value: shown.inMilliseconds.clamp(0, max).toDouble(),
-                  max: max.toDouble(),
-                  onChanged: (v) => widget.controller
-                      .seekTo(Duration(milliseconds: v.toInt())),
-                ),
+      // The target's time floats above the thumb. Beside the bar it took its
+      // width: the whole bar shrank, so one 10 s press moved the thumb back
+      // minutes, and forward again when the seek landed (owner's video,
+      // 2026-11-17).
+      child: Stack(clipBehavior: Clip.none, children: [
+        ExcludeFocus(
+          // 24 px instead of Slider's 48: the bar was too tall.
+          child: SizedBox(
+            height: 24,
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: focused ? 5 : 3,
+                activeTrackColor: focused ? scheme.primary : null,
+                thumbColor: focused ? Colors.white : null,
+                thumbShape:
+                    RoundSliderThumbShape(enabledThumbRadius: focused ? 9 : 6),
+                overlayShape: SliderComponentShape.noOverlay,
+              ),
+              child: Slider(
+                value: value,
+                max: max.toDouble(),
+                onChanged: (v) =>
+                    widget.controller.seekTo(Duration(milliseconds: v.toInt())),
               ),
             ),
           ),
         ),
         if (_target != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 10),
-            child: Text(
-              '${_clock(shown)}  (${_target! >= widget.position ? '+' : '−'}'
-              '${_clock((_target! - widget.position).abs())})',
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white),
-            ),
+          _FloatingNote(
+            at: max > 0 ? value / max : 0,
+            text:
+                '${_clock(shown)}  (${_target! >= widget.position ? '+' : '−'}'
+                '${_clock((_target! - widget.position).abs())})',
           ),
       ]),
     );
@@ -2910,6 +2923,45 @@ class _ScrubBarState extends State<_ScrubBar> {
     final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
     String two(int v) => v.toString().padLeft(2, '0');
     return h > 0 ? '$h:${two(m)}:${two(s)}' : '$m:${two(s)}';
+  }
+}
+
+/// A seek bar's label floating above it, over the video, at [at] (0 = left
+/// end, 1 = right end; it never runs past either). A direct child of the
+/// bar's Stack: it takes no room, so the bar keeps its width.
+class _FloatingNote extends StatelessWidget {
+  const _FloatingNote({required this.at, required this.text, this.color});
+
+  final double at;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 26,
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment(at.clamp(0.0, 1.0) * 2 - 1, 1),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              text,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: color ?? Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2938,7 +2990,7 @@ class _LiveTimeline extends StatefulWidget {
 class _LiveTimelineState extends State<_LiveTimeline> {
   final _focus = FocusNode(debugLabel: 'live-timeline');
   DateTime? _target;
-  int _steps = 0;
+  final _steps = ScrubSteps();
   Timer? _commit;
 
   @override
@@ -2948,12 +3000,13 @@ class _LiveTimelineState extends State<_LiveTimeline> {
     super.dispose();
   }
 
-  void _move(int sign) {
+  void _move(int sign, {required bool repeat}) {
     widget.onActivity?.call();
+    final step = _steps.next(repeat: repeat);
+    if (step == null) return;
     final now = DateTime.now();
     final from = _target ?? now;
-    var next = from
-        .add(Duration(seconds: sign * _ScrubBarState.stepSeconds(_steps++)));
+    var next = from.add(step * sign);
     final oldest = CatchupSession.oldest(widget.channel, now);
     if (next.isBefore(oldest)) next = oldest;
     if (next.isAfter(now)) next = now;
@@ -2965,7 +3018,7 @@ class _LiveTimelineState extends State<_LiveTimeline> {
   void _go() {
     _commit?.cancel();
     final target = _target;
-    _steps = 0;
+    _steps.reset();
     if (mounted) setState(() => _target = null);
     if (target == null ||
         DateTime.now().difference(target) < CatchupSession.liveEdge) {
@@ -2978,11 +3031,11 @@ class _LiveTimelineState extends State<_LiveTimeline> {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
-      _move(-1);
+      _move(-1, repeat: event is KeyRepeatEvent);
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      _move(1);
+      _move(1, repeat: event is KeyRepeatEvent);
       return KeyEventResult.handled;
     }
     if (_target != null &&
@@ -3051,29 +3104,26 @@ class _LiveTimelineState extends State<_LiveTimeline> {
         );
       }),
     );
-    final row = Row(children: [
-      Text(hm.format(programme.start),
-          style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      const SizedBox(width: 10),
-      Expanded(child: bar),
-      const SizedBox(width: 10),
-      Text(hm.format(programme.stop),
-          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+    // The target time and the Catch-up hint float above the bar, like
+    // [_ScrubBar]'s: beside it they took its width and moved every point.
+    final row = Stack(clipBehavior: Clip.none, children: [
+      Row(children: [
+        Text(hm.format(programme.start),
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        const SizedBox(width: 10),
+        Expanded(child: bar),
+        const SizedBox(width: 10),
+        Text(hm.format(programme.stop),
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ]),
       if (target != null)
-        Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Text(
-            '${hm.format(target)}  (−${_ScrubBarState._clock(now.difference(target))})',
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
-          ),
+        _FloatingNote(
+          at: at(target),
+          text: '${hm.format(target)}  '
+              '(−${_ScrubBarState._clock(now.difference(target))})',
         )
       else if (focused)
-        Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Text(tr('◀ Catch-up'),
-              style: TextStyle(color: scheme.primary, fontSize: 12)),
-        ),
+        _FloatingNote(at: 1, text: tr('◀ Catch-up'), color: scheme.primary),
     ]);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),

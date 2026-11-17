@@ -574,6 +574,10 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideSportsTrak) ?? false;
   Future<void> setHideSportsTrak(bool value) =>
       _prefs.setBool(AppConstants.keyHideSportsTrak, value);
+  bool getHideWhatsNew() =>
+      _prefs.getBool(AppConstants.keyHideWhatsNew) ?? false;
+  Future<void> setHideWhatsNew(bool value) =>
+      _prefs.setBool(AppConstants.keyHideWhatsNew, value);
 
   /// Separate Movies / TV Shows switches; unset = the old combined one.
   bool getHideMovies() =>
@@ -1466,8 +1470,8 @@ class StorageService {
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
   /// See [AppConstants.keySavedLiveKeys] (per viewer).
-  String? getSavedLiveKeys(String viewerId) => _prefs
-      .getString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId));
+  String? getSavedLiveKeys(String viewerId) =>
+      _prefs.getString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId));
   Future<void> setSavedLiveKeys(String json, String viewerId) => _prefs
       .setString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId), json);
 

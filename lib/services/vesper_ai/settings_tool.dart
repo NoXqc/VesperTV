@@ -544,6 +544,13 @@ final List<_AiSetting> _aiSettings = [
   _switch('hide_tv_shows', 'tabs', 'Hide TV Shows', 'Hides the TV Shows tab.',
       (b) => b.prefs.hideShows, (b, on) => b.prefs.setHideShows(on)),
   _switch(
+      'hide_whats_new',
+      'tabs',
+      "Hide What's New",
+      "Movies and TV Shows open on All, without the What's New carousel.",
+      (b) => b.prefs.hideWhatsNew,
+      (b, on) => b.prefs.setHideWhatsNew(on)),
+  _switch(
       'hide_sports_trak',
       'tabs',
       'Hide Sports Trak',

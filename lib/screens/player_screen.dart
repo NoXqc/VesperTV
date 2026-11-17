@@ -24,6 +24,7 @@ import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
+import '../utils/scrub_steps.dart';
 import '../utils/tv_theme.dart';
 import '../utils/video_fit.dart';
 import '../widgets/channel_schedule_panel.dart';
@@ -442,6 +443,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       _dataPoolVisible = false;
       _skipTarget = null;
       _skipSteps = 0;
+      _scrubSteps.reset();
     });
     if (!locked) {
       _resetHideTimer();
@@ -1344,17 +1346,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   Duration? _skipTarget;
   bool _skipLive = false;
   int _skipSteps = 0;
-  Timer? _skipCommit;
 
-  static int _skipStepSeconds(int steps) => steps < 3
-      ? 10
-      : steps < 6
-          ? 30
-          : steps < 10
-              ? 60
-              : steps < 15
-                  ? 120
-                  : 300;
+  /// Movies: a tap is 10 s, a held key grows the step (see [ScrubSteps]).
+  final _scrubSteps = ScrubSteps();
+  Timer? _skipCommit;
 
   /// Live rewind: past catch-up's 90 s live edge from the first press.
   static int _liveStepMinutes(int steps) => steps == 0
@@ -1375,9 +1370,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (seekable) {
       if (_skipLive) _skipTarget = null;
       _skipLive = false;
+      // The shortcut can't tell a held key's repeat from a new press:
+      // ScrubSteps guesses from the time between them.
+      final step = _scrubSteps.next();
+      if (step == null) return;
       final from = _skipTarget ?? controller.value.position;
-      final next =
-          from + Duration(seconds: sign * _skipStepSeconds(_skipSteps++));
+      final next = from + step * sign;
       _skipTarget = next < Duration.zero
           ? Duration.zero
           : next > duration
@@ -1405,6 +1403,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final live = _skipLive;
     _skipTarget = null;
     _skipSteps = 0;
+    _scrubSteps.reset();
     if (mounted) setState(() {});
     final controller = _playback.controller;
     if (target == null || controller == null) return;

@@ -1506,6 +1506,7 @@ const Map<String, String> kPl = {
       "Sprawdź link tutaj, a potem naciśnij Dodaj.",
   "Hide Movies": "Ukryj Filmy",
   "Hide TV Shows": "Ukryj Seriale",
+  "Hide What's New": "Ukryj Nowości",
   "Hide Recordings": "Ukryj Nagrania",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Wpisywanie klucza pilotem jest uciążliwe. Zeskanuj ten kod aparatem telefonu i wklej tam klucz — pojawi się tutaj do sprawdzenia i zapisania.",
@@ -1519,6 +1520,8 @@ const Map<String, String> kPl = {
       "Usuwa kartę Filmy i wyniki wyszukiwania filmów.",
   "Removes the TV Shows tab and show search results.":
       "Usuwa kartę Seriale i wyniki wyszukiwania seriali.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Usuwa Nowości z Filmów i Seriali: otwierają się na Wszystkie.",
   "Removes the Recordings tab.": "Usuwa kartę Nagrania.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Wpisywanie długiego linku pilotem jest uciążliwe. Zeskanuj ten kod aparatem telefonu i wklej tam link — pojawi się tutaj do sprawdzenia i dodania.",

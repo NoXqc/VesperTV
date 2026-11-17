@@ -1555,6 +1555,7 @@ const Map<String, String> kFr = {
       "Vérifiez le lien ici, puis appuyez sur Ajouter.",
   "Hide Movies": "Masquer Films",
   "Hide TV Shows": "Masquer Séries",
+  "Hide What's New": "Masquer Nouveautés",
   "Hide Recordings": "Masquer les enregistrements",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Taper une clé avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et collez-y la clé — elle apparaît ici pour que vous la vérifiiez et l'enregistriez.",
@@ -1570,6 +1571,8 @@ const Map<String, String> kFr = {
       "Retire l'onglet Films et les films des résultats de recherche.",
   "Removes the TV Shows tab and show search results.":
       "Retire l'onglet Séries et les séries des résultats de recherche.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Retire les Nouveautés des Films et Séries : ils s'ouvrent sur Tout.",
   "Removes the Recordings tab.": "Retire l’onglet Enregistrements.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Taper un long lien avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et collez-y le lien — il apparaît ici pour que vous le vérifiiez et l'ajoutiez.",

@@ -1515,6 +1515,7 @@ const Map<String, String> kEl = {
       "Ελέγξτε τον σύνδεσμο εδώ και πατήστε Προσθήκη.",
   "Hide Movies": "Απόκρυψη Ταινιών",
   "Hide TV Shows": "Απόκρυψη Σειρών",
+  "Hide What's New": "Απόκρυψη «Τι νέο υπάρχει»",
   "Hide Recordings": "Απόκρυψη εγγραφών",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Η πληκτρολόγηση ενός κλειδιού με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε το κλειδί εκεί — εμφανίζεται εδώ για έλεγχο και αποθήκευση.",
@@ -1529,6 +1530,8 @@ const Map<String, String> kEl = {
       "Αφαιρεί την καρτέλα Ταινίες και τα αποτελέσματα αναζήτησης ταινιών.",
   "Removes the TV Shows tab and show search results.":
       "Αφαιρεί την καρτέλα Σειρές και τα αποτελέσματα αναζήτησης σειρών.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Αφαιρεί το «Τι νέο υπάρχει» από Ταινίες και Σειρές: ανοίγουν στο Όλα.",
   "Removes the Recordings tab.": "Αφαιρεί την καρτέλα Εγγραφές.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Η πληκτρολόγηση ενός μεγάλου συνδέσμου με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε τον σύνδεσμο εκεί — εμφανίζεται εδώ για έλεγχο και προσθήκη.",

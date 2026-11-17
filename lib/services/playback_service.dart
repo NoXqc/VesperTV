@@ -32,6 +32,7 @@ import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
 import 'live_reconnect_log.dart';
+import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
 
@@ -79,12 +80,20 @@ class PlaybackService extends ChangeNotifier {
       // Storage not initialised (tests): the 500 ms default stays.
     }
     _reconnectLog.start();
+    _vodStallLog.start();
   }
 
   /// Send log lines for the native player's silent live reconnects.
   late final _reconnectLog = LiveReconnectLog(() {
     final c = controller;
     return currentChannel?.isLive == true ? c : null;
+  });
+
+  /// Send log lines for movie / episode buffering.
+  late final _vodStallLog = VodStallLog(() {
+    final c = controller;
+    final channel = currentChannel;
+    return channel != null && VodBuffering.appliesTo(channel) ? c : null;
   });
 
   static const _recentlyPlayedCacheKey = 'recently_played';
@@ -1640,6 +1649,7 @@ class PlaybackService extends ChangeNotifier {
   @override
   void dispose() {
     _reconnectLog.dispose();
+    _vodStallLog.dispose();
     _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     _teardown();

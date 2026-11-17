@@ -1554,6 +1554,7 @@ const Map<String, String> kIt = {
       "Controlla il link qui, poi premi Aggiungi.",
   "Hide Movies": "Nascondi Film",
   "Hide TV Shows": "Nascondi Serie TV",
+  "Hide What's New": "Nascondi Novità",
   "Hide Recordings": "Nascondi registrazioni",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Digitare una chiave con il telecomando è scomodo. Scansiona questo codice con la fotocamera del telefono e incolla lì la chiave: apparirà qui per controllarla e salvarla.",
@@ -1568,6 +1569,8 @@ const Map<String, String> kIt = {
       "Rimuove la scheda Film e i film dai risultati di ricerca.",
   "Removes the TV Shows tab and show search results.":
       "Rimuove la scheda Serie TV e le serie dai risultati di ricerca.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Rimuove le Novità da Film e Serie TV: si aprono su Tutto.",
   "Removes the Recordings tab.": "Rimuove la scheda Registrazioni.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Digitare un link lungo con il telecomando è faticoso. Scansiona questo codice con la fotocamera del telefono e incolla lì il link — apparirà qui da controllare e aggiungere.",
