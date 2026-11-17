@@ -1063,6 +1063,60 @@ void main() {
     await disposePage(tester);
   });
 
+  // No clip above a row's focused first card cuts its zoomed frame: the
+  // regular page's scroll view cut the left side off (owner photo,
+  // 2026-11-16, after deb5e86 fixed Sports Mode only).
+  for (final mode in [false, true]) {
+    for (final scale in [1.0, 1.4]) {
+      testWidgets(
+          'a focused first card keeps its left frame (mode=$mode, text=$scale)',
+          (tester) async {
+        await prefs.setSportsMode(mode);
+        await open(tester, scale: scale);
+        final card = find.byWidgetPredicate((w) =>
+            w is InkWell &&
+            w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+        tester.widget<InkWell>(card).focusNode!.requestFocus();
+        await tester.pump();
+        // The zoom's ticker starts on the frame after the focus one.
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 300));
+        final zoom = find.descendant(
+            of: card, matching: find.byType(AnimatedScale));
+        final frame = tester.getRect(
+            find.descendant(of: zoom, matching: find.byType(Container)).first);
+        final unzoomed = tester.getRect(zoom);
+        final reach = unzoomed.left - frame.left;
+        expect(reach, greaterThan(0)); // it is zoomed
+        // Where a row's first card's frame reaches. (The test font's hold
+        // hint is wider than the card and centres it; on a box it isn't.)
+        final row = find.ancestor(of: card, matching: find.byType(ListView));
+        final edge = tester.getRect(row.first).left +
+            (tester.widget<ListView>(row.first).padding?.horizontal ?? 0) / 2 -
+            reach;
+        for (RenderObject? o = tester.renderObject(zoom).parent;
+            o != null;
+            o = o.parent) {
+          Rect? clip;
+          // (Overscroll's stretch clip is off while nothing stretches.)
+          if (o is RenderClipRect && o.clipBehavior != Clip.none) {
+            clip = o.clipper?.getClip(o.size) ?? Offset.zero & o.size;
+          } else if (o is RenderAbstractViewport &&
+              (o as dynamic).clipBehavior != Clip.none) {
+            clip = Offset.zero & (o as RenderBox).size;
+          }
+          if (clip == null) continue;
+          final onScreen = MatrixUtils.transformRect(
+              (o as RenderBox).getTransformTo(null), clip);
+          expect(onScreen.left, lessThanOrEqualTo(edge),
+              reason: '${o.runtimeType} cuts the left frame');
+        }
+        expect(tester.takeException(), isNull);
+        await disposePage(tester);
+      });
+    }
+  }
+
   testWidgets('regular Sports Trak keeps All tap and rail league reorder',
       (tester) async {
     await prefs.setSportsMode(false);
