@@ -87,7 +87,8 @@ class _Playback extends PlaybackService {
   final List<Channel> plays = [];
   Completer<void>? opening;
   @override
-  Future<void> play(Channel channel, {bool recordHistory = true}) async {
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
     plays.add(channel);
     await opening?.future;
     currentChannel = channel;

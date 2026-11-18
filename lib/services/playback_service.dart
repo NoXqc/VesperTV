@@ -285,7 +285,8 @@ class PlaybackService extends ChangeNotifier {
     debugPrint('PlaybackService: source picked -> ${source.name}');
     await play(
         playing.copyWith(url: source.url, httpHeaders: source.httpHeaders),
-        recordHistory: false);
+        recordHistory: false,
+        switchSource: true);
   }
 
   void setUpNextQueue(List<Channel>? queue,
@@ -493,7 +494,13 @@ class PlaybackService extends ChangeNotifier {
   /// the TV guide's Preview on highlight plays every channel the remote
   /// stops on and records it only once it has been watched a while
   /// ([recordWatched]).
-  Future<void> play(Channel channel, {bool recordHistory = true}) async {
+  ///
+  /// [switchSource]: the same channel from another stream URL (player >
+  /// Sources). Without it the same channel id is a no-op (the guide's OK on
+  /// the playing channel must not restart it), which swallowed every live
+  /// Sources pick since +813 (owner photo, TVA Montreal, 2026-11-18).
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
     if (channel.url.isEmpty && resolveLive != null) {
       final resolved = await resolveLive!(channel);
       if (resolved == null || resolved.url.isEmpty) {
@@ -506,7 +513,7 @@ class PlaybackService extends ChangeNotifier {
         !NativeVideoSurface.active ||
         textureVideo ||
         currentChannel?.id == channel.id) {
-      return _playChannel(channel, recordHistory);
+      return _playChannel(channel, recordHistory, switchSource);
     }
     final release = NativeVideoSurface.retainForPlayerSwitch();
     _nativeSwitchReleases.add(release);
@@ -516,7 +523,7 @@ class PlaybackService extends ChangeNotifier {
     }
 
     try {
-      await _playChannel(channel, recordHistory);
+      await _playChannel(channel, recordHistory, switchSource);
       final initializing = initFuture;
       if (initializing == null) {
         finish();
@@ -538,7 +545,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> _playChannel(Channel channel,
-      [bool recordHistory = true]) async {
+      [bool recordHistory = true, bool switchSource = false]) async {
     if (channel.id != _copyFallbackFor) copyFallbackName = null;
     _announce(tr('Playing {name}', {'name': channel.name}));
     // A queued episode whose stream isn't known yet (Archive Next / auto-
@@ -579,8 +586,13 @@ class PlaybackService extends ChangeNotifier {
     // but supplies a different file URL. Only the identical file is a no-op.
     if (currentChannel?.id == channel.id &&
         controller != null &&
-        (!Channel.isArchiveId(channel.rawId) ||
-            currentChannel?.url == channel.url)) {
+        currentChannel?.url == channel.url) {
+      return;
+    }
+    if (currentChannel?.id == channel.id &&
+        controller != null &&
+        !switchSource &&
+        !Channel.isArchiveId(channel.rawId)) {
       return;
     }
 

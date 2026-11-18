@@ -25,7 +25,8 @@ class BrowsePlayback extends CountingPlayback {
 
   final played = <Channel>[];
   @override
-  Future<void> play(Channel channel, {bool recordHistory = true}) async {
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
     played.add(channel);
     currentChannel = channel;
   }

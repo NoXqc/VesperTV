@@ -25,7 +25,8 @@ class _MiniPlayback extends PlaybackService {
   int stops = 0;
 
   @override
-  Future<void> play(Channel channel, {bool recordHistory = true}) async {
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
     plays.add((channel.id, recordHistory));
     currentChannel = channel;
     notifyListeners();
