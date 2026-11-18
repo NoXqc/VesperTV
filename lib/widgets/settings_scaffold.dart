@@ -194,6 +194,7 @@ class SettingsScaffold extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: GlassPanel(
                 blur: true,
+                dim: floatingBarrier,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,6 +238,9 @@ class SettingsScaffold extends StatelessWidget {
   }
 
   static const floatingWidth = 680.0;
+
+  /// The dim over the page under a floating panel ([openSettingsPage]).
+  static const floatingBarrier = Colors.black54;
 }
 
 /// Marks a Settings page opened by [openSettingsPage] as a floating panel.
@@ -260,15 +264,20 @@ Future<T?> openSettingsPage<T>(BuildContext context, WidgetBuilder builder,
   if (!floating || !SettingsScaffold.compact) {
     return navigator.push<T>(MaterialPageRoute(builder: builder));
   }
-  return navigator.push<T>(PageRouteBuilder<T>(
+  // The page below, captured and blurred once for the panel's glass: a live
+  // blur redid it on every frame the panel drew (a text field's cursor
+  // blink, each focus step): 30-60 ms frames on the Homatics (Dispatcharr
+  // page, owner 2026-11-18; CLAUDE.md §10 rule 15).
+  final frost = GlassFrost.capture(context);
+  return frost.during(navigator.push<T>(PageRouteBuilder<T>(
     opaque: false,
     barrierDismissible: true,
-    barrierColor: Colors.black54,
+    barrierColor: SettingsScaffold.floatingBarrier,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     transitionDuration: const Duration(milliseconds: 180),
     reverseTransitionDuration: const Duration(milliseconds: 140),
     pageBuilder: (_, __, ___) =>
-        SettingsFloating(child: Builder(builder: builder)),
+        frost.scope(SettingsFloating(child: Builder(builder: builder))),
     transitionsBuilder: (_, animation, __, child) {
       final curve =
           CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -278,7 +287,7 @@ Future<T?> openSettingsPage<T>(BuildContext context, WidgetBuilder builder,
             scale: Tween(begin: 0.96, end: 1.0).animate(curve), child: child),
       );
     },
-  ));
+  )));
 }
 
 /// Behind every Settings page: the viewer's Home wallpaper, blurred and

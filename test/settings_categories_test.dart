@@ -227,6 +227,13 @@ void main() {
     await tester.tap(find.widgetWithText(SettingRow, 'Support VesperTV'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsFloating), findsOneWidget);
+    // Its glass is the page below captured once, never a live blur (30-60
+    // ms frames on the Homatics while a field's cursor blinked, +834).
+    expect(
+        find.descendant(
+            of: find.byType(SettingsFloating),
+            matching: find.byType(BackdropFilter)),
+        findsNothing);
     // Settings stays underneath (dimmed), Back closes the panel only.
     expect(find.byType(SettingsMenuScreen), findsOneWidget);
     await tester.binding.handlePopRoute();
