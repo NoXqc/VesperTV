@@ -121,11 +121,15 @@ class _LiveSourceDrawerState extends State<_LiveSourceDrawer> {
                         fontSize: _compact ? 14 : 16,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
+                // Two lines at the theme's 1.43 left the focused row 1-2 px
+                // short.
                 Text(tr('Any channel, any playlist: tried first if this one fails'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: Colors.white70, fontSize: _compact ? 11 : 12)),
+                        color: Colors.white70,
+                        fontSize: _compact ? 11 : 12,
+                        height: 1.2)),
               ],
             ),
           ),

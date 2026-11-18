@@ -2012,27 +2012,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _pickChannel(SportsGame game,
       [Future<void> Function(Channel, SportsGame)? watch]) async {
-    final channel = await Navigator.of(context).push<Channel>(
-      MaterialPageRoute(
-        builder: (_) => _ChannelPickerScreen(game: game, matcher: _matcher),
-      ),
-    );
+    final channel = await pickChannelForGame(context, game, _matcher);
     if (channel == null || !mounted) return;
-    final scope = await showGlassMenu<_PickScope>(
-      context: context,
-      builder: (_) => _PickScopeDialog(game: game, channel: channel),
-    );
-    if (scope == null || !mounted) return;
-    switch (scope) {
-      case _PickScope.game:
-        await _picks.pickForGame(game, channel.id);
-      case _PickScope.first when game.league.kind != SportsKind.team:
-        await _picks.pickForSeries(game, channel.id);
-      case _PickScope.first:
-        await _picks.pickForTeam(game, game.first, channel.id);
-      case _PickScope.second:
-        await _picks.pickForTeam(game, game.second, channel.id);
-    }
     await _rematch();
     if (!mounted) return;
     await (watch ?? _watch)(channel, game);
@@ -6336,6 +6317,40 @@ class _ChannelLogo extends StatelessWidget {
             ),
     );
   }
+}
+
+/// "Choose a different channel" for [game]: the channel search (team-name
+/// chips + any word), then "Remember this channel?" (this game, a team or
+/// the series), saved as the game's pick. The channel picked, null =
+/// cancelled at either step. Sports Trak's game menu and the full-screen
+/// player's Sources drawer (a provider naming its channels differently,
+/// 2026-11-18) share it; the caller plays the channel.
+Future<Channel?> pickChannelForGame(
+    BuildContext context, SportsGame game, SportsChannelMatcher matcher) async {
+  final storage = context.read<StorageService>();
+  final channel = await Navigator.of(context).push<Channel>(
+    MaterialPageRoute(
+      builder: (_) => _ChannelPickerScreen(game: game, matcher: matcher),
+    ),
+  );
+  if (channel == null || !context.mounted) return null;
+  final scope = await showGlassMenu<_PickScope>(
+    context: context,
+    builder: (_) => _PickScopeDialog(game: game, channel: channel),
+  );
+  if (scope == null) return null;
+  final picks = SportsChannelPicks.load(storage);
+  switch (scope) {
+    case _PickScope.game:
+      await picks.pickForGame(game, channel.id);
+    case _PickScope.first when game.league.kind != SportsKind.team:
+      await picks.pickForSeries(game, channel.id);
+    case _PickScope.first:
+      await picks.pickForTeam(game, game.first, channel.id);
+    case _PickScope.second:
+      await picks.pickForTeam(game, game.second, channel.id);
+  }
+  return channel;
 }
 
 enum _PickScope { game, first, second }

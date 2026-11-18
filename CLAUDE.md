@@ -457,6 +457,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-18 - This game: Choose a different channel (`claude/game-search-sources`, +850 on the Homatics):** Discord request via the
+  owner (a game's 2-3 matched channels were all wrong for one provider's names; searching meant leaving the game). The player's Left
+  panel This game tab ends with **Choose a different channel** (`PlayerSidePanel._findChannel`, Android + Windows): Sports Trak's own
+  picker + Remember this channel? through the shared `pickChannelForGame` (sports_screen.dart), then the pick plays. Tried in the live
+  Sources drawer first; moved here (it already lists the game's channels). Box-tested with a temp 12 h game window. Testing picks on the
+  owner's box: never Forget my pick (`clearFor` also removes team picks). Next build > 850.
 - **Claude, 2026-11-17 - release 1.0.69 (beta), +827 (latest):** owner said "/cutr". Android only; Windows stays 1.0.68, Linux 1.0.63 (+702). Live player one bottom info bar, sync fix (an edit on a held key wiped other devices' favourites, `rebaseHeldEdit`), Send-log sync lines, plus +809..+822 (stream badges, movie buffer, Sources, closed-app updates, Multiview decoder, seek bar). Notes: dev-notes/releases/1.0.69.md. Next build > 827.
 - **Claude, 2026-11-16 - Stream badges (`claude/stream-badges`, worktree `VesperTV-claude-badges`, test +812, uncommitted):**
   owner showed Xperience's Nuvio badge packs. Settings > Playback > Movies & TV Shows > **Stream badges**: paste a
