@@ -2367,6 +2367,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     };
   }
 
+  /// [make] timed into [PerfDiagnostics.part] (the eager part of a
+  /// column's build: lists, sorting, counts).
+  T _timed<T>(String label, T Function() make) {
+    final sw = Stopwatch()..start();
+    final out = make();
+    PerfDiagnostics.part(label, sw.elapsedMicroseconds);
+    return out;
+  }
+
   void _onColumnFocus(int depth) {
     if (_focusDepth != depth) setState(() => _focusDepth = depth);
   }
@@ -2689,6 +2698,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   @override
   void dispose() {
+    _playlistListened?.removeListener(_onPlaylistChanged);
     GuideKey.unregister(this);
     HardwareKeyboard.instance.removeHandler(_noteKey);
     _focusPreviewTimer?.cancel();
@@ -3759,19 +3769,53 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// dependency). 32 hidden rebuilds in 10 s while the owner was on Home
   /// (LOG-W8R8UJ, the Movies preload notifying). See-through menus over it
   /// leave tickers on, so it still updates under those.
+  /// The TV tab rebuilds for a [PlaylistManager] change only when its live
+  /// view changed ([PlaylistManager.liveViewSignature]); the browse tabs
+  /// for any change, as before (a `context.watch` rebuilt the whole screen
+  /// on every Movies / TV Shows warm-up step: 6-10 times in 10 s,
+  /// 300-850 ms each on the Homatics, owner 2026-11-18).
+  PlaylistManager? _playlistListened;
+  int? _liveViewSeen;
+
+  void _listenPlaylist() {
+    final p = context.read<PlaylistManager>();
+    if (identical(p, _playlistListened)) return;
+    _playlistListened?.removeListener(_onPlaylistChanged);
+    _playlistListened = p..addListener(_onPlaylistChanged);
+    _liveViewSeen = null;
+  }
+
+  void _onPlaylistChanged() {
+    if (!mounted) return;
+    final p = _playlistListened;
+    if (p != null && _tab == 'TV') {
+      final seen = p.liveViewSignature();
+      if (seen == _liveViewSeen) return;
+      _liveViewSeen = seen;
+    } else {
+      _liveViewSeen = null;
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
+    _listenPlaylist();
     final hidden = !TickerMode.valuesOf(context).enabled;
     final last = _lastBuilt;
     if (hidden && last != null) return last;
-    final built = PerfDiagnostics.timedSync('homeBuild', () => _build(context));
+    final sw = Stopwatch()..start();
+    final built = TimedSubtree('home',
+        child: PerfDiagnostics.timedSync('homeBuild', () => _build(context)));
+    PerfDiagnostics.part('homeMake', sw.elapsedMicroseconds);
     _lastBuilt = built;
     return built;
   }
 
   Widget _build(BuildContext context) {
     PerfDiagnostics.homeBuilds++;
-    final playlist = context.watch<PlaylistManager>();
+    // Listened to in [_onPlaylistChanged], not watched (see there).
+    final playlist = context.read<PlaylistManager>();
     final epg = context.watch<EpgService>();
     final prefs = context.watch<AppPreferences>();
     final screen = MediaQuery.sizeOf(context);
@@ -3897,8 +3941,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                   _focusDepth > 0
                               ? _handleBack
                               : null,
-                          showClock: prefs.showClock,
-                          isLoading: playlist.isLoading),
+                          showClock: prefs.showClock),
                     ),
                     const CatalogWarmupBanner(),
                     Expanded(
@@ -4242,7 +4285,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           onFocusChange: (has) {
             if (has) _onColumnFocus(0);
           },
-          child: _uiText(_buildTabsColumn(collapsed: collapsed)),
+          child: TimedSubtree('tabs',
+              child: _uiText(_buildTabsColumn(collapsed: collapsed))),
         ),
       );
 
@@ -4258,9 +4302,18 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           // the guide and background beside it (choppy groups on the
           // Homatics' small GPU, 2026-11-12). Same for the content column.
           child: RepaintBoundary(
-            child: _uiText(isBrowseTab
-                ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
-                : _buildGroupsColumn(playlist, collapsed: collapsed)),
+            // Fresh group counts repaint this column only.
+            child: ValueListenableBuilder<int>(
+              valueListenable: playlist.liveCountsShown,
+              builder: (_, __, ___) => TimedSubtree('groups',
+                  child: _timed(
+                      'groupsMake',
+                      () => _uiText(isBrowseTab
+                          ? _buildBrowseGroupsColumn(playlist,
+                              collapsed: collapsed)
+                          : _buildGroupsColumn(playlist,
+                              collapsed: collapsed)))),
+            ),
           ),
         ),
       );
@@ -4311,7 +4364,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           child: RepaintBoundary(
             child: isBrowseTab
                 ? _buildMainArea(playlist, epg)
-                : _uiText(_buildLiveRegion(playlist, epg)),
+                : TimedSubtree('live',
+                    child: _timed('liveMake',
+                        () => _uiText(_buildLiveRegion(playlist, epg)))),
           ),
         ),
       );
@@ -5391,7 +5446,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         icon: Icons.folder_special_outlined,
                         label: title,
                         count: showCounts
-                            ? playlist.liveGroupCount(null, title)
+                            ? playlist.liveGroupCountShown(null, title)
                             : null,
                         selected: effectiveGroup == title,
                         collapsed: collapsed,
@@ -5422,7 +5477,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         icon: Icons.grid_view_rounded,
                         label: group.title,
                         count: showCounts
-                            ? playlist.liveGroupCount(
+                            ? playlist.liveGroupCountShown(
                                 group.playlistId, group.title)
                             : null,
                         selected: effectiveGroup == group.title,
@@ -6373,84 +6428,87 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // The description card stays right of the list (it covered the
         // list when the groups column was open: owner photo, 2026-11-14).
         final cardWidth = math.min(440.0, box.maxWidth - 380 - 24);
-        return Stack(
-          children: [
-            Positioned.fill(
-              // `channel` (`PlaybackService.currentChannel`) is always null
-              // on Windows — that service is never touched by
-              // `DesktopPlayerScreen`/`DesktopMiniPlayer` (see their own
-              // doc comments) — so this plain pane used to permanently read
-              // "Select a channel to start watching" there even with a
-              // live channel actually minimized, the exact same gap the
-              // Timeline guide's own preview box had before it was fixed to
-              // watch `DesktopMiniPlayer` directly. Reported directly as
-              // the same bug on this ("Live", non-timeline) guide view —
-              // reusing that already-fixed box here instead of duplicating
-              // its Windows-vs-not branching a second time. See its own doc
-              // comment for why rendering `DesktopMiniPlayer`'s video here
-              // is safe (no second simultaneous stream/audio consumer):
-              // `media_kit`'s texture-based rendering tolerates more than
-              // one `Video` widget on the same controller, and in practice
-              // only one is ever actually mounted at a time anyway.
-              child: _buildTimelinePreviewBox(channel),
-            ),
-            if (channel != null)
-              Positioned(
-                // A couple px further in than before — right up against the
-                // pane's own new rounded corner (above), an 8px inset let the
-                // button's circular edge clip visually into the curve.
-                top: 12,
-                right: 12,
-                child: IconButton.filledTonal(
-                  tooltip: tr('Full screen'),
-                  icon: const Icon(Icons.fullscreen),
-                  onPressed: () => Navigator.of(context).push(
-                      PlayerGlideRoute.open(context.read<PlaybackService>(),
-                          (_) => PlayerScreen(channel: channel))),
+        return TimedSubtree('region',
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  // `channel` (`PlaybackService.currentChannel`) is always null
+                  // on Windows — that service is never touched by
+                  // `DesktopPlayerScreen`/`DesktopMiniPlayer` (see their own
+                  // doc comments) — so this plain pane used to permanently read
+                  // "Select a channel to start watching" there even with a
+                  // live channel actually minimized, the exact same gap the
+                  // Timeline guide's own preview box had before it was fixed to
+                  // watch `DesktopMiniPlayer` directly. Reported directly as
+                  // the same bug on this ("Live", non-timeline) guide view —
+                  // reusing that already-fixed box here instead of duplicating
+                  // its Windows-vs-not branching a second time. See its own doc
+                  // comment for why rendering `DesktopMiniPlayer`'s video here
+                  // is safe (no second simultaneous stream/audio consumer):
+                  // `media_kit`'s texture-based rendering tolerates more than
+                  // one `Video` widget on the same controller, and in practice
+                  // only one is ever actually mounted at a time anyway.
+                  child: _buildTimelinePreviewBox(channel),
                 ),
-              ),
-            Positioned(
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: 380,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.62),
-                // The video is behind the list: Refined finish rows stay
-                // see-through, as in the full-video Timeline guide.
-                child: RefinedFinishBackdrop(
-                  translucent: true,
-                  child: _buildLiveList(playlist),
-                ),
-              ),
-            ),
-            // The description sits right of the list, over the video, and
-            // follows the highlighted channel (the playing one otherwise).
-            if (cardWidth >= 220)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                width: cardWidth,
-                height: 190,
-                child: IgnorePointer(
-                  child: ValueListenableBuilder<Channel?>(
-                    valueListenable: _liveListFocused,
-                    builder: (context, focused, _) {
-                      final shown = focused ?? channel;
-                      if (shown == null) return const SizedBox.shrink();
-                      return DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.62),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: _ProgramDetails(channel: shown, epg: epg),
-                      );
-                    },
+                if (channel != null)
+                  Positioned(
+                    // A couple px further in than before — right up against the
+                    // pane's own new rounded corner (above), an 8px inset let the
+                    // button's circular edge clip visually into the curve.
+                    top: 12,
+                    right: 12,
+                    child: IconButton.filledTonal(
+                      tooltip: tr('Full screen'),
+                      icon: const Icon(Icons.fullscreen),
+                      onPressed: () => Navigator.of(context).push(
+                          PlayerGlideRoute.open(context.read<PlaybackService>(),
+                              (_) => PlayerScreen(channel: channel))),
+                    ),
+                  ),
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  width: 380,
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.62),
+                    // The video is behind the list: Refined finish rows stay
+                    // see-through, as in the full-video Timeline guide.
+                    child: RefinedFinishBackdrop(
+                      translucent: true,
+                      child: TimedSubtree('list',
+                          child: _timed(
+                              'listMake', () => _buildLiveList(playlist))),
+                    ),
                   ),
                 ),
-              ),
-          ],
-        );
+                // The description sits right of the list, over the video, and
+                // follows the highlighted channel (the playing one otherwise).
+                if (cardWidth >= 220)
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    width: cardWidth,
+                    height: 190,
+                    child: IgnorePointer(
+                      child: ValueListenableBuilder<Channel?>(
+                        valueListenable: _liveListFocused,
+                        builder: (context, focused, _) {
+                          final shown = focused ?? channel;
+                          if (shown == null) return const SizedBox.shrink();
+                          return DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.62),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: _ProgramDetails(channel: shown, epg: epg),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
+            ));
       }),
     );
   }
@@ -6571,7 +6629,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         itemCount: channels.length,
         itemBuilder: (context, i) {
           final channel = channels[i];
-          final row = _buildLiveRow(playback, channel, i);
+          final row = TimedSubtree('row',
+              child:
+                  _timed('rowMake', () => _buildLiveRow(playback, channel, i)));
           if (!labelPlaylists ||
               (i > 0 && channels[i - 1].playlistId == channel.playlistId)) {
             return row;
@@ -9237,21 +9297,18 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
 /// everywhere" the way a search entry point should be — costs nothing and
 /// actually works with a remote.
 class _TvTopBar extends StatelessWidget {
-  const _TvTopBar(
-      {required this.showClock,
-      required this.isLoading,
-      this.onBack,
-      this.dense = false});
+  const _TvTopBar({required this.showClock, this.onBack, this.dense = false});
 
   /// A phone held sideways ([_TvHomeScreenState._shortScreen]): no
   /// vertical padding, a smaller back button and wordmark.
   final bool dense;
   final bool showClock;
-  final bool isLoading;
   final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
+    // Its own: the TV screen no longer rebuilds for every catalog step.
+    final isLoading = context.select<PlaylistManager, bool>((p) => p.isLoading);
     // Deliberately the palette's own colors, not `Theme.of(context)
     // .colorScheme` — for the Minimalist palette specifically, that
     // scheme's primary/secondary are a neutral white/light-gray (see

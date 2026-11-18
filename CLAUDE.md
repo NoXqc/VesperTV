@@ -307,6 +307,16 @@ inaccurate. Recoverable from commit c18de49.)
   back logic must route it through its PopScope (`DesktopPlayerScreen` is `canPop: false` ->
   `_handleBack`, or a live channel was dropped instead of handed to the mini player).
   Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
+  (18) **The TV screen does not watch PlaylistManager** (2026-11-18, +838..+847): it listens and rebuilds on the
+  TV tab only when `PlaylistManager.liveViewSignature()` changes (live lists, hidden, edits, merges, own groups,
+  viewer, groups + order, playlists, favourites, error); the browse tabs rebuild on every change as before. The
+  Movies / TV Shows warm-up notified every few hundred ms for minutes on big playlists and each rebuild cost
+  300-850 ms on the Homatics. **New PlaylistManager state shown on the TV tab must go into liveViewSignature** (or
+  read with its own `context.select`, like `_TvTopBar`'s spinner), or the TV tab won't update. Group counts there
+  use `liveGroupCountShown` (recount only when the live inputs change, `liveCountsShown` repaints the column);
+  `PlaylistSession._liveChannelsOfGroup` indexes live channels by group (a group change scanned ~27k channels per
+  playlist), Favourites uses it too. Send log: `Frames: ... parts(max/total ms)` names the slow part (`TimedSubtree`,
+  `PerfDiagnostics.part`), `LiveView: changed [...]` says what rebuilt the TV tab. Details: dev-notes/tv-guide-speed.md.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
   (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;

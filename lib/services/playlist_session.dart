@@ -1763,9 +1763,7 @@ class PlaylistSession {
 
         var seriesIndex = 0;
         Future<void> seriesWorker() async {
-          while (!serverDown &&
-              !stopped() &&
-              seriesIndex < seriesTodo.length) {
+          while (!serverDown && !stopped() && seriesIndex < seriesTodo.length) {
             final cat = seriesTodo[seriesIndex++];
             await _loadOneSeriesCategory(api, cat, force: force);
             seriesCatalogDone++;
@@ -2025,8 +2023,7 @@ class PlaylistSession {
       switch (category) {
         case 'tv':
           final list = groupTitle != null
-              ? _orderedChannels(groupTitle,
-                  liveChannels.where((c) => liveGroupOf(c) == groupTitle))
+              ? _orderedChannels(groupTitle, _liveChannelsOfGroup(groupTitle))
               : liveChannels
                   .where((c) => !hiddenGroups.contains(liveGroupOf(c)));
           // Applied even when a specific group was asked for (unlike
@@ -2138,6 +2135,40 @@ class PlaylistSession {
   /// into, else the provider's.
   String liveGroupOf(Channel c) =>
       myGroupOf?.call(c) ?? edits.groupTitle(c.group);
+
+  /// Set by the manager: changes whenever a live channel's group can change
+  /// (own groups, moves, viewer, edits; `PlaylistManager
+  /// ._liveCountsSignature`). Keys [_liveChannelsOfGroup]'s index.
+  int Function()? liveGroupsToken;
+  Map<String, List<Channel>>? _liveByGroup;
+  int? _liveByGroupToken;
+
+  /// [_liveChannelsOfGroup] for the manager (Favourites' favourited
+  /// groups). Xtream lists only: an M3U playlist's live entries aren't in
+  /// [liveChannels].
+  List<Channel> liveChannelsInGroup(String groupTitle) =>
+      _liveChannelsOfGroup(groupTitle);
+
+  /// [liveChannels] in [groupTitle] ([liveGroupOf]), playlist order, from an
+  /// index built once per [liveGroupsToken]: a group used to scan all ~27k
+  /// channels of each playlist (~120-320 ms per group change on the
+  /// Homatics, owner 2026-11-18).
+  List<Channel> _liveChannelsOfGroup(String groupTitle) {
+    final token = Object.hash(identityHashCode(liveChannels),
+        liveChannels.length, identityHashCode(edits), liveGroupsToken?.call());
+    var index = _liveByGroup;
+    if (index == null || _liveByGroupToken != token) {
+      final sw = Stopwatch()..start();
+      index = <String, List<Channel>>{};
+      for (final c in liveChannels) {
+        (index[liveGroupOf(c)] ??= <Channel>[]).add(c);
+      }
+      PerfDiagnostics.part('groupIndex', sw.elapsedMicroseconds);
+      _liveByGroup = index;
+      _liveByGroupToken = token;
+    }
+    return index[groupTitle] ?? const <Channel>[];
+  }
 
   Future<void> toggleChannelHidden(String rawId) async {
     if (hiddenChannels.contains(rawId)) {

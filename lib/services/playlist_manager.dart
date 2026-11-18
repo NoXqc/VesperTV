@@ -129,6 +129,8 @@ class PlaylistManager extends ChangeNotifier {
   void dispose() {
     _favoriteCatalogGeneration++;
     _eventRefreshTimer?.cancel();
+    _shownCountsTimer?.cancel();
+    liveCountsShown.dispose();
     super.dispose();
   }
 
@@ -508,7 +510,9 @@ class PlaylistManager extends ChangeNotifier {
       isRestrictedViewer: () => _activeViewerRestricted,
       onNotify: notifyListeners,
       myGroupOf: _myGroupOf,
-    )..onEditsApplied = () {
+    )
+      ..liveGroupsToken = _liveCountsSignature
+      ..onEditsApplied = () {
         recomputeMerge();
         _checkSavedLive(session);
       };
@@ -1615,10 +1619,12 @@ class PlaylistManager extends ChangeNotifier {
             // Every playlist at once: ~350k channels for a 13-playlist user.
             ? PerfDiagnostics.timedSync('visibleChannels($category)',
                 () => _visibleChannels(category: category))
-            : _visibleChannels(
-                playlistId: playlistId,
-                groupTitle: groupTitle,
-                category: category);
+            : PerfDiagnostics.timedPart(
+                'visible',
+                () => _visibleChannels(
+                    playlistId: playlistId,
+                    groupTitle: groupTitle,
+                    category: category));
     return List.of(cached);
   }
 
@@ -1977,21 +1983,52 @@ class PlaylistManager extends ChangeNotifier {
       _visibleCache['favoritesWithGroups'] ??= _favoriteLiveChannelsWithGroups);
 
   List<Channel> get _favoriteLiveChannelsWithGroups =>
-      _enabledSessionsSortedFor('tv').expand((s) {
-        final live = s.allLiveChannels;
-        final visible = live
-            .where((c) =>
-                !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
-            .toList();
-        final starred = visible.where((c) => c.isFavorite).toList();
-        final starredIds = {for (final c in starred) c.id};
-        return [
-          ...starred,
-          ...visible.where((c) =>
-              !starredIds.contains(c.id) &&
-              s.favoritedGroups.contains(s.liveGroupOf(c))),
-        ];
-      }).toList();
+      PerfDiagnostics.timedPart('favourites',
+          () => _enabledSessionsSortedFor('tv').expand(_favoritesOf).toList());
+
+  /// [s]'s starred live channels, then its favourited groups' channels,
+  /// playlist order. Xtream: only starred channels have their group worked
+  /// out, and favourited groups come from the group index; it used to work
+  /// out the group of all ~27k channels per playlist, after every notify
+  /// (145 ms on the Homatics for the Favourites list, owner 2026-11-18).
+  List<Channel> _favoritesOf(PlaylistSession s) {
+    if (!s.isXtream) return _favoritesScanned(s);
+    final live = s.liveChannels;
+    final starred = [
+      for (final c in live)
+        if (c.isFavorite &&
+            !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
+          c,
+    ];
+    final groups = [
+      for (final g in s.favoritedGroups)
+        if (!_isHiddenForActiveViewer(s.profile.id, g)) g,
+    ];
+    if (groups.isEmpty) return starred;
+    final starredIds = {for (final c in starred) c.id};
+    final inGroups = Set<Channel>.identity()
+      ..addAll([for (final g in groups) ...s.liveChannelsInGroup(g)]);
+    return [
+      ...starred,
+      for (final c in live)
+        if (inGroups.contains(c) && !starredIds.contains(c.id)) c,
+    ];
+  }
+
+  List<Channel> _favoritesScanned(PlaylistSession s) {
+    final live = s.allLiveChannels;
+    final visible = live
+        .where((c) => !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
+        .toList();
+    final starred = visible.where((c) => c.isFavorite).toList();
+    final starredIds = {for (final c in starred) c.id};
+    return [
+      ...starred,
+      ...visible.where((c) =>
+          !starredIds.contains(c.id) &&
+          s.favoritedGroups.contains(s.liveGroupOf(c))),
+    ];
+  }
 
   FavoriteLiveSort get favoriteLiveSort =>
       FavoriteLiveSort.values
@@ -2659,7 +2696,10 @@ class PlaylistManager extends ChangeNotifier {
   /// [base] (a group's own channels) plus what the editor moved or copied
   /// into [ref], not listed twice and without hidden channels; a provider
   /// group in the order the user gave it here ([UserGroups.porder]).
-  List<Channel> _withPlaced(List<Channel> base, GroupRef ref) {
+  List<Channel> _withPlaced(List<Channel> base, GroupRef ref) =>
+      PerfDiagnostics.timedPart('withPlaced', () => _withPlacedNow(base, ref));
+
+  List<Channel> _withPlacedNow(List<Channel> base, GroupRef ref) {
     if (!_myGroups.hasPlacements && _myGroups.porder.isEmpty) return base;
     final ids = _myGroups.idsInto(ref);
     var all = base;
@@ -2836,6 +2876,7 @@ class PlaylistManager extends ChangeNotifier {
   /// channels left out); null [playlistId] = the viewer's own group.
   int liveGroupCount(String? playlistId, String title) {
     final counts = _liveCounts ??= () {
+      final sw = Stopwatch()..start();
       final out = <String, int>{};
       for (final s in _enabledSessionsSortedFor('tv')) {
         for (final c in _flatPlaced(s, s.visibleChannels(category: 'tv'))) {
@@ -2855,10 +2896,155 @@ class PlaylistManager extends ChangeNotifier {
           }
         }
       }
+      PerfDiagnostics.part('counts', sw.elapsedMicroseconds);
       return out;
     }();
     return counts[_countKey(playlistId, title)] ?? 0;
   }
+
+  /// The TV guide's groups column: [liveGroupCount], but while the catalog
+  /// keeps changing (Movies / TV Shows warming up after launch notify every
+  /// few hundred ms, and each notify drops the counts) it shows the last
+  /// counts and recounts once things have been quiet for [_countsQuiet].
+  /// Recounting ~53k channels took 330-470 ms on the Homatics, on every
+  /// rebuild of the TV home (owner, 2026-11-18: "groups and channels all
+  /// three feel slow"). [liveCountsShown] bumps when fresh counts land.
+  int liveGroupCountShown(String? playlistId, String title) {
+    final fresh = _liveCounts;
+    if (fresh != null) {
+      _shownLiveCounts = fresh;
+      return fresh[_countKey(playlistId, title)] ?? 0;
+    }
+    final shown = _shownLiveCounts;
+    if (shown == null) {
+      final n = liveGroupCount(playlistId, title);
+      _shownSignature = _liveCountsSignature();
+      return n;
+    }
+    // Most notifies are the Movies / TV Shows warm-up: the live channels,
+    // hidden sets, edits and own groups are the same, so are the counts.
+    final signature = _liveCountsSignature();
+    if (signature != _shownSignature) {
+      _shownCountsTimer?.cancel();
+      _shownCountsTimer = Timer(_countsQuiet, () {
+        liveGroupCount(null, '');
+        _shownLiveCounts = _liveCounts ?? _shownLiveCounts;
+        _shownSignature = _liveCountsSignature();
+        liveCountsShown.value++;
+      });
+    }
+    return shown[_countKey(playlistId, title)] ?? 0;
+  }
+
+  /// What [liveGroupCount] depends on, cheap to compare: each enabled
+  /// playlist's live list, hidden groups / channels, edits and merge hiding,
+  /// the viewer's own groups and who is watching.
+  int _liveCountsSignature() {
+    if (_signatureAt == _notifyCount) return _signatureCached;
+    _signatureAt = _notifyCount;
+    return _signatureCached =
+        PerfDiagnostics.timedPart('signature', _computeLiveCountsSignature);
+  }
+
+  int _signatureAt = -1;
+  int _signatureCached = 0;
+
+  /// What the TV tab's live view shows from this manager, cheap to compare:
+  /// [_liveCountsSignature] (channels, hidden, edits, merges, own groups,
+  /// viewer) plus groups and their order, playlists (name, on/off, order),
+  /// favourites and the error. A notify that leaves it unchanged (the
+  /// Movies / TV Shows warm-up after launch: every few hundred ms, for
+  /// minutes on big playlists) needn't rebuild the TV screen: those cost
+  /// 300-850 ms each on the Homatics (owner, 2026-11-18: "groups and
+  /// channels all three feel slow"). Once per notify.
+  int liveViewSignature() {
+    if (_viewSignatureAt == _notifyCount) return _viewSignatureCached;
+    _viewSignatureAt = _notifyCount;
+    final parts = <String, int>{
+      'viewer': _storage.getActiveViewerId().hashCode,
+      'myGroups': _myGroups.toJson().hashCode,
+      'liveLists': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          s.profile.id,
+          s.lastLoaded,
+          identityHashCode(s.liveChannels),
+          s.liveChannels.length,
+        ],
+      ]),
+      'hidden': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          Object.hashAllUnordered(s.hiddenGroups),
+          Object.hashAllUnordered(s.hiddenChannels),
+        ],
+      ]),
+      'edits': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv'))
+          identityHashCode(s.edits),
+      ]),
+      'mergeHidden': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv'))
+          Object.hashAllUnordered(s.mergeHidden),
+      ]),
+      'favourites': _favoritesVersion,
+      'init': _initializing.hashCode,
+      'error': error.hashCode,
+      'merge': _storage.getMergePlaylists().hashCode,
+      'playlists': Object.hashAll([
+        for (final s in _sessions) ...[
+          s.profile.id,
+          s.profile.name,
+          s.profile.enabled,
+          s.profile.sortOrderFor('tv'),
+        ],
+      ]),
+      'groups': Object.hashAll([
+        for (final s in _sessions) ...[
+          identityHashCode(s.liveCategories),
+          s.liveCategories.length,
+          Object.hashAll(s.groupOrder['tv'] ?? const <String>[]),
+          Object.hashAllUnordered(s.mergeHiddenGroups),
+        ],
+      ]),
+    };
+    // Which part moved, for Send log (a TV rebuild costs 100s of ms on a
+    // weak box; this says what caused one).
+    final last = _viewSignatureParts;
+    if (last != null) {
+      final changed = [
+        for (final e in parts.entries)
+          if (last[e.key] != e.value) e.key,
+      ];
+      if (changed.isNotEmpty) debugPrint('LiveView: changed $changed');
+    }
+    _viewSignatureParts = parts;
+    return _viewSignatureCached = Object.hashAll(parts.values);
+  }
+
+  Map<String, int>? _viewSignatureParts;
+
+  int _viewSignatureAt = -1;
+  int _viewSignatureCached = 0;
+
+  int _computeLiveCountsSignature() => Object.hashAll([
+        _storage.getActiveViewerId(),
+        _myGroups.toJson(),
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          s.profile.id,
+          s.lastLoaded,
+          identityHashCode(s.liveChannels),
+          s.liveChannels.length,
+          Object.hashAllUnordered(s.hiddenGroups),
+          Object.hashAllUnordered(s.hiddenChannels),
+          identityHashCode(s.edits),
+          Object.hashAllUnordered(s.mergeHidden),
+        ],
+      ]);
+
+  int? _shownSignature;
+  Map<String, int>? _shownLiveCounts;
+  Timer? _shownCountsTimer;
+  static const _countsQuiet = Duration(milliseconds: 1500);
+  final liveCountsShown = ValueNotifier<int>(0);
 
   Map<String, int> _vodCounts = const {};
   Map<String, int> _seriesCounts = const {};
