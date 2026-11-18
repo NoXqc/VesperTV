@@ -457,6 +457,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-18 - release 1.0.70 (beta), +861 (latest):** owner said "Commit merge and /cutr". Android only;
+  Windows stays 1.0.68, Linux 1.0.63 (+702). Since 1.0.69: group tools (TV Group management shown first + All / Shown /
+  Hidden + Countries "Hide every group"; editor Groups tab hidden fold, bulk hide, country chips + Keep only; Discord
+  clayts450 / Jacek), Dispatcharr (+837..+859), Select…, subscription ending reminder, This game: Choose a different
+  channel, TV guide speed (+847), Multiview start/tags, live resume after Hub/Home/Multiview, Sources switch fix, leagues.
+  Analyze 16, 2127 tests. Notes: dev-notes/releases/1.0.70.md. Next build > 861.
 - **Claude, 2026-11-18 - +851..+859 (merged to local main, not pushed, not released):** Dispatcharr > Sources in the player
   (`DispatcharrSources`: first / only / vesper; the channel's own row says Automatic) + `X-API-Key` on picked Dispatcharr
   streams (user shown instead of Anonymous). **`PlaybackService._reuseNativeLive` never reuses the player for a channel
