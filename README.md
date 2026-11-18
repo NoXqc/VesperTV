@@ -16,7 +16,7 @@ No ads, no tracking, no account. VesperTV ships no content: you bring the source
 Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows. It also runs on
 Linux, including the **Steam Deck**.
 
-> **Android gets new features first.** Windows is in step again as of **1.0.68**; the Linux build (beta) is on
+> **Android gets new features first.** Windows is in step again as of **1.0.70**; the Linux build (beta) is on
 > **1.0.63**.
 
 ## Download

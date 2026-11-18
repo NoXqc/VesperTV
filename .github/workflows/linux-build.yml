@@ -19,8 +19,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Linux build tools + libmpv
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config \
+          # A slow mirror hung this step for 45+ min (2026-11-18): time out
+          # and retry instead of waiting for the job's 60 min limit.
+          apt="-o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          timeout 600 sudo apt-get $apt update
+          timeout 900 sudo apt-get $apt install -y clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev libmpv-dev
       - uses: subosito/flutter-action@v2
         with:
