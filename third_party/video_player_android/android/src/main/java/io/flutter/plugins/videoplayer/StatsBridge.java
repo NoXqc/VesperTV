@@ -61,7 +61,10 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     if (thin) {
       // Multiview's frame saver (ThinningVideoRenderer); false for players without it.
       FrameThinning t = player.frameThinning;
-      if (t != null) t.setOn(Boolean.TRUE.equals(call.argument("on")));
+      if (t != null) {
+        t.setOn(Boolean.TRUE.equals(call.argument("on")));
+        t.setStrong(Boolean.TRUE.equals(call.argument("strong")));
+      }
       result.success(t != null);
       return;
     }

@@ -22,9 +22,11 @@ import '../services/recording_service.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
+import '../services/vod_buffering.dart';
 import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/ink_layer.dart';
 import '../widgets/native_video_hole.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -753,9 +755,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// offsetSumUs, offsetCount), for the per-10 s deltas in the log line.
   final _lastCounters = <VideoPlayerHdrController, List<int>>{};
 
-  /// Consecutive 10 s samples where the box couldn't decode every screen,
-  /// and whether the viewer was told (once per Multiview session).
+  /// Of the last 3 10 s samples, how many the box couldn't decode every
+  /// screen (0 when the latest was fine), and whether the viewer was told
+  /// (once per Multiview session).
   int _overloadTicks = 0;
+  final _overloadHistory = <bool>[];
   bool _overloadHinted = false;
 
   /// Too many screens for the box's hardware decoder (Homatics Box R 4K
@@ -767,11 +771,15 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// across screens). No player setting fixes it: tell the viewer once.
   void _checkOverload(int playing, List<int> starvedCells) {
     final starved = starvedCells.length;
-    if (playing >= 3 && starved >= 2) {
-      _overloadTicks++;
-    } else {
-      _overloadTicks = 0;
-    }
+    // The screen with the sound counts on its own (it's the one watched),
+    // and 2 bad samples out of 3, not in a row (Homatics, 2026-11-17, swap
+    // mode: the big screen showed 7-18 fps beside a silent 1080p one while
+    // the count kept resetting between samples, so nothing ever helped it).
+    final bad =
+        playing >= 3 && (starved >= 2 || starvedCells.contains(_activeCell));
+    _overloadHistory.add(bad);
+    if (_overloadHistory.length > 3) _overloadHistory.removeAt(0);
+    _overloadTicks = bad ? _overloadHistory.where((b) => b).length : 0;
     if (playing < 3 && _saverEngaged) {
       _saverEngaged = false;
       _applyFrameSaver();
@@ -782,6 +790,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       // crawls, remote included), then a lighter copy, then the hint.
       _saverEngaged = true;
       _overloadTicks = 0;
+      _overloadHistory.clear();
       debugPrint('Multiview: frame saver on ($starved of $playing screens '
           'dropping most frames with a full buffer)');
       _applyFrameSaver();
@@ -813,6 +822,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         });
       if (targets.isNotEmpty) {
         _overloadTicks = 0;
+        _overloadHistory.clear();
         unawaited(_lighterCopy(targets.first));
         return;
       }
@@ -918,24 +928,36 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// button): silent screens skip frames nothing depends on before decoding
   /// (native ThinningVideoRenderer), so 50/60 fps channels decode at 25/30.
   /// 'auto' engages it when [_checkOverload] sees the decoder fall behind.
-  late String _frameSaver = context.read<StorageService>().getMultiviewFrameSaver();
+  late String _frameSaver =
+      context.read<StorageService>().getMultiviewFrameSaver();
   bool _saverEngaged = false;
-  final _thinned = <VideoPlayerHdrController, bool>{};
+
+  /// Per player: 0 = full, 1 = frame saver, 2 = strong (3+ screens).
+  final _thinned = <VideoPlayerHdrController, int>{};
   final _lastThinned = <VideoPlayerHdrController, int>{};
 
   bool get _thinSilent =>
       _frameSaver == 'always' || (_frameSaver == 'auto' && _saverEngaged);
 
   void _applyFrameSaver() {
+    // 3+ screens: silent ones keep about a third of their skippable frames
+    // instead of half, so the one with the sound keeps all of its own
+    // (Homatics, 2026-11-17: it dropped 220-440 frames every 10 s).
+    final playing = _cells.where((c) => c.controller != null).length;
     for (var i = 0; i < _cells.length; i++) {
       final c = _cells[i].controller;
       if (c == null) continue;
-      final want = _thinSilent && i != _activeCell;
+      final want = !_thinSilent || i == _activeCell
+          ? 0
+          : playing >= 3
+              ? 2
+              : 1;
       if (_thinned[c] == want) continue;
       _thinned[c] = want;
       unawaited(_stats.invokeMethod<bool>('setFrameThinning', {
         'playerId': SubtitleTracks.playerIdOf(c),
-        'on': want
+        'on': want > 0,
+        'strong': want == 2,
       }).catchError((Object _) => false));
     }
   }
@@ -1094,6 +1116,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       channel.url,
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
+    // Send log: how long a screen takes to show (AMD, 2026-11-17: slower
+    // than a channel change; it held 4 s of video before starting).
+    final started = Stopwatch()..start();
     try {
       // Native video surface on: this screen draws into its own SurfaceView
       // behind Flutter instead of a texture (see NativeMultiviewTiles).
@@ -1107,6 +1132,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         unawaited(newController.dispose());
         return;
       }
+      debugPrint('Multiview: screen ${index + 1} ready in '
+          '${started.elapsedMilliseconds} ms');
+      // Started after 1 s of video: a live screen grows its cushion while
+      // playing (Gradual, like the main player).
+      unawaited(VodBuffering.configureTile(newController, channel));
       // The live list's 4K tag, from what this tile really decodes.
       unawaited(Future<void>.delayed(const Duration(seconds: 6), () {
         if (cell.controller != newController || !channel.isLive) return;
@@ -1917,6 +1947,42 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   }
 }
 
+/// The channel picker's tag: the resolution a channel really played at
+/// ([PlaylistManager.measuredOf]; owner, 2026-11-17: "I can't find 720p
+/// channels"). 720p and lower in the accent colour: they fit 3-4 screens.
+class _ResolutionTag extends StatelessWidget {
+  const _ResolutionTag(this.measured);
+
+  final ProbeResult? measured;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = measured?.height;
+    if (h == null) return const SizedBox.shrink();
+    final w = measured?.width ?? 0;
+    final label = h >= 1500 || w >= 3000
+        ? '4K'
+        : h > 720
+            ? '1080p'
+            : h >= 600
+                ? '720p'
+                : 'SD';
+    final light = h <= 720;
+    final color =
+        light ? Theme.of(context).colorScheme.primary : Colors.white60;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: color, width: 1.2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
 /// A screen moved to a lighter copy of its channel (`_lighterCopy`).
 class _LighterBadge extends StatelessWidget {
   const _LighterBadge();
@@ -2139,119 +2205,123 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
       alignment: widget.alignment,
       child: _MaybeAspect(
         ratio: widget.fill ? null : ratio,
-        child: InkWell(
-          focusNode: widget.focusNode,
-          onTap: widget.onTap,
-          onLongPress: widget.onLongPress,
-          onFocusChange: (f) {
-            setState(() => _focused = f);
-            if (f) widget.onFocused?.call();
-          },
-          child: Container(
-            // Focus in the theme's accent, thicker + a glow: a white
-            // 3 px line was hard to see over video (user reports,
-            // 2026-11-15). The audio screen keeps its amber line.
-            decoration: BoxDecoration(
-              border: widget.bare
+        // Its own ink layer: InkWell painted its focus highlight on the
+        // page's Material, so each remote step repainted the whole screen
+        // (CLAUDE.md §10 (10); Homatics 2026-11-17: 55 ms frames in Multiview).
+        child: InkLayer(
+          child: InkWell(
+            focusNode: widget.focusNode,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            onFocusChange: (f) {
+              setState(() => _focused = f);
+              if (f) widget.onFocused?.call();
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.bare ? 0 : 8),
+              ),
+              // Focus in the theme's accent: a white 3 px line was hard
+              // to see over video (user reports, 2026-11-15). The audio screen
+              // keeps its amber line. Drawn over the picture, not around it: a
+              // border in `decoration` pads the child by its width, so every
+              // focus / sound move resized the screen's video surface (1256 ->
+              // 1260 -> 1268 px wide). No blurred glow (redrawn per frame).
+              foregroundDecoration: widget.bare
                   ? null
-                  : Border.all(
-                      color: _focused
-                          ? accent
-                          : (widget.active ? Colors.amber : Colors.white24),
-                      width: _focused ? 4 : (widget.active ? 3 : 1),
-                    ),
-              boxShadow: _focused && !widget.bare
-                  ? [
-                      BoxShadow(
-                          color: accent.withValues(alpha: 0.55),
-                          blurRadius: 14,
-                          spreadRadius: 1),
-                    ]
-                  : null,
-              borderRadius: BorderRadius.circular(widget.bare ? 0 : 8),
-            ),
-            clipBehavior: Clip.antiAlias,
-            // The name bar fades after a few seconds (it covered the
-            // score bug): shown again on a new channel, when the sound
-            // moves here, and when focus lands on the tile.
-            child: _withBadge(AutoHideOverlay(
-              flashKey: (widget.channel?.id, widget.active, _focused),
-              hidden: widget.active ? const MultiviewAudioBadge() : null,
-              video: widget.controller != null &&
-                      widget.controller!.value.isInitialized
-                  ? multiviewVideo(widget.controller!)
-                  : ColoredBox(
-                      color: const Color(0xFF1A1A1A),
-                      child: Center(
-                        child: Icon(
-                            widget.channel == null
-                                ? Icons.add_circle_outline
-                                : Icons.hourglass_empty,
-                            color: Colors.white38,
-                            size: 36),
+                  : BoxDecoration(
+                      border: Border.all(
+                        color: _focused
+                            ? accent
+                            : (widget.active ? Colors.amber : Colors.white24),
+                        width: _focused ? 3 : (widget.active ? 2 : 1),
                       ),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-              overlay: widget.channel == null
-                  ? const SizedBox.shrink()
-                  : Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 4),
-                        // Was a 2-stop gradient fading to transparent almost
-                        // immediately — reported directly as barely visible
-                        // against a bright/busy video frame. A mid-bar stop
-                        // keeps the whole header solidly dark (not just its
-                        // very top edge) before fading out underneath it, and
-                        // the text itself now carries its own shadow as a
-                        // second, independent line of contrast — the same
-                        // "readable over anything behind it" fix already used
-                        // elsewhere in this app (e.g. PosterCard's progress
-                        // label) rather than relying on the backdrop alone.
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.0, 0.6, 1.0],
-                            colors: [
-                              Colors.black.withValues(alpha: 0.92),
-                              Colors.black.withValues(alpha: 0.92),
-                              Colors.transparent,
-                            ],
-                          ),
+              clipBehavior: Clip.antiAlias,
+              // The name bar fades after a few seconds (it covered the
+              // score bug): shown again on a new channel, when the sound
+              // moves here, and when focus lands on the tile.
+              child: _withBadge(AutoHideOverlay(
+                flashKey: (widget.channel?.id, widget.active, _focused),
+                hidden: widget.active ? const MultiviewAudioBadge() : null,
+                video: widget.controller != null &&
+                        widget.controller!.value.isInitialized
+                    ? multiviewVideo(widget.controller!)
+                    : ColoredBox(
+                        color: const Color(0xFF1A1A1A),
+                        child: Center(
+                          child: Icon(
+                              widget.channel == null
+                                  ? Icons.add_circle_outline
+                                  : Icons.hourglass_empty,
+                              color: Colors.white38,
+                              size: 36),
                         ),
-                        child: Row(
-                          children: [
-                            if (widget.active) ...[
-                              const Icon(Icons.volume_up,
-                                  color: Colors.amber,
-                                  size: 15,
-                                  shadows: [
-                                    Shadow(color: Colors.black, blurRadius: 4)
-                                  ]),
-                              const SizedBox(width: 4),
-                            ],
-                            Expanded(
-                              child: Text(
-                                widget.channel!.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                      ),
+                overlay: widget.channel == null
+                    ? const SizedBox.shrink()
+                    : Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 4),
+                          // Was a 2-stop gradient fading to transparent almost
+                          // immediately — reported directly as barely visible
+                          // against a bright/busy video frame. A mid-bar stop
+                          // keeps the whole header solidly dark (not just its
+                          // very top edge) before fading out underneath it, and
+                          // the text itself now carries its own shadow as a
+                          // second, independent line of contrast — the same
+                          // "readable over anything behind it" fix already used
+                          // elsewhere in this app (e.g. PosterCard's progress
+                          // label) rather than relying on the backdrop alone.
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              stops: const [0.0, 0.6, 1.0],
+                              colors: [
+                                Colors.black.withValues(alpha: 0.92),
+                                Colors.black.withValues(alpha: 0.92),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              if (widget.active) ...[
+                                const Icon(Icons.volume_up,
+                                    color: Colors.amber,
+                                    size: 15,
                                     shadows: [
                                       Shadow(color: Colors.black, blurRadius: 4)
                                     ]),
+                                const SizedBox(width: 4),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.channel!.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      shadows: [
+                                        Shadow(
+                                            color: Colors.black, blurRadius: 4)
+                                      ]),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-            )),
+              )),
+            ),
           ),
         ),
       ),
@@ -2666,7 +2736,11 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                     : const Icon(Icons.tv,
                                         color: Colors.white54),
                                 title: c.name,
-                                trailing: const SizedBox.shrink(),
+                                // What it really played at, once measured:
+                                // 720p and lower fit 3-4 screens best.
+                                trailing: _ResolutionTag(context
+                                    .read<PlaylistManager>()
+                                    .measuredOf(c)),
                                 onTap: () => Navigator.of(context).pop(c),
                               );
                             },

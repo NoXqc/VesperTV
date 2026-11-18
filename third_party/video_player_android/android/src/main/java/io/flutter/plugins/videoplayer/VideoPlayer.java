@@ -369,12 +369,12 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   }
 
   /**
-   * See {@link OnDemandLoadControl#setLiveReserveMs}. Main player only. A negative value is
-   * Gradual: normal fast start, then see {@link #cushionTick}.
+   * See {@link OnDemandLoadControl#setLiveReserveMs} (main player only). A negative value is
+   * Gradual: normal fast start, then see {@link #cushionTick}; texture players (Multiview,
+   * Compatibility video) have no reserve policy but take Gradual too.
    */
   void setLiveBuffer(long ms) {
-    if (onDemandLoadControl == null) return;
-    onDemandLoadControl.setLiveReserveMs(Math.max(0, ms));
+    if (onDemandLoadControl != null) onDemandLoadControl.setLiveReserveMs(Math.max(0, ms));
     liveGradual = ms < 0;
     resetCushion();
     if (liveGradual) mainHandler.postDelayed(cushionTick, CUSHION_SAMPLE_MS);

@@ -17,6 +17,7 @@ import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
 import 'perf_diagnostics.dart';
+import 'playlist_edits.dart' show ProbeResult;
 import 'playlist_manager.dart';
 import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
@@ -816,6 +817,16 @@ class PlaybackService extends ChangeNotifier {
       final size = c.value.size;
       Real4kChannels.record(
           channel.id, size.width.round(), size.height.round());
+      // The settled size, for Multiview's picker tags (720p / 1080p / 4K).
+      if (wait.inSeconds == 12 && size.height >= 240) {
+        unawaited(_playlistManager.recordMeasured(
+            channel,
+            ProbeResult(
+                ok: true,
+                at: DateTime.now(),
+                width: size.width.round(),
+                height: size.height.round())));
+      }
     }
   }
 

@@ -79,7 +79,8 @@ public final class ThinningVideoRenderer extends MediaCodecVideoRenderer {
     recentNext = (recentNext + 1) % recent.length;
     if (recentCount < recent.length) recentCount++;
     if (++seen % 1500 == 0 && thinning.isOn()) {
-      Log.i("VesperFrameSaver", "on " + thinning.isOn() + " interlaced " + interlaced
+      Log.i("VesperFrameSaver", "on " + thinning.isOn() + " strong " + thinning.isStrong()
+          + " interlaced " + interlaced
           + " fps " + Math.round(fps()) + " | last 1500: gated " + gatedOff + ", credit "
           + keptByCredit + ", key " + keyframes + ", depended " + dependedOn + ", thinned "
           + thinnedHere + " | size " + buffer.data.position() + " limit " + buffer.data.limit());
@@ -90,7 +91,8 @@ public final class ThinningVideoRenderer extends MediaCodecVideoRenderer {
       gatedOff++;
       return false;
     }
-    credit += 0.5;
+    // Strong: ~1/3 kept (a 60 fps channel near 20 fps), as far as its reference frames allow.
+    credit += thinning.isStrong() ? 1.0 / 3 : 0.5;
     if (credit >= 1) {
       credit -= 1;
       keptByCredit++;

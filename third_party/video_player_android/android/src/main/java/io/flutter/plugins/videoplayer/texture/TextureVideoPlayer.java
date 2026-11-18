@@ -79,12 +79,17 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
           // 90-120 s min/max did nothing for progressive live (it can never
           // fill ahead of real time) — back to modest values.
           // 2026-11-03: measured on Blcktv, FHD channels routinely pause 3-6.6 s
-          // between bursts, so a 2.5 s cushion ran dry on most of them. 4 s to
-          // start; after a stall, rebuild 8 s so the next gap doesn't show.
+          // between bursts, so a 2.5 s cushion ran dry on most of them. After a
+          // stall, rebuild 8 s so the next gap doesn't show.
+          // 2026-11-17: the 4 s held before starting made every Multiview screen
+          // ~4 s slower than a channel change, and screens start one after the
+          // other (AMD: "clunky"). 1 s to start, then Live buffer > Gradual
+          // grows the cushion while playing, like the main player
+          // (VideoPlayer.setLiveBuffer, Dart VodBuffering.configureTile).
           loadControlBuilder.setBufferDurationsMs(
               /* minBufferMs= */ 15_000,
               /* maxBufferMs= */ 30_000,
-              /* bufferForPlaybackMs= */ 4_000,
+              /* bufferForPlaybackMs= */ 1_000,
               /* bufferForPlaybackAfterRebufferMs= */ 8_000);
           // Small-RAM devices: a byte cap per screen (see BufferBudget).
           io.flutter.plugins.videoplayer.BufferBudget.apply(

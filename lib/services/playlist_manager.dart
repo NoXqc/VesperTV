@@ -1296,8 +1296,28 @@ class PlaylistManager extends ChangeNotifier {
   Future<void> recordMeasured(Channel channel, ProbeResult r) async {
     final s = _sessionFor(channel.playlistId);
     if (s == null) return;
+    // The full-screen player records every live channel it plays: an
+    // unchanged size measured in the last day isn't written again.
+    final old = s.edits.probes[channel.rawId];
+    if (r.ok &&
+        old != null &&
+        old.ok &&
+        old.height == r.height &&
+        old.width == r.width &&
+        r.at.difference(old.at) < const Duration(days: 1)) {
+      return;
+    }
     s.edits.probes[channel.rawId] = r;
     await _storage.setPlaylistEditsJson(s.profile.id, s.edits.encode());
+  }
+
+  /// What the live [channel] really played at (a Multiview screen, the
+  /// full-screen player, the editor's stream test) in the last 30 days;
+  /// null = not measured. Multiview's channel picker shows it as a tag
+  /// (owner, 2026-11-17: "I can't find 720p channels").
+  ProbeResult? measuredOf(Channel channel) {
+    final p = _sessionFor(channel.playlistId)?.edits.probes[channel.rawId];
+    return p != null && p.ok && p.height != null && !p.isStale ? p : null;
   }
 
   /// Every source of the live [channel] for the player's Sources drawer:
