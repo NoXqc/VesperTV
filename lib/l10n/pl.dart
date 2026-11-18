@@ -1063,6 +1063,13 @@ const Map<String, String> kPl = {
   "Search groups": "Szukaj grup",
   "Countries": "Kraje",
   "Countries and prefixes": "Kraje i prefiksy",
+  "{count} hidden": "{count} ukrytych",
+  "Shown groups": "Widoczne grupy",
+  "Hidden groups": "Ukryte grupy",
+  "No groups here.": "Brak grup.",
+  "Hide every group": "Ukryj wszystkie grupy",
+  "Then select the countries to keep.": "Potem wybierz kraje do zachowania.",
+  "All hidden. Select the countries to keep.": "Wszystko ukryte. Wybierz kraje do zachowania.",
   "Found at the start of the group names. Select one to show or hide all its groups at once.":
       "Znajdują się na początku nazw grup. Wybierz jeden, aby naraz pokazać lub ukryć wszystkie jego grupy.",
   "1 group": "1 grupa",

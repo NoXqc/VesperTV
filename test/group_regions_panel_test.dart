@@ -96,4 +96,22 @@ void main() {
     expect(model.calls.single.$2, isTrue);
     expect(model.calls.single.$1, hasLength(3));
   });
+  testWidgets('Hide every group, then a country = keep only that country',
+      (tester) async {
+    await open(tester);
+    await tester.tap(find.text('Hide every group'));
+    await tester.pumpAndSettle();
+    expect(model.hidden, model.titles.toSet());
+    expect(
+        find.text('All hidden. Select the countries to keep.'), findsOneWidget);
+    await tester.tap(find.text('US'));
+    await tester.pumpAndSettle();
+    expect(model.titles.where((t) => !model.hidden.contains(t)),
+        ['US: News', 'US| Sports', 'AM | US - Kids']);
+    // Nothing more to hide only when everything is hidden.
+    final calls = model.calls.length;
+    await tester.tap(find.text('Hide every group'));
+    await tester.pumpAndSettle();
+    expect(model.calls.length, calls + 1);
+  });
 }

@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import 'epg_channel_info.dart';
 import 'playlist_editor_epg.dart';
 import '../utils/channel_name_matching.dart';
+import '../utils/group_regions.dart';
 import 'phone_pairing_service.dart' show privateLanIpv4;
 import 'playback_service.dart';
 import 'playlist_edits.dart';
@@ -74,9 +75,12 @@ class PlaylistEditorServer extends ChangeNotifier {
     server ??= await HttpServer.bind(InternetAddress.anyIPv4, 0);
     _server = server;
     _address = 'http://${ip?.address ?? '127.0.0.1'}:${server.port}';
-    server.listen(_handle, onError: (Object e) {
-      debugPrint('PlaylistEditor: server error $e');
-    });
+    server.listen(
+      _handle,
+      onError: (Object e) {
+        debugPrint('PlaylistEditor: server error $e');
+      },
+    );
     notifyListeners();
   }
 
@@ -133,9 +137,11 @@ class PlaylistEditorServer extends ChangeNotifier {
         if (viewer != _storage.getActiveViewerId()) {
           res.statusCode = HttpStatus.conflict;
           res.headers.contentType = ContentType.json;
-          res.write(jsonEncode({
-            'error': tr('The viewer changed. Reopen the playlist editor.')
-          }));
+          res.write(
+            jsonEncode({
+              'error': tr('The viewer changed. Reopen the playlist editor.'),
+            }),
+          );
           return;
         }
       }
@@ -164,7 +170,11 @@ class PlaylistEditorServer extends ChangeNotifier {
   }
 
   Future<Object?> _route(
-      String method, String path, Map<String, String> q, Object? body) async {
+    String method,
+    String path,
+    Map<String, String> q,
+    Object? body,
+  ) async {
     switch ((method, path)) {
       case ('GET', '/api/playlists'):
         return {
@@ -182,7 +192,7 @@ class PlaylistEditorServer extends ChangeNotifier {
                   'name': p.name,
                   'enabled': p.enabled,
                   'count': s.allLiveChannels.length,
-                }
+                },
           ],
         };
       case ('GET', '/api/channels'):
@@ -196,7 +206,7 @@ class PlaylistEditorServer extends ChangeNotifier {
         final hidden = draft.apply(s.allLiveChannels);
         final names = {
           for (final c in s.allLiveChannels)
-            if (c.nameOverride != null) c.rawId: c.nameOverride
+            if (c.nameOverride != null) c.rawId: c.nameOverride,
         };
         s.applyEdits(); // back to the saved layer
         return {'hidden': hidden.toList(), 'names': names};
@@ -208,7 +218,8 @@ class PlaylistEditorServer extends ChangeNotifier {
             rawLogos.values.any((v) => v is! String || epgLogoUrl(v) == null)) {
           return {
             'error': tr(
-                'Logo URLs must be HTTP(S) links of at most 1000 characters.')
+              'Logo URLs must be HTTP(S) links of at most 1000 characters.',
+            ),
           };
         }
         final next = PlaylistEdits.fromJson(body['edits']);
@@ -226,8 +237,9 @@ class PlaylistEditorServer extends ChangeNotifier {
           await _storage.setCopyFallback(body['copyFallback'] as bool);
         }
         if (body['crossFallback'] is bool) {
-          await _storage
-              .setCrossPlaylistFallback(body['crossFallback'] as bool);
+          await _storage.setCrossPlaylistFallback(
+            body['crossFallback'] as bool,
+          );
         }
         if (body['merge'] is bool) {
           await _storage.setMergePlaylists(body['merge'] as bool);
@@ -252,18 +264,26 @@ class PlaylistEditorServer extends ChangeNotifier {
           // Provider groups, each with the title it shows under.
           'groups': [
             for (final title in counts.keys)
-              {
-                't': title,
-                'd': s.edits.groupTitle(title),
-                'n': counts[title],
-              }
+              {'t': title, 'd': s.edits.groupTitle(title), 'n': counts[title]},
           ],
           // Shown groups in their order, with hidden flags.
           'order': [
             for (final g in s.tvGroups)
-              {'d': g.title, if (s.hiddenGroups.contains(g.title)) 'h': 1}
+              {'d': g.title, if (s.hiddenGroups.contains(g.title)) 'h': 1},
           ],
           'shown': shown,
+          // Countries / shared prefixes of the shown groups (same detection
+          // as the TV's Group management), for the page's country chips and
+          // "Keep only these countries".
+          'regions': [
+            for (final r in GroupRegions.detect(shown))
+              {
+                'k': r.key,
+                if (r.flag != null) 'f': r.flag,
+                if (r.country) 'c': 1,
+                't': r.titles,
+              },
+          ],
         };
       case ('GET', '/api/groupdest'):
         // Where Move / Copy can put channels: the viewer's own groups and
@@ -286,20 +306,20 @@ class PlaylistEditorServer extends ChangeNotifier {
                   't': g.title,
                   'n': _playlists.liveGroupCount(to, g.title),
                   if (t.hiddenGroups.contains(g.title)) 'h': 1,
-                }
-            ]
+                },
+            ],
           };
         }
         return {
           'restricted': s.isRestrictedViewer(),
           'own': [
             for (final g in _playlists.userGroups)
-              {'t': g, 'n': _playlists.liveGroupCount(null, g)}
+              {'t': g, 'n': _playlists.liveGroupCount(null, g)},
           ],
           'playlists': [
             for (final p in _playlists.profiles)
               if (p.enabled && _playlists.editorSession(p.id) != null)
-                {'id': p.id, 'name': p.name}
+                {'id': p.id, 'name': p.name},
           ],
         };
       case ('POST', '/api/place'):
@@ -310,7 +330,7 @@ class PlaylistEditorServer extends ChangeNotifier {
         final ids = _stringSet(body['ids']);
         final n = await _playlists.unplaceChannels([
           for (final c in s.allLiveChannels)
-            if (ids.contains(c.rawId)) c
+            if (ids.contains(c.rawId)) c,
         ]);
         if (n > 0) {
           lastChange = s.profile.name;
@@ -328,8 +348,9 @@ class PlaylistEditorServer extends ChangeNotifier {
                 v is String &&
                 v.trim().isNotEmpty &&
                 v.trim() != e.key) {
-              names[e.key as String] =
-                  v.trim().length > 120 ? v.trim().substring(0, 120) : v.trim();
+              names[e.key as String] = v.trim().length > 120
+                  ? v.trim().substring(0, 120)
+                  : v.trim();
             }
           }
         }
@@ -341,13 +362,13 @@ class PlaylistEditorServer extends ChangeNotifier {
           order: body['order'] is List
               ? [
                   for (final x in body['order'] as List)
-                    if (x is String) x
+                    if (x is String) x,
                 ]
               : null,
           hidden: body['hidden'] is List
               ? {
                   for (final x in body['hidden'] as List)
-                    if (x is String) x
+                    if (x is String) x,
                 }
               : null,
         );
@@ -376,7 +397,7 @@ class PlaylistEditorServer extends ChangeNotifier {
         final ids = {
           if (body['ids'] is List)
             for (final x in body['ids'] as List)
-              if (x is String) x
+              if (x is String) x,
         };
         final error = await _startProbe(s, ids);
         return {'started': error == null, 'error': error};
@@ -415,9 +436,12 @@ class PlaylistEditorServer extends ChangeNotifier {
         final s = _session(q['pl']);
         if (s == null) return null;
         return {
-          'results': editorGuideSearch(s.profile,
-              (url) => guideChannels?.call(url) ?? const [], q['q'] ?? '',
-              source: q['source'])
+          'results': editorGuideSearch(
+            s.profile,
+            (url) => guideChannels?.call(url) ?? const [],
+            q['q'] ?? '',
+            source: q['source'],
+          ),
         };
       case ('POST', '/api/epg/refresh'):
         if (_session(q['pl']) == null) return null;
@@ -428,12 +452,16 @@ class PlaylistEditorServer extends ChangeNotifier {
         if (s == null || body is! Map || body['r'] is! String) return null;
         final id = (body['id'] as String?)?.trim();
         await s.setEpgIdOverride(
-            body['r'] as String, id == null || id.isEmpty ? null : id);
+          body['r'] as String,
+          id == null || id.isEmpty ? null : id,
+        );
         // The guide only keeps programmes for channels it knows: load the
         // newly linked ids once the user is done linking.
         _guideReload?.cancel();
         _guideReload = Timer(
-            const Duration(seconds: 20), () => unawaited(refreshGuide?.call()));
+          const Duration(seconds: 20),
+          () => unawaited(refreshGuide?.call()),
+        );
         return {'ok': true};
       case ('POST', '/api/probe/stop'):
         _stopProbe = true;
@@ -455,10 +483,10 @@ class PlaylistEditorServer extends ChangeNotifier {
       id == null ? null : _playlists.editorSession(id);
 
   static Set<String> _stringSet(Object? list) => {
-        if (list is List)
-          for (final x in list)
-            if (x is String) x
-      };
+    if (list is List)
+      for (final x in list)
+        if (x is String) x,
+  };
 
   /// Move / Copy to a group. Body: `ids` (rawIds of [s]), `mode`
   /// (`move` | `copy`) and `to`: `{own: title}`, `{newOwn: name}` or
@@ -494,10 +522,14 @@ class PlaylistEditorServer extends ChangeNotifier {
     }
     if (dest == null) return {'error': 'Pick a group.'};
     final copy = body['mode'] == 'copy';
-    final result = await _playlists.placeChannels([
-      for (final c in s.allLiveChannels)
-        if (ids.contains(c.rawId)) c
-    ], dest, copy: copy);
+    final result = await _playlists.placeChannels(
+      [
+        for (final c in s.allLiveChannels)
+          if (ids.contains(c.rawId)) c,
+      ],
+      dest,
+      copy: copy,
+    );
     if (result.changed > 0) {
       lastChange = s.profile.name;
       notifyListeners();
@@ -513,13 +545,13 @@ class PlaylistEditorServer extends ChangeNotifier {
   /// rawId -> where the channel was moved (`mv`) / groups that also show
   /// it (`cp`), for the channels of [s] that were moved or copied.
   Map<String, Object?> _placementsJson(PlaylistSession s) => {
-        for (final c in s.allLiveChannels)
-          if (_playlists.placementOf(c) case final p?)
-            c.rawId: {
-              if (p.moved != null) 'mv': p.moved,
-              if (p.copies.isNotEmpty) 'cp': p.copies,
-            }
-      };
+    for (final c in s.allLiveChannels)
+      if (_playlists.placementOf(c) case final p?)
+        c.rawId: {
+          if (p.moved != null) 'mv': p.moved,
+          if (p.copies.isNotEmpty) 'cp': p.copies,
+        },
+  };
 
   Map<String, Object?> _channelsJson(PlaylistSession s) {
     final e = s.edits;
@@ -545,7 +577,7 @@ class PlaylistEditorServer extends ChangeNotifier {
             'q': e.copyRank(c),
             if (e.probes[c.rawId] case final p?) 'p': p.label,
             if (!s.isLiveHidden(c.rawId) && _epgMissing(c)) 'ne': 1,
-          }
+          },
       ],
     };
   }
@@ -581,7 +613,7 @@ class PlaylistEditorServer extends ChangeNotifier {
     }
     final targets = [
       for (final c in s.allLiveChannels)
-        if (ids.contains(c.rawId) && c.url.isNotEmpty) c
+        if (ids.contains(c.rawId) && c.url.isNotEmpty) c,
     ];
     if (targets.isEmpty) return 'No channels selected.';
     if (targets.length > maxProbe) {

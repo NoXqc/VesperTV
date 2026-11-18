@@ -77,6 +77,7 @@ class _GroupRegionsPanelState extends State<GroupRegionsPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        _hideAll(context, hidden),
                         for (final (i, region) in _regions.indexed)
                           _row(context, region, hidden, autofocus: i == 0),
                       ],
@@ -87,6 +88,26 @@ class _GroupRegionsPanelState extends State<GroupRegionsPanel> {
             ),
           ),
         );
+      },
+    );
+  }
+
+  /// "Keep only UK": hide everything here, then select the countries to
+  /// keep (Discord, 2026-11-18). Always listed, so focus never loses its row.
+  Widget _hideAll(BuildContext context, Set<String> hidden) {
+    final all = [for (final r in _regions) ...r.titles];
+    final anyShown = all.any((t) => !hidden.contains(t));
+    return TvMenuTile(
+      key: const ValueKey('region:hide-all'),
+      icon: Icons.visibility_off_outlined,
+      title: tr('Hide every group'),
+      subtitle: anyShown
+          ? tr('Then select the countries to keep.')
+          : tr('All hidden. Select the countries to keep.'),
+      trailing: const SizedBox.shrink(),
+      // Stays enabled when all are hidden: a disabled row can't keep focus.
+      onTap: () {
+        if (anyShown) widget.setHidden(all, true);
       },
     );
   }
@@ -125,9 +146,8 @@ class _GroupRegionsPanelState extends State<GroupRegionsPanel> {
             : shown == 0
                 ? Icons.circle_outlined
                 : Icons.remove_circle_outline,
-        color: shown == 0
-            ? Colors.white54
-            : Theme.of(context).colorScheme.primary,
+        color:
+            shown == 0 ? Colors.white54 : Theme.of(context).colorScheme.primary,
       ),
       // All shown = hide them; otherwise show every one.
       onTap: () => widget.setHidden(region.titles, shown == total),

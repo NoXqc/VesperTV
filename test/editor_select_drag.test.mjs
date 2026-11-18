@@ -37,3 +37,16 @@ test('dragging moves one or several groups before or after the target', () => {
   assert.deepEqual(run(`movedGroups(['A','B','C','D','E'], ['B','D'], 'E', true)`), ['A', 'C', 'E', 'B', 'D']);
   assert.deepEqual(run(`movedGroups(['A','B','C','D','E'], ['A','E'], 'C', false)`), ['B', 'A', 'E', 'C', 'D']);
 });
+
+// Hidden groups at the bottom + Keep only these countries (Discord, 2026-11-18).
+test('hidden groups go after the shown ones, each part in its order', () => {
+  const run = page();
+  assert.deepEqual(run(`hiddenLast(['A','B','C','D','E'], new Set(['A','D']))`), ['B', 'C', 'E', 'A', 'D']);
+  assert.deepEqual(run(`hiddenLast(['A','B'], new Set())`), ['A', 'B']);
+});
+
+test('keep only: picked groups shown on top, every other one hidden', () => {
+  const run = page();
+  assert.deepEqual(run(`(() => { const r = keepOnly(['AR 1','UK News','AR 2','UK Sport','Kids'], new Set(['UK News','UK Sport'])); return {o: r.order, h: [...r.hidden]}; })()`),
+    {o: ['UK News', 'UK Sport', 'AR 1', 'AR 2', 'Kids'], h: ['AR 1', 'AR 2', 'Kids']});
+});
