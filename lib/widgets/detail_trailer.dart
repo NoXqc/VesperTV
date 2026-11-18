@@ -11,6 +11,7 @@ import '../models/trailer.dart';
 import '../models/youtube_embed.dart';
 import '../services/archive_service.dart';
 import '../services/desktop_mini_player.dart';
+import '../services/device_memory_service.dart';
 import '../services/desktop_stream_setup.dart';
 import '../services/playback_service.dart';
 import '../services/trailer_service.dart';
@@ -164,6 +165,13 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
       }
       if (uri == null) return;
+      // Send log: a Fire TV Stick was closed for low memory right after a
+      // show page's automatic trailer (4K episode just before, 2026-11-16).
+      final kind = TrailerLinks.videoId(uri.toString()) != null
+          ? 'youtube'
+          : 'direct ${uri.host}';
+      unawaited(DeviceMemoryService.describeFree().then((free) =>
+          debugPrint('Trailer: auto $kind ${free ?? ''}'.trimRight())));
       if (usesMediaKit) {
         _pausing = DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
@@ -234,6 +242,8 @@ class DetailTrailerState extends State<DetailTrailer>
             onFinished: _finish,
             onPlaying: () {
               if (!mounted || _picture) return;
+              unawaited(DeviceMemoryService.describeFree().then((free) =>
+                  debugPrint('Trailer: playing ${free ?? ''}'.trimRight())));
               _picture = true;
               _fade.forward();
             },
@@ -365,6 +375,7 @@ class _PreviewState extends State<_Preview> {
   Future<void> close() =>
       _closed ??= _disposePlayers().catchError((Object _) {});
   Future<void> _disposePlayers() async {
+    debugPrint('Trailer: closed');
     _timeout?.cancel();
     try {
       await _execute

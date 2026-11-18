@@ -161,11 +161,13 @@ class MainActivity : FlutterActivity() {
     override fun onStart() {
         super.onStart()
         EpisodeAlertsWork.gate.setVisible(true)
+        ContentUpdateWork.gate.setVisible(true)
         SportsNotifications.onVisible(applicationContext, true)
     }
 
     override fun onStop() {
         EpisodeAlertsWork.gate.setVisible(false)
+        ContentUpdateWork.gate.setVisible(false)
         SportsNotifications.onVisible(applicationContext, false)
         super.onStop()
         phonePip.onStop()
@@ -180,6 +182,49 @@ class MainActivity : FlutterActivity() {
         voiceBridge.dispose()
         semanticsGate.stop()
         super.onDestroy()
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        ContentUpdateWork.disconnect(flutterEngine)
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    /**
+     * Android 11+ keeps why each recent process ended (low memory kill,
+     * native crash, not responding…), which the next launch's logcat
+     * can't show. Newest first, one line each, for Send log.
+     */
+    private fun lastExits(): List<String> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
+        return try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US)
+            am.getHistoricalProcessExitReasons(packageName, 0, 3).map { e ->
+                val reason = when (e.reason) {
+                    android.app.ApplicationExitInfo.REASON_ANR -> "not responding"
+                    android.app.ApplicationExitInfo.REASON_CRASH -> "crash (java)"
+                    android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "crash (native)"
+                    android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "too many resources"
+                    android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "exited itself"
+                    android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "start failed"
+                    android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "low memory"
+                    android.app.ApplicationExitInfo.REASON_OTHER -> "other"
+                    android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "permission change"
+                    android.app.ApplicationExitInfo.REASON_SIGNALED -> "signal ${e.status}"
+                    android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "user stopped it"
+                    android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "user stopped it"
+                    android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "dependency died"
+                    else -> "unknown ${e.reason}"
+                }
+                val process = if (e.processName == packageName) "" else " ${e.processName}"
+                "${stamp.format(java.util.Date(e.timestamp))}$process $reason" +
+                    " importance=${e.importance}" +
+                    " pss=${e.pss / 1024}MB rss=${e.rss / 1024}MB" +
+                    (e.description?.let { " ($it)" } ?: "")
+            }
+        } catch (e: Exception) {
+            listOf("unavailable: ${e.javaClass.simpleName}")
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -218,6 +263,9 @@ class MainActivity : FlutterActivity() {
             { intent?.getBooleanExtra("vespertv_episode_alert", false) == true },
             { intent?.removeExtra("vespertv_episode_alert") })
 
+        // Settings > Startup > Update while VesperTV is closed — see ContentUpdateWorker.
+        ContentUpdateWork.connect(applicationContext, flutterEngine)
+
         // "Notify me" new-episode alerts — see EpisodeNotifier.
         val episodeNotifier = EpisodeNotifier(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/notify")
@@ -235,9 +283,16 @@ class MainActivity : FlutterActivity() {
                 result.success(
                     mapOf(
                         "totalMemBytes" to memoryInfo.totalMem,
-                        "isLowRamDevice" to activityManager.isLowRamDevice
+                        "isLowRamDevice" to activityManager.isLowRamDevice,
+                        "availMemBytes" to memoryInfo.availMem,
+                        "lowMemory" to memoryInfo.lowMemory
                     )
                 )
+            } else if (call.method == "lastExits") {
+                // Send log: why the previous processes ended. A low-memory
+                // kill leaves no line in the app's own log (Fire TV Stick,
+                // Media Hub show page right after a 4K episode, 2026-11-16).
+                result.success(lastExits())
             } else {
                 result.notImplemented()
             }

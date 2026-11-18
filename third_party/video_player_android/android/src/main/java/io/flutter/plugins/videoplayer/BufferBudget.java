@@ -46,6 +46,29 @@ public final class BufferBudget {
     return small;
   }
 
+  /** Movies / episodes on the main player: never more than this (~21 s of a 100 Mbit/s remux). */
+  private static final long ON_DEMAND_MAX_BYTES = 256L * 1024 * 1024;
+
+  /** Media3's own default for a video + audio + text player, what bigger devices get today. */
+  private static final long MEDIA3_DEFAULT_BYTES = 144L * 1024 * 1024;
+
+  /**
+   * The main player's byte cap for movies / episodes (OnDemandLoadControl), 0 = unchanged. Not on
+   * small devices (they keep 64 MB). Elsewhere half the app's Java heap limit, at most 256 MB:
+   * the buffer is Java heap, and the app's own heap use is small (Flutter's images and Dart heap
+   * live in native memory). A 512 MB heap (largeHeap on 3-4 GB boxes) gives 256 MB.
+   */
+  public static long onDemandBytes(@NonNull Context context) {
+    if (isSmallDevice(context)) return 0;
+    long bytes = Math.min(ON_DEMAND_MAX_BYTES, Runtime.getRuntime().maxMemory() / 2);
+    return bytes > MEDIA3_DEFAULT_BYTES ? bytes : 0;
+  }
+
+  /** Send log: whether the byte cap applies (false until a player was built). */
+  static synchronized boolean isSmallDeviceKnown() {
+    return small != null && small;
+  }
+
   /** Applies [bytes] as the buffer cap on a small device; no-op otherwise. */
   public static void apply(
       @NonNull Context context, @NonNull DefaultLoadControl.Builder builder, int bytes) {

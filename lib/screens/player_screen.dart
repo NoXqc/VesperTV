@@ -12,16 +12,20 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
+import '../widgets/live_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/remote_buttons.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
+import '../services/live_sources.dart';
 import '../services/playlist_manager.dart';
 import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
+import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
+import '../utils/scrub_steps.dart';
 import '../utils/tv_theme.dart';
 import '../utils/video_fit.dart';
 import '../widgets/channel_schedule_panel.dart';
@@ -440,6 +444,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       _dataPoolVisible = false;
       _skipTarget = null;
       _skipSteps = 0;
+      _scrubSteps.reset();
     });
     if (!locked) {
       _resetHideTimer();
@@ -565,6 +570,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _onOk() {
+    if (_sourceDrawerOpen) return;
     final segment = _skip.visibleWith(_bottomVisible);
     if (segment != null && !_panelOpen && !_scheduleOpen) {
       _skipSegment(segment);
@@ -802,6 +808,72 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// Live: the playing channel's other sources (quality copies, editor
+  /// fallbacks, the same channel in other playlists), picked by hand; the
+  /// last row adds one (a playlist editor fallback) and reopens the list.
+  Future<void> _openLiveSources() async {
+    final channel = _playback.currentChannel;
+    if (channel == null || !channel.isLive || _sourceDrawerOpen) return;
+    final manager = context.read<PlaylistManager>();
+    _sourceBackGuard.opened();
+    _hideTimer?.cancel();
+    setState(() {
+      _topVisible = false;
+      _bottomVisible = false;
+      _optionsVisible = false;
+      _moreVisible = false;
+    });
+    try {
+      while (mounted && _playback.currentChannel?.id == channel.id) {
+        final playing = _playback.currentChannel!;
+        final (:rows, :canAdd) = await liveSourceRows(manager, playing);
+        if (!mounted || _playback.currentChannel?.id != channel.id) return;
+        final sources = [for (final r in rows) r.$1];
+        final entries = [for (final r in rows) r.$2];
+        final picked = await showLiveSourceDrawer(context,
+            canAdd: canAdd, entries: entries);
+        if (!mounted ||
+            picked == null ||
+            _playback.currentChannel?.id != channel.id) {
+          return;
+        }
+        if (picked != liveSourceAdd) {
+          final note = await playPickedLiveSource(
+              playing, sources[picked], _playback.playLiveSource);
+          if (note != null && mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(note)));
+          }
+          return;
+        }
+        await manager.ensureLiveChannelsLoaded();
+        if (!mounted) return;
+        final fallback = await showLiveSourceSearch(context,
+            title: tr('Another source for {channel}',
+                {'channel': sources.first.name}),
+            channels: manager.visibleChannels(category: 'tv'),
+            suggest: channelCopyProbe(channelCopyKey(sources.first.name)),
+            skipUrls: {for (final s in sources) s.url},
+            describe: (c) => [
+                  manager.playlistNameFor(c.playlistId).trim(),
+                  c.group,
+                ].where((s) => s.isNotEmpty).join(' · '));
+        if (!mounted || fallback == null) continue;
+        final added = await manager.addLiveFallback(sources.first, fallback);
+        if (!mounted) return;
+        if (!added) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('That source is already on the list.'))));
+        }
+      }
+    } finally {
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
+    }
+  }
+
   /// Refreshed on every build (see [build]) and read from [_cycleFit]
   /// / [_restoreChrome] / [dispose] — those don't call [build] themselves,
   /// so this caches the last-known answer rather than doing a fresh
@@ -813,6 +885,12 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// [_isTvLayout] — unlike that one it stays true for a phone held
   /// sideways, whose width can pass the TV-layout threshold.
   bool _touch = false;
+
+  /// Remote + a live channel: the one bottom info bar
+  /// ([PlayerControls.liveInfoBar]) is both the zap info and the bar; the
+  /// info card at the top stays for catch-up and touch. Refreshed on every
+  /// build like [_touch].
+  bool _infoBar = false;
 
   /// The rotate button forced an orientation (released on leaving).
   bool _rotated = false;
@@ -967,6 +1045,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Remote Up (see the class doc's flow). Always handles the key.
   void _remoteUp() {
+    if (_sourceDrawerOpen) return;
     _resetHideTimer();
     if (_optionsScope.hasFocus) {
       _closeOptions();
@@ -986,7 +1065,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         _watchFocus.requestFocus();
       } else if (_hasSwitchButton) {
         _switchButtonFocus.requestFocus();
-      } else if (_zapInfoVisible) {
+      } else if (_zapInfoVisible && !_infoBar) {
         _focusScheduleChip();
       }
       return;
@@ -1002,6 +1081,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Remote Down (see the class doc's flow). Always handles the key.
   void _remoteDown() {
+    if (_sourceDrawerOpen) return;
     _resetHideTimer();
     if (_optionsScope.hasFocus || _skipFocus.hasFocus || _watchFocus.hasFocus) {
       return;
@@ -1273,17 +1353,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   Duration? _skipTarget;
   bool _skipLive = false;
   int _skipSteps = 0;
-  Timer? _skipCommit;
 
-  static int _skipStepSeconds(int steps) => steps < 3
-      ? 10
-      : steps < 6
-          ? 30
-          : steps < 10
-              ? 60
-              : steps < 15
-                  ? 120
-                  : 300;
+  /// Movies: a tap is 10 s, a held key grows the step (see [ScrubSteps]).
+  final _scrubSteps = ScrubSteps();
+  Timer? _skipCommit;
 
   /// Live rewind: past catch-up's 90 s live edge from the first press.
   static int _liveStepMinutes(int steps) => steps == 0
@@ -1304,9 +1377,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (seekable) {
       if (_skipLive) _skipTarget = null;
       _skipLive = false;
+      // The shortcut can't tell a held key's repeat from a new press:
+      // ScrubSteps guesses from the time between them.
+      final step = _scrubSteps.next();
+      if (step == null) return;
       final from = _skipTarget ?? controller.value.position;
-      final next =
-          from + Duration(seconds: sign * _skipStepSeconds(_skipSteps++));
+      final next = from + step * sign;
       _skipTarget = next < Duration.zero
           ? Duration.zero
           : next > duration
@@ -1334,6 +1410,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final live = _skipLive;
     _skipTarget = null;
     _skipSteps = 0;
+    _scrubSteps.reset();
     if (mounted) setState(() {});
     final controller = _playback.controller;
     if (target == null || controller == null) return;
@@ -1360,7 +1437,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// (Fire Stick) never sends them. Reveals the top bar so the new
   /// channel's name + now/next show.
   void _zapChannel(int step) {
-    if (_panelOpen || _scheduleOpen) return;
+    if (_panelOpen || _scheduleOpen || _sourceDrawerOpen) return;
     // From catch-up, zapping steps from its live channel (and leaves it).
     final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
@@ -1404,6 +1481,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Backup & devices > Remote buttons > Player arrows says (default Left
   /// = side drawer, Right = last channel, Up / Down = zap).
   void _runArrow(PlayerArrow arrow) {
+    // The Sources drawer (or its search) is opening or open: keys pressed
+    // meanwhile reached the player and changed the channel (owner, +816).
+    if (_sourceDrawerOpen) return;
     final action = RemoteButtons.instance.arrowAction(arrow);
     if (action == 'channel_up') {
       _zapChannel(-1);
@@ -1463,7 +1543,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   /// Right on a live channel: back to the channel watched before this one
   /// (the side panel's Last channels list), so Right again flips back.
   void _lastChannel() {
-    if (_panelOpen || _scheduleOpen) return;
+    if (_panelOpen || _scheduleOpen || _sourceDrawerOpen) return;
     final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
     final target = _playback.recentlyPlayed
@@ -1707,6 +1787,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     // && a linkedChannel to offer), same caching pattern as [_isTvLayout].
     _hasSwitchButton = playback.error != null && linkedChannel != null;
     _touch = !prefs.isTelevision;
+    _infoBar = !_touch && channel.isLive;
+    // A zap shows the info bar too, display only (nothing in it focused).
+    final infoBarShown =
+        _infoBar && (_bottomVisible || (_zapInfoVisible && !_optionsVisible));
     final phoneTouch =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android && _touch;
     final touchLocked = phoneTouch && _touchLocked && !inPip;
@@ -2035,7 +2119,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                           // Touch: the top bar has its own clock.
                           if (prefs.playerClock)
                             PlayerClockPill(
-                                top: 6, visible: !(_touch && _topVisible)),
+                                top: 6,
+                                // The info bar starts with its own clock.
+                                visible:
+                                    !(_touch && _topVisible) && !infoBarShown),
                           if (channel.mediaFileInfo case final info?)
                             MediaFileInfoOverlay(
                               key: ValueKey('file-info-${channel.id}'),
@@ -2060,12 +2147,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                             left: 0,
                             right: 0,
                             child: AnimatedOpacity(
-                              opacity: _zapInfoVisible ? 1 : 0,
+                              opacity: _zapInfoVisible && !_infoBar ? 1 : 0,
                               duration: const Duration(milliseconds: 200),
                               child: IgnorePointer(
-                                ignoring: !_zapInfoVisible,
+                                ignoring: !_zapInfoVisible || _infoBar,
                                 child: ExcludeFocus(
-                                  excluding: !_zapInfoVisible,
+                                  excluding: !_zapInfoVisible || _infoBar,
                                   child: Center(
                                       child: LiveChannelInfoCard(
                                     channel: channel,
@@ -2083,11 +2170,15 @@ class _PlayerScreenState extends State<PlayerScreen>
                           // One bottom layout keeps captions above the actual panel
                           // height, including on phones and with larger text. Only
                           // build the Data pool while visible (it polls the player).
+                          // Over the info bar while it shows.
                           if (controller != null)
-                            Positioned(
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 200),
                               left: 0,
                               right: 0,
-                              bottom: 48,
+                              bottom: infoBarShown
+                                  ? PlayerControls.liveInfoBarHeight + 8
+                                  : 48,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -2131,13 +2222,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 key: _bottomBarKey,
                                 excluding: !_bottomVisible,
                                 child: AnimatedOpacity(
-                                  opacity: _bottomVisible ? 1 : 0,
+                                  opacity:
+                                      _bottomVisible || infoBarShown ? 1 : 0,
                                   duration: const Duration(milliseconds: 200),
                                   child: FocusTraversalGroup(
                                     child: FocusScope(
                                       node: _bottomScope,
                                       child: PlayerControls(
-                                        active: _bottomVisible,
+                                        active: _bottomVisible || infoBarShown,
+                                        liveInfoBar: _infoBar,
+                                        infoBarButtons: _bottomVisible,
+                                        onSchedule: _openSchedule,
                                         insetForSystemBars: true,
                                         controller: controller,
                                         title: channel.name,
@@ -2169,10 +2264,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         playFocusNode: _playFocus,
                                         showActions: _touch,
                                         touchLayout: _touch,
-                                        onOpenMultiview: _multiviewable(channel) &&
-                                                !prefs.hideMultiview
-                                            ? () => _openMultiview(channel)
-                                            : null,
+                                        onOpenMultiview:
+                                            _multiviewable(channel) &&
+                                                    !prefs.hideMultiview
+                                                ? () => _openMultiview(channel)
+                                                : null,
                                       ),
                                     ),
                                   ),
@@ -2234,10 +2330,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           linkedChannel: linkedChannel,
                                           onActivity: _resetHideTimer,
                                           onToggleMore: () {},
-                                          onOpenMultiview: _multiviewable(channel) &&
-                                                  !prefs.hideMultiview
-                                              ? () => _openMultiview(channel)
-                                              : null,
+                                          onOpenMultiview:
+                                              _multiviewable(channel) &&
+                                                      !prefs.hideMultiview
+                                                  ? () =>
+                                                      _openMultiview(channel)
+                                                  : null,
                                           leadingOptions: [
                                             if (channel.isLive ||
                                                 playback.catchup != null) ...[
@@ -2246,6 +2344,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                 label: tr('Channels'),
                                                 onPressed: _openPanel,
                                               ),
+                                              if (channel.isLive &&
+                                                  playback.catchup == null)
+                                                PlayerOption(
+                                                  icon: Icons.swap_horiz,
+                                                  label: tr('Sources'),
+                                                  onPressed: _openLiveSources,
+                                                ),
                                             ],
                                             if (prefs.dataPool)
                                               PlayerOption(
@@ -2338,7 +2443,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               // both show.
                               bottom: _skipShowing
                                   ? 262
-                                  : _bottomVisible
+                                  : _bottomVisible || infoBarShown
                                       ? _bottomBarHeight + 8
                                       : 28,
                               showUpHint: !_touch &&

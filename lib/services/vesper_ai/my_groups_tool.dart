@@ -47,14 +47,19 @@ final _myGroupsTool = VesperTool(
   name: 'my_groups',
   description:
       'The viewer\'s own live TV groups (top of the TV tab\'s groups, like '
-      'hold OK > Move to group… on the TV). list: each with its channels. '
-      'create: a new empty group. add: channels (refs) into a group, made if '
-      'new; they leave their provider group and show only in it (still '
-      'favourites if they were). remove: channels back to their own group. '
-      'delete: a group (its channels go back). order: a group\'s channels, '
-      'refs first in that order, the rest after. move: a group (no ref), or '
-      'a channel (ref) inside the group it is in (own or provider), to top, '
-      'bottom, up / down (steps) or a position.',
+      'hold OK > Move to group… on the TV, and the playlist editor\'s Move / '
+      'Copy to group). list: each with its channels. create: a new empty '
+      'group. add: channels (refs) into a group, made if new; they leave '
+      'their provider group and show only in it (still favourites if they '
+      'were). With playlist: into that playlist\'s own (provider) group '
+      'instead, e.g. "put these channels in Sports of playlist B". With copy '
+      'true: they stay where they are and also show in that group. remove: '
+      'channels back to their own group, copies removed (with group: only '
+      'their copy in that group). delete: a group (its channels go back). '
+      'order: a group\'s channels, refs first in that order, the rest after. '
+      'move: a group (no ref), or a channel (ref) inside the group it is in '
+      '(own or provider; group names the group for a copy), to top, bottom, '
+      'up / down (steps) or a position.',
   schema: {
     'type': 'object',
     'properties': {
@@ -64,7 +69,18 @@ final _myGroupsTool = VesperTool(
       },
       'group': {
         'type': 'string',
-        'description': 'The own group\'s name (for create: the new name).',
+        'description': 'The own group\'s name (for create: the new name); '
+            'with playlist, that playlist\'s group.',
+      },
+      'playlist': {
+        'type': 'string',
+        'description': 'For add: put the channels in a group of this '
+            'playlist (name or id) instead of an own group.',
+      },
+      'copy': {
+        'type': 'boolean',
+        'description': 'For add: copy (the channels also stay in their '
+            'group) instead of move.',
       },
       'refs': {
         'type': 'array',
@@ -137,29 +153,66 @@ final _myGroupsTool = VesperTool(
         if (channels.isEmpty) {
           throw VesperToolError('None of these refs is a live channel.');
         }
-        var title = playlist.userGroups.firstWhere(
-            (g) => TitleSearch.fold(g) == TitleSearch.fold(name),
-            orElse: () => '');
-        // New: made unique against the provider groups (groups are picked
-        // by title).
-        if (title.isEmpty) title = await playlist.createUserGroup(name);
-        for (final c in channels) {
-          await playlist.moveChannelToGroup(c, title);
+        final copy = _bool(args, 'copy') ?? false;
+        final GroupRef dest;
+        final playlistName = _str(args, 'playlist');
+        if (playlistName.isNotEmpty) {
+          // A provider group of any enabled playlist (the editor's Move /
+          // Copy to group), by the title the TV shows.
+          final s = _editorSessions(box, playlistName, allowAll: false).single;
+          if (!s.profile.enabled) {
+            throw VesperToolError('${s.profile.name} is turned off.');
+          }
+          await s.ensureLiveChannelsLoaded();
+          final titles = [for (final g in s.tvGroups) g.title];
+          final title = titles.contains(name)
+              ? name
+              : titles.firstWhere(
+                  (g) => TitleSearch.fold(g) == TitleSearch.fold(name),
+                  orElse: () => throw VesperToolError(
+                      '${s.profile.name} has no group "$name" (the groups '
+                      'tool lists them).'));
+          dest = GroupRef.provider(s.profile.id, title);
+        } else {
+          var title = playlist.userGroups.firstWhere(
+              (g) => TitleSearch.fold(g) == TitleSearch.fold(name),
+              orElse: () => '');
+          // New: made unique against the provider groups (groups are
+          // picked by title).
+          if (title.isEmpty) title = await playlist.createUserGroup(name);
+          dest = GroupRef.own(title);
         }
+        final done = await playlist.placeChannels(channels, dest, copy: copy);
         return {
-          'group': title,
-          'added': [for (final c in channels) c.name],
+          'group': dest.isOwn ? dest.title : playlist.placementLabel(dest),
+          copy ? 'copied' : 'moved': [for (final c in channels) c.name],
+          if (done.skipped > 0) 'already_there': done.skipped,
           if (unknown.isNotEmpty) 'not_live_channels': unknown,
         };
       case 'remove':
         final (channels, unknown) = _liveChannelsOf(box, args['refs']);
+        if (name.isNotEmpty) {
+          // Only the copy in that group; the channel stays where it is.
+          final copies = [
+            for (final c in channels)
+              if (playlist.isCopyIn(c, name)) c
+          ];
+          for (final c in copies) {
+            await playlist.removeCopyFrom(c, name);
+          }
+          return {
+            'copies_removed_from': name,
+            'channels': [for (final c in copies) c.name],
+            if (copies.length < channels.length)
+              'note': 'The others have no copy in "$name".',
+            if (unknown.isNotEmpty) 'not_live_channels': unknown,
+          };
+        }
         final back = [
           for (final c in channels)
-            if (playlist.isUserGroup(playlist.liveGroupOf(c))) c
+            if (playlist.placementOf(c) != null) c
         ];
-        for (final c in back) {
-          await playlist.moveChannelToGroup(c, null);
-        }
+        await playlist.unplaceChannels(back);
         return {
           'back_to_their_groups': [
             for (final c in back) '${c.name} (${c.group})'
@@ -205,18 +258,29 @@ final _myGroupsTool = VesperTool(
         if (c is! Channel || !c.isLive) {
           throw VesperToolError('Give a live channel ref.');
         }
-        final group = playlist.liveGroupOf(c);
+        // A copy is listed in a group that isn't its own: group names it.
+        final group = name.isNotEmpty && playlist.isCopyIn(c, name)
+            ? name
+            : playlist.liveGroupOf(c);
         // An own group spans every playlist; a provider group's order is
         // its playlist's (PlaylistSession.moveChannel).
-        final shown = playlist.isUserGroup(group)
+        var shown = playlist.isUserGroup(group)
             ? channelsOf(group)
             : playlist.visibleChannels(
                 playlistId: c.playlistId, groupTitle: group, category: 'tv');
+        // Moved or copied into another playlist's group: that one's list.
+        for (final p in playlist.profiles) {
+          if (shown.any((x) => x.id == c.id)) break;
+          if (!p.enabled || p.id == c.playlistId) continue;
+          shown = playlist.visibleChannels(
+              playlistId: p.id, groupTitle: group, category: 'tv');
+        }
         final from = shown.indexWhere((x) => x.id == c.id);
         if (from < 0) throw VesperToolError('${c.name} is not listed now.');
         final index = _moveTarget(to, from, shown.length, steps);
-        final placed =
-            index == from ? from : await playlist.moveChannel(c, index - from);
+        final placed = index == from
+            ? from
+            : await playlist.moveChannel(c, index - from, inGroup: group);
         return {
           'moved': c.name,
           'group': group,

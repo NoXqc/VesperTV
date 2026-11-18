@@ -760,7 +760,10 @@ const _playlistEditorTool = VesperTool(
       'without guide data or measured dead, hide / show channels, add hide '
       'or find-and-replace rules (e.g. strip a "CA: " prefix), rename '
       'channels and groups, set fallback channels, collapse lower-quality '
-      'copies. Every change returns a change_id and can be undone. Call '
+      'copies. A playlist\'s TV guides (EPG links, more guides, their '
+      'order, channel guide links) are tool epg_matching; moving or '
+      'copying channels into groups is my_groups. Every change returns a '
+      'change_id and can be undone. Call '
       'vesper_help topic "playlist_editor" first for the rules and examples; '
       'use preview: true to see the effect before changing anything.',
   schema: {

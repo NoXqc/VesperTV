@@ -383,6 +383,42 @@ class StorageService {
   Future<void> setArchivePosterPattern(String pattern) =>
       _prefs.setString(AppConstants.keyArchivePosterPattern, pattern);
 
+  /// Settings > Playlists & sources > Dispatcharr: the server and its API
+  /// key as JSON (`DispatcharrLogin`), '' = not connected. Device-only.
+  String getDispatcharr() =>
+      _prefs.getString(AppConstants.keyDispatcharr) ?? '';
+  Future<void> setDispatcharr(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyDispatcharr)
+      : _prefs.setString(AppConstants.keyDispatcharr, json);
+
+  /// Settings > Dispatcharr > Sources in the player ([DispatcharrSources]
+  /// name), '' = the default. Device-only, like the sign-in.
+  String getDispatcharrSources() =>
+      _prefs.getString(AppConstants.keyDispatcharrSources) ?? '';
+  Future<void> setDispatcharrSources(String name) =>
+      _prefs.setString(AppConstants.keyDispatcharrSources, name);
+
+  /// The day (YYYY-MM-DD) the "subscription ends soon" card last showed
+  /// (`ProviderExpiryOverlay`): once a day at most. Device-only.
+  String getProviderExpiryNoticeDay() =>
+      _prefs.getString(AppConstants.keyProviderExpiryNoticeDay) ?? '';
+  Future<void> setProviderExpiryNoticeDay(String day) =>
+      _prefs.setString(AppConstants.keyProviderExpiryNoticeDay, day);
+
+  /// Settings > Playback > Stream badges — see `StreamBadges`.
+  String getStreamBadgesUrl() =>
+      _prefs.getString(AppConstants.keyStreamBadgesUrl) ?? '';
+  Future<void> setStreamBadgesUrl(String url) =>
+      _prefs.setString(AppConstants.keyStreamBadgesUrl, url);
+  int getStreamBadgesFetched() =>
+      _prefs.getInt(AppConstants.keyStreamBadgesFetched) ?? 0;
+  Future<void> setStreamBadgesFetched(int ms) =>
+      _prefs.setInt(AppConstants.keyStreamBadgesFetched, ms);
+  bool getStreamBadgesOn() =>
+      _prefs.getBool(AppConstants.keyStreamBadgesOn) ?? true;
+  Future<void> setStreamBadgesOn(bool on) =>
+      _prefs.setBool(AppConstants.keyStreamBadgesOn, on);
+
   /// Settings > Media Hub > Debrid accounts — see `DebridApi`.
   String? getRealDebridToken() =>
       _prefs.getString(AppConstants.keyRealDebridToken);
@@ -529,6 +565,13 @@ class StorageService {
   Future<void> setMultiviewHideTips(bool value) =>
       _prefs.setBool(AppConstants.keyMultiviewHideTips, value);
 
+  /// Multiview's frame saver (device-only): 'auto' = only when the box can't
+  /// decode every screen, 'always', 'off'.
+  String getMultiviewFrameSaver() =>
+      _prefs.getString(AppConstants.keyMultiviewFrameSaver) ?? 'auto';
+  Future<void> setMultiviewFrameSaver(String value) =>
+      _prefs.setString(AppConstants.keyMultiviewFrameSaver, value);
+
   /// Settings > General: open the last live channel fullscreen right after
   /// the splash (Android; Windows always does). Off = the "Hold > to resume"
   /// pill only.
@@ -553,6 +596,10 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideSportsTrak) ?? false;
   Future<void> setHideSportsTrak(bool value) =>
       _prefs.setBool(AppConstants.keyHideSportsTrak, value);
+  bool getHideWhatsNew() =>
+      _prefs.getBool(AppConstants.keyHideWhatsNew) ?? false;
+  Future<void> setHideWhatsNew(bool value) =>
+      _prefs.setBool(AppConstants.keyHideWhatsNew, value);
 
   /// Separate Movies / TV Shows switches; unset = the old combined one.
   bool getHideMovies() =>
@@ -642,6 +689,16 @@ class StorageService {
       _prefs.getBool(AppConstants.keyBackgroundSync) ?? false;
   Future<void> setBackgroundSync(bool value) =>
       _prefs.setBool(AppConstants.keyBackgroundSync, value);
+
+  /// See [AppConstants.keyContentUpdates].
+  bool getContentUpdates() =>
+      _prefs.getBool(AppConstants.keyContentUpdates) ?? false;
+  Future<void> setContentUpdates(bool value) =>
+      _prefs.setBool(AppConstants.keyContentUpdates, value);
+
+  /// See [AppConstants.keyContentUpdatesNextDue]. 0 = check at the next run.
+  Future<void> setContentUpdatesNextDue(DateTime? at) => _prefs.setInt(
+      AppConstants.keyContentUpdatesNextDue, at?.millisecondsSinceEpoch ?? 0);
 
   String? getLiveGroupSort() => _prefs.getString(AppConstants.keyLiveGroupSort);
   Future<void> setLiveGroupSort(String value) =>
@@ -1434,6 +1491,12 @@ class StorageService {
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
+  /// See [AppConstants.keySavedLiveKeys] (per viewer).
+  String? getSavedLiveKeys(String viewerId) =>
+      _prefs.getString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId));
+  Future<void> setSavedLiveKeys(String json, String viewerId) => _prefs
+      .setString(_vk(AppConstants.keySavedLiveKeys, viewerId: viewerId), json);
+
   /// Live Favourites order across playlists (per viewer).
   List<String> getFavoriteLiveOrder() =>
       _prefs.getStringList(_vk(AppConstants.keyFavoriteLiveOrder)) ?? [];
@@ -1734,6 +1797,8 @@ class StorageService {
     AppConstants.keySplashGreeting,
     AppConstants.keySkippedUpdateVersion,
     AppConstants.keyArchiveReadyWatch,
+    AppConstants.keyContentUpdates,
+    AppConstants.keyContentUpdatesNextDue,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
@@ -1783,6 +1848,7 @@ class StorageService {
     AppConstants.keyWhatsNewSeriesIds,
     AppConstants.keyCloudTransfer,
     AppConstants.keyLastAutoBackup,
+    AppConstants.keyContentUpdatesNextDue,
   };
 
   static bool _backupable(String key) =>

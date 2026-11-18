@@ -172,4 +172,15 @@ void main() {
     pending = stampLocalChanges(base, {'a': i(1), 'b': i(2)}, pending, 300);
     expect(pending, {'b': 200});
   });
+
+  test('Send log: profile keys stay readable, favourites per playlist', () {
+    expect(syncKeyLabel('nox_favorites'), 'nox_favorites');
+    final label = syncKeyLabel('nox_favorites__vp_1792590634437724');
+    expect(label, 'nox_favorites(profile ..7724)');
+    // The log's redaction hides any word of 32+ characters.
+    expect(RegExp(r'\b[A-Za-z0-9_\-]{32,}\b').hasMatch(label), isFalse);
+    expect(syncListChange(l(['1::a', '1::b', '2::c']), l(['1::a', '3::d'])),
+        '3 -> 2 (+1 -2) 1:2->1 2:1->0 3:0->1');
+    expect(syncListChange(l(['1::a']), null), '1 -> 0 (+0 -1) 1:1->0');
+  });
 }

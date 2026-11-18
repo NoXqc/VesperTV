@@ -189,12 +189,50 @@ String _episodeLabel(ArchiveVideo v) =>
     'E${v.episode.toString().padLeft(2, '0')}'
     '${v.title.isEmpty ? '' : ' - ${v.title}'}';
 
-Map<String, Object?> _describeHubTitle(VesperToolbox box, HubTitle t) => {
-      'ref': box.refFor(t),
-      'title': t.meta.name,
-      'kind': t.meta.type == ArchiveType.series ? 'series' : 'movie',
-      if (t.meta.year != null) 'year': t.meta.year,
-    };
+/// A Media Hub title for an AI app. Several titles can share a name and a
+/// year (three "The Odyssey (2026)", 2026-11-15): the source, ids, a short
+/// description, cast and director tell them apart. [full] is the info
+/// action's view (whole description, more cast, genres, runtime).
+Map<String, Object?> _describeHubTitle(VesperToolbox box, HubTitle t,
+    {bool full = false}) {
+  final m = t.meta;
+  final source = box.archive?.enabledSources
+      .where((s) => s.manifestUrl == t.sourceUrl)
+      .firstOrNull
+      ?.name;
+  final about = (m.description ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  return {
+    'ref': box.refFor(t),
+    'title': m.name,
+    'kind': m.type == ArchiveType.series ? 'series' : 'movie',
+    if (m.year != null) 'year': m.year,
+    if (source != null && source.isNotEmpty) 'source': source,
+    if (m.imdb != null) 'imdb': m.imdb,
+    if (m.imdb == null || full) 'id': m.id,
+    if (about.isNotEmpty)
+      'description':
+          full || about.length <= 160 ? about : '${about.substring(0, 157)}...',
+    if (m.cast.isNotEmpty) 'cast': m.cast.take(full ? 12 : 4).toList(),
+    if (m.director.isNotEmpty) 'director': m.director,
+    if (full && m.genres.isNotEmpty) 'genres': m.genres,
+    if (full && m.runtime != null) 'runtime': m.runtime,
+    if (full && m.rating != null) 'rating': m.rating,
+  };
+}
+
+/// Media Hub titles named like [name]'s best match when more than one
+/// shares that exact name (case and accents aside); else empty.
+Future<List<HubTitle>> _sameNamedHubTitles(VesperHub hub, String name) async {
+  final found = await hub.search(name, limit: 8);
+  if (found.length < 2) return const [];
+  String key(String s) => TitleSearch.fold(s).trim();
+  final top = key(found.first.meta.name);
+  final same = [
+    for (final t in found)
+      if (key(t.meta.name) == top) t
+  ];
+  return same.length > 1 ? same : const [];
+}
 
 bool _aired(ArchiveVideo v) {
   final date = DateTime.tryParse(v.released ?? '');
@@ -283,7 +321,10 @@ Future<Map<String, Object?>> _awaitStart(
 final _mediaHubTool = VesperTool(
   name: 'media_hub',
   description: 'Media Hub: the viewer\'s add-ons and media servers (not the '
-      'IPTV playlists). search: movies and shows by name (title refs). '
+      'IPTV playlists). search: movies and shows by name (title refs, with '
+      'source, ids, a short description, cast and director when the source '
+      'gives them). info: one title\'s full details (ref): use it to tell '
+      'apart titles sharing a name and year, e.g. by an actor. '
       'episodes: a show\'s episodes. sources: the streams offered for a '
       'title (ref; a show also needs season and episode), or with no ref '
       'for what is playing now: source, video quality, audio, languages '
@@ -308,7 +349,15 @@ final _mediaHubTool = VesperTool(
     'properties': {
       'action': {
         'type': 'string',
-        'enum': ['search', 'episodes', 'sources', 'play', 'continue', 'switch'],
+        'enum': [
+          'search',
+          'info',
+          'episodes',
+          'sources',
+          'play',
+          'continue',
+          'switch'
+        ],
       },
       'query': {
         'type': 'string',
@@ -355,6 +404,11 @@ final _mediaHubTool = VesperTool(
           'titles': [for (final t in found) _describeHubTitle(box, t)],
           if (found.isEmpty) 'note': 'Nothing called "$query" in Media Hub.',
         };
+      case 'info':
+        final (title, _) = await _hubTarget(
+            box, hub, {...args, 'season': null, 'episode': null});
+        final full = await hub.details(title) ?? title;
+        return _describeHubTitle(box, full, full: true);
       case 'episodes':
         final (title, _) = await _hubTarget(
             box, hub, {...args, 'season': null, 'episode': null});

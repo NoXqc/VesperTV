@@ -119,6 +119,12 @@ class EpgService extends ChangeNotifier {
   /// (owner, +460: only Update EPG brought it back).
   Future<void> Function()? beforeRefresh;
 
+  /// Checked before each batch of parsed programmes is written: true ends
+  /// the refresh like a failed download (the source keeps its old rows).
+  /// Content updates with the app closed (ContentUpdates) stop when the
+  /// app opens or their time is up.
+  bool Function()? shouldStop;
+
   /// Re-reads the catch-up list; true when it changed.
   bool _readCatchupDays() {
     try {
@@ -420,6 +426,15 @@ class EpgService extends ChangeNotifier {
     await _runRefresh([(url: url, knownChannelIds: knownChannelIds)]);
   }
 
+  /// One refresh of [sources], no timer: content updates with the app
+  /// closed (ContentUpdates). True when a source refreshed.
+  Future<bool> refreshOnce(List<EpgSource> sources) async {
+    if (isLoading || sources.isEmpty) return false;
+    final before = lastUpdated;
+    await _runRefresh(sources);
+    return lastUpdated != before;
+  }
+
   Future<void> _runRefresh(List<EpgSource> sources) async {
     isLoading = true;
     notifyListeners();
@@ -505,7 +520,7 @@ class EpgService extends ChangeNotifier {
   /// failed download, the ones it filled last time: its old rows stay).
   Future<int?> _refreshOne(String url,
       {required Set<String> knownChannelIds, Set<String>? covered}) async {
-    if (url.isEmpty) return null;
+    if (url.isEmpty || (shouldStop?.call() ?? false)) return null;
     error = null;
     notifyListeners();
 
@@ -534,7 +549,12 @@ class EpgService extends ChangeNotifier {
         await _autoGunzip(streamedResponse.stream),
         knownChannelIds: effectiveFilter,
         skipChannelIds: covered == null || covered.isEmpty ? null : covered,
-        onRows: (rows) => _db.insertBatch(rows, url, gen),
+        onRows: (rows) {
+          if (shouldStop?.call() ?? false) {
+            throw StateError('EPG refresh stopped');
+          }
+          return _db.insertBatch(rows, url, gen);
+        },
         sourceUrl: url,
       ).timeout(const Duration(minutes: 10));
       _filledBySource[url] = result.filled;
@@ -570,6 +590,11 @@ class EpgService extends ChangeNotifier {
   /// The channels each guide stored programmes for in its last refresh
   /// this run ([_refreshOne]'s `covered`).
   final Map<String, Set<String>> _filledBySource = {};
+
+  /// How many channels guide [url] filled in its last refresh this run
+  /// (null = not refreshed yet). A later guide only fills the channels the
+  /// guides before it left empty.
+  int? filledCount(String url) => _filledBySource[url]?.length;
 
   /// Transparently decompresses gzip — plenty of third-party XMLTV sources
   /// (large ones especially) are served as `.xml.gz` to save bandwidth,

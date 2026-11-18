@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/epg_service.dart';
@@ -21,6 +22,14 @@ class BrowsePlayback extends CountingPlayback {
 
   @override
   bool get usesNativeSurface => native;
+
+  final played = <Channel>[];
+  @override
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
+    played.add(channel);
+    currentChannel = channel;
+  }
 }
 
 void main() {
@@ -77,8 +86,13 @@ void main() {
           await tester.tap(find.text('TV').hitTestable().first);
           await tester.pumpAndSettle();
           expect(playback.stopCalls, native ? 0 : 1);
-          expect(
-              playback.currentChannel, native ? same(playlist.live) : isNull);
+          // Back on TV the parked channel plays again in the preview (AMD,
+          // 2026-11-17); a launch that opened on this tab parked nothing
+          // from the guide, so nothing comes back.
+          final resumes = !native && !startup;
+          expect(playback.played, resumes ? [same(playlist.live)] : isEmpty);
+          expect(playback.currentChannel,
+              native || resumes ? same(playlist.live) : isNull);
           await tester.pump(const Duration(seconds: 20));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);

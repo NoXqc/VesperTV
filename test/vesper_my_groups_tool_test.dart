@@ -165,6 +165,59 @@ void main() {
     expect(manager.userGroups, ['Sports', 'News']);
   });
 
+  test('copy or move into a playlist\'s own group (editor Move / Copy)',
+      () async {
+    final copied = await box.call('my_groups', {
+      'action': 'add',
+      'playlist': 'Home',
+      'group': 'sports',
+      'copy': true,
+      'refs': [ref('CNN')],
+    });
+    expect(copied['error'], isNull, reason: '$copied');
+    expect(copied['copied'], ['CNN']);
+    expect(names('SPORTS'), ['TSN 1', 'RDS', 'CNN']);
+    expect(names('NEWS'), ['CNN', 'CP24']);
+    // A copy moves inside the group it is copied into.
+    final up = await box.call('my_groups', {
+      'action': 'move',
+      'ref': ref('CNN'),
+      'group': 'SPORTS',
+      'to': 'top',
+    });
+    expect(up['group'], 'SPORTS', reason: '$up');
+    expect(names('SPORTS').first, 'CNN');
+    final uncopied = await box.call('my_groups', {
+      'action': 'remove',
+      'group': 'SPORTS',
+      'refs': [ref('CNN')],
+    });
+    expect(uncopied['channels'], ['CNN']);
+    expect(names('SPORTS'), ['TSN 1', 'RDS']);
+
+    final moved = await box.call('my_groups', {
+      'action': 'add',
+      'playlist': 'Home',
+      'group': 'SPORTS',
+      'refs': [ref('CP24')],
+    });
+    expect(moved['moved'], ['CP24']);
+    expect(names('NEWS'), ['CNN']);
+    expect(names('SPORTS'), contains('CP24'));
+    final missing = await box.call('my_groups', {
+      'action': 'add',
+      'playlist': 'Home',
+      'group': 'Movies',
+      'refs': [ref('CNN')],
+    });
+    expect(missing['error'], contains('no group'));
+    await box.call('my_groups', {
+      'action': 'remove',
+      'refs': [ref('CP24')],
+    });
+    expect(names('NEWS'), ['CNN', 'CP24']);
+  });
+
   test('a channel moves inside its provider group too', () async {
     final r = await box
         .call('my_groups', {'action': 'move', 'ref': ref('CP24'), 'to': 'up'});

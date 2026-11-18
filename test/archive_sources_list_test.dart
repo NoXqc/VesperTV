@@ -178,10 +178,17 @@ void main() {
     expect(find.text('Import from Stremio'), findsOneWidget);
     expect(find.byKey(const ValueKey('source-tool-manage')), findsOneWidget);
     // Manage from phone: nothing starts until OK on Show the code.
-    for (var i = 0; i < 6; i++) {
+    var badges = false;
+    for (var i = 0; i < 8; i++) {
       await _key(tester, LogicalKeyboardKey.arrowDown);
+      // Stream badges, just above: a pack pasted in Add a source is
+      // turned on / off there.
+      if (_focused == 'sources-badges') {
+        badges = find.text('Add a badge pack').evaluate().isNotEmpty;
+      }
       if (_focused == 'sources-phone') break;
     }
+    expect(badges, isTrue);
     expect(_focused, 'sources-phone');
     expect(find.byKey(const ValueKey('sources-phone-start')), findsOneWidget);
     expect(find.byKey(const ValueKey('sources-phone-qr')), findsNothing);

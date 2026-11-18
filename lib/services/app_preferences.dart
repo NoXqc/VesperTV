@@ -10,6 +10,7 @@ import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import '../utils/video_fit.dart';
 import 'audio_delay.dart';
+import 'content_updates.dart';
 import 'desktop_audio.dart';
 import 'display_match.dart';
 import 'device_defaults.dart';
@@ -70,6 +71,10 @@ class AppPreferences extends ChangeNotifier {
   late bool hideShows;
   late bool hideLiveTv;
   late bool hideSportsTrak;
+
+  /// Movies / TV Shows without their What's New carousel and row: they open
+  /// on All (Settings > Appearance > Tabs, owner 2026-11-17).
+  late bool hideWhatsNew;
 
   /// The Extras row (the Archive tab; tabs column / phone "More" page)
   /// hidden.
@@ -446,6 +451,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update while VesperTV is closed (Android): see [ContentUpdates].
+  bool get contentUpdates => _storage.getContentUpdates();
+
+  Future<void> setContentUpdates(bool value) async {
+    await _storage.setContentUpdates(value);
+    notifyListeners();
+    await ContentUpdates.schedule(_storage);
+  }
+
   /// Read once after the splash; changing it applies on the next launch.
   bool get launchWithProfiles => _storage.getLaunchWithProfiles();
 
@@ -480,6 +494,7 @@ class AppPreferences extends ChangeNotifier {
     hideShows = _storage.getHideShows();
     hideLiveTv = _storage.getHideLiveTv();
     hideSportsTrak = _storage.getHideSportsTrak();
+    hideWhatsNew = _storage.getHideWhatsNew();
     hideArchive = _storage.getHideArchive();
     hideRecordings = _storage.getHideRecordings();
     hideCatchupGroup = _storage.getHideCatchupGroup();
@@ -661,6 +676,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideShows(bool value) {
     hideShows = value;
     _storage.setHideShows(value);
+    notifyListeners();
+  }
+
+  void setHideWhatsNew(bool value) {
+    hideWhatsNew = value;
+    _storage.setHideWhatsNew(value);
     notifyListeners();
   }
 

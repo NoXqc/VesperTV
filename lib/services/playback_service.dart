@@ -17,6 +17,7 @@ import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
 import 'perf_diagnostics.dart';
+import 'playlist_edits.dart' show ProbeResult;
 import 'playlist_manager.dart';
 import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
@@ -32,6 +33,7 @@ import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
 import 'live_reconnect_log.dart';
+import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
 
@@ -79,12 +81,20 @@ class PlaybackService extends ChangeNotifier {
       // Storage not initialised (tests): the 500 ms default stays.
     }
     _reconnectLog.start();
+    _vodStallLog.start();
   }
 
   /// Send log lines for the native player's silent live reconnects.
   late final _reconnectLog = LiveReconnectLog(() {
     final c = controller;
     return currentChannel?.isLive == true ? c : null;
+  });
+
+  /// Send log lines for movie / episode buffering.
+  late final _vodStallLog = VodStallLog(() {
+    final c = controller;
+    final channel = currentChannel;
+    return channel != null && VodBuffering.appliesTo(channel) ? c : null;
   });
 
   static const _recentlyPlayedCacheKey = 'recently_played';
@@ -262,6 +272,21 @@ class PlaybackService extends ChangeNotifier {
     final player = controller;
     await initFuture;
     if (!wasPlaying && controller == player) await player?.pause();
+  }
+
+  /// The viewer picked another source of the live channel playing (player
+  /// options > Sources): the channel keeps its id, name and guide (like the
+  /// automatic copy fallback), only the stream changes.
+  Future<void> playLiveSource(Channel source) async {
+    final playing = currentChannel;
+    if (playing == null || source.url == playing.url) return;
+    copyFallbackName = source.name;
+    _copyFallbackFor = playing.id;
+    debugPrint('PlaybackService: source picked -> ${source.name}');
+    await play(
+        playing.copyWith(url: source.url, httpHeaders: source.httpHeaders),
+        recordHistory: false,
+        switchSource: true);
   }
 
   void setUpNextQueue(List<Channel>? queue,
@@ -469,7 +494,13 @@ class PlaybackService extends ChangeNotifier {
   /// the TV guide's Preview on highlight plays every channel the remote
   /// stops on and records it only once it has been watched a while
   /// ([recordWatched]).
-  Future<void> play(Channel channel, {bool recordHistory = true}) async {
+  ///
+  /// [switchSource]: the same channel from another stream URL (player >
+  /// Sources). Without it the same channel id is a no-op (the guide's OK on
+  /// the playing channel must not restart it), which swallowed every live
+  /// Sources pick since +813 (owner photo, TVA Montreal, 2026-11-18).
+  Future<void> play(Channel channel,
+      {bool recordHistory = true, bool switchSource = false}) async {
     if (channel.url.isEmpty && resolveLive != null) {
       final resolved = await resolveLive!(channel);
       if (resolved == null || resolved.url.isEmpty) {
@@ -482,7 +513,7 @@ class PlaybackService extends ChangeNotifier {
         !NativeVideoSurface.active ||
         textureVideo ||
         currentChannel?.id == channel.id) {
-      return _playChannel(channel, recordHistory);
+      return _playChannel(channel, recordHistory, switchSource);
     }
     final release = NativeVideoSurface.retainForPlayerSwitch();
     _nativeSwitchReleases.add(release);
@@ -492,7 +523,7 @@ class PlaybackService extends ChangeNotifier {
     }
 
     try {
-      await _playChannel(channel, recordHistory);
+      await _playChannel(channel, recordHistory, switchSource);
       final initializing = initFuture;
       if (initializing == null) {
         finish();
@@ -514,7 +545,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> _playChannel(Channel channel,
-      [bool recordHistory = true]) async {
+      [bool recordHistory = true, bool switchSource = false]) async {
     if (channel.id != _copyFallbackFor) copyFallbackName = null;
     _announce(tr('Playing {name}', {'name': channel.name}));
     // A queued episode whose stream isn't known yet (Archive Next / auto-
@@ -555,8 +586,13 @@ class PlaybackService extends ChangeNotifier {
     // but supplies a different file URL. Only the identical file is a no-op.
     if (currentChannel?.id == channel.id &&
         controller != null &&
-        (!Channel.isArchiveId(channel.rawId) ||
-            currentChannel?.url == channel.url)) {
+        currentChannel?.url == channel.url) {
+      return;
+    }
+    if (currentChannel?.id == channel.id &&
+        controller != null &&
+        !switchSource &&
+        !Channel.isArchiveId(channel.rawId)) {
       return;
     }
 
@@ -793,6 +829,16 @@ class PlaybackService extends ChangeNotifier {
       final size = c.value.size;
       Real4kChannels.record(
           channel.id, size.width.round(), size.height.round());
+      // The settled size, for Multiview's picker tags (720p / 1080p / 4K).
+      if (wait.inSeconds == 12 && size.height >= 240) {
+        unawaited(_playlistManager.recordMeasured(
+            channel,
+            ProbeResult(
+                ok: true,
+                at: DateTime.now(),
+                width: size.width.round(),
+                height: size.height.round())));
+      }
     }
   }
 
@@ -1071,7 +1117,12 @@ class PlaybackService extends ChangeNotifier {
         !previous.isLive ||
         !channel.isLive ||
         previous.subtitleUrl != null ||
-        channel.subtitleUrl != null) {
+        channel.subtitleUrl != null ||
+        // replaceLive only takes the URL: a stream with headers (a
+        // Dispatcharr pick's X-API-Key, a provider's User-Agent) needs a
+        // fresh player, or they're dropped (AMD's LOG-AP4L8B, +853: still
+        // Anonymous in Dispatcharr).
+        channel.httpHeaders.isNotEmpty) {
       return false;
     }
     final generation = ++_nativeZapGeneration;
@@ -1490,6 +1541,8 @@ class PlaybackService extends ChangeNotifier {
     _watchRestartLoop(c, channel);
     await c.setVolume(1.0);
     unawaited(WakelockPlus.enable());
+    // A Multiview screen taken full screen: its own rate and resolution.
+    unawaited(DisplayMatch.start(_storage, c, () => controller == c));
     notifyListeners();
     await _storage.setLastChannelId(channel.id);
   }
@@ -1624,6 +1677,7 @@ class PlaybackService extends ChangeNotifier {
   @override
   void dispose() {
     _reconnectLog.dispose();
+    _vodStallLog.dispose();
     _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     _teardown();
@@ -1846,6 +1900,11 @@ bool unlearnHlsUrl(String url, Object error) {
 
 bool _streamUsesHls(String url) {
   final uri = Uri.parse(url);
+  // A Dispatcharr stream picked in Sources names its format (it has no
+  // .m3u8 in the path): opened as HLS at once, not after a failed read
+  // and a sniff (clayts450, 2026-11-18: the switch should be smooth).
+  final format = uri.queryParameters['output_format']?.toLowerCase();
+  if (format == 'hls' || format == 'm3u8') return true;
   return _hlsUrls.contains(url) ||
       (_hlsHosts.contains(uri.host) &&
           uri.path.toLowerCase().endsWith('.ts') &&

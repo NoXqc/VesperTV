@@ -183,18 +183,20 @@ void main() {
         // Still held as one migration, including the old key's removal.
         expect(b.values['nox_playlists'], playlists('local'));
         expect(b.values['nox_favorites'], l(['local::live_2']));
+        // Starring one here while held adds it; A's live_1 stays (B never
+        // removed it: LOG-CGEYUG lost a whole favourites list this way).
         b.values['nox_favorites'] = l(['local::live_2', 'local::live_4']);
         await b.engine.sync(applyNow: StorageService.isLiveSyncKey);
         await a.engine.sync();
-        expect(
-            a.values['nox_favorites'], l(['remote::live_2', 'remote::live_4']));
+        expect(a.values['nox_favorites'],
+            l(['remote::live_1', 'remote::live_2', 'remote::live_4']));
         await b.engine.sync();
       }
       expect(b.values['nox_playlists'], playlists('remote'));
       expect(
           b.values['nox_favorites'],
           l([
-            if (!liveJoin) 'remote::live_1',
+            'remote::live_1',
             'remote::live_2',
             if (liveJoin) 'remote::live_4'
           ]));
@@ -312,6 +314,42 @@ void main() {
     await b.engine.sync(applyNow: live);
     await a.engine.sync();
     expect(a.values['theme'], s('green'));
+  });
+
+  test('a held list edited here keeps what other devices added (LOG-CGEYUG)',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final a = _Device({
+      'fav': l(['ch1'])
+    });
+    final b = _Device({});
+    final secret = newSyncSecret();
+    await a.engine.start(secret);
+    await a.engine.sync();
+    await b.engine.start(secret);
+    await b.engine.sync();
+    expect(b.values['fav'], l(['ch1']));
+    // B can't write 'fav' while it runs (a join's held keys, or a list
+    // its services keep a copy of): A's additions wait for B's launch.
+    bool none(String k) => false;
+    a.values['fav'] = l(['ch1', 'ch2', 'ch3']);
+    await a.engine.sync();
+    await b.engine.sync(applyNow: none);
+    expect(b.values['fav'], l(['ch1']));
+    // Before that launch, B's viewer stars one more channel.
+    b.values['fav'] = l(['ch1', 'ch9']);
+    await b.engine.sync(applyNow: none);
+    await a.engine.sync();
+    // Only ch9 is B's change: ch2 and ch3 were never removed on B.
+    expect(a.values['fav'], l(['ch1', 'ch2', 'ch3', 'ch9']));
+    // B's launch writes the same list.
+    await b.engine.sync();
+    expect(b.values['fav'], l(['ch1', 'ch2', 'ch3', 'ch9']));
+    // And a removal on B still goes through.
+    b.values['fav'] = l(['ch1', 'ch2', 'ch9']);
+    await b.engine.sync();
+    await a.engine.sync();
+    expect(a.values['fav'], l(['ch1', 'ch2', 'ch9']));
   });
 
   test('file store: saved state reads back, also in a new store', () async {

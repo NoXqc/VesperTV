@@ -37,8 +37,11 @@ import 'services/launcher_channels.dart';
 import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
+import 'services/dispatcharr.dart';
+import 'services/stream_badges.dart';
 import 'services/catalog_database.dart';
 import 'services/cloud_sync_service.dart';
+import 'services/content_updates.dart';
 import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
 import 'services/epg_service.dart';
@@ -63,6 +66,7 @@ import 'services/storage_service.dart';
 import 'services/game_reminders.dart';
 import 'services/programme_reminders.dart';
 import 'widgets/programme_reminder_overlay.dart';
+import 'widgets/provider_expiry_overlay.dart';
 import 'services/goals_alerts.dart';
 import 'services/episode_alert_lookup.dart';
 import 'services/episode_alerts.dart';
@@ -706,6 +710,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      // An update that ran with the app closed stops once the app is on
+      // screen; it shares the databases and saves sync times (Settings >
+      // Startup > Update while VesperTV is closed).
+      await ContentUpdates.waitForBackgroundRun(_storage);
       PerfDiagnostics.mark('prefs');
       // Cloud sync first: the services below read storage once, so other
       // devices' changes are written before they load (dev-notes/
@@ -726,6 +734,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           sampleFreshness: const Duration(minutes: 3));
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
       ArchivePosters.pattern = _storage.getArchivePosterPattern();
+      // Loads its pack the first time a source list needs it.
+      StreamBadges.instance.attach(_storage);
+      Dispatcharr.instance.attach(_storage);
 
       Real4kChannels.init(_storage);
       ArchiveReadyWatch.instance.init(_storage);
@@ -1214,6 +1225,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         PerfDiagnostics.mark('epgInit');
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
+        // With the app hidden, the closed-app update runs here.
+        ContentUpdates.attachApp(
+          storage: _storage,
+          refreshGuide: () =>
+              _epgService.refreshOnce(_playlistManager.epgSources()),
+          syncPlaylists: _playlistManager.runDueCatalogSync,
+        );
         // No-op for most launches (no key set, or already refreshed this
         // week) — see PlaylistManager.refreshWhatsNewTmdbIfDue's doc
         // comment for why this is a launch-time due-check rather than an
@@ -1706,6 +1724,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),
+              const ProviderExpiryOverlay(),
               const GoalsAlertOverlay(),
               const VesperBubbleOverlay(),
             ],

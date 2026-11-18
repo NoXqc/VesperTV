@@ -15,6 +15,7 @@ import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
+import 'package:nox_iptv/widgets/sports_trak_name.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -107,6 +108,23 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Settings > Appearance > Tabs > What's New off (owner, 2026-11-17):
+  // Movies opens on its posters, with no What's New row to land on.
+  testWidgets("What's New off: Movies opens without it", (tester) async {
+    for (final hide in [false, true]) {
+      prefs.setHideWhatsNew(hide);
+      await pumpHome(tester, const Size(1920, 1080));
+      await tester.tap(find.text('Movies').hitTestable().first);
+      // The carousel turns its slides on a timer: no pumpAndSettle.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text("What's New"), hide ? findsNothing : findsWidgets,
+          reason: 'hidden: $hide');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
   for (final size in [const Size(1920, 1080), const Size(420, 900)]) {
     testWidgets('settings hide active Live TV and Sports Trak; size=$size',
         (tester) async {
@@ -130,7 +148,7 @@ void main() {
       expect(prefs.hideLiveTv, isTrue);
       expect(prefs.hideSportsTrak, isTrue);
       expect(find.text('TV').hitTestable(), findsNothing);
-      expect(find.text(AppConstants.sportsTabName), findsNothing);
+      expect(_sportsTab, findsNothing);
       expect(find.text('Movies').hitTestable(), findsWidgets);
       expect(find.text('Test group'), findsNothing);
       (tester.state(find.byType(TvHomeScreen)) as GuideTarget).openGuide();
@@ -152,8 +170,7 @@ void main() {
       navigator.pop();
       await tester.pumpAndSettle();
       expect(find.text('TV').hitTestable(), findsWidgets);
-      expect(
-          find.text(AppConstants.sportsTabName).hitTestable(), findsOneWidget);
+      expect(_sportsTab.hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
@@ -169,7 +186,7 @@ void main() {
       await pumpHome(tester, size);
       expect(find.byType(HomeScreen).hitTestable(), findsOneWidget);
       expect(find.text('TV'), findsNothing);
-      expect(find.text(AppConstants.sportsTabName), findsNothing);
+      expect(_sportsTab, findsNothing);
       if (size.width > 1000) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       } else {
@@ -234,3 +251,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 }
+
+/// The Sports Trak tab: plain text on a phone, [SportsTrakName] ("Sports"
+/// + a small gold "Trak") in the TV home's tabs column.
+final _sportsTab = find.byWidgetPredicate((w) =>
+    w is SportsTrakName || (w is Text && w.data == AppConstants.sportsTabName));

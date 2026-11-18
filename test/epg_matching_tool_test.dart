@@ -301,6 +301,47 @@ void main() {
         manager.profiles.firstWhere((p) => p.id == 'p').extraEpgUrls, isEmpty);
   });
 
+  test('more guides: reorder them (priority), undo puts the order back',
+      () async {
+    const a = 'https://a.example/guide.xml';
+    const b = 'https://b.example/guide.xml';
+    List<String> extras() =>
+        manager.profiles.firstWhere((p) => p.id == 'p').extraEpgUrls;
+    await run({'action': 'add_guide', 'playlist': 'Home', 'url': a});
+    await run({'action': 'add_guide', 'playlist': 'Home', 'url': b});
+    expect(extras(), [a, b]);
+
+    final own = await run(
+        {'action': 'move_guide', 'playlist': 'Home', 'guide': 1, 'to': '3'});
+    expect(own['error'], contains('own guide'));
+    final preview = await run({
+      'action': 'move_guide',
+      'playlist': 'Home',
+      'guide': 3,
+      'to': 'up',
+      'preview': true,
+    });
+    expect(preview['order'], ['guide.example', 'b.example', 'a.example']);
+    expect(extras(), [a, b]);
+
+    final moved = await run(
+        {'action': 'move_guide', 'playlist': 'Home', 'guide': 3, 'to': '2'});
+    expect(moved['changed'], isTrue, reason: '$moved');
+    expect(host.questions.last,
+        'An AI app wants to change the order of the TV guides of Home.');
+    expect(extras(), [b, a]);
+    final same = await run(
+        {'action': 'move_guide', 'playlist': 'Home', 'guide': 2, 'to': 'top'});
+    expect(same['changed'], isFalse);
+
+    final status = await run({'action': 'status', 'playlist': 'Home'});
+    expect(((status['playlists'] as List).single as Map)['order'],
+        contains('move_guide'));
+
+    await run({'action': 'undo', 'change_id': moved['change_id']});
+    expect(extras(), [a, b]);
+  });
+
   test('unlink and a viewer saying no on the TV', () async {
     await manager.editorSession('p')!.setEpgIdOverride('x1', 'TSN1.ca');
     host.answer = false;

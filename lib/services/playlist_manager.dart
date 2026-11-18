@@ -18,11 +18,13 @@ import 'channel_name_events.dart';
 import 'epg_service.dart';
 import 'live_stream_format.dart';
 import 'playlist_session.dart';
+import 'saved_live_channels.dart';
 import 'storage_service.dart';
 import 'local_playlist_files.dart';
 import 'tmdb_enrichment_service.dart';
 import 'user_groups.dart';
 import 'channel_copy_fallback.dart';
+import 'playlist_edits.dart';
 import 'perf_diagnostics.dart';
 
 /// Holds every playlist's parsed catalog, group visibility, and the
@@ -127,6 +129,8 @@ class PlaylistManager extends ChangeNotifier {
   void dispose() {
     _favoriteCatalogGeneration++;
     _eventRefreshTimer?.cancel();
+    _shownCountsTimer?.cancel();
+    liveCountsShown.dispose();
     super.dispose();
   }
 
@@ -289,22 +293,15 @@ class PlaylistManager extends ChangeNotifier {
       _catalogDb.isSeriesFavorite = (id) => _favoriteSeriesIds.contains(id);
 
       _favoriteIds = _storage.getFavorites();
+      _favoritesViewer = _storage.getActiveViewerId();
       _favoriteSeriesIds = _storage.getFavoriteSeries();
       _activeViewerRestricted = _activeViewerIsRestricted();
       _myGroups.load(_storage.getMyGroups());
+      _logFavorites('start');
 
       _sessions
         ..clear()
-        ..addAll(_storage.getPlaylists().map((profile) => PlaylistSession(
-              profile: profile,
-              storage: _storage,
-              catalogDb: _catalogDb,
-              favoriteIds: () => _favoriteIds,
-              favoriteSeriesIds: () => _favoriteSeriesIds,
-              isRestrictedViewer: () => _activeViewerRestricted,
-              onNotify: notifyListeners,
-              myGroupOf: _myGroupOf,
-            )..onEditsApplied = recomputeMerge));
+        ..addAll(_storage.getPlaylists().map(_newSession));
 
       notifyListeners();
       // Every enabled playlist restores (from its own cache, or a fresh
@@ -406,6 +403,31 @@ class PlaylistManager extends ChangeNotifier {
   // visibility is a blocklist or an allowlist (see `PlaylistSession
   // ._loadViewerScopedState`'s doc comment).
 
+  /// Send log: whose favourites were just read and how many per playlist
+  /// (LOG-LGX8TV: a tester's favourites were gone after each update while
+  /// he synced 3 devices). `elsewhere` = ids of a playlist this device
+  /// doesn't have.
+  void _logFavorites(String when) {
+    final viewer = _favoritesViewer;
+    final here = {for (final p in _storage.getPlaylists()) p.id};
+    final per = <String, int>{};
+    var elsewhere = 0;
+    for (final id in _favoriteIds) {
+      final at = id.indexOf('::');
+      final p = at < 0 ? '' : id.substring(0, at);
+      if (here.contains(p)) {
+        per[p] = (per[p] ?? 0) + 1;
+      } else {
+        elsewhere++;
+      }
+    }
+    debugPrint('Favorites: $when '
+        'viewer=${viewer == AppConstants.mainViewerId ? 'main' : 'profile ..${viewer.length > 4 ? viewer.substring(viewer.length - 4) : viewer}'} '
+        'n=${_favoriteIds.length}'
+        '${per.entries.map((e) => ' ${e.key}:${e.value}').join()}'
+        '${elsewhere == 0 ? '' : ' elsewhere=$elsewhere'}');
+  }
+
   bool _activeViewerIsRestricted() {
     final activeId = _storage.getActiveViewerId();
     if (activeId == AppConstants.mainViewerId) return false;
@@ -427,6 +449,9 @@ class PlaylistManager extends ChangeNotifier {
     _invalidateFavoriteCatalog(clear: true);
     _activeViewerRestricted = _activeViewerIsRestricted();
     _favoriteIds = _storage.getFavorites();
+    _favoritesViewer = _storage.getActiveViewerId();
+    _logFavorites('reload');
+    _savedLiveChecked.clear();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
     _myGroups.load(_storage.getMyGroups());
     for (final session in _sessions) {
@@ -474,16 +499,25 @@ class PlaylistManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  PlaylistSession _newSession(PlaylistProfile profile) => PlaylistSession(
-        profile: profile,
-        storage: _storage,
-        catalogDb: _catalogDb,
-        favoriteIds: () => _favoriteIds,
-        favoriteSeriesIds: () => _favoriteSeriesIds,
-        isRestrictedViewer: () => _activeViewerRestricted,
-        onNotify: notifyListeners,
-        myGroupOf: _myGroupOf,
-      )..onEditsApplied = recomputeMerge;
+  PlaylistSession _newSession(PlaylistProfile profile) {
+    late final PlaylistSession session;
+    session = PlaylistSession(
+      profile: profile,
+      storage: _storage,
+      catalogDb: _catalogDb,
+      favoriteIds: () => _favoriteIds,
+      favoriteSeriesIds: () => _favoriteSeriesIds,
+      isRestrictedViewer: () => _activeViewerRestricted,
+      onNotify: notifyListeners,
+      myGroupOf: _myGroupOf,
+    )
+      ..liveGroupsToken = _liveCountsSignature
+      ..onEditsApplied = () {
+        recomputeMerge();
+        _checkSavedLive(session);
+      };
+    return session;
+  }
 
   /// A playlist read another way (M3U <-> Xtream: an Xtream panel's M3U
   /// link goes through its Xtream login, or back to the M3U when that
@@ -1198,7 +1232,7 @@ class PlaylistManager extends ChangeNotifier {
   /// channels, the manual channel link, then the playlist's other quality
   /// copies, best first. Hidden channels count: a copy hidden by Collapse
   /// copies is exactly what should take over.
-  List<Channel> failoverCandidatesFor(Channel channel) {
+  List<Channel> failoverCandidatesFor(Channel channel, {bool? crossPlaylist}) {
     final session = _sessionFor(channel.playlistId);
     if (session == null) return const [];
     final out = <Channel>[];
@@ -1222,7 +1256,7 @@ class PlaylistManager extends ChangeNotifier {
       add(c);
     }
     // The same channel in the other playlists, in playlist order.
-    if (_storage.getCrossPlaylistFallback()) {
+    if (crossPlaylist ?? _storage.getCrossPlaylistFallback()) {
       for (final other in _enabledSessionsSortedFor('tv')) {
         if (identical(other, session)) continue;
         for (final c in ChannelCopyFallback.copiesOf(
@@ -1233,6 +1267,93 @@ class PlaylistManager extends ChangeNotifier {
       }
     }
     return out;
+  }
+
+  /// Multiview's lighter copies (`MultiviewScreen._lighterCopy`): [channel]'s
+  /// quality copies ([channelCopyKey]), its own playlist first, then the
+  /// other enabled playlists, each with what it was last measured at (the
+  /// editor's stream test or a Multiview screen; null = never measured).
+  /// Names can't be trusted for this: on one provider "FOX NEWS HD" was
+  /// 720p but "BBC NEWS HD" 1080p and "TSN 2 RAW" 368p (2026-11-15).
+  List<(Channel, ProbeResult?)> measuredCopiesOf(Channel channel) {
+    final own = _sessionFor(channel.playlistId);
+    final out = <(Channel, ProbeResult?)>[];
+    final seen = <String>{channel.url};
+    for (final s in [
+      if (own != null) own,
+      for (final o in _enabledSessionsSortedFor('tv'))
+        if (!identical(o, own)) o,
+    ]) {
+      for (final c
+          in ChannelCopyFallback.copiesOf(channel, s.allLiveChannels)) {
+        if (!seen.add(c.url)) continue;
+        final p = s.edits.probes[c.rawId];
+        out.add((c, p != null && !p.isStale ? p : null));
+      }
+    }
+    return out;
+  }
+
+  /// Saves what [channel] really played at (a Multiview screen, a copy
+  /// test), beside the playlist editor's own stream tests. Written straight
+  /// to storage: re-applying the edits would redo every channel's name.
+  Future<void> recordMeasured(Channel channel, ProbeResult r) async {
+    final s = _sessionFor(channel.playlistId);
+    if (s == null) return;
+    // The full-screen player records every live channel it plays: an
+    // unchanged size measured in the last day isn't written again.
+    final old = s.edits.probes[channel.rawId];
+    if (r.ok &&
+        old != null &&
+        old.ok &&
+        old.height == r.height &&
+        old.width == r.width &&
+        r.at.difference(old.at) < const Duration(days: 1)) {
+      return;
+    }
+    s.edits.probes[channel.rawId] = r;
+    await _storage.setPlaylistEditsJson(s.profile.id, s.edits.encode());
+  }
+
+  /// What the live [channel] really played at (a Multiview screen, the
+  /// full-screen player, the editor's stream test) in the last 30 days;
+  /// null = not measured. Multiview's channel picker shows it as a tag
+  /// (owner, 2026-11-17: "I can't find 720p channels").
+  ProbeResult? measuredOf(Channel channel) {
+    final p = _sessionFor(channel.playlistId)?.edits.probes[channel.rawId];
+    return p != null && p.ok && p.height != null && !p.isStale ? p : null;
+  }
+
+  /// Every source of the live [channel] for the player's Sources drawer:
+  /// the channel itself first, then [failoverCandidatesFor] with the other
+  /// playlists always included (the viewer picks; the automatic
+  /// cross-playlist setting only governs failover). [channel] may be
+  /// playing another source's URL: its own comes from the playlist.
+  List<Channel> liveSourcesFor(Channel channel) {
+    final own = resolveChannelLink(
+            (playlistId: channel.playlistId, rawId: channel.rawId)) ??
+        channel;
+    final out = <Channel>[own];
+    for (final c in failoverCandidatesFor(own, crossPlaylist: true)) {
+      if (c.url.isNotEmpty && !out.any((o) => o.url == c.url)) out.add(c);
+    }
+    return out;
+  }
+
+  /// Adds [fallback] to the playlist editor's fallbacks of live [channel]
+  /// (player Sources > Add another source): tried first when [channel]
+  /// fails, and listed in its Sources. False = already there, the channel
+  /// itself, the 10-fallback limit, or a profile that can't edit playlists.
+  Future<bool> addLiveFallback(Channel channel, Channel fallback) async {
+    if (activeViewerRestricted) return false;
+    final session = _sessionFor(channel.playlistId);
+    if (session == null || fallback.id == channel.id) return false;
+    final next = PlaylistEdits.fromJson(session.edits.toJson());
+    final list = [...?next.fallbacks[channel.rawId]];
+    if (list.contains(fallback.id) || list.length >= 10) return false;
+    next.fallbacks[channel.rawId] = [...list, fallback.id];
+    await session.saveEdits(next);
+    return true;
   }
 
   bool _merging = false;
@@ -1498,10 +1619,12 @@ class PlaylistManager extends ChangeNotifier {
             // Every playlist at once: ~350k channels for a 13-playlist user.
             ? PerfDiagnostics.timedSync('visibleChannels($category)',
                 () => _visibleChannels(category: category))
-            : _visibleChannels(
-                playlistId: playlistId,
-                groupTitle: groupTitle,
-                category: category);
+            : PerfDiagnostics.timedPart(
+                'visible',
+                () => _visibleChannels(
+                    playlistId: playlistId,
+                    groupTitle: groupTitle,
+                    category: category));
     return List.of(cached);
   }
 
@@ -1860,21 +1983,52 @@ class PlaylistManager extends ChangeNotifier {
       _visibleCache['favoritesWithGroups'] ??= _favoriteLiveChannelsWithGroups);
 
   List<Channel> get _favoriteLiveChannelsWithGroups =>
-      _enabledSessionsSortedFor('tv').expand((s) {
-        final live = s.allLiveChannels;
-        final visible = live
-            .where((c) =>
-                !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
-            .toList();
-        final starred = visible.where((c) => c.isFavorite).toList();
-        final starredIds = {for (final c in starred) c.id};
-        return [
-          ...starred,
-          ...visible.where((c) =>
-              !starredIds.contains(c.id) &&
-              s.favoritedGroups.contains(s.liveGroupOf(c))),
-        ];
-      }).toList();
+      PerfDiagnostics.timedPart('favourites',
+          () => _enabledSessionsSortedFor('tv').expand(_favoritesOf).toList());
+
+  /// [s]'s starred live channels, then its favourited groups' channels,
+  /// playlist order. Xtream: only starred channels have their group worked
+  /// out, and favourited groups come from the group index; it used to work
+  /// out the group of all ~27k channels per playlist, after every notify
+  /// (145 ms on the Homatics for the Favourites list, owner 2026-11-18).
+  List<Channel> _favoritesOf(PlaylistSession s) {
+    if (!s.isXtream) return _favoritesScanned(s);
+    final live = s.liveChannels;
+    final starred = [
+      for (final c in live)
+        if (c.isFavorite &&
+            !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
+          c,
+    ];
+    final groups = [
+      for (final g in s.favoritedGroups)
+        if (!_isHiddenForActiveViewer(s.profile.id, g)) g,
+    ];
+    if (groups.isEmpty) return starred;
+    final starredIds = {for (final c in starred) c.id};
+    final inGroups = Set<Channel>.identity()
+      ..addAll([for (final g in groups) ...s.liveChannelsInGroup(g)]);
+    return [
+      ...starred,
+      for (final c in live)
+        if (inGroups.contains(c) && !starredIds.contains(c.id)) c,
+    ];
+  }
+
+  List<Channel> _favoritesScanned(PlaylistSession s) {
+    final live = s.allLiveChannels;
+    final visible = live
+        .where((c) => !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
+        .toList();
+    final starred = visible.where((c) => c.isFavorite).toList();
+    final starredIds = {for (final c in starred) c.id};
+    return [
+      ...starred,
+      ...visible.where((c) =>
+          !starredIds.contains(c.id) &&
+          s.favoritedGroups.contains(s.liveGroupOf(c))),
+    ];
+  }
 
   FavoriteLiveSort get favoriteLiveSort =>
       FavoriteLiveSort.values
@@ -2123,10 +2277,39 @@ class PlaylistManager extends ChangeNotifier {
               c.isFavorite && !_isHiddenForActiveViewer(c.playlistId, c.group))
           .toList());
 
+  /// Hold OK > Select on the TV (owner, 2026-11-18): many live channels
+  /// into or out of Favourites at once, with one save and one rebuild.
+  /// Returns how many changed.
+  Future<int> setLiveFavorites(
+      Iterable<Channel> channels, bool favorite) async {
+    final changed = <Channel>[];
+    for (final c in channels) {
+      c.isFavorite = favorite;
+      if (_favoriteIds.contains(c.id) == favorite) continue;
+      favorite ? _favoriteIds.add(c.id) : _favoriteIds.remove(c.id);
+      changed.add(c);
+    }
+    if (changed.isEmpty) return 0;
+    if (favorite) _rememberSavedLive(changed);
+    final ids = {for (final c in changed) c.id};
+    _invalidateFavoriteCatalog();
+    for (final session in _sessions) {
+      for (final list in [session.channels, session.liveChannels]) {
+        for (final copy in list) {
+          if (ids.contains(copy.id)) copy.isFavorite = favorite;
+        }
+      }
+    }
+    await _storage.setFavorites(_favoriteIds);
+    notifyListeners();
+    return changed.length;
+  }
+
   Future<void> toggleFavorite(Channel channel) async {
     channel.isFavorite = !_favoriteIds.contains(channel.id);
     if (channel.isFavorite) {
       _favoriteIds.add(channel.id);
+      _rememberSavedLive([channel]);
     } else {
       _favoriteIds.remove(channel.id);
     }
@@ -2335,6 +2518,137 @@ class PlaylistManager extends ChangeNotifier {
 
   final UserGroups _myGroups = UserGroups();
 
+  // --- Saved live channels follow a changed id (SavedLiveChannels) -------
+
+  /// The viewer [_favoriteIds] / [_myGroups] belong to.
+  String _favoritesViewer = AppConstants.mainViewerId;
+
+  /// Per playlist: the live list [_checkSavedLive] last went through.
+  final Map<String, int> _savedLiveChecked = {};
+
+  /// After each live list load (and a viewer switch, via `applyEdits`):
+  /// records the identity of every saved live channel the list has, and
+  /// hands a saved id the list no longer has to the channel that took its
+  /// place, in Favourites, their order and own groups. Once per list.
+  /// Send log: `SavedLive:`.
+  void _checkSavedLive(PlaylistSession s) {
+    final live = s.allLiveChannels;
+    // Mid viewer switch: [applyActiveViewer] checks again.
+    if (live.isEmpty || _favoritesViewer != _storage.getActiveViewerId()) {
+      return;
+    }
+    final mark = identityHashCode(live);
+    if (_savedLiveChecked[s.profile.id] == mark) return;
+    _savedLiveChecked[s.profile.id] = mark;
+    final prefix = '${s.profile.id}::';
+    final saved = {
+      for (final id in _favoriteIds)
+        if (id.startsWith(prefix)) id,
+      for (final id in _myGroups.channelIds)
+        if (id.startsWith(prefix)) id,
+    };
+    final viewer = _favoritesViewer;
+    final keys = SavedLiveChannels.decode(_storage.getSavedLiveKeys(viewer));
+    if (saved.isEmpty && !keys.keys.any((id) => id.startsWith(prefix))) {
+      return;
+    }
+    var keysChanged = false;
+    final here = <String>{};
+    for (final c in live) {
+      if (!saved.contains(c.id)) continue;
+      here.add(c.id);
+      final k = SavedLiveKey.of(c);
+      if (keys[c.id] != k) {
+        keys[c.id] = k;
+        keysChanged = true;
+      }
+    }
+    // Starred movies / shows of this playlist are never in the live list,
+    // and never keyed.
+    final missing = {
+      for (final id in saved)
+        if (!here.contains(id) && keys[id] != null) id: keys[id]!,
+    };
+    final found = SavedLiveChannels.rescue(missing, live);
+    final order = List.of(_storage.getFavoriteLiveOrder());
+    var favoritesChanged = false, orderChanged = false;
+    for (final e in found.entries) {
+      final from = e.key, to = e.value.id;
+      if (_favoriteIds.remove(from)) {
+        _favoriteIds.add(to);
+        favoritesChanged = true;
+      }
+      _myGroups.renameId(from, to);
+      final at = order.indexOf(from);
+      if (at >= 0) {
+        if (order.contains(to)) {
+          order.removeAt(at);
+        } else {
+          order[at] = to;
+        }
+        orderChanged = true;
+      }
+      keys.remove(from);
+      keys[to] = SavedLiveKey.of(e.value);
+      keysChanged = true;
+    }
+    // Unstarred, or out of every group: forget it.
+    final kept = {
+      ...saved.difference(found.keys.toSet()),
+      for (final c in found.values) c.id,
+    };
+    final before = keys.length;
+    keys.removeWhere((id, _) => id.startsWith(prefix) && !kept.contains(id));
+    if (keys.length != before) keysChanged = true;
+    final lost = [
+      for (final e in missing.entries)
+        if (!found.containsKey(e.key)) e.value.name
+    ];
+    // other = not in the live list and never keyed: starred movies / shows,
+    // or a channel lost before this build.
+    if (saved.isNotEmpty) {
+      debugPrint('SavedLive: playlist=${s.profile.id} saved=${saved.length} '
+          'here=${here.length} missing=${missing.length} '
+          'moved=${found.length} '
+          'other=${saved.length - here.length - missing.length}'
+          '${lost.isEmpty ? '' : ' lost=${lost.take(5).join(' | ')}'}');
+    }
+    if (found.isNotEmpty) {
+      s.restampFavorites();
+      notifyListeners();
+    }
+    unawaited(() async {
+      if (keysChanged) {
+        await _storage.setSavedLiveKeys(SavedLiveChannels.encode(keys), viewer);
+      }
+      if (found.isEmpty || _storage.getActiveViewerId() != viewer) return;
+      if (favoritesChanged) await _storage.setFavorites(_favoriteIds);
+      if (orderChanged) {
+        await _storage.setFavoriteLiveOrder(order, viewerId: viewer);
+      }
+      await _storage.setMyGroups(_myGroups.toJson());
+    }());
+  }
+
+  /// Records [channels]' identities as they are saved (starred, put in a
+  /// group), so a new id at the next list load already finds them.
+  void _rememberSavedLive(Iterable<Channel> channels) {
+    final viewer = _favoritesViewer;
+    final keys = SavedLiveChannels.decode(_storage.getSavedLiveKeys(viewer));
+    var changed = false;
+    for (final c in channels) {
+      if (!c.isLive || _sessionFor(c.playlistId) == null) continue;
+      final k = SavedLiveKey.of(c);
+      if (keys[c.id] == k) continue;
+      keys[c.id] = k;
+      changed = true;
+    }
+    if (changed) {
+      unawaited(
+          _storage.setSavedLiveKeys(SavedLiveChannels.encode(keys), viewer));
+    }
+  }
+
   /// A channel's group when the viewer put it somewhere else: an own group,
   /// or the provider group the editor moved it into (that group's title in
   /// its own playlist; a title no group has when it went to another
@@ -2410,7 +2724,10 @@ class PlaylistManager extends ChangeNotifier {
   /// [base] (a group's own channels) plus what the editor moved or copied
   /// into [ref], not listed twice and without hidden channels; a provider
   /// group in the order the user gave it here ([UserGroups.porder]).
-  List<Channel> _withPlaced(List<Channel> base, GroupRef ref) {
+  List<Channel> _withPlaced(List<Channel> base, GroupRef ref) =>
+      PerfDiagnostics.timedPart('withPlaced', () => _withPlacedNow(base, ref));
+
+  List<Channel> _withPlacedNow(List<Channel> base, GroupRef ref) {
     if (!_myGroups.hasPlacements && _myGroups.porder.isEmpty) return base;
     final ids = _myGroups.idsInto(ref);
     var all = base;
@@ -2481,6 +2798,7 @@ class PlaylistManager extends ChangeNotifier {
     for (final c in channels) {
       _placeOne(c, dest, copy: copy) ? changed++ : skipped++;
     }
+    _rememberSavedLive(channels);
     if (changed > 0) await _saveMyGroups();
     return (changed: changed, skipped: skipped);
   }
@@ -2586,6 +2904,7 @@ class PlaylistManager extends ChangeNotifier {
   /// channels left out); null [playlistId] = the viewer's own group.
   int liveGroupCount(String? playlistId, String title) {
     final counts = _liveCounts ??= () {
+      final sw = Stopwatch()..start();
       final out = <String, int>{};
       for (final s in _enabledSessionsSortedFor('tv')) {
         for (final c in _flatPlaced(s, s.visibleChannels(category: 'tv'))) {
@@ -2605,10 +2924,155 @@ class PlaylistManager extends ChangeNotifier {
           }
         }
       }
+      PerfDiagnostics.part('counts', sw.elapsedMicroseconds);
       return out;
     }();
     return counts[_countKey(playlistId, title)] ?? 0;
   }
+
+  /// The TV guide's groups column: [liveGroupCount], but while the catalog
+  /// keeps changing (Movies / TV Shows warming up after launch notify every
+  /// few hundred ms, and each notify drops the counts) it shows the last
+  /// counts and recounts once things have been quiet for [_countsQuiet].
+  /// Recounting ~53k channels took 330-470 ms on the Homatics, on every
+  /// rebuild of the TV home (owner, 2026-11-18: "groups and channels all
+  /// three feel slow"). [liveCountsShown] bumps when fresh counts land.
+  int liveGroupCountShown(String? playlistId, String title) {
+    final fresh = _liveCounts;
+    if (fresh != null) {
+      _shownLiveCounts = fresh;
+      return fresh[_countKey(playlistId, title)] ?? 0;
+    }
+    final shown = _shownLiveCounts;
+    if (shown == null) {
+      final n = liveGroupCount(playlistId, title);
+      _shownSignature = _liveCountsSignature();
+      return n;
+    }
+    // Most notifies are the Movies / TV Shows warm-up: the live channels,
+    // hidden sets, edits and own groups are the same, so are the counts.
+    final signature = _liveCountsSignature();
+    if (signature != _shownSignature) {
+      _shownCountsTimer?.cancel();
+      _shownCountsTimer = Timer(_countsQuiet, () {
+        liveGroupCount(null, '');
+        _shownLiveCounts = _liveCounts ?? _shownLiveCounts;
+        _shownSignature = _liveCountsSignature();
+        liveCountsShown.value++;
+      });
+    }
+    return shown[_countKey(playlistId, title)] ?? 0;
+  }
+
+  /// What [liveGroupCount] depends on, cheap to compare: each enabled
+  /// playlist's live list, hidden groups / channels, edits and merge hiding,
+  /// the viewer's own groups and who is watching.
+  int _liveCountsSignature() {
+    if (_signatureAt == _notifyCount) return _signatureCached;
+    _signatureAt = _notifyCount;
+    return _signatureCached =
+        PerfDiagnostics.timedPart('signature', _computeLiveCountsSignature);
+  }
+
+  int _signatureAt = -1;
+  int _signatureCached = 0;
+
+  /// What the TV tab's live view shows from this manager, cheap to compare:
+  /// [_liveCountsSignature] (channels, hidden, edits, merges, own groups,
+  /// viewer) plus groups and their order, playlists (name, on/off, order),
+  /// favourites and the error. A notify that leaves it unchanged (the
+  /// Movies / TV Shows warm-up after launch: every few hundred ms, for
+  /// minutes on big playlists) needn't rebuild the TV screen: those cost
+  /// 300-850 ms each on the Homatics (owner, 2026-11-18: "groups and
+  /// channels all three feel slow"). Once per notify.
+  int liveViewSignature() {
+    if (_viewSignatureAt == _notifyCount) return _viewSignatureCached;
+    _viewSignatureAt = _notifyCount;
+    final parts = <String, int>{
+      'viewer': _storage.getActiveViewerId().hashCode,
+      'myGroups': _myGroups.toJson().hashCode,
+      'liveLists': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          s.profile.id,
+          s.lastLoaded,
+          identityHashCode(s.liveChannels),
+          s.liveChannels.length,
+        ],
+      ]),
+      'hidden': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          Object.hashAllUnordered(s.hiddenGroups),
+          Object.hashAllUnordered(s.hiddenChannels),
+        ],
+      ]),
+      'edits': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv'))
+          identityHashCode(s.edits),
+      ]),
+      'mergeHidden': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv'))
+          Object.hashAllUnordered(s.mergeHidden),
+      ]),
+      'favourites': _favoritesVersion,
+      'init': _initializing.hashCode,
+      'error': error.hashCode,
+      'merge': _storage.getMergePlaylists().hashCode,
+      'playlists': Object.hashAll([
+        for (final s in _sessions) ...[
+          s.profile.id,
+          s.profile.name,
+          s.profile.enabled,
+          s.profile.sortOrderFor('tv'),
+        ],
+      ]),
+      'groups': Object.hashAll([
+        for (final s in _sessions) ...[
+          identityHashCode(s.liveCategories),
+          s.liveCategories.length,
+          Object.hashAll(s.groupOrder['tv'] ?? const <String>[]),
+          Object.hashAllUnordered(s.mergeHiddenGroups),
+        ],
+      ]),
+    };
+    // Which part moved, for Send log (a TV rebuild costs 100s of ms on a
+    // weak box; this says what caused one).
+    final last = _viewSignatureParts;
+    if (last != null) {
+      final changed = [
+        for (final e in parts.entries)
+          if (last[e.key] != e.value) e.key,
+      ];
+      if (changed.isNotEmpty) debugPrint('LiveView: changed $changed');
+    }
+    _viewSignatureParts = parts;
+    return _viewSignatureCached = Object.hashAll(parts.values);
+  }
+
+  Map<String, int>? _viewSignatureParts;
+
+  int _viewSignatureAt = -1;
+  int _viewSignatureCached = 0;
+
+  int _computeLiveCountsSignature() => Object.hashAll([
+        _storage.getActiveViewerId(),
+        _myGroups.toJson(),
+        for (final s in _enabledSessionsSortedFor('tv')) ...[
+          s.profile.id,
+          s.lastLoaded,
+          identityHashCode(s.liveChannels),
+          s.liveChannels.length,
+          Object.hashAllUnordered(s.hiddenGroups),
+          Object.hashAllUnordered(s.hiddenChannels),
+          identityHashCode(s.edits),
+          Object.hashAllUnordered(s.mergeHidden),
+        ],
+      ]);
+
+  int? _shownSignature;
+  Map<String, int>? _shownLiveCounts;
+  Timer? _shownCountsTimer;
+  static const _countsQuiet = Duration(milliseconds: 1500);
+  final liveCountsShown = ValueNotifier<int>(0);
 
   Map<String, int> _vodCounts = const {};
   Map<String, int> _seriesCounts = const {};
@@ -2678,6 +3142,7 @@ class PlaylistManager extends ChangeNotifier {
   /// provider group when [title] is null (Remove from group).
   Future<void> moveChannelToGroup(Channel channel, String? title) {
     _myGroups.move(channel.id, title);
+    if (title != null) _rememberSavedLive([channel]);
     return _saveMyGroups();
   }
 
@@ -2745,13 +3210,49 @@ class PlaylistManager extends ChangeNotifier {
   /// every manual "Update Content" trigger, which always re-syncs
   /// everything unconditionally rather than only what's technically stale.
   Future<void> runFullCatalogSync() async {
-    for (final session in _enabledSessionsSorted.where((s) => s.isXtream)) {
-      _foregroundSession = session;
-      notifyListeners();
-      await session.runFullCatalogSync();
+    _fullSyncs++;
+    try {
+      for (final session in _enabledSessionsSorted.where((s) => s.isXtream)) {
+        _foregroundSession = session;
+        notifyListeners();
+        await session.runFullCatalogSync();
+      }
+    } finally {
+      _fullSyncs--;
     }
     _invalidateFavoriteCatalog(clear: true);
     await ensureFavoriteCatalogLoaded();
+  }
+
+  /// Full syncs running: a launch sync may still be going behind the app
+  /// when the closed-app update asks ([runDueCatalogSync] then waits for
+  /// the next run).
+  int _fullSyncs = 0;
+
+  /// Content updates with the app closed (ContentUpdates): only the
+  /// playlists due for a full sync, one at a time. [stop] ends it between
+  /// playlists and categories; a stopped playlist stays due, so the next run
+  /// picks it up. Returns (synced, due).
+  Future<(int, int)> runDueCatalogSync({bool Function()? stop}) async {
+    final due = _enabledSessionsSorted.where((s) => s.needsFullSync()).toList();
+    if (_fullSyncs > 0) return (0, due.length);
+    var synced = 0;
+    _fullSyncs++;
+    try {
+      for (final session in due) {
+        if (stop?.call() ?? false) break;
+        _foregroundSession = session;
+        notifyListeners();
+        if (await session.runFullCatalogSync(stop: stop)) synced++;
+      }
+    } finally {
+      _fullSyncs--;
+    }
+    if (synced > 0) {
+      _invalidateFavoriteCatalog(clear: true);
+      await ensureFavoriteCatalogLoaded();
+    }
+    return (synced, due.length);
   }
 
   /// The catalog database's queue wait ([PerfDiagnostics]).

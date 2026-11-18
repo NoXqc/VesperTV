@@ -9,6 +9,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
 import '../services/app_preferences.dart';
+import '../services/channel_copy_fallback.dart';
+import '../services/playlist_edits.dart';
+import '../services/stream_probe.dart';
+import '../services/display_match.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playback_service.dart'
@@ -18,9 +22,11 @@ import '../services/recording_service.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
+import '../services/vod_buffering.dart';
 import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/ink_layer.dart';
 import '../widgets/native_video_hole.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -475,6 +481,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     for (var i = 0; i < _cellCount; i++) {
       unawaited(_cells[i].controller?.setVolume(i == 0 ? 1.0 : 0.0));
     }
+    _applyFrameSaver();
   }
 
   KeyEventResult _onSwapKey(KeyEvent e) {
@@ -492,6 +499,22 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     _cells[0].focusNode.requestFocus();
     return KeyEventResult.handled;
   }
+
+  /// Header buttons: a focused one fills with the theme's accent and gets
+  /// its outline (the default focus tint was hard to see, user reports
+  /// 2026-11-15).
+  static ButtonStyle _headerButtonStyle(Color accent) => ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused)
+                ? accent.withValues(alpha: 0.3)
+                : null),
+        side: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused)
+                ? BorderSide(color: accent, width: 2)
+                : null),
+        overlayColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.focused) ? Colors.transparent : null),
+      );
 
   /// Add screen: a new empty screen, focused, with the channel picker open.
   /// Backing out of the picker takes the empty screen away again.
@@ -732,7 +755,261 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// offsetSumUs, offsetCount), for the per-10 s deltas in the log line.
   final _lastCounters = <VideoPlayerHdrController, List<int>>{};
 
+  /// Of the last 3 10 s samples, how many the box couldn't decode every
+  /// screen (0 when the latest was fine), and whether the viewer was told
+  /// (once per Multiview session).
+  int _overloadTicks = 0;
+  final _overloadHistory = <bool>[];
+  bool _overloadHinted = false;
+
+  /// Too many screens for the box's hardware decoder (Homatics Box R 4K
+  /// Plus, 2026-11-15, adb): three 1080p50 H.264 screens + one HEVC each
+  /// showed 6-7 fps with 7-27 s buffered: frames 0.2-0.6 s late, ExoPlayer
+  /// flushing to the next keyframe over and over. Same with the native
+  /// surface on or off; closing one H.264 screen = all back to 50 fps. The
+  /// S905X4's H.264 decoder does ~4K30 (about 120 1080p frames a second
+  /// across screens). No player setting fixes it: tell the viewer once.
+  void _checkOverload(int playing, List<int> starvedCells) {
+    final starved = starvedCells.length;
+    // The screen with the sound counts on its own (it's the one watched),
+    // and 2 bad samples out of 3, not in a row (Homatics, 2026-11-17, swap
+    // mode: the big screen showed 7-18 fps beside a silent 1080p one while
+    // the count kept resetting between samples, so nothing ever helped it).
+    final bad =
+        playing >= 3 && (starved >= 2 || starvedCells.contains(_activeCell));
+    _overloadHistory.add(bad);
+    if (_overloadHistory.length > 3) _overloadHistory.removeAt(0);
+    _overloadTicks = bad ? _overloadHistory.where((b) => b).length : 0;
+    if (playing < 3 && _saverEngaged) {
+      _saverEngaged = false;
+      _applyFrameSaver();
+    }
+    if (_overloadTicks < 1 || !mounted) return;
+    if (_frameSaver == 'auto' && !_saverEngaged) {
+      // First the frame saver (after one 10 s sample: an overloaded box
+      // crawls, remote included), then a lighter copy, then the hint.
+      _saverEngaged = true;
+      _overloadTicks = 0;
+      _overloadHistory.clear();
+      debugPrint('Multiview: frame saver on ($starved of $playing screens '
+          'dropping most frames with a full buffer)');
+      _applyFrameSaver();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(tr('Frame saver on: silent screens skip every other '
+            'frame so this box can keep up.')),
+      ));
+      return;
+    }
+    // The frame saver had 10 s and it's still too much: a silent screen
+    // above 720p moves to a lighter copy of its channel. Frame saver Off =
+    // the viewer wants full quality, so never.
+    if (_overloadTicks < 2) return;
+    if (_frameSaver != 'off' && !_lighterBusy) {
+      final targets = [
+        for (var i = 0; i < _cells.length; i++)
+          if (i != _activeCell &&
+              _cells[i].channel?.isLive == true &&
+              (_heights[i] ?? 0) > 720 &&
+              !_lighterTried.contains(_cells[i].channel!.id))
+            i
+      ]..sort((a, b) {
+          // Struggling screens first, then the ones the saver can't thin.
+          final s = (starvedCells.contains(b) ? 1 : 0) -
+              (starvedCells.contains(a) ? 1 : 0);
+          if (s != 0) return s;
+          return (_tickThinned[a] ?? 0).compareTo(_tickThinned[b] ?? 0);
+        });
+      if (targets.isNotEmpty) {
+        _overloadTicks = 0;
+        _overloadHistory.clear();
+        unawaited(_lighterCopy(targets.first));
+        return;
+      }
+    }
+    if (_overloadHinted) return;
+    _overloadHinted = true;
+    debugPrint('Multiview: decoder overloaded ($starved of $playing screens '
+        'dropping most frames with a full buffer)');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      duration: const Duration(seconds: 10),
+      content: Text(tr('This box can\'t decode this many full-HD screens at '
+          'once. Close a screen, or pick an HD or SD version of a channel.')),
+    ));
+  }
+
+  /// Each screen's decoded height (10 s samples) and frames the saver skipped
+  /// in the last sample.
+  final _heights = <int, int>{};
+  final _tickThinned = <int, int>{};
+
+  /// Lighter copies: channel ids already tried this session, ids of copies
+  /// put on a screen (their "720p" tag), and one search at a time.
+  final _lighterTried = <String>{};
+  final _lighter = <String>{};
+  bool _lighterBusy = false;
+  bool _tipShown = false;
+
+  /// Controllers whose decoded size was saved ([PlaylistManager.recordMeasured]).
+  final _measured = <VideoPlayerHdrController>{};
+
+  /// Moves screen [index] to a copy of its channel measured at 360-720p:
+  /// a box's decoder budget is shared by every screen, and a 720p frame is
+  /// under half a 1080p one (Homatics, 2026-11-15: three 1080p50/60
+  /// screens choked it, 720p copies fit). Copies already measured first;
+  /// else up to 4 unknown ones get the editor's stream test (one extra
+  /// connection for a few seconds each), most likely-720p names first.
+  Future<void> _lighterCopy(int index) async {
+    final channel = _cells[index].channel;
+    if (channel == null) return;
+    _lighterBusy = true;
+    _lighterTried.add(channel.id);
+    try {
+      final pm = context.read<PlaylistManager>();
+      final copies = pm.measuredCopiesOf(channel);
+      bool fits(ProbeResult? p) =>
+          p != null &&
+          p.ok &&
+          p.height != null &&
+          p.height! >= 340 &&
+          p.height! <= 720;
+      final known = [
+        for (final (c, p) in copies)
+          if (fits(p)) (c, p!.height!)
+      ]..sort((a, b) => b.$2.compareTo(a.$2));
+      Channel? pick = known.firstOrNull?.$1;
+      if (pick == null) {
+        // HD, unlabelled, SD names before FHD/4K ones.
+        int order(Channel c) {
+          final r = ChannelCopyFallback.qualityRank(c.sourceName);
+          return r <= 3 ? 3 - r : r;
+        }
+
+        final unknown = [
+          for (final (c, p) in copies)
+            if (p == null) c
+        ]..sort((a, b) => order(a).compareTo(order(b)));
+        final probe = StreamProbe();
+        for (final c in unknown.take(4)) {
+          if (!mounted || _cells[index].channel?.id != channel.id) return;
+          final r = await probe.probe(c);
+          debugPrint('Multiview: copy test ${c.name}: ${r.label}');
+          unawaited(pm.recordMeasured(c, r));
+          if (StreamProbe.isRefusal(r)) break;
+          if (fits(r)) {
+            pick = c;
+            break;
+          }
+        }
+      }
+      if (!mounted || _cells[index].channel?.id != channel.id) return;
+      if (pick == null) {
+        debugPrint('Multiview: no 720p copy of ${channel.name} '
+            '(${copies.length} copies)');
+        return;
+      }
+      debugPrint('Multiview: screen ${index + 1} ${channel.name} -> '
+          'lighter copy ${pick.name}');
+      _lighter.add(pick.id);
+      _lighterTried.add(pick.id);
+      await _assign(index, pick);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(tr('Screen {n} now plays a 720p copy: {name}',
+            {'n': index + 1, 'name': pick.name})),
+      ));
+    } finally {
+      _lighterBusy = false;
+    }
+  }
+
+  /// Frame saver (Settings > Playback > Multiview frame saver, or the header
+  /// button): silent screens skip frames nothing depends on before decoding
+  /// (native ThinningVideoRenderer), so 50/60 fps channels decode at 25/30.
+  /// 'auto' engages it when [_checkOverload] sees the decoder fall behind.
+  late String _frameSaver =
+      context.read<StorageService>().getMultiviewFrameSaver();
+  bool _saverEngaged = false;
+
+  /// Per player: 0 = full, 1 = frame saver, 2 = strong (3+ screens).
+  final _thinned = <VideoPlayerHdrController, int>{};
+  final _lastThinned = <VideoPlayerHdrController, int>{};
+
+  bool get _thinSilent =>
+      _frameSaver == 'always' || (_frameSaver == 'auto' && _saverEngaged);
+
+  void _applyFrameSaver() {
+    // 3+ screens: silent ones keep about a third of their skippable frames
+    // instead of half, so the one with the sound keeps all of its own
+    // (Homatics, 2026-11-17: it dropped 220-440 frames every 10 s).
+    final playing = _cells.where((c) => c.controller != null).length;
+    for (var i = 0; i < _cells.length; i++) {
+      final c = _cells[i].controller;
+      if (c == null) continue;
+      final want = !_thinSilent || i == _activeCell
+          ? 0
+          : playing >= 3
+              ? 2
+              : 1;
+      if (_thinned[c] == want) continue;
+      _thinned[c] = want;
+      unawaited(_stats.invokeMethod<bool>('setFrameThinning', {
+        'playerId': SubtitleTracks.playerIdOf(c),
+        'on': want > 0,
+        'strong': want == 2,
+      }).catchError((Object _) => false));
+    }
+  }
+
+  String _frameSaverLabel() => switch (_frameSaver) {
+        'always' => tr('Always'),
+        'off' => tr('Off'),
+        _ => _saverEngaged ? tr('Auto (on)') : tr('Auto'),
+      };
+
+  void _cycleFrameSaver() {
+    final next = switch (_frameSaver) {
+      'auto' => 'always',
+      'always' => 'off',
+      _ => 'auto',
+    };
+    setState(() => _frameSaver = next);
+    unawaited(context.read<StorageService>().setMultiviewFrameSaver(next));
+    _applyFrameSaver();
+  }
+
+  /// Match frame rate (Settings > Playback): the screen with the sound sets
+  /// the TV's refresh rate, never its resolution. Each screen's own vote is
+  /// "50 Hz only if seamless", so without this a 59.94 Hz box stayed at
+  /// 59.94 for 50 fps channels (AMD, Homatics, 2026-11-15).
+  VideoPlayerHdrController? _matchedFor;
+
+  void _matchDisplay() {
+    if (_activeCell >= _cells.length) return;
+    final c = _cells[_activeCell].controller;
+    if (c == null || c == _matchedFor || !c.value.isInitialized) return;
+    _matchedFor = c;
+    unawaited(DisplayMatch.start(context.read<StorageService>(), c,
+        () => mounted && _cells[_activeCell].controller == c,
+        rateOnly: true));
+  }
+
+  static String _codecName(Object? mime) => switch (mime) {
+        'video/avc' => 'H.264',
+        'video/hevc' => 'HEVC',
+        'video/mpeg2' => 'MPEG-2',
+        'video/av01' => 'AV1',
+        'video/x-vnd.on2.vp9' => 'VP9',
+        String m => m,
+        _ => '?',
+      };
+
   Future<void> _logTiles() async {
+    _matchDisplay();
+    _applyFrameSaver();
+    var playing = 0;
+    final starved = <int>[];
     for (var i = 0; i < _cells.length; i++) {
       final c = _cells[i].controller;
       if (c == null || !c.value.isInitialized) continue;
@@ -760,16 +1037,42 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         _lastCounters[c] = now;
         final offsets = now[3] - before[3];
         final early = offsets > 0 ? (now[2] - before[2]) / offsets / 1000 : 0.0;
+        // Starved = the decoder, not the provider: 10+ late frames thrown
+        // away a second while 3+ s are buffered.
+        playing++;
+        if (newDrops >= 100 && n('bufferedMs') >= 3000) starved.add(i);
+        final thinned = n('thinned');
+        final newThinned = thinned - (_lastThinned[c] ?? thinned);
+        _lastThinned[c] = thinned;
+        _tickThinned[i] = newThinned;
+        _heights[i] = n('height');
+        final srcFps = (m['ptsFps'] as num?)?.toDouble() ??
+            (m['frameRate'] as num?)?.toDouble() ??
+            -1;
+        final ch = _cells[i].channel;
+        if (ch != null && ch.isLive && n('height') > 0 && _measured.add(c)) {
+          unawaited(context.read<PlaylistManager>().recordMeasured(
+              ch,
+              ProbeResult(
+                  ok: true,
+                  at: DateTime.now(),
+                  width: n('width'),
+                  height: n('height'),
+                  fps: srcFps > 0 ? srcFps : null,
+                  codec: _codecName(m['mime']))));
+        }
         debugPrint('Multiview: screen ${i + 1} ${_cells[i].channel?.name}: '
             'buffer ${(n('bufferedMs') / 1000).toStringAsFixed(1)} s, '
             'freezes ${n('stalls')} (last ${(n('lastStallMs') / 1000).toStringAsFixed(1)} s), '
             '${fps.toStringAsFixed(1)} fps, dropped +$newDrops, '
-            '${n('height')}p${c.value.isBuffering ? ', buffering now' : ''}'
+            '${n('height')}p${srcFps > 0 ? srcFps.round() : ''} ${_codecName(m['mime'])}'
+            '${c.value.isBuffering ? ', buffering now' : ''}'
             ', ${_tileControllers[c] == true ? 'native' : 'texture'}'
             ', decoder in ${((now[0] - before[0]) / 10).toStringAsFixed(1)}/s'
             ', dropped before decode +${now[1] - before[1]}'
             ', avg ${early.toStringAsFixed(0)} ms early'
-            ', max run ${n('maxConsecutiveDropped')}');
+            ', max run ${n('maxConsecutiveDropped')}'
+            '${m['thinning'] == true ? ', frame saver +$newThinned' : ''}');
       } on MissingPluginException {
         _statsTimer?.cancel();
         return;
@@ -777,6 +1080,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         // Screen changed between the check and the call.
       }
     }
+    _checkOverload(playing, starved);
   }
 
   /// Deliberately the *opposite* order from `PlaybackService
@@ -812,6 +1116,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       channel.url,
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
+    // Send log: how long a screen takes to show (AMD, 2026-11-17: slower
+    // than a channel change; it held 4 s of video before starting).
+    final started = Stopwatch()..start();
     try {
       // Native video surface on: this screen draws into its own SurfaceView
       // behind Flutter instead of a texture (see NativeMultiviewTiles).
@@ -825,6 +1132,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         unawaited(newController.dispose());
         return;
       }
+      debugPrint('Multiview: screen ${index + 1} ready in '
+          '${started.elapsedMilliseconds} ms');
+      // Started after 1 s of video: a live screen grows its cushion while
+      // playing (Gradual, like the main player).
+      unawaited(VodBuffering.configureTile(newController, channel));
       // The live list's 4K tag, from what this tile really decodes.
       unawaited(Future<void>.delayed(const Duration(seconds: 6), () {
         if (cell.controller != newController || !channel.isLive) return;
@@ -842,6 +1154,18 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         cell.controller = newController;
       });
       _reportTiles();
+      if (index == _activeCell) _matchDisplay();
+      _applyFrameSaver();
+      if (mounted &&
+          !_tipShown &&
+          _cells.where((c) => c.controller != null).length >= 3) {
+        _tipShown = true;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          duration: const Duration(seconds: 5),
+          content:
+              Text(tr('For 3 or 4 screens, 720p channels play smoothest.')),
+        ));
+      }
     } catch (e) {
       unawaited(newController.dispose());
       // A `.ts` that was really HLS (see learnHlsHost): once more as HLS;
@@ -901,6 +1225,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       if (_cells[index].controller != null)
         _cells[index].controller!.setVolume(1.0),
     ]);
+    if (mounted) {
+      _matchDisplay();
+      _applyFrameSaver();
+    }
   }
 
   /// True while a picker push is already in flight — [HoldToActivate]'s
@@ -1264,7 +1592,17 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           () => NativeMultiviewTiles.release(id)));
       _tileControllers[kept] = false;
     }
-    unawaited(WakelockPlus.disable());
+    // A screen that went full screen is now the main player (adoptLive just
+    // enabled its wakelock, before this dispose ran): releasing it here left
+    // the picture playing with nothing keeping the screen on, and a Fire TV
+    // Cube fell into its screensaver ~5 min later (Send log LOG-F2AHJU:
+    // Multiview -> full screen, 16 min without a key). Native zaps reuse the
+    // controller, so nothing re-enabled it. The main player's own stop()
+    // releases it.
+    if (kept == null) unawaited(WakelockPlus.disable());
+    // Nothing plays any more: the TV goes back to its own mode (a screen
+    // taken full screen matches its own, PlaybackService.adoptLive).
+    if (kept == null && _matchedFor != null) unawaited(DisplayMatch.reset());
     super.dispose();
   }
 
@@ -1308,6 +1646,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // Below a phone's status bar (the back arrow sat under the clock,
     // owner 2026-11-02); the gradient still reaches the top edge.
     final inset = MediaQuery.paddingOf(context);
+    final buttonStyle =
+        _headerButtonStyle(Theme.of(context).colorScheme.primary);
     final header = Container(
       padding: EdgeInsets.fromLTRB(
           4 + inset.left, 4 + inset.top, 12 + inset.right, 16),
@@ -1340,6 +1680,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           children: [
             IconButton(
               tooltip: tr('Back'),
+              style: buttonStyle,
               focusNode: _headerFirst,
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => unawaited(_leave()),
@@ -1352,6 +1693,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             const SizedBox(width: 12),
             if (!_portrait && _fullscreen == null)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _toggleMainLayout,
                 icon: Icon(_main ? Icons.view_quilt : Icons.grid_view,
                     color: Colors.white, size: 18),
@@ -1360,6 +1702,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               ),
             if (_main && _canSwap && _fullscreen == null)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _enterSwapMode,
                 icon:
                     const Icon(Icons.swap_vert, color: Colors.white, size: 18),
@@ -1368,10 +1711,19 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               ),
             if (_slots < _maxSlots && _fullscreen == null && !_main)
               TextButton.icon(
+                style: buttonStyle,
                 onPressed: _addScreen,
                 icon: const Icon(Icons.add_box_outlined,
                     color: Colors.white, size: 18),
                 label: Text(tr('Add screen'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            if (_fullscreen == null)
+              TextButton.icon(
+                style: buttonStyle,
+                onPressed: _cycleFrameSaver,
+                icon: const Icon(Icons.speed, color: Colors.white, size: 18),
+                label: Text('${tr('Frame saver')}: ${_frameSaverLabel()}',
                     style: const TextStyle(color: Colors.white)),
               ),
             const Spacer(),
@@ -1586,11 +1938,72 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           alignment: Alignment.center,
           badge: _swapMode && index == 0
               ? _SwapModeBadge(swaps: _swapCount)
-              : null,
+              : _lighter.contains(cell.channel?.id)
+                  ? const _LighterBadge()
+                  : null,
         ),
       ),
     );
   }
+}
+
+/// The channel picker's tag: the resolution a channel really played at
+/// ([PlaylistManager.measuredOf]; owner, 2026-11-17: "I can't find 720p
+/// channels"). 720p and lower in the accent colour: they fit 3-4 screens.
+class _ResolutionTag extends StatelessWidget {
+  const _ResolutionTag(this.measured);
+
+  final ProbeResult? measured;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = measured?.height;
+    if (h == null) return const SizedBox.shrink();
+    final w = measured?.width ?? 0;
+    final label = h >= 1500 || w >= 3000
+        ? '4K'
+        : h > 720
+            ? '1080p'
+            : h >= 600
+                ? '720p'
+                : 'SD';
+    final light = h <= 720;
+    final color =
+        light ? Theme.of(context).colorScheme.primary : Colors.white60;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: color, width: 1.2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+/// A screen moved to a lighter copy of its channel (`_lighterCopy`).
+class _LighterBadge extends StatelessWidget {
+  const _LighterBadge();
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topRight,
+        child: Container(
+          margin: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Text('720p',
+              style: TextStyle(
+                  color: Colors.amber,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
+      );
 }
 
 /// The order Swap mode moves the playing [slots] (cell indices, big one
@@ -1787,112 +2200,128 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
                 ? widget.controller!.value.aspectRatio
                 : 16 / 9) *
             widget.widthBoost;
+    final accent = Theme.of(context).colorScheme.primary;
     return Align(
       alignment: widget.alignment,
       child: _MaybeAspect(
         ratio: widget.fill ? null : ratio,
-        child: InkWell(
-          focusNode: widget.focusNode,
-          onTap: widget.onTap,
-          onLongPress: widget.onLongPress,
-          onFocusChange: (f) {
-            setState(() => _focused = f);
-            if (f) widget.onFocused?.call();
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: widget.bare
+        // Its own ink layer: InkWell painted its focus highlight on the
+        // page's Material, so each remote step repainted the whole screen
+        // (CLAUDE.md §10 (10); Homatics 2026-11-17: 55 ms frames in Multiview).
+        child: InkLayer(
+          child: InkWell(
+            focusNode: widget.focusNode,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            onFocusChange: (f) {
+              setState(() => _focused = f);
+              if (f) widget.onFocused?.call();
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.bare ? 0 : 8),
+              ),
+              // Focus in the theme's accent: a white 3 px line was hard
+              // to see over video (user reports, 2026-11-15). The audio screen
+              // keeps its amber line. Drawn over the picture, not around it: a
+              // border in `decoration` pads the child by its width, so every
+              // focus / sound move resized the screen's video surface (1256 ->
+              // 1260 -> 1268 px wide). No blurred glow (redrawn per frame).
+              foregroundDecoration: widget.bare
                   ? null
-                  : Border.all(
-                      color: widget.active
-                          ? Colors.amber
-                          : (_focused ? Colors.white : Colors.white24),
-                      width: widget.active || _focused ? 3 : 1,
-                    ),
-              borderRadius: BorderRadius.circular(widget.bare ? 0 : 8),
-            ),
-            clipBehavior: Clip.antiAlias,
-            // The name bar fades after a few seconds (it covered the
-            // score bug): shown again on a new channel, when the sound
-            // moves here, and when focus lands on the tile.
-            child: _withBadge(AutoHideOverlay(
-              flashKey: (widget.channel?.id, widget.active, _focused),
-              hidden: widget.active ? const MultiviewAudioBadge() : null,
-              video: widget.controller != null &&
-                      widget.controller!.value.isInitialized
-                  ? multiviewVideo(widget.controller!)
-                  : ColoredBox(
-                      color: const Color(0xFF1A1A1A),
-                      child: Center(
-                        child: Icon(
-                            widget.channel == null
-                                ? Icons.add_circle_outline
-                                : Icons.hourglass_empty,
-                            color: Colors.white38,
-                            size: 36),
+                  : BoxDecoration(
+                      border: Border.all(
+                        color: _focused
+                            ? accent
+                            : (widget.active ? Colors.amber : Colors.white24),
+                        width: _focused ? 3 : (widget.active ? 2 : 1),
                       ),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-              overlay: widget.channel == null
-                  ? const SizedBox.shrink()
-                  : Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 4),
-                        // Was a 2-stop gradient fading to transparent almost
-                        // immediately — reported directly as barely visible
-                        // against a bright/busy video frame. A mid-bar stop
-                        // keeps the whole header solidly dark (not just its
-                        // very top edge) before fading out underneath it, and
-                        // the text itself now carries its own shadow as a
-                        // second, independent line of contrast — the same
-                        // "readable over anything behind it" fix already used
-                        // elsewhere in this app (e.g. PosterCard's progress
-                        // label) rather than relying on the backdrop alone.
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.0, 0.6, 1.0],
-                            colors: [
-                              Colors.black.withValues(alpha: 0.92),
-                              Colors.black.withValues(alpha: 0.92),
-                              Colors.transparent,
-                            ],
-                          ),
+              clipBehavior: Clip.antiAlias,
+              // The name bar fades after a few seconds (it covered the
+              // score bug): shown again on a new channel, when the sound
+              // moves here, and when focus lands on the tile.
+              child: _withBadge(AutoHideOverlay(
+                flashKey: (widget.channel?.id, widget.active, _focused),
+                hidden: widget.active ? const MultiviewAudioBadge() : null,
+                video: widget.controller != null &&
+                        widget.controller!.value.isInitialized
+                    ? multiviewVideo(widget.controller!)
+                    : ColoredBox(
+                        color: const Color(0xFF1A1A1A),
+                        child: Center(
+                          child: Icon(
+                              widget.channel == null
+                                  ? Icons.add_circle_outline
+                                  : Icons.hourglass_empty,
+                              color: Colors.white38,
+                              size: 36),
                         ),
-                        child: Row(
-                          children: [
-                            if (widget.active) ...[
-                              const Icon(Icons.volume_up,
-                                  color: Colors.amber,
-                                  size: 15,
-                                  shadows: [
-                                    Shadow(color: Colors.black, blurRadius: 4)
-                                  ]),
-                              const SizedBox(width: 4),
-                            ],
-                            Expanded(
-                              child: Text(
-                                widget.channel!.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                      ),
+                overlay: widget.channel == null
+                    ? const SizedBox.shrink()
+                    : Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 4),
+                          // Was a 2-stop gradient fading to transparent almost
+                          // immediately — reported directly as barely visible
+                          // against a bright/busy video frame. A mid-bar stop
+                          // keeps the whole header solidly dark (not just its
+                          // very top edge) before fading out underneath it, and
+                          // the text itself now carries its own shadow as a
+                          // second, independent line of contrast — the same
+                          // "readable over anything behind it" fix already used
+                          // elsewhere in this app (e.g. PosterCard's progress
+                          // label) rather than relying on the backdrop alone.
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              stops: const [0.0, 0.6, 1.0],
+                              colors: [
+                                Colors.black.withValues(alpha: 0.92),
+                                Colors.black.withValues(alpha: 0.92),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              if (widget.active) ...[
+                                const Icon(Icons.volume_up,
+                                    color: Colors.amber,
+                                    size: 15,
                                     shadows: [
                                       Shadow(color: Colors.black, blurRadius: 4)
                                     ]),
+                                const SizedBox(width: 4),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.channel!.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      shadows: [
+                                        Shadow(
+                                            color: Colors.black, blurRadius: 4)
+                                      ]),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-            )),
+              )),
+            ),
           ),
         ),
       ),
@@ -2307,7 +2736,11 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                     : const Icon(Icons.tv,
                                         color: Colors.white54),
                                 title: c.name,
-                                trailing: const SizedBox.shrink(),
+                                // What it really played at, once measured:
+                                // 720p and lower fit 3-4 screens best.
+                                trailing: _ResolutionTag(context
+                                    .read<PlaylistManager>()
+                                    .measuredOf(c)),
                                 onTap: () => Navigator.of(context).pop(c),
                               );
                             },

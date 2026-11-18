@@ -300,6 +300,24 @@ const Map<String, String> kIt = {
   'Don\'t show this again': "Non mostrare più",
   'OK': "OK",
   'Couldn\'t start that channel': "Impossibile avviare il canale",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Questo dispositivo non riesce a decodificare così tanti schermi Full HD insieme. Chiudi uno schermo o scegli una versione HD o SD di un canale.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Con 3 o 4 schermi, i canali a 720p sono i più fluidi.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Lo schermo {n} passa a una copia a 720p: {name}",
+  'Multiview frame saver':
+      "Risparmio fotogrammi Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Gli schermi Multiview senza audio saltano un fotogramma su due (un canale a 50 fps va a 25), così il dispositivo può decodificare più schermi insieme. Lo schermo con l'audio mostra sempre tutti i fotogrammi. Auto: solo quando il dispositivo non tiene il passo.",
+  'Always':
+      "Sempre",
+  'Auto (on)':
+      "Auto (attivo)",
+  'Frame saver':
+      "Risparmio fotogrammi",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Risparmio fotogrammi attivo: gli schermi senza audio saltano un fotogramma su due perché il dispositivo tenga il passo.",
   'Full screen': "Schermo intero",
   'Windowed': "In finestra",
   '4 screens': "4 schermi",
@@ -1081,6 +1099,13 @@ const Map<String, String> kIt = {
   'Search groups': 'Cerca gruppi',
   "Countries": "Paesi",
   "Countries and prefixes": "Paesi e prefissi",
+  "{count} hidden": "{count} nascosti",
+  "Shown groups": "Gruppi visibili",
+  "Hidden groups": "Gruppi nascosti",
+  "No groups here.": "Nessun gruppo qui.",
+  "Hide every group": "Nascondi tutti i gruppi",
+  "Then select the countries to keep.": "Poi scegli i paesi da tenere.",
+  "All hidden. Select the countries to keep.": "Tutto nascosto. Scegli i paesi da tenere.",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Trovati all'inizio dei nomi dei gruppi. Scegline uno per mostrare o nascondere tutti i suoi gruppi in una volta.",
   "1 group": "1 gruppo",
   "{count} groups": "{count} gruppi",
@@ -1536,6 +1561,7 @@ const Map<String, String> kIt = {
       "Controlla il link qui, poi premi Aggiungi.",
   "Hide Movies": "Nascondi Film",
   "Hide TV Shows": "Nascondi Serie TV",
+  "Hide What's New": "Nascondi Novità",
   "Hide Recordings": "Nascondi registrazioni",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Digitare una chiave con il telecomando è scomodo. Scansiona questo codice con la fotocamera del telefono e incolla lì la chiave: apparirà qui per controllarla e salvarla.",
@@ -1550,6 +1576,8 @@ const Map<String, String> kIt = {
       "Rimuove la scheda Film e i film dai risultati di ricerca.",
   "Removes the TV Shows tab and show search results.":
       "Rimuove la scheda Serie TV e le serie dai risultati di ricerca.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Rimuove le Novità da Film e Serie TV: si aprono su Tutto.",
   "Removes the Recordings tab.": "Rimuove la scheda Registrazioni.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Digitare un link lungo con il telecomando è faticoso. Scansiona questo codice con la fotocamera del telefono e incolla lì il link — apparirà qui da controllare e aggiungere.",
@@ -1791,6 +1819,9 @@ const Map<String, String> kIt = {
   // Fast startup
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Premi Indietro per usare subito l’app. Film e Serie TV continuano ad aggiornarsi in background.",
+  "Update while VesperTV is closed": "Aggiorna quando VesperTV è chiuso",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "La guida e le tue playlist si aggiornano con la solita frequenza anche ad app chiusa, così sono pronte quando la apri. Alcuni box lo mettono in pausa in standby.",
   "Update in the background": "Aggiorna in background",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Quando è il momento di aggiornare i contenuti, apre subito la TV in diretta e aggiorna Film e Serie TV in background. Si completano nei prossimi minuti e il telecomando può risultare più lento fino alla fine. Si applica dal prossimo avvio.",
@@ -3849,4 +3880,149 @@ const Map<String, String> kIt = {
       "Rimuove la scheda Home.",
   "Press Menu again to go to the Apple TV Home screen.":
       "Premi di nuovo Menu per tornare alla schermata Home di Apple TV.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Nascondi Home",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Un'app di IA vuole cambiare l'ordine delle guide TV di {playlist}.",
+  "No other source for this channel.":
+      "Nessun'altra fonte per questo canale.",
+  "Add another source":
+      "Aggiungi un'altra fonte",
+  "Any channel, any playlist: tried first if this one fails":
+      "Qualsiasi canale, qualsiasi playlist: provata per prima se questa non funziona",
+  "Another source for {channel}":
+      "Un'altra fonte per {channel}",
+  "That source is already on the list.":
+      "Questa fonte è già nell'elenco.",
+  "Type a channel name.":
+      "Scrivi il nome di un canale.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Solo i primi {n}. Scrivi di più per restringere.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Badge delle fonti",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Badge con immagini sulle fonti del Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Salvato. Le fonti del Media Hub ora mostrano questi badge.",
+  "This address is not a badge pack.":
+      "Questo indirizzo non è un pacchetto di badge.",
+  "Could not download the badge pack ({error}).":
+      "Impossibile scaricare il pacchetto di badge ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Mostra badge con immagini come 4K, Dolby Vision o Atmos sulle fonti del Media Hub. Incolla l'indirizzo di un pacchetto di badge fatto per Nuvio o Fusion (il loro URL dei badge).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Senza pacchetto, le fonti mostrano le etichette di VesperTV. Lascia vuoto per disattivarlo.",
+  "Badge pack address":
+      "Indirizzo del pacchetto di badge",
+  "{n} badges in this pack":
+      "{n} badge in questo pacchetto",
+  "{n} could not be read and are left out.":
+      "{n} non sono leggibili e sono esclusi.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Badge delle fonti salvati: {n} badge. Attivali o disattivali in Badge delle fonti.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Pacchetto di badge rimosso: le fonti mostrano le etichette di VesperTV.",
+  "Show stream badges":
+      "Mostra i badge delle fonti",
+  "Change badge pack":
+      "Cambia pacchetto di badge",
+  "Add a badge pack":
+      "Aggiungi un pacchetto di badge",
+  "Its address, typed or from your phone":
+      "Il suo indirizzo, digitato o dal telefono",
+  "Remove badge pack":
+      "Rimuovi pacchetto di badge",
+  "Sources show VesperTV's own tags":
+      "Le fonti mostrano le etichette di VesperTV",
+  "Every stream of a channel in the player's Sources":
+      "Tutti i flussi di un canale nelle Fonti del lettore",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr ha passato il canale a {stream}.",
+  "Dispatcharr refused the saved sign-in. Sign in again.":
+      "Dispatcharr ha rifiutato l'accesso salvato. Accedi di nuovo.",
+  "Dispatcharr doesn't answer right now.":
+      "Dispatcharr non risponde in questo momento.",
+  "Couldn't find a Dispatcharr server at that address.":
+      "Nessun server Dispatcharr trovato a quell'indirizzo.",
+  "Connected to {server} as {user}":
+      "Connesso a {server} come {user}",
+  "No playlist loads from this server yet.":
+      "Nessuna playlist viene ancora caricata da questo server.",
+  "Playlists on this server: {names}":
+      "Playlist su questo server: {names}",
+  "In the player, Sources lists every stream Dispatcharr has for the channel. Picking one plays it for you only: other viewers keep theirs.":
+      "Nel lettore, Fonti elenca tutti i flussi che Dispatcharr ha per il canale. Sceglierne uno lo riproduce solo per te: gli altri spettatori mantengono il loro.",
+  "Add as a playlist":
+      "Aggiungi come playlist",
+  "Sources in the player":
+      "Fonti nel lettore",
+  "Which streams Sources lists for a Dispatcharr channel":
+      "Quali stream mostra Fonti per un canale Dispatcharr",
+  "Dispatcharr's first":
+      "Prima quelli di Dispatcharr",
+  "Then VesperTV's matches: quality copies, fallbacks, other playlists":
+      "Poi quelli trovati da VesperTV: copie di altra qualità, riserve, altre playlist",
+  "Only Dispatcharr's":
+      "Solo quelli di Dispatcharr",
+  "The channel and the streams you assigned to it in Dispatcharr":
+      "Il canale e gli stream che gli hai assegnato in Dispatcharr",
+  "Only VesperTV's":
+      "Solo quelli di VesperTV",
+  "Quality copies, fallbacks and other playlists, as without Dispatcharr":
+      "Copie di altra qualità, riserve e altre playlist, come senza Dispatcharr",
+  "An AI app wants to save the network folder {folder}.":
+      "Un'app IA vuole salvare la cartella di rete {folder}.",
+  "An AI app wants to forget the network folder {folder}.":
+      "Un'app IA vuole dimenticare la cartella di rete {folder}.",
+  "Select…":
+      "Seleziona…",
+  "Stop selecting":
+      "Smetti di selezionare",
+  "{count} added to Favourites":
+      "{count} aggiunti ai Preferiti",
+  "{count} removed from Favourites":
+      "{count} rimossi dai Preferiti",
+  "Add to group…":
+      "Aggiungi a un gruppo…",
+  "Add {count} channels to":
+      "Aggiungi {count} canali a",
+  "{count} added to {group}":
+      "{count} aggiunti a {group}",
+  "{count} selected · OK: tick · Hold OK: add them · Back: done":
+      "{count} selezionati · OK: spunta · Tieni premuto OK: aggiungili · Indietro: fine",
+  "Subscription ended":
+      "Abbonamento scaduto",
+  "Subscription ends today":
+      "L'abbonamento scade oggi",
+  "Subscription ends tomorrow":
+      "L'abbonamento scade domani",
+  "Subscription ends in {days} days":
+      "L'abbonamento scade tra {days} giorni",
+  "Renew with your provider so it keeps playing.":
+      "Rinnova con il tuo provider per continuare a guardare.",
+  "Add another playlist from it":
+      "Aggiungi un'altra playlist da esso",
+  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
+      "Dispatcharr riunisce più flussi dei fornitori in ogni canale. Accedi per vedere e scegliere quei flussi dalle Fonti del lettore.",
+  "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
+      "La tua password viene inviata solo al tuo server, una volta. VesperTV conserva la tua chiave API di Dispatcharr (una esistente viene riutilizzata, mai sostituita), non la password.",
+  "Too many tries. Wait a minute, then connect again.":
+      "Troppi tentativi. Attendi un minuto, poi riconnettiti.",
+  "This Dispatcharr user has no XC password, so it would be added as an M3U playlist. For an Xtream playlist (steadier, with catch-up, movies and shows), give the user an XC password in Dispatcharr (Users > Edit), then come back here.":
+      "Questo utente Dispatcharr non ha una password XC, quindi verrebbe aggiunto come playlist M3U. Per una playlist Xtream (più stabile, con catch-up, film e serie), assegnagli una password XC in Dispatcharr (Users > Edit), poi torna qui.",
+  "Enter the server address, then your user name and password or your API key.":
+      "Inserisci l'indirizzo del server, poi nome utente e password oppure la chiave API.",
+  "Dispatcharr refused this API key.":
+      "Dispatcharr ha rifiutato questa chiave API.",
+  "Or your API key":
+      "Oppure la tua chiave API",
+  "Instead of the user name and password":
+      "Al posto di nome utente e password",
+  "Your Dispatcharr only allows the password sign-in from some networks. Use your API key instead.":
+      "Il tuo Dispatcharr consente l'accesso con password solo da alcune reti. Usa la tua chiave API.",
+  "Dispatcharr refused the sign-in (HTTP {code}).":
+      "Dispatcharr ha rifiutato l'accesso (HTTP {code}).",
+  "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
+      "La password funziona, ma il server ha rifiutato di fornire la chiave API (HTTP {code}). Incolla invece la chiave API.",
 };

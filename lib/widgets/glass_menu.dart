@@ -169,9 +169,13 @@ class _GlassFrostScope extends InheritedWidget {
 
 /// Draws the part of the frozen, blurred page that is under this box.
 class _FrostPainter extends CustomPainter {
-  _FrostPainter(this.frost, this.box) : super(repaint: frost);
+  _FrostPainter(this.frost, this.box, {this.dim}) : super(repaint: frost);
   final ValueListenable<_Frost?> frost;
   final RenderBox? Function() box;
+
+  /// Painted over the capture: the route's barrier, which a live blur
+  /// sampled too but the capture (taken before the route) doesn't hold.
+  final Color? dim;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -191,6 +195,7 @@ class _FrostPainter extends CustomPainter {
         (global.bottom - f.rect.top) * sy);
     canvas.drawImageRect(f.image, src, Offset.zero & size,
         Paint()..filterQuality = FilterQuality.low);
+    if (dim != null) canvas.drawRect(Offset.zero & size, Paint()..color = dim!);
   }
 
   @override
@@ -201,8 +206,9 @@ class _FrostPainter extends CustomPainter {
 /// live BackdropFilter (a GlassMenuSurface not opened through
 /// [showGlassMenu] / [GlassFrost], e.g. Sports Trak's panel).
 class _FrostedBackdrop extends StatefulWidget {
-  const _FrostedBackdrop({required this.child});
+  const _FrostedBackdrop({required this.child, this.dim});
   final Widget child;
+  final Color? dim;
 
   @override
   State<_FrostedBackdrop> createState() => _FrostedBackdropState();
@@ -224,7 +230,8 @@ class _FrostedBackdropState extends State<_FrostedBackdrop> {
     return CustomPaint(
       key: _key,
       painter: _FrostPainter(scope.frost,
-          () => _key.currentContext?.findRenderObject() as RenderBox?),
+          () => _key.currentContext?.findRenderObject() as RenderBox?,
+          dim: widget.dim),
       child: widget.child,
     );
   }
@@ -469,15 +476,22 @@ class GlassPanel extends StatelessWidget {
       required this.child,
       this.radius = 20,
       this.padding,
-      this.blur = false});
+      this.blur = false,
+      this.dim});
 
   final Widget child;
   final double radius;
   final EdgeInsetsGeometry? padding;
 
   /// Blur what is behind (a panel floating over another page). Off on a
-  /// panel over the Settings backdrop, which is already blurred.
+  /// panel over the Settings backdrop, which is already blurred. Opened
+  /// through [GlassFrost] (`openSettingsPage`), that is the page captured
+  /// and blurred once, not a live BackdropFilter.
   final bool blur;
+
+  /// The barrier color over the page behind: painted over the capture so
+  /// the frost is as dark as the live blur was.
+  final Color? dim;
 
   static const _base = Color(0xBF0D1016);
 
@@ -512,12 +526,7 @@ class GlassPanel extends StatelessWidget {
                 : Padding(padding: padding!, child: child)),
       ),
     );
-    if (blur) {
-      glass = BackdropFilter(
-          enabled: GlassBlur.live,
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: glass);
-    }
+    if (blur) glass = _FrostedBackdrop(dim: dim, child: glass);
     return RefinedFinishBackdrop(
       translucent: true,
       child: DecoratedBox(

@@ -50,6 +50,11 @@ label.opt{display:flex;gap:10px;align-items:center;padding:8px 10px;border-botto
 label.opt:last-child{border-bottom:0}
 label.opt:has(input:checked){background:#d8b25a22}
 #mvModal.copy label.opt:has(input:checked){background:#6cc48a22}
+.grip{cursor:grab;color:var(--dim);font-size:18px;padding:0 4px;user-select:none;touch-action:none}.grip:hover{color:var(--gold)}
+.gdrag{opacity:.4}.gsel{border-color:#d8b25a88}
+#groupOrder .drop-before{box-shadow:0 -3px 0 var(--gold)}#groupOrder .drop-after{box-shadow:0 3px 0 var(--gold)}
+button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
+#groupOrder h3 button{font:inherit;font-size:15px}
 @media (max-width:700px){.wide{display:none}td,th{padding:5px 3px}}
 </style>
 </head>
@@ -92,7 +97,7 @@ label.opt:has(input:checked){background:#d8b25a22}
     <div class="card"><h3 style="margin-top:0">Channels</h3>
       <p>Search or filter (hidden, renamed, copies, no guide, dead...). Type over a name to rename it. Tick channels, then use the bottom bar: <b>Hide</b>, <b>Show</b>, <b>Reset name</b>, <b>Set logo</b>, <b>Move to group</b> (the channels leave their group and show only in the one you pick), <b>Copy to group</b> (they stay where they are and also show in the one you pick) and <b>Reset group</b> (back in their own groups, copies removed). The destination can be one of your own custom groups (new or existing) or a group of any playlist; it is applied on the TV at once, without Save. <b>Fallbacks</b> on a row: channels to play, in your order, if this one fails (from any playlist).</p></div>
     <div class="card"><h3 style="margin-top:0">Groups</h3>
-      <p><b>Rename</b> a group by typing its new name. <b>Merge</b>: tick two or more groups, press <b>Merge selected</b> and give the new group a name (typing the same name on several groups does the same). <b>Move</b> groups with the arrows and <b>hide</b> them with the box. Press <b>Save groups</b>.</p></div>
+      <p><b>Rename</b> a group by typing its new name. <b>Merge</b>: tick two or more groups, press <b>Merge selected</b> and give the new group a name (typing the same name on several groups does the same). <b>Move</b> groups by dragging the &#8942;&#8942; handle (ticked groups move together) or with the arrows, and <b>hide</b> them with the box. Hold <b>Shift</b> and tick a second box to tick every group in between. Press <b>Save groups</b>.</p></div>
     <div class="card"><h3 style="margin-top:0">Duplicates &amp; cleanup</h3>
       <p>In <b>Rules &amp; cleanup</b>, tick <b>Hide lower-quality copies</b>: only the best copy of each channel (4K / FHD / HD) stays listed, the others become automatic fallbacks. Add rules to rename (for example remove <code>US| </code>) or hide (for example <code>PPV</code>) many channels at once; they keep working after every update. <b>Preview</b> shows the effect before saving. The <b>Duplicates</b> tab shows which copy is kept.</p></div>
     <div class="card"><h3 style="margin-top:0">Several playlists</h3>
@@ -104,8 +109,16 @@ label.opt:has(input:checked){background:#d8b25a22}
   </section>
 
   <section id="t-groups" style="display:none">
-    <div class="card dim">Type in a group's name box to <b>rename</b> it (in either list); give several groups the <b>same name to merge</b> them. The arrows move a group, the box hides it. Then <b>Save groups</b>.</div>
+    <div class="card dim">Type in a group's name box to <b>rename</b> it (in either list); give several groups the <b>same name to merge</b> them. Drag the &#8942;&#8942; handle (or use the arrows) to move a group; tick several and drag one of them to move them together. <b>Shift</b>-click a second box to tick a whole range. The hide box hides it: hidden groups move to <b>Hidden groups</b> at the bottom (tap it to open). To hide many at once, tick them (or filter, then <b>Tick listed</b>) and press <b>Hide ticked</b>. <b>Countries</b>: tap UK, US… to list only those groups; <b>Keep only these countries</b> hides every other group. Then <b>Save groups</b>.</div>
     <div class="row"><input id="gq" placeholder="Search groups" class="grow"><button id="mergeGroups">Merge selected…</button><button class="gold" id="saveGroups">Save groups</button></div>
+    <div class="row"><select id="gView" aria-label="Which groups"><option value="">All groups</option><option value="shown">Shown only</option><option value="hidden">Hidden only</option></select>
+      <button id="gTickAll" title="Tick every group listed now">Tick listed</button><button id="gUntick">Untick all</button>
+      <button id="gHide" title="Hide the ticked groups (they go to Hidden groups at the bottom)">Hide ticked</button><button id="gShow">Show ticked</button></div>
+    <div id="gRegionsBox" style="display:none">
+      <div class="row dim" style="margin-top:4px">Countries: tap one or more to list only their groups.</div>
+      <div id="gRegions" class="row" style="flex-wrap:wrap;gap:4px"></div>
+      <div class="row"><button class="gold" id="gKeepOnly" disabled>Keep only these countries…</button><span class="dim" id="gRegionMsg"></span></div>
+    </div>
     <h3>Order on the TV</h3>
     <div id="groupOrder"></div>
     <h3>Provider groups</h3>
@@ -397,7 +410,7 @@ async function save() {
 $('go').onclick = login;
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 $('pl').onchange = () => load($('pl').value);
-for (const id of ['q', 'grp', 'flt']) $(id).addEventListener('input', () => { page = 300; renderChannels(); });
+for (const id of ['q', 'grp', 'flt']) $(id).addEventListener('input', () => { page = 300; lastSel = null; renderChannels(); });
 $('dq').addEventListener('input', renderDupes);
 $('more').onclick = () => { page += 300; renderChannels(); };
 $('tabs').onclick = e => {
@@ -411,8 +424,24 @@ $('tabs').onclick = e => {
 };
 $('rows').addEventListener('change', e => {
   const s = e.target.dataset.s, n = e.target.dataset.n;
-  if (s !== undefined) { e.target.checked ? sel.add(s) : sel.delete(s); $('selMsg').textContent = sel.size + ' selected'; }
   if (n !== undefined) { edits.names[n] = e.target.value; setDirty(true); renderDupes(); }
+});
+// Shift-click a second box = every row between it and the last box
+// clicked takes its state (as in a file manager).
+let lastSel = null;
+function rangeTick(list, from, to, on, add, del) {
+  const a = list.indexOf(from), b = list.indexOf(to); if (a < 0 || b < 0) return false;
+  for (const x of list.slice(Math.min(a, b), Math.max(a, b) + 1)) on ? add(x) : del(x);
+  return true;
+}
+$('rows').addEventListener('click', e => {
+  const s = e.target.dataset.s;
+  if (s === undefined) return;
+  const on = e.target.checked, list = shown.slice(0, page).map(c => c.r);
+  if (!(e.shiftKey && lastSel !== null && rangeTick(list, lastSel, s, on, x => sel.add(x), x => sel.delete(x)))) on ? sel.add(s) : sel.delete(s);
+  lastSel = s;
+  if (e.shiftKey) { renderChannels(); document.getSelection()?.removeAllRanges(); }
+  $('selMsg').textContent = sel.size + ' selected';
 });
 $('rows').addEventListener('click', e => { const d = e.target.dataset; if (d.fb) openFallbacks(d.fb); if (d.guide) openGuide(d.guide); });
 $('all').onchange = e => { for (const c of shown.slice(0, page)) e.target.checked ? sel.add(c.r) : sel.delete(c.r); renderChannels(); };
@@ -674,30 +703,150 @@ async function loadGroups() {
   for (const g of groupData.groups) g.d0 = g.d;
   groupOrder = groupData.order.map(g => g.d);  // shown titles at load (d0)
   groupHidden = new Set(groupData.order.filter(g => g.h).map(g => g.d));
-  groupSel = new Set();
+  groupSel = new Set(); groupRegionSel = new Set();
+  groupRegions = groupData.regions || [];
+  groupOrder = hiddenLast(groupOrder, groupHidden);
+  renderRegions();
   renderGroups();
 }
+// Hidden groups always sit after the shown ones (owner request via Discord,
+// 2026-11-18: scrolling past thousands of hidden groups to reach the few in
+// use). Stable: each part keeps its own order.
+function hiddenLast(order, hidden) { return [...order.filter(d => !hidden.has(d)), ...order.filter(d => hidden.has(d))]; }
+let groupRegions = [], groupRegionSel = new Set(), groupHiddenOpen = false;
+function regionTitles() { const s = new Set(); for (const r of groupRegions) if (groupRegionSel.has(r.k)) for (const t of r.t) s.add(t); return s; }
+// The groups the filters list now (search, Shown / Hidden, countries).
+function listedGroups() {
+  const q = $('gq').value.trim().toLowerCase(), view = $('gView').value, reg = groupRegionSel.size ? regionTitles() : null;
+  return groupOrder.filter(d => (!q || d.toLowerCase().includes(q) || shownOf(d).toLowerCase().includes(q)) &&
+    (view !== 'shown' || !groupHidden.has(d)) && (view !== 'hidden' || groupHidden.has(d)) && (!reg || reg.has(d)));
+}
+function renderRegions() {
+  const useful = groupRegions.filter(r => r.k || groupRegions.length > 1);
+  $('gRegionsBox').style.display = useful.length > 1 ? '' : 'none';
+  $('gRegions').innerHTML = useful.map(r => {
+    const hid = r.t.filter(t => groupHidden.has(t)).length;
+    return `<button class="tag${groupRegionSel.has(r.k) ? ' on' : ''}" data-region="${esc(r.k)}" title="${r.t.length} groups${hid ? ', ' + hid + ' hidden' : ''}">${r.f ? r.f + ' ' : ''}${esc(r.k || 'No country')} <span class="dim">${r.t.length}</span></button>`;
+  }).join('');
+  $('gKeepOnly').disabled = !groupRegionSel.size;
+  $('gRegionMsg').textContent = groupRegionSel.size ? regionTitles().size + ' groups picked' : '';
+}
+$('gRegions').addEventListener('click', e => {
+  const b = e.target.closest('[data-region]'); if (!b) return;
+  const k = b.dataset.region; groupRegionSel.has(k) ? groupRegionSel.delete(k) : groupRegionSel.add(k);
+  lastGroupSel = null; renderRegions(); renderGroups();
+});
+// Every group outside the picked countries is hidden, the picked ones shown
+// and moved to the top (in their current order).
+function keepOnly(order, keep) {
+  const hidden = new Set(order.filter(d => !keep.has(d)));
+  return {order: [...order.filter(d => keep.has(d)), ...order.filter(d => !keep.has(d))], hidden};
+}
+$('gKeepOnly').onclick = () => {
+  const keep = regionTitles(); if (!keep.size) return;
+  const off = groupOrder.filter(d => !keep.has(d)).length;
+  if (!confirm(`Show the ${keep.size} groups of the picked countries and hide the other ${off}? You can still show any group again.`)) return;
+  const r = keepOnly(groupOrder, keep); groupOrder = r.order; groupHidden = r.hidden;
+  groupSel.clear(); groupRegionSel.clear(); renderRegions(); renderGroups();
+  $('status').textContent = `${keep.size} groups kept, ${off} hidden. Press Save groups to apply on the TV.`;
+};
+$('gView').onchange = () => { lastGroupSel = null; renderGroups(); };
+$('gTickAll').onclick = () => { for (const d of listedGroups()) groupSel.add(d); renderGroups(); };
+$('gUntick').onclick = () => { groupSel.clear(); renderGroups(); };
+function setTickedHidden(hide) {
+  if (!groupSel.size) { alert('Tick some groups first (Tick listed ticks every group listed).'); return; }
+  const n = groupSel.size;
+  for (const d of groupSel) hide ? groupHidden.add(d) : groupHidden.delete(d);
+  groupOrder = hiddenLast(groupOrder, groupHidden); groupSel.clear(); renderRegions(); renderGroups();
+  $('status').textContent = `${n} group(s) ${hide ? 'hidden' : 'shown'}. Press Save groups to apply on the TV.`;
+}
+$('gHide').onclick = () => setTickedHidden(true);
+$('gShow').onclick = () => setTickedHidden(false);
 function renderGroups() {
   if (!groupData) return;
   const q = $('gq').value.trim().toLowerCase();
-  $('groupOrder').innerHTML = groupOrder.map((d, i) => (!q || d.toLowerCase().includes(q)) ? `<div class="row card" style="margin:4px 0;padding:6px 10px">
+  const listed = new Set(listedGroups()), row = (d, i) => `<div class="row card${groupSel.has(d) ? ' gsel' : ''}" data-grow="${i}" style="margin:4px 0;padding:6px 10px">
+    <span class="grip" data-grip="${i}" title="Drag to move (ticked groups move together)" aria-hidden="true">&#8942;&#8942;</span>
     <input type="checkbox" data-gsel="${i}" ${groupSel.has(d) ? 'checked' : ''} aria-label="Select for merge">
     <input class="grow" data-orename="${i}" value="${esc(shownOf(d))}" aria-label="Group name" style="min-width:120px">
     <label class="dim"><input type="checkbox" data-gh="${i}" ${groupHidden.has(d) ? 'checked' : ''}> hide</label>
-    <button data-gup="${i}" aria-label="Move up">&#9650;</button><button data-gdn="${i}" aria-label="Move down">&#9660;</button></div>` : '').join('') || '<p class="dim">No groups.</p>';
+    <button data-gup="${i}" aria-label="Move up">&#9650;</button><button data-gdn="${i}" aria-label="Move down">&#9660;</button></div>`;
+  // Shown groups first; the hidden ones fold under one header at the bottom
+  // (open on Hidden only or a search).
+  const shownRows = [], hiddenRows = [];
+  groupOrder.forEach((d, i) => { if (listed.has(d)) (groupHidden.has(d) ? hiddenRows : shownRows).push(row(d, i)); });
+  const open = groupHiddenOpen || $('gView').value === 'hidden' || !!q;
+  const head = hiddenRows.length ? `<h3><button data-ghtoggle="1" aria-expanded="${open}">${open ? '&#9662;' : '&#9656;'} Hidden groups (${hiddenRows.length})</button></h3>` : '';
+  $('groupOrder').innerHTML = (shownRows.join('') || (hiddenRows.length ? '<p class="dim">No shown groups here.</p>' : '<p class="dim">No groups.</p>')) +
+    head + (open ? hiddenRows.join('') : '');
   $('groupRows').innerHTML = groupData.groups.filter(g => !q || g.t.toLowerCase().includes(q) || g.d.toLowerCase().includes(q)).slice(0, 600)
     .map(g => `<tr><td>${esc(g.t)}</td><td><input data-gname="${esc(g.t)}" value="${esc(g.d)}" style="width:100%"></td><td class="dim">${g.n}</td></tr>`).join('');
 }
-$('gq').addEventListener('input', renderGroups);
+$('gq').addEventListener('input', () => { lastGroupSel = null; renderGroups(); });
+let lastGroupSel = null;
+$('groupOrder').addEventListener('click', e => {
+  if (e.target.closest && e.target.closest('[data-ghtoggle]')) { groupHiddenOpen = !groupHiddenOpen; renderGroups(); return; }
+  if (e.target.dataset.gsel === undefined) return;
+  const d = groupOrder[+e.target.dataset.gsel], on = e.target.checked;
+  const list = listedGroups();
+  if (!(e.shiftKey && lastGroupSel !== null && rangeTick(list, lastGroupSel, d, on, x => groupSel.add(x), x => groupSel.delete(x)))) on ? groupSel.add(d) : groupSel.delete(d);
+  lastGroupSel = d; renderGroups();
+});
+// Drag to reorder: only the grip starts a drag (a draggable row would
+// stop text selection in the name box). Dragging a ticked group carries
+// every ticked group, in their current order.
+let gDrag = null;
+function movedGroups(order, moving, target, after) {
+  const rest = order.filter(x => !moving.includes(x));
+  rest.splice(rest.indexOf(target) + (after ? 1 : 0), 0, ...moving);
+  return rest;
+}
+const gRowOf = el => el && el.closest ? el.closest('[data-grow]') : null;
+function clearDropMarks() { for (const r of $('groupOrder').querySelectorAll('.drop-before,.drop-after')) r.classList.remove('drop-before', 'drop-after'); }
+$('groupOrder').addEventListener('pointerdown', e => {
+  if (e.target.dataset.grip === undefined) return;
+  const row = gRowOf(e.target); if (row) row.draggable = true;
+});
+$('groupOrder').addEventListener('dragstart', e => {
+  const row = gRowOf(e.target); if (!row || !row.draggable) { e.preventDefault(); return; }
+  const d = groupOrder[+row.dataset.grow];
+  gDrag = groupSel.has(d) ? groupOrder.filter(x => groupSel.has(x)) : [d];
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', gDrag.length > 1 ? gDrag.length + ' groups' : shownOf(d)); } catch (_) {}
+  requestAnimationFrame(() => { for (const r of $('groupOrder').querySelectorAll('[data-grow]')) if (gDrag && gDrag.includes(groupOrder[+r.dataset.grow])) r.classList.add('gdrag'); });
+});
+$('groupOrder').addEventListener('dragover', e => {
+  if (!gDrag) return; const row = gRowOf(e.target); if (!row) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  const box = row.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+  clearDropMarks(); row.classList.add(after ? 'drop-after' : 'drop-before');
+});
+$('groupOrder').addEventListener('drop', e => {
+  if (!gDrag) return; const row = gRowOf(e.target); if (!row) return;
+  e.preventDefault();
+  const target = groupOrder[+row.dataset.grow], box = row.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+  if (!gDrag.includes(target)) {
+    groupOrder = hiddenLast(movedGroups(groupOrder, gDrag, target, after), groupHidden);
+    $('status').textContent = 'Moved. Press Save groups to apply on the TV.';
+  }
+  gDrag = null; renderGroups();
+});
+// A press on the grip that never became a drag.
+window.addEventListener('pointerup', () => { if (!gDrag) for (const r of $('groupOrder').querySelectorAll('[draggable=true]')) r.draggable = false; });
+$('groupOrder').addEventListener('dragend', () => {
+  gDrag = null; clearDropMarks();
+  for (const r of $('groupOrder').querySelectorAll('[data-grow]')) { r.draggable = false; r.classList.remove('gdrag'); }
+});
 $('groupOrder').addEventListener('click', e => {
   const d = e.target.dataset; const i = +(d.gup ?? d.gdn ?? -1); if (i < 0) return;
   const j = d.gup !== undefined ? i - 1 : i + 1; if (j < 0 || j >= groupOrder.length) return;
+  if (groupHidden.has(groupOrder[i]) !== groupHidden.has(groupOrder[j])) return;  // stays in its section
   [groupOrder[i], groupOrder[j]] = [groupOrder[j], groupOrder[i]]; renderGroups();
 });
 $('groupOrder').addEventListener('change', e => {
-  const sel = e.target.dataset.gsel;
-  if (sel !== undefined) { const d = groupOrder[+sel]; e.target.checked ? groupSel.add(d) : groupSel.delete(d); return; }
-  const i = e.target.dataset.gh; if (i === undefined) return; const d = groupOrder[+i]; e.target.checked ? groupHidden.add(d) : groupHidden.delete(d); });
+  if (e.target.dataset.gsel !== undefined) return;  // handled on click (Shift ranges)
+  const i = e.target.dataset.gh; if (i === undefined) return; const d = groupOrder[+i]; e.target.checked ? groupHidden.add(d) : groupHidden.delete(d);
+  groupOrder = hiddenLast(groupOrder, groupHidden); renderRegions(); renderGroups(); });
 // Shown title at load -> shown title now (renames and merges).
 function shownOf(d) { const g = groupData.groups.find(x => x.d0 === d); return g ? g.d : d; }
 $('groupOrder').addEventListener('input', e => {
@@ -719,7 +868,7 @@ $('mergeGroups').onclick = () => {
   for (const g of groupData.groups) if (picked.includes(g.d0)) g.d = name;
   groupOrder = groupOrder.filter(d => d === picked[0] || !picked.includes(d));
   if ([...groupHidden].some(d => picked.includes(d))) for (const d of picked) groupHidden.delete(d);
-  groupSel.clear(); renderGroups();
+  groupOrder = hiddenLast(groupOrder, groupHidden); groupSel.clear(); renderGroups();
   $('status').textContent = 'Merged. Press Save groups to apply on the TV.';
 };
 $('saveGroups').onclick = async () => {

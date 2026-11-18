@@ -22,6 +22,7 @@ class _AiSetting {
     this.unit = '',
     this.androidOnly = false,
     this.nextStart = false,
+    this.shown,
   });
 
   final String key;
@@ -43,6 +44,10 @@ class _AiSetting {
 
   /// Read once at launch: a change applies at the next app start.
   final bool nextStart;
+
+  /// How the TV's confirm names [value], when the choice names alone
+  /// can't (they take a number).
+  final String Function(Object value)? shown;
   final Object Function(VesperToolbox box) read;
   final Future<void> Function(VesperToolbox box, Object value) write;
 
@@ -287,6 +292,49 @@ final List<_AiSetting> _aiSettings = [
           'title.',
       (b) => _hubPlayback(b).avoidHdr,
       (b, on) => _setHubPlayback(b, avoidHdr: on)),
+  _switch(
+      'panel_keep_open',
+      'playback',
+      'Keep the side panel open',
+      'Left in the full-screen live player opens the side panel (Last '
+          'channels, My Teams, Live now); on = it stays open after a pick '
+          '(Back closes it).',
+      (b) => b.prefs.panelKeepOpen,
+      (b, on) => b.prefs.setPanelKeepOpen(on)),
+  _switch(
+      'panel_zap_on_move',
+      'playback',
+      'Switch channels while moving in the side panel',
+      'The channel changes when the side panel\'s highlight stops on it, '
+          'without OK (the panel stays open).',
+      (b) => b.prefs.panelZapOnMove,
+      (b, on) => b.prefs.setPanelZapOnMove(on)),
+  _AiSetting(
+      'dispatcharr_sources',
+      'playback',
+      'Sources in the player',
+      'Dispatcharr channels (Settings > Dispatcharr): which streams the '
+          "player's Sources lists. first = the channel, the streams "
+          "Dispatcharr merged into it, then VesperTV's own matches (quality "
+          'copies, fallbacks, other playlists); only = the channel and '
+          "Dispatcharr's streams; vesper = VesperTV's matches only.",
+      choices: const [
+        ('first', "Dispatcharr's first"),
+        ('only', "Only Dispatcharr's"),
+        ('vesper', "Only VesperTV's"),
+      ],
+      read: (b) => Dispatcharr.instance.sources.name,
+      write: (b, v) => Dispatcharr.instance
+          .setSources(DispatcharrSources.parse(v as String)),
+      androidOnly: true),
+  _switch(
+      'catchup_keep_playing',
+      'playback',
+      'Keep playing after the programme',
+      'Off = catch-up pauses when the programme picked ends; on = it keeps '
+          'going like the channel did.',
+      (b) => b.storage.getCatchupKeepPlaying(),
+      (b, on) => b.storage.setCatchupKeepPlaying(on)),
   // ---- startup
   _AiSetting('open_on', 'startup', 'Open on',
       'The part of the app it opens on after the splash.',
@@ -344,6 +392,15 @@ final List<_AiSetting> _aiSettings = [
       (b, on) => b.prefs.setBackgroundSync(on),
       nextStart: true),
   _switch(
+      'update_while_closed',
+      'startup',
+      'Update while VesperTV is closed',
+      'The guide and playlists update on their usual schedule with the app '
+          'closed.',
+      (b) => b.prefs.contentUpdates,
+      (b, on) => b.prefs.setContentUpdates(on),
+      androidOnly: true),
+  _switch(
       'launch_with_profiles',
       'startup',
       'Launch with profiles selector',
@@ -392,6 +449,16 @@ final List<_AiSetting> _aiSettings = [
       'Glass look with reflections and soft depth.',
       (b) => b.prefs.refinedFinish,
       (b, on) => b.prefs.setRefinedFinish(on)),
+  _switch(
+      'minimalist',
+      'look',
+      'Minimalist',
+      'A plain IPTV player in one switch: the classic compact Timeline '
+          'guide, groups that fold away, no Refined finish, and no Home, '
+          'profiles, Sports Trak or Media Hub; opens on TV. Off puts every '
+          'one of those back as it was. Each can still be changed by itself.',
+      (b) => b.prefs.minimalist,
+      (b, on) => b.prefs.setMinimalist(on)),
   _switch('show_clock', 'look', 'Show clock', 'The clock on screen.',
       (b) => b.prefs.showClock, (b, on) => b.prefs.setShowClock(on)),
   _switch(
@@ -437,6 +504,29 @@ final List<_AiSetting> _aiSettings = [
       'With guide_full_video: the Timeline fills the screen.',
       (b) => b.prefs.guideExpanded,
       (b, on) => b.prefs.setGuideExpanded(on)),
+  _switch(
+      'keep_groups_open',
+      'guide',
+      'Keep groups open',
+      'The TV tab\'s groups column stays open beside the channels after a '
+          'pick.',
+      (b) => b.prefs.keepGroupsOpen,
+      (b, on) => b.prefs.setKeepGroupsOpen(on)),
+  _switch(
+      'groups_follow_focus',
+      'guide',
+      'Show channels while moving through groups',
+      'Remote / keyboard: the group the highlight rests on shows its '
+          'channels without OK.',
+      (b) => b.prefs.groupsFollowFocus,
+      (b, on) => b.prefs.setGroupsFollowFocus(on)),
+  _switch(
+      'preview_badges',
+      'guide',
+      'Quality on the preview',
+      'HD / FHD / 4K and the frame rate in a corner of the guide\'s preview.',
+      (b) => b.prefs.previewBadges,
+      (b, on) => b.prefs.setPreviewBadges(on)),
   // ---- tabs
   _AiSetting(
       'ui_size',
@@ -458,12 +548,26 @@ final List<_AiSetting> _aiSettings = [
       'Same as ui_size compact (off = normal).',
       (b) => b.prefs.compactUi,
       (b, on) => b.prefs.setCompactUi(on)),
+  _switch(
+      'hide_home',
+      'tabs',
+      'Hide Home',
+      'Removes the Home tab (Home stays when it is the only page left).',
+      (b) => b.prefs.hideHome,
+      (b, on) => b.prefs.setHideHome(on)),
   _switch('hide_live_tv', 'tabs', 'Hide Live TV', 'Hides the TV tab.',
       (b) => b.prefs.hideLiveTv, (b, on) => b.prefs.setHideLiveTv(on)),
   _switch('hide_movies', 'tabs', 'Hide Movies', 'Hides the Movies tab.',
       (b) => b.prefs.hideMovies, (b, on) => b.prefs.setHideMovies(on)),
   _switch('hide_tv_shows', 'tabs', 'Hide TV Shows', 'Hides the TV Shows tab.',
       (b) => b.prefs.hideShows, (b, on) => b.prefs.setHideShows(on)),
+  _switch(
+      'hide_whats_new',
+      'tabs',
+      "Hide What's New",
+      "Movies and TV Shows open on All, without the What's New carousel.",
+      (b) => b.prefs.hideWhatsNew,
+      (b, on) => b.prefs.setHideWhatsNew(on)),
   _switch(
       'hide_sports_trak',
       'tabs',
@@ -583,6 +687,29 @@ final List<_AiSetting> _aiSettings = [
       'Score popups for My Teams on any screen.',
       (b) => b.prefs.goalsAlert,
       (b, on) => b.prefs.setGoalsAlert(on)),
+  _AiSetting(
+      'goal_alert_delay',
+      'sports',
+      'Goals alert delay',
+      'Waits before showing a goal, so the popup doesn\'t come before the '
+          'stream shows it (HLS streams often run 20 to 30 s behind).',
+      choices: const [
+        ('0', 'No delay'),
+        ('15', '15 seconds'),
+        ('30', '30 seconds'),
+        ('60', '60 seconds'),
+      ],
+      read: (b) => '${b.storage.getGoalAlertDelay()}',
+      write: (b, v) => b.storage.setGoalAlertDelay(int.parse('$v')),
+      shown: (v) => v == '0' ? tr('No delay') : tr('{n} seconds', {'n': '$v'})),
+  _switch(
+      'redzone_button',
+      'sports',
+      'NFL RedZone button',
+      'The RedZone button beside Standings, shown when a playlist has an NFL '
+          'RedZone channel.',
+      (b) => !b.storage.getSportsHideRedZone(),
+      (b, on) => b.storage.setSportsHideRedZone(!on)),
   _switch(
       'transparent_popups',
       'sports',
@@ -699,6 +826,7 @@ Object _settingValue(_AiSetting s, Object? raw) {
 
 /// [value] as the TV says it in the confirm.
 String _shownSetting(_AiSetting s, Object value) {
+  if (s.shown case final shown?) return shown(value);
   if (s.isSwitch) return tr(value == true ? 'turn on' : 'turn off');
   if (s.choices case final choices?) {
     return tr(choices.firstWhere((c) => c.$1 == value).$2);
@@ -759,6 +887,7 @@ Set<String> get vesperSettingTexts => {
           'subtitle_language',
           'media_hub_language',
           'media_hub_max_quality',
+          'goal_alert_delay',
         ].contains(s.key))
           for (final (_, name) in s.choices ?? const <(String, String)>[])
             if (name != AppConstants.sportsTabName) name,
@@ -766,6 +895,8 @@ Set<String> get vesperSettingTexts => {
       'Source default',
       'Any language',
       'Any quality',
+      'No delay',
+      '{n} seconds',
       ..._clearNames.values,
     };
 

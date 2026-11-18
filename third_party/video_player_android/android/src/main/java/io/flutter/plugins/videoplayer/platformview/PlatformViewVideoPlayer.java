@@ -91,7 +91,10 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               loadControlBuilder.setBackBuffer(backBufferInt, /* retainBackBufferFromKeyframe= */ true);
             }
           }
-          policy[0] = new OnDemandLoadControl(loadControlBuilder.build());
+          // Movies / episodes may buffer more on a box with memory to spare (remuxes).
+          policy[0] = new OnDemandLoadControl(loadControlBuilder.build(),
+              io.flutter.plugins.videoplayer.BufferBudget.onDemandBytes(context),
+              /* minBufferUs= */ 90_000_000L); // minBufferMs above
           builder.setLoadControl(policy[0]);
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);

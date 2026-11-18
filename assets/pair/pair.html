@@ -109,6 +109,10 @@
       <label for="ms-password">Password</label>
       <input id="ms-password" name="password" type="password" autocapitalize="off" spellcheck="false" maxlength="200">
       <div class="hint">Leave the password blank if your account has none.</div>
+      <div id="ms-key-row" hidden>
+        <label for="ms-key">Or your API key</label>
+        <input id="ms-key" name="key" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="Instead of the user name and password">
+      </div>
       <button class="send" id="server-send" type="submit">Send to TV</button>
       <div class="msg" id="server-msg"></div>
     </form>
@@ -163,6 +167,10 @@
   // kind the same with "server".
   var linkKind = parts[parts.length - 1] === "link";
   var serverKind = parts[parts.length - 1] === "server";
+  // "dispatcharr" (Settings > Dispatcharr): the server form, worded for it;
+  // still sends {"mode":"server"}.
+  var dispatcharrKind = parts[parts.length - 1] === "dispatcharr";
+  if (dispatcharrKind) serverKind = true;
   var photoKind = parts[parts.length - 1] === "photo";
   // "wallpaper" (Home wallpaper): the photo form, a 16:9 picture at 1920x1080.
   var wallKind = parts[parts.length - 1] === "wallpaper";
@@ -173,6 +181,9 @@
   // box, worded for them; both still send {"mode":"link"}.
   var keyKind = parts[parts.length - 1] === "key";
   var posterKind = parts[parts.length - 1] === "poster";
+  // "badges" (Stream badges): a badge pack address, Save like "poster".
+  var badgeKind = parts[parts.length - 1] === "badges";
+  if (badgeKind) posterKind = true;
   if (keyKind || posterKind) linkKind = true;
   if (linkKind || serverKind || photoKind || smbKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
@@ -227,12 +238,20 @@
       $("link").setAttribute("inputmode", "text");
       document.title = "VesperTV · Send a key";
     }
-    if (posterKind) $("link").placeholder = "https://…/{imdb_id}…";
+    if (posterKind) $("link").placeholder = badgeKind ? "https://…/badges.json" : "https://…/{imdb_id}…";
   }
   if (serverKind) {
     $("form-view").hidden = true;
     $("server-view").hidden = false;
     document.title = "VesperTV · Sign in to your server";
+    if (dispatcharrKind) {
+      $("server-view").querySelector("h1").innerHTML = "Sign in to Dispatcharr on <span>VesperTV</span>";
+      $("server-view").querySelector(".lead").textContent = "Your Dispatcharr details go straight to your TV. VesperTV keeps your API key, not the password.";
+      $("ms-server").placeholder = "http://192.168.1.10:9191";
+      $("server-view").querySelector(".hint").hidden = true;
+      $("ms-key-row").hidden = false;
+      document.title = "VesperTV · Dispatcharr";
+    }
   }
   if (smbKind) {
     relay = false;
@@ -318,6 +337,11 @@
   function collectServer() {
     var v = function (id) { return $(id).value.trim(); };
     var data = { v: 1, mode: "server", server: v("ms-server"), username: v("ms-username"), password: $("ms-password").value };
+    if (dispatcharrKind) {
+      data.key = v("ms-key").replace(/\s+/g, "");
+      if (!data.server || (!data.username && !data.key)) return "Fill in the server address, then your user name or your API key.";
+      return data;
+    }
     if (!data.server || !data.username) return "Fill in the server address and user name.";
     return data;
   }

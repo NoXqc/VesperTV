@@ -807,6 +807,35 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/98.png',
       region: 'Europe',
       soccer: true),
+  // Discord request (Jacek, 2026-11-18: more European domestic leagues):
+  // checked on ESPN's scoreboard that day.
+  SportsLeague(
+      id: 'sui.1',
+      espnPath: 'soccer/sui.1',
+      homeTags: ['ch'],
+      name: 'Swiss Super League',
+      shortName: 'SUI',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/17.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'ned.2',
+      espnPath: 'soccer/ned.2',
+      homeTags: ['nl'],
+      name: 'Eerste Divisie',
+      shortName: 'NED 2',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/105.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'irl.1',
+      espnPath: 'soccer/irl.1',
+      homeTags: ['ie'],
+      name: 'League of Ireland Premier Division',
+      shortName: 'IRL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/116.png',
+      region: 'Europe',
+      soccer: true),
   SportsLeague(
       id: 'rus.1',
       espnPath: 'soccer/rus.1',
@@ -839,6 +868,30 @@ const List<SportsLeague> kSportsLeagueBank = [
       name: 'Swedish Allsvenskan',
       shortName: 'ALLSV',
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/16.png',
+      region: 'Europe',
+      soccer: true),
+  // Not on ESPN at all: TheSportsDB (Jacek, Discord 2026-11-18: Wisła
+  // Kraków plays in I liga). Fixtures checked that day.
+  SportsLeague(
+      id: 'pol.1',
+      espnPath: 'soccer/pol.1',
+      homeTags: ['pl'],
+      sportsDbId: '4422',
+      name: 'Ekstraklasa',
+      shortName: 'EKS',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/l3jovw1516960585.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'pol.2',
+      espnPath: 'soccer/pol.2',
+      homeTags: ['pl'],
+      sportsDbId: '4661',
+      name: 'Polish I liga',
+      shortName: 'I LIGA',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/kf2y521760289353.png',
       region: 'Europe',
       soccer: true),
   // Not on ESPN (its rou.1 stopped updating in 2025): TheSportsDB instead,

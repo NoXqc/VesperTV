@@ -36,8 +36,28 @@ public final class OnDemandLoadControl implements LoadControl {
     defaultLiveReserveUs = Math.max(0, ms) * 1000L;
   }
 
+  /**
+   * Movies / episodes: a bigger byte cap than the delegate's on a box with memory to spare
+   * (BufferBudget.onDemandBytes; 0 = the delegate's). Media3's default (~140 MB) is 11 s of a
+   * 100 Mbit/s 4K remux; the 90 s time target is never reached at that bitrate, so bytes decide
+   * (owner, 2026-11-17: remux buffering). Only applies under [minBufferUs].
+   */
+  private final long onDemandBytes;
+  private final long minBufferUs;
+
   public OnDemandLoadControl(DefaultLoadControl delegate) {
+    this(delegate, 0, 0);
+  }
+
+  public OnDemandLoadControl(DefaultLoadControl delegate, long onDemandBytes, long minBufferUs) {
     this.delegate = delegate;
+    this.onDemandBytes = onDemandBytes;
+    this.minBufferUs = minBufferUs;
+  }
+
+  /** Send log: the movie byte cap in use, 0 when the delegate's applies. */
+  public long onDemandBytesInUse() {
+    return onDemand ? onDemandBytes : 0;
   }
 
   /** Dart supplies Channel.isLive classification; never guess from URL or duration. */
@@ -79,7 +99,11 @@ public final class OnDemandLoadControl implements LoadControl {
     return delegate.retainBackBufferFromKeyframe(id);
   }
   @Override public boolean shouldContinueLoading(Parameters p) {
-    return delegate.shouldContinueLoading(p);
+    boolean go = delegate.shouldContinueLoading(p);
+    if (go || !onDemand || onDemandBytes <= 0 || p.bufferedDurationUs >= minBufferUs) return go;
+    // Under the time target, so the delegate stopped on its byte cap: a movie keeps loading
+    // up to its own, bigger one.
+    return delegate.getAllocator(p.playerId).getTotalBytesAllocated() < onDemandBytes;
   }
   @Override public boolean shouldContinuePreloading(PlayerId id, Timeline timeline,
       MediaPeriodId period, long bufferedUs) {

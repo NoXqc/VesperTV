@@ -102,6 +102,47 @@ public final class OnDemandLoadControlTest {
     assertTrue(control.shouldStartPlayback(parameters(500_000, true, 1)));
   }
 
+  /** A main player whose movies may use 4 segments where the delegate's cap is 2. */
+  private OnDemandLoadControl biggerMovieCap(PlayerId player) {
+    OnDemandLoadControl bigger = new OnDemandLoadControl(new DefaultLoadControl.Builder()
+        .setBufferDurationsMs(90_000, 120_000, 500, 500)
+        .setTargetBufferBytes(2 * C.DEFAULT_BUFFER_SEGMENT_SIZE).build(),
+        4 * C.DEFAULT_BUFFER_SEGMENT_SIZE, 90_000_000L);
+    bigger.onPrepared(player);
+    bigger.onTracksSelected(new Parameters(player, timeline,
+        new MediaPeriodId(timeline.getUidOfPeriod(0)), 0, 0, 1, true, false,
+        C.TIME_UNSET, C.TIME_UNSET), TrackGroupArray.EMPTY, new ExoTrackSelection[0]);
+    return bigger;
+  }
+
+  @Test public void moviesKeepLoadingPastTheDelegatesByteCapUpToTheirOwn() {
+    OnDemandLoadControl bigger = biggerMovieCap(id);
+    PlayerIdAwareAllocator a = (PlayerIdAwareAllocator) bigger.getAllocator(id);
+    a.setPlayerId(id);
+    List<Allocation> held = new ArrayList<>();
+    try {
+      bigger.setOnDemand(true);
+      assertEquals(4L * C.DEFAULT_BUFFER_SEGMENT_SIZE, bigger.onDemandBytesInUse());
+      held.add(a.allocate());
+      held.add(a.allocate());
+      // The delegate's cap is reached, the movie's isn't.
+      assertTrue(bigger.shouldContinueLoading(parameters(11_000_000, false, 1)));
+      held.add(a.allocate());
+      held.add(a.allocate());
+      assertFalse(bigger.shouldContinueLoading(parameters(11_000_000, false, 1)));
+      // Live keeps the delegate's cap.
+      a.release(held.remove(held.size() - 1));
+      a.release(held.remove(held.size() - 1));
+      bigger.setOnDemand(false);
+      assertEquals(0, bigger.onDemandBytesInUse());
+      assertFalse(bigger.shouldContinueLoading(parameters(11_000_000, false, 1)));
+    } finally {
+      for (Allocation allocation : held) a.release(allocation);
+      bigger.onStopped(id);
+      bigger.onReleased(id);
+    }
+  }
+
   @Test public void clearingVodModeRestoresTheLiveThreshold() {
     control.setOnDemand(true);
     assertFalse(control.shouldStartPlayback(parameters(500_000, false, 1)));

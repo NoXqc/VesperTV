@@ -175,8 +175,15 @@ Map<String, Object?> _guideStatus(VesperToolbox box, String playlist) {
                   'host': _guideHost(urls[i]),
                   // 0 = its channel list isn't loaded in this app run yet.
                   'channels': box.epg.channelsFromSource(urls[i]).length,
+                  // The channels it gave programmes to in the last update
+                  // (an earlier guide keeps the channels it fills).
+                  if (box.epg.filledCount(urls[i]) case final n?) 'filled': n,
                 }
             ],
+            if (urls.length > 1)
+              'order': 'Guides load in this order: a channel the first one '
+                  'fills keeps it, the next ones only fill the channels '
+                  'still empty (move_guide changes the order).',
             'live_channels': visible.length,
             if (ready)
               'without_guide':
@@ -449,6 +456,73 @@ Future<Map<String, Object?>> _guideRemove(VesperToolbox box,
     'change_id': change.id,
     'note': 'Channels linked to that guide lose their guide data at the next '
         'update unless another guide has the same ids.',
+    'undo': 'epg_matching action "undo" with change_id "${change.id}".',
+  };
+}
+
+/// Settings > EPG > More guides' Move up for AI apps: the guides load in
+/// order and an earlier one keeps the channels it fills, so the order is
+/// the priority. The playlist's own guide stays first (n 1).
+Future<Map<String, Object?>> _guideMove(VesperToolbox box,
+    Map<String, Object?> args, VesperCaller caller, bool preview) async {
+  final s = _guideSession(box, _str(args, 'playlist'));
+  final urls = editorGuideUrls(s.profile);
+  final n = _int(args, 'guide', 0, min: 0, max: 99);
+  if (n < 1 || n > urls.length) {
+    throw VesperToolError('guide is the n from status (1..${urls.length}).');
+  }
+  final url = urls[n - 1];
+  if (url == s.profile.epgUrl) {
+    throw VesperToolError('That is the playlist\'s own guide: it always '
+        'loads first. Move the extra guides around it.');
+  }
+  final before = List<String>.from(s.profile.extraEpgUrls);
+  final from = before.indexOf(url);
+  final to = _str(args, 'to');
+  if (to.isEmpty) {
+    throw VesperToolError('Give to: top, bottom, up, down or a position n '
+        'from status.');
+  }
+  // Positions are status' n; the extras start after the own guide.
+  final first = urls.length - before.length + 1;
+  final position = int.tryParse(to);
+  final target = position != null
+      ? (position - first).clamp(0, before.length - 1)
+      : _moveTarget(
+          to, from, before.length, _int(args, 'steps', 1, min: 1, max: 5));
+  if (target == from) {
+    return {'changed': false, 'note': 'That guide is already there.'};
+  }
+  final after = [...before]
+    ..removeAt(from)
+    ..insert(target, url);
+  final order = [
+    for (final u in [...urls.take(first - 1), ...after]) _guideHost(u)
+  ];
+  if (preview) {
+    return {'preview': true, 'playlist': s.profile.name, 'order': order};
+  }
+  if (box.restrictedViewer) {
+    throw VesperToolError('This profile cannot change playlists.');
+  }
+  await _confirmRemote(
+      box,
+      caller,
+      'An AI app wants to change the order of the TV guides of {playlist}.',
+      {'playlist': s.profile.name});
+  await box.playlist.updatePlaylist(s.profile.copyWith(extraEpgUrls: after));
+  final log = _guideLog(box);
+  final change = log.add(
+      'move guide ${_guideHost(url)} to ${target + first} in '
+      '${s.profile.name}',
+      guides: {s.profile.id: (before, after)});
+  await _saveGuideLog(box, log);
+  _reloadGuideSoon(box);
+  return {
+    'changed': true,
+    'change_id': change.id,
+    'order': order,
+    'note': 'The guide reloads in about 20 s with the new order.',
     'undo': 'epg_matching action "undo" with change_id "${change.id}".',
   };
 }
@@ -730,6 +804,8 @@ Future<Map<String, Object?>> _runEpgMatching(
       return _guideAdd(box, args, caller, preview);
     case 'remove_guide':
       return _guideRemove(box, args, caller, preview);
+    case 'move_guide':
+      return _guideMove(box, args, caller, preview);
     case 'link':
       return _guideLink(box, args, caller, preview);
     case 'unlink':
@@ -748,9 +824,12 @@ const _epgMatchingTool = VesperTool(
       'add an XMLTV guide link to a playlist (or borrow another playlist\'s '
       'guide), get guide matches for the channels without guide data '
       '(prefixes, spelling and spacing differences handled, a score and '
-      'what airs now on each), and link channels to guide channels. Every '
-      'change returns a change_id and can be undone. Call vesper_help topic '
-      '"epg_matching" first.',
+      'what airs now on each), and link channels to guide channels. A '
+      'playlist has its own guide and up to five extra guides (Settings > '
+      'EPG > More guides): add, remove or reorder them (they load in order, '
+      'an earlier guide keeps the channels it fills). Every change returns '
+      'a change_id and can be undone. Call vesper_help topic "epg_matching" '
+      'first.',
   schema: {
     'type': 'object',
     'properties': {
@@ -762,6 +841,7 @@ const _epgMatchingTool = VesperTool(
           'find_guide',
           'add_guide',
           'remove_guide',
+          'move_guide',
           'link',
           'unlink',
           'undo',
@@ -783,7 +863,17 @@ const _epgMatchingTool = VesperTool(
       },
       'guide': {
         'type': 'integer',
-        'description': 'remove_guide: the guide\'s n from status.',
+        'description': 'remove_guide / move_guide: the guide\'s n from '
+            'status.',
+      },
+      'to': {
+        'type': 'string',
+        'description': 'move_guide: top, bottom, up, down or a position n '
+            '(as in status; the playlist\'s own guide stays first).',
+      },
+      'steps': {
+        'type': 'integer',
+        'description': 'move_guide up / down: how many places (default 1).',
       },
       'preview': {
         'type': 'boolean',

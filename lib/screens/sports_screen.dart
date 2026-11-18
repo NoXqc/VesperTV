@@ -2012,27 +2012,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _pickChannel(SportsGame game,
       [Future<void> Function(Channel, SportsGame)? watch]) async {
-    final channel = await Navigator.of(context).push<Channel>(
-      MaterialPageRoute(
-        builder: (_) => _ChannelPickerScreen(game: game, matcher: _matcher),
-      ),
-    );
+    final channel = await pickChannelForGame(context, game, _matcher);
     if (channel == null || !mounted) return;
-    final scope = await showGlassMenu<_PickScope>(
-      context: context,
-      builder: (_) => _PickScopeDialog(game: game, channel: channel),
-    );
-    if (scope == null || !mounted) return;
-    switch (scope) {
-      case _PickScope.game:
-        await _picks.pickForGame(game, channel.id);
-      case _PickScope.first when game.league.kind != SportsKind.team:
-        await _picks.pickForSeries(game, channel.id);
-      case _PickScope.first:
-        await _picks.pickForTeam(game, game.first, channel.id);
-      case _PickScope.second:
-        await _picks.pickForTeam(game, game.second, channel.id);
-    }
     await _rematch();
     if (!mounted) return;
     await (watch ?? _watch)(channel, game);
@@ -3822,14 +3803,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Not a lazy ListView: Down focuses a card in the next row, and with the
     // coming days' rows that row could be off screen and unbuilt, so the
     // focus stayed put (CLAUDE.md §10). Each row is still a lazy list.
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 8, bottom: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (i, s) in sections.indexed)
-            _buildSection(s, preview, _firstRowZone + i),
-        ],
+    // The page clips above and below only: its own clip cut the left frame
+    // off a row's focused first card (1.05 zoom past the page's edge, into
+    // its margin; owner photo, regular Sports Trak, 2026-11-16). The rows
+    // still clip their sides (_RowSideClipper).
+    return ClipRect(
+      clipper: _PageClipper(_zoomRoom(context) + 4),
+      child: SingleChildScrollView(
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(top: 8, bottom: 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, s) in sections.indexed)
+              _buildSection(s, preview, _firstRowZone + i),
+          ],
+        ),
       ),
     );
   }
@@ -4066,7 +4055,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                 // the Sports Mode Live TV groups (owner photo, 1.0.51): clip
                 // the sides just past the zoom room, never top/bottom.
                 child: ClipRect(
-                  clipper: const _RowSideClipper(),
+                  clipper: _RowSideClipper(_zoomRoom(context) + 4),
                   child: ListView(
                     controller: _rowScrolls[s.id],
                     scrollDirection: Axis.horizontal,
@@ -4074,7 +4063,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     // Room for the focused card's 1.05 zoom: the page's scroll
                     // view clipped its left edge in Sports Mode (owner photo).
                     padding: _modeActive
-                        ? const EdgeInsets.symmetric(horizontal: 8)
+                        ? EdgeInsets.symmetric(horizontal: _zoomRoom(context))
                         : null,
                     children: [
                       for (final (k, g) in s.games.indexed) ...[
@@ -4131,15 +4120,38 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 /// A game row's clip: 10 px past each side (the focused card's 1.05 zoom),
 /// unbounded above and below (the zoom and the hold hint).
 class _RowSideClipper extends CustomClipper<Rect> {
-  const _RowSideClipper();
+  const _RowSideClipper(this.margin);
+
+  final double margin;
 
   @override
   Rect getClip(Size size) =>
-      Rect.fromLTRB(-10, -1000, size.width + 10, size.height + 1000);
+      Rect.fromLTRB(-margin, -1000, size.width + margin, size.height + 1000);
 
   @override
-  bool shouldReclip(_RowSideClipper oldClipper) => false;
+  bool shouldReclip(_RowSideClipper oldClipper) => oldClipper.margin != margin;
 }
+
+/// The regular Sports Trak page's clip: its top and bottom (rows scroll
+/// under the hero), [margin] past each side for a focused card's zoom.
+class _PageClipper extends CustomClipper<Rect> {
+  const _PageClipper(this.margin);
+
+  final double margin;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(-margin, 0, size.width + margin, size.height);
+
+  @override
+  bool shouldReclip(_PageClipper oldClipper) => oldClipper.margin != margin;
+}
+
+/// How far a focused game card's 1.05 zoom reaches past its side, plus its
+/// frame. Cards grow with the text size: at a large one the fixed 8-10 px
+/// cut the focused card's left frame off (user photo, Homatics, 2026-11-16).
+double _zoomRoom(BuildContext context) =>
+    (_GameCard.widthOf(context) * 0.025).ceilToDouble() + 4;
 
 /// Between two leagues' blocks in a game row: the league's logo and short
 /// name over a thin line. Not focusable (row navigation is by game).
@@ -6307,6 +6319,40 @@ class _ChannelLogo extends StatelessWidget {
   }
 }
 
+/// "Choose a different channel" for [game]: the channel search (team-name
+/// chips + any word), then "Remember this channel?" (this game, a team or
+/// the series), saved as the game's pick. The channel picked, null =
+/// cancelled at either step. Sports Trak's game menu and the full-screen
+/// player's Sources drawer (a provider naming its channels differently,
+/// 2026-11-18) share it; the caller plays the channel.
+Future<Channel?> pickChannelForGame(
+    BuildContext context, SportsGame game, SportsChannelMatcher matcher) async {
+  final storage = context.read<StorageService>();
+  final channel = await Navigator.of(context).push<Channel>(
+    MaterialPageRoute(
+      builder: (_) => _ChannelPickerScreen(game: game, matcher: matcher),
+    ),
+  );
+  if (channel == null || !context.mounted) return null;
+  final scope = await showGlassMenu<_PickScope>(
+    context: context,
+    builder: (_) => _PickScopeDialog(game: game, channel: channel),
+  );
+  if (scope == null) return null;
+  final picks = SportsChannelPicks.load(storage);
+  switch (scope) {
+    case _PickScope.game:
+      await picks.pickForGame(game, channel.id);
+    case _PickScope.first when game.league.kind != SportsKind.team:
+      await picks.pickForSeries(game, channel.id);
+    case _PickScope.first:
+      await picks.pickForTeam(game, game.first, channel.id);
+    case _PickScope.second:
+      await picks.pickForTeam(game, game.second, channel.id);
+  }
+  return channel;
+}
+
 enum _PickScope { game, first, second }
 
 class _PickScopeDialog extends StatelessWidget {
@@ -6419,6 +6465,12 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 : {
                     g.first.shortName,
                     g.second.shortName,
+                    // Both team codes ("TOR BOS" finds "TOR @ BOS"; GiladG2,
+                    // Discord 2026-11-18).
+                    if (g.first.abbreviation.trim().length >= 2 &&
+                        g.second.abbreviation.trim().length >= 2)
+                      '${g.first.abbreviation.trim()} '
+                          '${g.second.abbreviation.trim()}',
                     g.league.shortName,
                     ...g.broadcasts.take(4),
                   })

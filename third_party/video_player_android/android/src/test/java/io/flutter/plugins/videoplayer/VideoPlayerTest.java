@@ -281,6 +281,34 @@ public final class VideoPlayerTest {
   }
 
   @Test
+  public void bufferingRightAfterASeekIsASeekWaitNotAFreeze() {
+    VideoPlayer videoPlayer = createVideoPlayer();
+    verify(mockExoPlayer, atLeastOnce()).addListener(listenerCaptor.capture());
+    // The stall counter is the last listener the constructor registers.
+    List<Player.Listener> listeners = listenerCaptor.getAllValues();
+    Player.Listener stallCounter = listeners.get(listeners.size() - 1);
+    when(mockExoPlayer.getPlayWhenReady()).thenReturn(true);
+    when(mockExoPlayer.getCurrentPosition()).thenReturn(600_000L);
+    when(mockExoPlayer.getTotalBufferedDuration()).thenReturn(0L);
+
+    stallCounter.onPlaybackStateChanged(Player.STATE_BUFFERING);
+    stallCounter.onPlaybackStateChanged(Player.STATE_READY);
+    assertEquals(1, videoPlayer.stalls);
+    assertEquals(0, videoPlayer.seekWaits);
+    assertEquals(600_000L, videoPlayer.lastStallPosMs);
+
+    Player.PositionInfo at =
+        new Player.PositionInfo(null, 0, null, null, 0, 600_000L, 600_000L, -1, -1);
+    stallCounter.onPositionDiscontinuity(at, at, Player.DISCONTINUITY_REASON_SEEK);
+    stallCounter.onPlaybackStateChanged(Player.STATE_BUFFERING);
+    stallCounter.onPlaybackStateChanged(Player.STATE_READY);
+    assertEquals(1, videoPlayer.stalls);
+    assertEquals(1, videoPlayer.seekWaits);
+
+    videoPlayer.dispose();
+  }
+
+  @Test
   public void disposeReleasesExoPlayer() {
     VideoPlayer videoPlayer = createVideoPlayer();
 

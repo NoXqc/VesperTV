@@ -296,6 +296,24 @@ const Map<String, String> kEl = {
   "Don't show this again": "Να μην εμφανιστεί ξανά",
   "OK": "OK",
   "Couldn't start that channel": "Δεν ήταν δυνατή η έναρξη του καναλιού",
+  'This box can\'t decode this many full-HD screens at once. Close a screen, or pick an HD or SD version of a channel.':
+      "Αυτή η συσκευή δεν μπορεί να αποκωδικοποιήσει τόσες οθόνες Full HD ταυτόχρονα. Κλείστε μια οθόνη ή επιλέξτε μια έκδοση HD ή SD ενός καναλιού.",
+  'For 3 or 4 screens, 720p channels play smoothest.':
+      "Με 3 ή 4 οθόνες, τα κανάλια 720p παίζουν πιο ομαλά.",
+  'Screen {n} now plays a 720p copy: {name}':
+      "Η οθόνη {n} παίζει τώρα ένα αντίγραφο 720p: {name}",
+  'Multiview frame saver':
+      "Εξοικονόμηση καρέ Multiview",
+  'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.':
+      "Οι οθόνες Multiview χωρίς ήχο παραλείπουν ένα καρέ στα δύο (ένα κανάλι 50 fps παίζει στα 25), ώστε η συσκευή να αποκωδικοποιεί περισσότερες οθόνες ταυτόχρονα. Η οθόνη με τον ήχο δείχνει πάντα όλα τα καρέ. Αυτόματο: μόνο όταν η συσκευή δεν προλαβαίνει.",
+  'Always':
+      "Πάντα",
+  'Auto (on)':
+      "Αυτόματο (ενεργό)",
+  'Frame saver':
+      "Εξοικονόμηση καρέ",
+  'Frame saver on: silent screens skip every other frame so this box can keep up.':
+      "Εξοικονόμηση καρέ ενεργή: οι οθόνες χωρίς ήχο παραλείπουν ένα καρέ στα δύο για να προλαβαίνει η συσκευή.",
   "Full screen": "Πλήρης οθόνη",
   "Windowed": "Σε παράθυρο",
   "4 screens": "4 οθόνες",
@@ -1057,6 +1075,13 @@ const Map<String, String> kEl = {
   'Search groups': 'Αναζήτηση ομάδων',
   "Countries": "Χώρες",
   "Countries and prefixes": "Χώρες και προθέματα",
+  "{count} hidden": "{count} κρυφές",
+  "Shown groups": "Εμφανείς ομάδες",
+  "Hidden groups": "Κρυφές ομάδες",
+  "No groups here.": "Δεν υπάρχουν ομάδες εδώ.",
+  "Hide every group": "Απόκρυψη όλων των ομάδων",
+  "Then select the countries to keep.": "Μετά επιλέξτε τις χώρες που θα κρατήσετε.",
+  "All hidden. Select the countries to keep.": "Όλα κρυφά. Επιλέξτε τις χώρες που θα κρατήσετε.",
   "Found at the start of the group names. Select one to show or hide all its groups at once.": "Βρέθηκαν στην αρχή των ονομάτων των ομάδων. Επιλέξτε μία για να εμφανίσετε ή να κρύψετε όλες τις ομάδες της μαζί.",
   "1 group": "1 ομάδα",
   "{count} groups": "{count} ομάδες",
@@ -1497,6 +1522,7 @@ const Map<String, String> kEl = {
       "Ελέγξτε τον σύνδεσμο εδώ και πατήστε Προσθήκη.",
   "Hide Movies": "Απόκρυψη Ταινιών",
   "Hide TV Shows": "Απόκρυψη Σειρών",
+  "Hide What's New": "Απόκρυψη «Τι νέο υπάρχει»",
   "Hide Recordings": "Απόκρυψη εγγραφών",
   "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
       "Η πληκτρολόγηση ενός κλειδιού με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε το κλειδί εκεί — εμφανίζεται εδώ για έλεγχο και αποθήκευση.",
@@ -1511,6 +1537,8 @@ const Map<String, String> kEl = {
       "Αφαιρεί την καρτέλα Ταινίες και τα αποτελέσματα αναζήτησης ταινιών.",
   "Removes the TV Shows tab and show search results.":
       "Αφαιρεί την καρτέλα Σειρές και τα αποτελέσματα αναζήτησης σειρών.",
+  "Removes What's New from Movies and TV Shows: they open on All.":
+      "Αφαιρεί το «Τι νέο υπάρχει» από Ταινίες και Σειρές: ανοίγουν στο Όλα.",
   "Removes the Recordings tab.": "Αφαιρεί την καρτέλα Εγγραφές.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Η πληκτρολόγηση ενός μεγάλου συνδέσμου με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε τον σύνδεσμο εκεί — εμφανίζεται εδώ για έλεγχο και προσθήκη.",
@@ -1740,6 +1768,9 @@ const Map<String, String> kEl = {
   // Fast startup
   "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
       "Πατήστε Πίσω για να χρησιμοποιήσετε την εφαρμογή τώρα. Οι Ταινίες και οι Σειρές συνεχίζουν να ενημερώνονται στο παρασκήνιο.",
+  "Update while VesperTV is closed": "Ενημέρωση όταν το VesperTV είναι κλειστό",
+  "The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.":
+      "Ο οδηγός και οι λίστες σας ενημερώνονται με το συνηθισμένο πρόγραμμα ακόμα και με την εφαρμογή κλειστή, ώστε να είναι έτοιμα όταν την ανοίξετε. Ορισμένες συσκευές το διακόπτουν σε αναμονή.",
   "Update in the background": "Ενημέρωση στο παρασκήνιο",
   "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
       "Όταν πρέπει να ενημερωθεί το περιεχόμενο, ανοίγει αμέσως η Ζωντανή τηλεόραση και οι Ταινίες και οι Σειρές ενημερώνονται στο παρασκήνιο. Συμπληρώνονται τα επόμενα λεπτά και το τηλεχειριστήριο μπορεί να φαίνεται πιο αργό μέχρι να τελειώσει. Ισχύει από την επόμενη εκκίνηση.",
@@ -3804,4 +3835,149 @@ const Map<String, String> kEl = {
       "Αφαιρεί την καρτέλα Αρχική.",
   "Press Menu again to go to the Apple TV Home screen.":
       "Πατήστε ξανά Menu για να επιστρέψετε στην αρχική οθόνη του Apple TV.",
+  // Vesper AI settings tool + guide order (2026-11-14).
+  "Hide Home":
+      "Απόκρυψη Αρχικής",
+  "An AI app wants to change the order of the TV guides of {playlist}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει τη σειρά των οδηγών TV του {playlist}.",
+  "No other source for this channel.":
+      "Δεν υπάρχει άλλη πηγή για αυτό το κανάλι.",
+  "Add another source":
+      "Προσθήκη άλλης πηγής",
+  "Any channel, any playlist: tried first if this one fails":
+      "Οποιοδήποτε κανάλι, οποιαδήποτε λίστα: δοκιμάζεται πρώτη αν αυτή αποτύχει",
+  "Another source for {channel}":
+      "Άλλη πηγή για {channel}",
+  "That source is already on the list.":
+      "Αυτή η πηγή είναι ήδη στη λίστα.",
+  "Type a channel name.":
+      "Πληκτρολογήστε όνομα καναλιού.",
+  "Showing the first {n}. Type more to narrow it down.":
+      "Εμφανίζονται τα πρώτα {n}. Πληκτρολογήστε περισσότερα για να περιορίσετε.",
+  // Stream badges (2026-11-16).
+  "Stream badges":
+      "Σήματα πηγών",
+  "Picture badges on Media Hub sources (4K, HDR, Atmos…)":
+      "Σήματα με εικόνα στις πηγές του Media Hub (4K, HDR, Atmos…)",
+  "Saved. Media Hub sources now show these badges.":
+      "Αποθηκεύτηκε. Οι πηγές του Media Hub δείχνουν τώρα αυτά τα σήματα.",
+  "This address is not a badge pack.":
+      "Αυτή η διεύθυνση δεν είναι πακέτο σημάτων.",
+  "Could not download the badge pack ({error}).":
+      "Δεν ήταν δυνατή η λήψη του πακέτου σημάτων ({error}).",
+  "Show picture badges such as 4K, Dolby Vision or Atmos on Media Hub sources. Paste the address of a badge pack made for Nuvio or Fusion (their badge URL).":
+      "Εμφάνιση σημάτων με εικόνα όπως 4K, Dolby Vision ή Atmos στις πηγές του Media Hub. Επικολλήστε τη διεύθυνση ενός πακέτου σημάτων για Nuvio ή Fusion (το URL σημάτων τους).",
+  "Without a pack, sources show VesperTV's own tags. Leave empty to turn it off.":
+      "Χωρίς πακέτο, οι πηγές δείχνουν τις ετικέτες του VesperTV. Αφήστε το κενό για απενεργοποίηση.",
+  "Badge pack address":
+      "Διεύθυνση πακέτου σημάτων",
+  "{n} badges in this pack":
+      "{n} σήματα σε αυτό το πακέτο",
+  "{n} could not be read and are left out.":
+      "{n} δεν διαβάστηκαν και παραλείπονται.",
+  "Stream badges saved: {n} badges. Turn them on or off under Stream badges.":
+      "Τα σήματα πηγών αποθηκεύτηκαν: {n} σήματα. Ενεργοποιήστε ή απενεργοποιήστε τα στα Σήματα πηγών.",
+  "Badge pack removed: sources show VesperTV's own tags.":
+      "Το πακέτο σημάτων αφαιρέθηκε: οι πηγές δείχνουν τις ετικέτες του VesperTV.",
+  "Show stream badges":
+      "Εμφάνιση σημάτων πηγών",
+  "Change badge pack":
+      "Αλλαγή πακέτου σημάτων",
+  "Add a badge pack":
+      "Προσθήκη πακέτου σημάτων",
+  "Its address, typed or from your phone":
+      "Η διεύθυνσή του, πληκτρολογημένη ή από το κινητό σας",
+  "Remove badge pack":
+      "Αφαίρεση πακέτου σημάτων",
+  "Sources show VesperTV's own tags":
+      "Οι πηγές δείχνουν τις ετικέτες του VesperTV",
+  "Every stream of a channel in the player's Sources":
+      "Όλες οι ροές ενός καναλιού στις Πηγές της αναπαραγωγής",
+  "Dispatcharr switched the channel to {stream}.": "Το Dispatcharr άλλαξε το κανάλι σε {stream}.",
+  "Dispatcharr refused the saved sign-in. Sign in again.":
+      "Το Dispatcharr απέρριψε την αποθηκευμένη σύνδεση. Συνδεθείτε ξανά.",
+  "Dispatcharr doesn't answer right now.":
+      "Το Dispatcharr δεν απαντά αυτή τη στιγμή.",
+  "Couldn't find a Dispatcharr server at that address.":
+      "Δεν βρέθηκε διακομιστής Dispatcharr σε αυτή τη διεύθυνση.",
+  "Connected to {server} as {user}":
+      "Συνδέθηκε στο {server} ως {user}",
+  "No playlist loads from this server yet.":
+      "Καμία λίστα δεν φορτώνει ακόμα από αυτόν τον διακομιστή.",
+  "Playlists on this server: {names}":
+      "Λίστες σε αυτόν τον διακομιστή: {names}",
+  "In the player, Sources lists every stream Dispatcharr has for the channel. Picking one plays it for you only: other viewers keep theirs.":
+      "Στην αναπαραγωγή, οι Πηγές δείχνουν όλες τις ροές που έχει το Dispatcharr για το κανάλι. Η επιλογή ισχύει μόνο για εσάς: οι άλλοι θεατές κρατούν τη δική τους.",
+  "Add as a playlist":
+      "Προσθήκη ως λίστα",
+  "Sources in the player":
+      "Πηγές στο πρόγραμμα αναπαραγωγής",
+  "Which streams Sources lists for a Dispatcharr channel":
+      "Ποιες ροές δείχνουν οι Πηγές για ένα κανάλι Dispatcharr",
+  "Dispatcharr's first":
+      "Πρώτα του Dispatcharr",
+  "Then VesperTV's matches: quality copies, fallbacks, other playlists":
+      "Μετά όσες βρίσκει το VesperTV: αντίγραφα άλλης ποιότητας, εφεδρικές, άλλες λίστες",
+  "Only Dispatcharr's":
+      "Μόνο του Dispatcharr",
+  "The channel and the streams you assigned to it in Dispatcharr":
+      "Το κανάλι και οι ροές που του όρισες στο Dispatcharr",
+  "Only VesperTV's":
+      "Μόνο του VesperTV",
+  "Quality copies, fallbacks and other playlists, as without Dispatcharr":
+      "Αντίγραφα άλλης ποιότητας, εφεδρικές και άλλες λίστες, όπως χωρίς Dispatcharr",
+  "An AI app wants to save the network folder {folder}.":
+      "Μια εφαρμογή AI θέλει να αποθηκεύσει τον φάκελο δικτύου {folder}.",
+  "An AI app wants to forget the network folder {folder}.":
+      "Μια εφαρμογή AI θέλει να ξεχάσει τον φάκελο δικτύου {folder}.",
+  "Select…":
+      "Επιλογή…",
+  "Stop selecting":
+      "Τέλος επιλογής",
+  "{count} added to Favourites":
+      "{count} προστέθηκαν στα Αγαπημένα",
+  "{count} removed from Favourites":
+      "{count} αφαιρέθηκαν από τα Αγαπημένα",
+  "Add to group…":
+      "Προσθήκη σε ομάδα…",
+  "Add {count} channels to":
+      "Προσθήκη {count} καναλιών σε",
+  "{count} added to {group}":
+      "{count} προστέθηκαν στο {group}",
+  "{count} selected · OK: tick · Hold OK: add them · Back: done":
+      "{count} επιλεγμένα · OK: σημείωση · Κράτα OK: προσθήκη · Πίσω: τέλος",
+  "Subscription ended":
+      "Η συνδρομή έληξε",
+  "Subscription ends today":
+      "Η συνδρομή λήγει σήμερα",
+  "Subscription ends tomorrow":
+      "Η συνδρομή λήγει αύριο",
+  "Subscription ends in {days} days":
+      "Η συνδρομή λήγει σε {days} ημέρες",
+  "Renew with your provider so it keeps playing.":
+      "Ανανέωσε με τον πάροχό σου για να συνεχίσει η αναπαραγωγή.",
+  "Add another playlist from it":
+      "Προσθήκη άλλης λίστας από αυτόν",
+  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
+      "Το Dispatcharr συγκεντρώνει πολλές ροές παρόχων σε κάθε κανάλι. Συνδεθείτε για να δείτε και να επιλέξετε αυτές τις ροές από τις Πηγές της αναπαραγωγής.",
+  "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
+      "Ο κωδικός σας στέλνεται μόνο στον διακομιστή σας, μία φορά. Το VesperTV κρατά το κλειδί API του Dispatcharr (ένα υπάρχον επαναχρησιμοποιείται, δεν αντικαθίσταται ποτέ), όχι τον κωδικό.",
+  "Too many tries. Wait a minute, then connect again.":
+      "Πάρα πολλές προσπάθειες. Περιμένετε ένα λεπτό και συνδεθείτε ξανά.",
+  "This Dispatcharr user has no XC password, so it would be added as an M3U playlist. For an Xtream playlist (steadier, with catch-up, movies and shows), give the user an XC password in Dispatcharr (Users > Edit), then come back here.":
+      "Αυτός ο χρήστης Dispatcharr δεν έχει κωδικό XC, οπότε θα προστεθεί ως λίστα M3U. Για λίστα Xtream (πιο σταθερή, με catch-up, ταινίες και σειρές), δώστε στον χρήστη κωδικό XC στο Dispatcharr (Users > Edit) και επιστρέψτε εδώ.",
+  "Enter the server address, then your user name and password or your API key.":
+      "Εισαγάγετε τη διεύθυνση του διακομιστή και μετά το όνομα χρήστη και τον κωδικό ή το κλειδί API.",
+  "Dispatcharr refused this API key.":
+      "Το Dispatcharr απέρριψε αυτό το κλειδί API.",
+  "Or your API key":
+      "Ή το κλειδί API σας",
+  "Instead of the user name and password":
+      "Αντί για όνομα χρήστη και κωδικό",
+  "Your Dispatcharr only allows the password sign-in from some networks. Use your API key instead.":
+      "Το Dispatcharr σας επιτρέπει τη σύνδεση με κωδικό μόνο από ορισμένα δίκτυα. Χρησιμοποιήστε το κλειδί API.",
+  "Dispatcharr refused the sign-in (HTTP {code}).":
+      "Το Dispatcharr απέρριψε τη σύνδεση (HTTP {code}).",
+  "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
+      "Ο κωδικός σας λειτουργεί, αλλά ο διακομιστής αρνήθηκε να δώσει το κλειδί API (HTTP {code}). Επικολλήστε το κλειδί API.",
 };

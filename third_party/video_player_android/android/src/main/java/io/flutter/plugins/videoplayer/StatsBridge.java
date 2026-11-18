@@ -41,13 +41,14 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     boolean finite = "setFiniteMode".equals(call.method);
     boolean onDemand = "setOnDemandBuffering".equals(call.method);
     boolean liveBuffer = "setLiveBuffer".equals(call.method);
+    boolean thin = "setFrameThinning".equals(call.method);
     if ("setLiveBufferDefault".equals(call.method)) {
       Number ms = call.argument("ms");
       OnDemandLoadControl.setDefaultLiveReserveMs(ms == null ? 0 : ms.longValue());
       result.success(null);
       return;
     }
-    if (!finite && !onDemand && !liveBuffer && !"getStats".equals(call.method)) {
+    if (!finite && !onDemand && !liveBuffer && !thin && !"getStats".equals(call.method)) {
       result.notImplemented();
       return;
     }
@@ -55,6 +56,16 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     VideoPlayer player = idArg == null ? null : players.get(idArg.longValue());
     if (player == null) {
       result.error("no_player", "No player " + idArg, null);
+      return;
+    }
+    if (thin) {
+      // Multiview's frame saver (ThinningVideoRenderer); false for players without it.
+      FrameThinning t = player.frameThinning;
+      if (t != null) {
+        t.setOn(Boolean.TRUE.equals(call.argument("on")));
+        t.setStrong(Boolean.TRUE.equals(call.argument("strong")));
+      }
+      result.success(t != null);
       return;
     }
     if (finite) {
@@ -86,11 +97,29 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     }
     // Live buffer diagnostics for Send log.
     m.put("bufferedMs", player.getExoPlayer().getTotalBufferedDuration());
+    FrameThinning thinning = player.frameThinning;
+    if (thinning != null) {
+      m.put("thinning", thinning.isOn());
+      m.put("thinned", thinning.thinned());
+    }
     m.put("speed", (double) player.getExoPlayer().getPlaybackParameters().speed);
     m.put("gradual", player.isLiveGradual());
     m.put("cushionSlow", player.isCushionSlow());
     m.put("stalls", player.stalls);
     m.put("lastStallMs", player.lastStallMs);
+    // Movie / episode buffering (Dart VodStallLog): where the last freeze began and how much
+    // was buffered then, seek waits apart, audio underruns and failed loads (retried).
+    m.put("lastStallPosMs", player.lastStallPosMs);
+    m.put("lastStallAheadMs", player.lastStallAheadMs);
+    m.put("seekWaits", player.seekWaits);
+    m.put("lastSeekWaitMs", player.lastSeekWaitMs);
+    m.put("underruns", player.audioUnderruns());
+    m.put("loadErrors", player.loadErrors());
+    String loadError = player.lastLoadError();
+    if (loadError != null) m.put("lastLoadError", loadError);
+    m.put("smallRam", BufferBudget.isSmallDeviceKnown());
+    m.put("vodBufferMb", player.onDemandBufferBytes() / (1024 * 1024));
+    m.put("heapMb", Runtime.getRuntime().maxMemory() / (1024 * 1024));
     @Nullable DecoderCounters video = player.getExoPlayer().getVideoDecoderCounters();
     if (video != null) {
       video.ensureUpdated();
@@ -119,6 +148,9 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
         m.put("dvBase", dvBase(format));
       }
       m.put("frameRate", (double) format.frameRate);
+      // Multiview's log line names the codec: a box's H.264 and HEVC
+      // decoders have separate limits (Homatics, 2026-11-15).
+      if (format.sampleMimeType != null) m.put("mime", format.sampleMimeType);
       m.put("width", format.width);
       m.put("height", format.height);
     }

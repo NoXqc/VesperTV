@@ -102,3 +102,50 @@ class _PlayerBarTitleState extends State<PlayerBarTitle>
     );
   }
 }
+
+/// The time alone, redrawn on the minute (the live player's info bar).
+class PlayerBarClock extends StatefulWidget {
+  const PlayerBarClock({super.key, required this.style});
+
+  final TextStyle style;
+
+  @override
+  State<PlayerBarClock> createState() => _PlayerBarClockState();
+}
+
+class _PlayerBarClockState extends State<PlayerBarClock> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  void _schedule() {
+    final now = DateTime.now();
+    _timer = Timer(
+        const Duration(minutes: 1) -
+            Duration(
+                seconds: now.second,
+                milliseconds: now.millisecond,
+                microseconds: now.microsecond), () {
+      if (!mounted) return;
+      setState(() {});
+      _schedule();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    context.select<AppPreferences, bool>((prefs) => prefs.use24h);
+    return Text(TimeFormat.hm.format(DateTime.now()),
+        maxLines: 1, style: widget.style);
+  }
+}

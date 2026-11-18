@@ -10,7 +10,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/playlist_profile.dart';
+import 'content_updates.dart';
 import 'device_defaults.dart';
+import 'device_memory_service.dart';
 import 'episode_alerts_background.dart';
 import 'sports_phone_notifications.dart';
 import 'phone_pairing_service.dart' show kPairRelayBase, kRelayAppHeaders;
@@ -146,6 +148,13 @@ class AppLog {
       out.writeln();
       out.writeln(await EpisodeAlertsBackground.diagnostics());
       out.writeln(await SportsPhoneNotifications.diagnostics());
+      out.writeln(await ContentUpdates.diagnostics());
+      final exits = await DeviceMemoryService.lastExits();
+      if (exits.isNotEmpty) {
+        out.writeln('== Last exits (Android, newest first)');
+        exits.forEach(out.writeln);
+        out.writeln();
+      }
       out.writeln('== Android logcat (this process)');
       out.writeln(await _logcat());
     }

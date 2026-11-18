@@ -627,7 +627,8 @@ class SyncEngine {
   }
 
   /// [local] with each still-untouched held key read as the base's value
-  /// (it isn't a change of ours, just not written yet).
+  /// (it isn't a change of ours, just not written yet), and each edited one
+  /// as the edit on top of it ([rebaseHeldEdit]).
   Map<String, Object?> _effectiveLocal(
       SyncState state, Map<String, Object?> local) {
     final base = state.base?.values ?? const {};
@@ -644,12 +645,15 @@ class SyncEngine {
       out[k] = base[k];
     }
     for (final e in state.deferred.entries) {
-      if (!syncValuesEqual(local[e.key], e.value)) continue;
-      final b = base[e.key];
-      if (b == null) {
+      // Edited since it was held: the edit on top of the base's value
+      // ([rebaseHeldEdit]).
+      final v = syncValuesEqual(local[e.key], e.value)
+          ? base[e.key]
+          : rebaseHeldEdit(e.value, local[e.key], base[e.key]);
+      if (v == null) {
         out.remove(e.key);
       } else {
-        out[e.key] = b;
+        out[e.key] = v;
       }
     }
     return out;
@@ -671,13 +675,15 @@ class SyncEngine {
           lastSync: state.lastSync);
     }
     final local = await data.exportForSync();
+    // Read with every held key, edited ones included (their edit goes on
+    // top of the base's value, see [_effectiveLocal]).
+    final effective = _effectiveLocal(state, local);
     // Held keys the user has since edited here are ordinary changes now.
     final deferred = {
       for (final e in state.deferred.entries)
         if (syncValuesEqual(local[e.key], e.value)) e.key: e.value
     };
     state = state.copyWith(deferred: deferred);
-    final effective = _effectiveLocal(state, local);
     state = state.copyWith(
         pending: stampLocalChanges(state.base, effective, state.pending,
             _now().millisecondsSinceEpoch));
@@ -761,7 +767,7 @@ class SyncEngine {
               if (!syncValuesEqual(merged.values[k], remoteSnap.values[k])) k
           ];
           debugPrint('Sync: upload for ${names.length} changed '
-              '${names.isEmpty ? '(timestamps only)' : names.take(8).join(', ')}');
+              '${names.isEmpty ? '(timestamps only)' : names.take(8).map(syncKeyLabel).join(', ')}');
           try {
             version = await client.put(merged, remote.version);
             pushed = true;
@@ -779,6 +785,17 @@ class SyncEngine {
           return SyncResult(pulled: 0, pushed: pushed, busy: true);
         }
         if (changed.isNotEmpty || removed.isNotEmpty) {
+          // Send log: which keys other devices changed here (names only),
+          // and how favourites moved, per playlist (LOG-LGX8TV: favourites
+          // gone after an update, "10 in" was all the log said).
+          final written = [...changed.keys, ...removed];
+          debugPrint('Sync: in ${written.take(12).map(syncKeyLabel).join(', ')}'
+              '${written.length > 12 ? ' +${written.length - 12} more' : ''}');
+          for (final key in written) {
+            if (!key.startsWith(AppConstants.keyFavorites)) continue;
+            debugPrint('Sync: ${syncKeyLabel(key)} '
+                '${syncListChange(local[key], changed[key])}');
+          }
           await data.applySyncChanges(changed, removed);
         }
         state = state.copyWith(

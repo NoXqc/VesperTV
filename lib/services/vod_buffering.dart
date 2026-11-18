@@ -59,4 +59,23 @@ class VodBuffering {
       debugPrint('VodBuffer: configuration failed (${e.code})');
     }
   }
+
+  /// A Multiview screen: it starts after 1 s of video (it held 4 s, AMD
+  /// 2026-11-17: "clunky"), so a live one always grows its cushion while
+  /// playing (Gradual), whatever the main player's Live buffer setting.
+  static Future<void> configureTile(
+      VideoPlayerHdrController controller, Channel channel) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    if (!channel.isLive || channel.transientPlayback) return;
+    try {
+      await _stats.invokeMethod<void>('setLiveBuffer', {
+        'playerId': SubtitleTracks.playerIdOf(controller),
+        'ms': -1,
+      });
+    } on MissingPluginException {
+      // Older platform implementations keep their start threshold only.
+    } on PlatformException catch (e) {
+      debugPrint('LiveBuffer: tile configuration failed (${e.code})');
+    }
+  }
 }

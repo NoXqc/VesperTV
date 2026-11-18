@@ -162,10 +162,16 @@ class GuideLinkLog {
 }
 
 /// [current] extra guides with a change's additions removed and its
-/// removals back (in their old place when possible).
+/// removals back (in their old place when possible). Still exactly as the
+/// change left them: the list before it, so a new order (move_guide, the
+/// guides' priority) is undone too.
 List<String> revertGuides(
     (List<String>, List<String>) change, List<String> current) {
   final (before, after) = change;
+  if (current.length == after.length &&
+      Iterable<int>.generate(after.length).every((i) => current[i] == after[i])) {
+    return List.of(before);
+  }
   final added = after.where((u) => !before.contains(u)).toSet();
   final removed = before.where((u) => !after.contains(u));
   final out = [

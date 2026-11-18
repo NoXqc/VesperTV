@@ -362,6 +362,29 @@ class _ConfirmTab extends StatelessWidget {
   }
 }
 
+/// Which groups Group management lists.
+enum GroupView { all, shown, hidden }
+
+/// The titles to list: [search] matches (start of a word, see build) in
+/// [view], shown groups first, hidden after, each part in playlist order.
+@visibleForTesting
+List<String> shownFirst(List<M3uGroup> groups,
+    {required TitleSearch search, required GroupView view}) {
+  final matches = [
+    for (final g in groups)
+      if ((search.isEmpty || (search.rank(g.title) ?? 9) <= 1) &&
+          (view != GroupView.shown || !g.isHidden) &&
+          (view != GroupView.hidden || g.isHidden))
+        g
+  ];
+  return [
+    for (final g in matches)
+      if (!g.isHidden) g.title,
+    for (final g in matches)
+      if (g.isHidden) g.title,
+  ];
+}
+
 class _GroupList extends StatefulWidget {
   const _GroupList({
     required this.category,
@@ -428,14 +451,35 @@ class _GroupListState extends State<_GroupList> {
           .where((g) => g.playlistId == widget.playlistId)
           .toList();
 
-  void _openRegions() => showGroupRegions(
-        context,
-        listenable: widget.playlist,
-        groups: _groupsNow,
-        setHidden: (titles, hidden) => widget.playlist.setGroupsHidden(
-            widget.playlistId, titles, hidden,
-            loadImmediately: !widget.deferLoading),
-      );
+  Future<void> _openRegions() async {
+    await showGroupRegions(
+      context,
+      listenable: widget.playlist,
+      groups: _groupsNow,
+      setHidden: (titles, hidden) => widget.playlist.setGroupsHidden(
+          widget.playlistId, titles, hidden,
+          loadImmediately: !widget.deferLoading),
+    );
+    // Back on the list: shown first again.
+    if (mounted) setState(() => _order = null);
+  }
+
+  GroupView _view = GroupView.all;
+  List<String>? _order;
+  Object? _orderOf;
+
+  void _setView(GroupView view) {
+    if (view == _view) return;
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    setState(() => _view = view);
+  }
+
+  /// After Show / Hide results (focus is on the button, not a row) the list
+  /// re-sorts: shown first again.
+  Future<void> _bulk(Future<void> change) async {
+    await change;
+    if (mounted) setState(() => _order = null);
+  }
 
   void _searchChanged() {
     final text = widget.searchController.text;
@@ -472,10 +516,30 @@ class _GroupListState extends State<_GroupList> {
     // and "ent" must not take "Documentaries" with it. Accent and punctuation
     // tolerant, same matcher as global Search.
     final search = TitleSearch(widget.searchController.text);
-    final filtered = search.isEmpty
-        ? groups
-        : groups.where((g) => (search.rank(g.title) ?? 9) <= 1).toList();
+    // Shown groups first, hidden ones after (Discord, 2026-11-18: scrolling
+    // past thousands of hidden groups to reach the few in use). The order
+    // and membership are a snapshot taken when the search, the view or the
+    // groups change, never on a single toggle: a row moving away (or
+    // leaving "Shown") under the remote's focus would make focus jump.
+    final orderOf = (
+      _view,
+      widget.searchController.text,
+      groups.length,
+      groups.isEmpty ? null : groups.first.title,
+      groups.isEmpty ? null : groups.last.title,
+    );
+    if (orderOf != _orderOf || _order == null) {
+      _orderOf = orderOf;
+      _order = shownFirst(groups, search: search, view: _view);
+    }
+    final byTitle = {for (final g in groups) g.title: g};
+    final filtered = [
+      for (final t in _order!)
+        if (byTitle[t] case final g?) g
+    ];
     final titles = filtered.map((g) => g.title);
+    final hiddenCount = groups.where((g) => g.isHidden).length;
+    final bulkLabel = search.isEmpty && _view == GroupView.all;
 
     return Column(
       children: [
@@ -511,10 +575,32 @@ class _GroupListState extends State<_GroupList> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-          child: Text(tr('{shown} of {total} groups', {
-            'shown': '${filtered.length}',
-            'total': '${groups.length}',
-          })),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text([
+                tr('{shown} of {total} groups', {
+                  'shown': '${filtered.length}',
+                  'total': '${groups.length}',
+                }),
+                if (hiddenCount > 0)
+                  tr('{count} hidden', {'count': '$hiddenCount'}),
+              ].join(' · ')),
+              for (final (view, label) in [
+                (GroupView.all, 'All groups'),
+                (GroupView.shown, 'Shown groups'),
+                (GroupView.hidden, 'Hidden groups'),
+              ])
+                ChoiceChip(
+                  key: ValueKey('group-view:${view.name}'),
+                  label: Text(tr(label)),
+                  selected: _view == view,
+                  onSelected: (_) => _setView(view),
+                ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.all(12),
@@ -525,10 +611,10 @@ class _GroupListState extends State<_GroupList> {
                   focusNode: _showNode,
                   onPressed: filtered.isEmpty
                       ? null
-                      : () => playlist.setGroupsHidden(
-                          playlistId, titles, false,
-                          loadImmediately: !deferLoading),
-                  child: Text(tr(search.isEmpty ? 'Show All' : 'Show results')),
+                      : () => _bulk(playlist.setGroupsHidden(
+                          playlistId, titles.toList(), false,
+                          loadImmediately: !deferLoading)),
+                  child: Text(tr(bulkLabel ? 'Show All' : 'Show results')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -536,9 +622,9 @@ class _GroupListState extends State<_GroupList> {
                 child: OutlinedButton(
                   onPressed: filtered.isEmpty
                       ? null
-                      : () =>
-                          playlist.setGroupsHidden(playlistId, titles, true),
-                  child: Text(tr(search.isEmpty ? 'Hide All' : 'Hide results')),
+                      : () => _bulk(playlist.setGroupsHidden(
+                          playlistId, titles.toList(), true)),
+                  child: Text(tr(bulkLabel ? 'Hide All' : 'Hide results')),
                 ),
               ),
               if (_hasRegions) ...[
@@ -557,9 +643,11 @@ class _GroupListState extends State<_GroupList> {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text(tr('No groups start with "{query}".', {
-                  'query': widget.searchController.text.trim(),
-                })))
+                  child: Text(search.isEmpty
+                      ? tr('No groups here.')
+                      : tr('No groups start with "{query}".', {
+                          'query': widget.searchController.text.trim(),
+                        })))
               : ListView.builder(
                   controller: _scroll,
                   itemCount: filtered.length,
@@ -636,7 +724,12 @@ class _GroupListState extends State<_GroupList> {
                     return GlassFocusFrame(
                         key: ValueKey(group.title),
                         child: ListTile(
-                          title: Text(group.title),
+                          // Hidden rows dimmed, so the line between shown
+                          // and hidden reads at a glance.
+                          title: Text(group.title,
+                              style: group.isHidden
+                                  ? const TextStyle(color: Colors.white54)
+                                  : null),
                           trailing: RepaintBoundary(
                             key: ValueKey(group.isHidden),
                             child: Icon(

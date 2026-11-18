@@ -30,6 +30,22 @@ class PerfDiagnostics {
   static int notifies = 0;
   static int homeBuilds = 0;
 
+  /// The TV home's parts ([TimedSubtree]): label -> (slowest, total) build
+  /// time in microseconds this window. Printed on the Frames line.
+  static final Map<String, (int, int)> _parts = {};
+
+  static T timedPart<T>(String label, T Function() run) {
+    final sw = Stopwatch()..start();
+    final out = run();
+    part(label, sw.elapsedMicroseconds);
+    return out;
+  }
+
+  static void part(String label, int us) {
+    final (max, total) = _parts[label] ?? (0, 0);
+    _parts[label] = (us > max ? us : max, total + us);
+  }
+
   /// Media Hub screen builds (whole screen) in the window.
   static int hubBuilds = 0;
 
@@ -119,8 +135,13 @@ class PerfDiagnostics {
         debugPrint('Frames: n=$_frames slow=$_jankFrames '
             'maxBuild=${maxBuild}ms maxRaster=${_windowMaxRasterMs}ms '
             'avgRaster=${_rasterTotalMs ~/ _frames}ms homeBuilds=$builds'
-            '${hub + hubRows > 0 ? ' hubBuilds=$hub hubRows=$hubRows' : ''}');
+            '${hub + hubRows > 0 ? ' hubBuilds=$hub hubRows=$hubRows' : ''}'
+            '${_parts.isEmpty ? '' : ' parts(max/total ms): ${[
+                for (final e in _parts.entries)
+                  '${e.key}=${e.value.$1 ~/ 1000}/${e.value.$2 ~/ 1000}'
+              ].join(' ')}'}');
       }
+      _parts.clear();
       _frames = _jankFrames = _rasterTotalMs = _windowMaxRasterMs = 0;
       final waits = <String>[];
       for (final e in pings.entries) {
@@ -240,5 +261,33 @@ class PerfDiagnostics {
       final ms = sw.elapsedMilliseconds;
       if (ms >= 500) debugPrint('SlowDb: $label ${ms}ms');
     }
+  }
+}
+
+/// Times the build of [child]'s whole subtree (the element update runs
+/// every descendant's build synchronously) into [PerfDiagnostics.part]:
+/// which part of the TV home a rebuild costs (owner, 2026-11-18: groups
+/// steps and column switches felt slow on the Homatics).
+class TimedSubtree extends StatelessWidget {
+  const TimedSubtree(this.label, {super.key, required this.child});
+  final String label;
+  final Widget child;
+
+  @override
+  StatelessElement createElement() => _TimedElement(this);
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+class _TimedElement extends StatelessElement {
+  _TimedElement(TimedSubtree super.widget);
+
+  @override
+  void performRebuild() {
+    final sw = Stopwatch()..start();
+    super.performRebuild();
+    PerfDiagnostics.part(
+        (widget as TimedSubtree).label, sw.elapsedMicroseconds);
   }
 }

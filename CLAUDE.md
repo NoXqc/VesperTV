@@ -133,7 +133,7 @@ history: read them as notes about past work, and treat any open `cdx-do` item as
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.68 **+802**.)
+  (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.69 **+827**.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -307,6 +307,16 @@ inaccurate. Recoverable from commit c18de49.)
   back logic must route it through its PopScope (`DesktopPlayerScreen` is `canPop: false` ->
   `_handleBack`, or a live channel was dropped instead of handed to the mini player).
   Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
+  (18) **The TV screen does not watch PlaylistManager** (2026-11-18, +838..+847): it listens and rebuilds on the
+  TV tab only when `PlaylistManager.liveViewSignature()` changes (live lists, hidden, edits, merges, own groups,
+  viewer, groups + order, playlists, favourites, error); the browse tabs rebuild on every change as before. The
+  Movies / TV Shows warm-up notified every few hundred ms for minutes on big playlists and each rebuild cost
+  300-850 ms on the Homatics. **New PlaylistManager state shown on the TV tab must go into liveViewSignature** (or
+  read with its own `context.select`, like `_TvTopBar`'s spinner), or the TV tab won't update. Group counts there
+  use `liveGroupCountShown` (recount only when the live inputs change, `liveCountsShown` repaints the column);
+  `PlaylistSession._liveChannelsOfGroup` indexes live channels by group (a group change scanned ~27k channels per
+  playlist), Favourites uses it too. Send log: `Frames: ... parts(max/total ms)` names the slow part (`TimedSubtree`,
+  `PerfDiagnostics.part`), `LiveView: changed [...]` says what rebuilt the TV tab. Details: dev-notes/tv-guide-speed.md.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
   (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;
@@ -447,6 +457,36 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-18 - release 1.0.70 (beta), +861 (latest):** owner said "Commit merge and /cutr". Android first; same day owner asked "push windows and Linux": Windows zip (from 026e521) + Linux `VesperTV-1.0.70-861-linux-x64.tar.gz` (CI from e689309, apt step now times out/retries) added, site/README point at 1.0.70. Was Android only;
+  Windows stays 1.0.68, Linux 1.0.63 (+702). Since 1.0.69: group tools (TV Group management shown first + All / Shown /
+  Hidden + Countries "Hide every group"; editor Groups tab hidden fold, bulk hide, country chips + Keep only; Discord
+  clayts450 / Jacek), Dispatcharr (+837..+859), Select…, subscription ending reminder, This game: Choose a different
+  channel, TV guide speed (+847), Multiview start/tags, live resume after Hub/Home/Multiview, Sources switch fix, leagues.
+  Analyze 16, 2127 tests. Notes: dev-notes/releases/1.0.70.md. Next build > 861.
+- **Claude, 2026-11-18 - +851..+859 (merged to local main, not pushed, not released):** Dispatcharr > Sources in the player
+  (`DispatcharrSources`: first / only / vesper; the channel's own row says Automatic) + `X-API-Key` on picked Dispatcharr
+  streams (user shown instead of Anonymous). **`PlaybackService._reuseNativeLive` never reuses the player for a channel
+  with httpHeaders** (NativeVideoSurface.replaceLive takes only the URL: AMD's LOG-AP4L8B). Sources list shared in
+  `services/live_sources.dart`. Vesper AI tools `sources`, `network_folder`, settings key `dispatcharr_sources`. TV hold
+  OK > Select… (tick channels: Favourites / Add to group…, `_selection` ValueNotifier). Subscription ending reminder
+  (`provider_expiry_overlay.dart`, Xtream expiresAt, once a day). Leagues: Ekstraklasa + Polish I liga (TheSportsDB),
+  Swiss, Eerste Divisie, Irish. Guide titles in team codes ("TOR @ BOS") + picker chip. Network folder result above
+  the buttons. Next build > 859.
+- **Claude, 2026-11-18 - This game: Choose a different channel (`claude/game-search-sources`, +850 on the Homatics):** Discord request via the
+  owner (a game's 2-3 matched channels were all wrong for one provider's names; searching meant leaving the game). The player's Left
+  panel This game tab ends with **Choose a different channel** (`PlayerSidePanel._findChannel`, Android + Windows): Sports Trak's own
+  picker + Remember this channel? through the shared `pickChannelForGame` (sports_screen.dart), then the pick plays. Tried in the live
+  Sources drawer first; moved here (it already lists the game's channels). Box-tested with a temp 12 h game window. Testing picks on the
+  owner's box: never Forget my pick (`clearFor` also removes team picks). Next build > 850.
+- **Claude, 2026-11-17 - release 1.0.69 (beta), +827 (latest):** owner said "/cutr". Android only; Windows stays 1.0.68, Linux 1.0.63 (+702). Live player one bottom info bar, sync fix (an edit on a held key wiped other devices' favourites, `rebaseHeldEdit`), Send-log sync lines, plus +809..+822 (stream badges, movie buffer, Sources, closed-app updates, Multiview decoder, seek bar). Notes: dev-notes/releases/1.0.69.md. Next build > 827.
+- **Claude, 2026-11-16 - Stream badges (`claude/stream-badges`, worktree `VesperTV-claude-badges`, test +812, uncommitted):**
+  owner showed Xperience's Nuvio badge packs. Settings > Playback > Movies & TV Shows > **Stream badges**: paste a
+  Nuvio / Fusion badge pack address (same URL as Nuvio's Badge URLs; From phone = `PairingKind.badges`); Media Hub
+  source picker + player source drawer show its pictures (`StreamBadgeRow`), else VesperTV's own format tags as gold
+  `GoldTag`s. Pack patterns are Java regexes: leading `(?i)` -> case-insensitive, Java-only syntax skipped
+  (`streamBadgeRegExp`); matched in an isolate killed after 8 s (a runaway third-party pattern turns the pack off, never
+  freezes the box). Loaded on first use, never at startup; re-downloaded after 24 h. Device-only. Format, drawing rules
+  and measurements: `dev-notes/stream-badges.md`. Next build > 812.
 - **Claude, 2026-11-14 - release 1.0.68 (beta), +802 (latest):** owner said "/cutr and update git and website with the new windows zip". Android **and Windows** (zip built from the same commit; Windows was on 1.0.61, site/README Windows links now point at 1.0.68); Linux stays 1.0.63 (+702). Since 1.0.67: Minimalist switch + Home tab switch, live list rows lose the eye/star (hold OK menu) and the info card no longer covers the list, guide follows the clock, Media Hub Expand collection / Sort and Filter / AIOStreams as a Jellyfin server, Multiview recordings, Sports Mode next 3 days, Windows feedback batch (+797/+798, Stop in full screen disposes the taken player, one Exit row). Analyze 16, 2001 tests; native suite not rerun. Notes: dev-notes/releases/1.0.68.md. Next build > 802.
 - **Claude, 2026-11-13 - release 1.0.67 (beta), +781:** owner said "/cutr". Android only; Windows stays 1.0.61,
   Linux 1.0.63 (+702). Since 1.0.66: the glide to / from full screen reworked after frame-by-frame recordings against

@@ -52,6 +52,16 @@ class AppConstants {
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Media Hub custom poster URL pattern (ArchivePosters), device-only.
   static const String keyArchivePosterPattern = 'vesper_archive_poster_pattern';
+  // Media Hub stream badge pack (StreamBadges): its address + last download
+  // (ms since epoch), device-only; the pack itself is a file.
+  /// Settings > Playlists & sources > Dispatcharr (`DispatcharrLogin`).
+  static const String keyDispatcharr = 'vesper_dispatcharr';
+  static const String keyDispatcharrSources = 'vesper_dispatcharr_sources';
+  static const String keyProviderExpiryNoticeDay =
+      'vesper_provider_expiry_notice_day';
+  static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
+  static const String keyStreamBadgesFetched = 'vesper_stream_badges_fetched';
+  static const String keyStreamBadgesOn = 'vesper_stream_badges_on';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.
@@ -185,6 +195,11 @@ class AppConstants {
   static const String keyFavoriteLiveOrder = 'vesper_favorite_live_order';
   static const String keyFavoriteLiveSort = 'vesper_favorite_live_sort';
 
+  /// Per viewer: the identity of each saved live channel (Favourites, own
+  /// groups), so it is found again when the provider changes its id. See
+  /// `SavedLiveChannels`.
+  static const String keySavedLiveKeys = 'vesper_saved_live_keys';
+
   /// The viewer's own live groups, across every playlist (see
   /// `UserGroups` for the JSON). Per viewer, not per playlist.
   static const String keyMyGroups = 'nox_my_groups';
@@ -273,6 +288,7 @@ class AppConstants {
   static const String keyShowClock = 'nox_show_clock';
   static const String keyPlayerClock = 'vesper_player_clock';
   static const String keyMultiviewHideTips = 'vesper_multiview_hide_tips';
+  static const String keyMultiviewFrameSaver = 'vesper_multiview_frame_saver';
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
   static const String keyMultiviewMain = 'vesper_multiview_main';
   static const String keyResumeLastChannelAtStartup =
@@ -292,6 +308,7 @@ class AppConstants {
   static const String keyHideShows = 'vesper_hide_shows';
   static const String keyHideLiveTv = 'vesper_hide_live_tv';
   static const String keyHideSportsTrak = 'vesper_hide_sports_trak';
+  static const String keyHideWhatsNew = 'vesper_hide_whats_new';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideRecordings = 'vesper_hide_recordings';
   static const String keyHideCatchupGroup = 'vesper_hide_catchup_group';
@@ -447,6 +464,16 @@ class AppConstants {
   /// device-only). A due full catalog sync runs behind the app instead of
   /// behind the blocking "Updating Content" screen.
   static const String keyBackgroundSync = 'vesper_background_sync';
+
+  /// Settings > Profiles & startup > Startup: Update while VesperTV is
+  /// closed (Android, opt-in, device-only). An hourly WorkManager job
+  /// (ContentUpdateWorker.kt) refreshes the guide and the playlists due for
+  /// a full sync with the app closed — see `services/content_updates.dart`.
+  static const String keyContentUpdates = 'vesper_content_updates';
+
+  /// When that job next has something due (ms since epoch). Read natively,
+  /// so a run with nothing due doesn't start a Flutter engine.
+  static const String keyContentUpdatesNextDue = 'vesper_content_next_due';
 
   /// Device-wide opt-in: choose a viewer after the splash, before startup routes
   /// or automatic playback. Backups retain it; transfers keep the target choice.

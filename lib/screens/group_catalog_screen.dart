@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
@@ -100,6 +101,14 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   List<XtreamSeries> _seriesItems = [];
   bool _loading = true;
 
+  /// The grid's titles by index, so Right at the end of a row can go to the
+  /// next row's first title (see [_rowWrap]).
+  final Map<int, FocusNode> _gridNodes = {};
+  final ScrollController _gridScroll = ScrollController();
+  double _rowExtent = 0;
+
+  FocusNode _gridNode(int index) => _gridNodes[index] ??= FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -147,6 +156,10 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   void dispose() {
     _backButtonFocus.dispose();
     _spot.dispose();
+    for (final node in _gridNodes.values) {
+      node.dispose();
+    }
+    _gridScroll.dispose();
     super.dispose();
   }
 
@@ -378,7 +391,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     return _posterGrid(
       items,
       wide: wide,
-      (c) => PosterCard(
+      (c, node) => PosterCard(
+        focusNode: node,
         title: c.name,
         // TMDB's own poster, when enrichment has found one, over the
         // provider's — see `Channel.posterUrl`'s doc comment.
@@ -415,7 +429,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     return _posterGrid(
       items,
       wide: wide,
-      (s) => PosterCard(
+      (s, node) => PosterCard(
+        focusNode: node,
         title: s.name,
         imageUrl: s.posterUrl ?? s.coverUrl,
         rating: s.rating,
@@ -504,25 +519,86 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// (not a row-per-category layout), which default D-pad traversal
   /// handles reliably on its own; the unbounded-search failure mode this
   /// app has repeatedly hit elsewhere is specifically about *many rows of
-  /// differing length*, not a single regular grid like this one.
-  Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder,
+  /// differing length*, not a single regular grid like this one. Except
+  /// at a row's ends: [_rowWrap].
+  Widget _posterGrid<T>(
+      List<T> items, Widget Function(T, FocusNode) posterBuilder,
       {bool wide = false}) {
     if (items.isEmpty) {
       return Center(child: Text(tr('No items in this group.')));
     }
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent:
-            (wide ? PosterCard.wideStyleWidth : PosterCard.width) + 12,
-        mainAxisExtent:
-            (wide ? PosterCard.wideStyleHeight : PosterCard.height) + 10,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, i) => posterBuilder(items[i]),
-    );
+    const padding = 24.0, spacing = 8.0;
+    final maxExtent =
+        (wide ? PosterCard.wideStyleWidth : PosterCard.width) + 12;
+    final mainExtent =
+        (wide ? PosterCard.wideStyleHeight : PosterCard.height) + 10;
+    _rowExtent = mainExtent + spacing;
+    return LayoutBuilder(builder: (context, box) {
+      // SliverGridDelegateWithMaxCrossAxisExtent's own column count.
+      final columns = ((box.maxWidth - 2 * padding) / (maxExtent + spacing))
+          .ceil()
+          .clamp(1, 1000);
+      return GridView.builder(
+        controller: _gridScroll,
+        padding: const EdgeInsets.fromLTRB(padding, 4, padding, padding),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: maxExtent,
+          mainAxisExtent: mainExtent,
+          crossAxisSpacing: spacing,
+          mainAxisSpacing: spacing,
+        ),
+        itemCount: items.length,
+        itemBuilder: (context, i) => Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (_, event) => _rowWrap(event, i, columns, items.length),
+          child: posterBuilder(items[i], _gridNode(i)),
+        ),
+      );
+    });
+  }
+
+  /// Right on a row's last title goes on to the next row's first, Left on
+  /// a row's first back to the previous row's last (owner, 2026-11-17:
+  /// Right from the end of a row went up to Sort at the top right). Right
+  /// on the very last title stays put.
+  KeyEventResult _rowWrap(KeyEvent event, int i, int columns, int count) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final lastInRow = i % columns == columns - 1 || i == count - 1;
+    if (key == LogicalKeyboardKey.arrowRight && lastInRow) {
+      if (i + 1 < count) _focusTitle(i + 1, down: true);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft && i % columns == 0 && i > 0) {
+      _focusTitle(i - 1, down: false);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _focusTitle(int index, {required bool down}) {
+    void show(FocusNode node) {
+      node.requestFocus();
+      Scrollable.ensureVisible(node.context!,
+          alignmentPolicy: down
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    }
+
+    final node = _gridNodes[index];
+    if (node != null && node.context != null) {
+      show(node);
+      return;
+    }
+    // Its row isn't built yet (just past the edge): bring it in first.
+    final position = _gridScroll.position;
+    _gridScroll.jumpTo((position.pixels + (down ? _rowExtent : -_rowExtent))
+        .clamp(position.minScrollExtent, position.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final built = _gridNodes[index];
+      if (mounted && built != null && built.context != null) show(built);
+    });
   }
 
   /// The focused title with its year and rating, one line.

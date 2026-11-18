@@ -10,6 +10,7 @@ import '../services/archive_playback_sources.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_size.dart';
 import 'gold_tag.dart';
+import 'stream_badge_row.dart';
 
 Future<ArchiveSourceSelection?> showArchiveSourceDrawer(BuildContext context,
         {required ArchivePlaybackSources sources, required String channelId}) =>
@@ -266,7 +267,6 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                           itemBuilder: (_, index) {
                             final option = _options[index];
                             final info = archiveMediaFileInfo(option);
-                            final formats = archiveStreamFormats(option);
                             final current = index == _currentIndex;
                             return GestureDetector(
                               onTap: () => _select(index),
@@ -315,12 +315,11 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                                                 const EdgeInsets.only(left: 6)),
                                     ]),
                                     SizedBox(height: _compact ? 4 : 6),
-                                    if (formats.isNotEmpty)
-                                      Text(formats.join(' · '),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              fontSize: _compact ? 11 : 13)),
+                                    StreamBadgeRow(
+                                        option: option,
+                                        height: _compact ? 15 : 18,
+                                        wrap: false,
+                                        compact: _compact),
                                     const SizedBox(height: 4),
                                     Expanded(
                                       child: Text(

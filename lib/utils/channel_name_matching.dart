@@ -55,9 +55,9 @@ String _stripLeadingTag(String name) {
 /// distinct from `ESPN` rather than both collapsing to the same token.
 Set<String> normalizedChannelTokens(String name) {
   final withoutTag = _stripLeadingTag(name);
-  final cleaned = withoutTag.toUpperCase().replaceAll(RegExp(r'[^\w+]'), ' ');
+  final cleaned = withoutTag.toUpperCase().replaceAll(_punctuation, ' ');
   return cleaned
-      .split(RegExp(r'\s+'))
+      .split(_spaces)
       .where((t) => t.isNotEmpty && !_qualityTokens.contains(t))
       .toSet();
 }
@@ -84,6 +84,9 @@ String canonicalChannelKey(String name) {
 }
 
 final _lettersThenDigits = RegExp(r'^([A-Z]+)(\d+)$');
+// Compiled once: [channelCopyKey] runs on every channel of every playlist.
+final _punctuation = RegExp(r'[^\w+]');
+final _spaces = RegExp(r'\s+');
 
 /// Resolution/format words that only say which copy of a channel this is.
 const Set<String> _copyTokens = {
@@ -97,17 +100,57 @@ const Set<String> _copyTokens = {
   '60FPS',
 };
 
+/// Region tags that name the same country (`channelCopyKey`). Quebec is in
+/// Canada: one provider lists `QC: TVA MONTREAL`, another `CA| TVA MONTREAL
+/// HD` (owner, 2026-11-18: Sources didn't offer his Trex copy).
+const Map<String, String> _sameRegion = {
+  'QC': 'CA',
+  'QUEBEC': 'CA',
+  'CAFR': 'CA',
+  'FRCA': 'CA',
+  'CAEN': 'CA',
+  'USA': 'US',
+  'GB': 'UK',
+};
+
+/// Accented capitals as their plain letter (`MONTRÉAL` = `MONTREAL`): the
+/// punctuation pass below would otherwise split the word in two.
+const Map<int, String> _plainLetter = {
+  0xC0: 'A', 0xC1: 'A', 0xC2: 'A', 0xC3: 'A', 0xC4: 'A', 0xC5: 'A', //
+  0xC7: 'C',
+  0xC8: 'E', 0xC9: 'E', 0xCA: 'E', 0xCB: 'E', //
+  0xCC: 'I', 0xCD: 'I', 0xCE: 'I', 0xCF: 'I', //
+  0xD1: 'N',
+  0xD2: 'O', 0xD3: 'O', 0xD4: 'O', 0xD5: 'O', 0xD6: 'O', 0xD8: 'O', //
+  0xD9: 'U', 0xDA: 'U', 0xDB: 'U', 0xDC: 'U', //
+  0xDD: 'Y',
+};
+
+String _plainUpper(String text) {
+  final upper = text.toUpperCase();
+  if (upper.codeUnits.every((c) => c < 128)) return upper;
+  final out = StringBuffer();
+  for (final c in upper.codeUnits) {
+    final plain = _plainLetter[c];
+    plain == null ? out.writeCharCode(c) : out.write(plain);
+  }
+  return out.toString();
+}
+
 /// Same real channel, different quality copy (`CA: TSN 1 4K` / `CA: TSN 1
 /// FHD` / `CA: TSN 1 HD`): the leading region tag is kept, unlike
-/// [canonicalChannelKey] — `US: ESPN` and `CA: ESPN` air different things.
-/// Anything else that differs (East/West, 1/2, ESPN/ESPN+) keeps them apart.
+/// [canonicalChannelKey] — `US: ESPN` and `CA: ESPN` air different things —
+/// but tags of one country are one tag ([_sameRegion]: `QC` = `CA`), and
+/// accents don't count. Anything else that differs (East/West, 1/2,
+/// ESPN/ESPN+) keeps them apart.
 String channelCopyKey(String name) {
   final rest = _stripLeadingTag(name);
-  final tag = name.substring(0, name.length - rest.length).toUpperCase();
-  final tokens = rest
-      .toUpperCase()
-      .replaceAll(RegExp(r'[^\w+]'), ' ')
-      .split(RegExp(r'\s+'))
+  final rawTag = _plainUpper(name.substring(0, name.length - rest.length))
+      .replaceAll(_punctuation, '');
+  final tag = _sameRegion[rawTag] ?? rawTag;
+  final tokens = _plainUpper(rest)
+      .replaceAll(_punctuation, ' ')
+      .split(_spaces)
       .where((t) => t.isNotEmpty && !_copyTokens.contains(t))
       // `TSN2` == `TSN 2` (Trex lists both spellings, playlist editor
       // test 2026-11-02): letters followed by a number become two words.
@@ -118,7 +161,22 @@ String channelCopyKey(String name) {
           })
       .toList()
     ..sort();
-  return tokens.isEmpty
-      ? ''
-      : '${tag.replaceAll(RegExp(r'[^\w+]'), '')}|${tokens.join(' ')}';
+  return tokens.isEmpty ? '' : '$tag|${tokens.join(' ')}';
+}
+
+/// Cheap pre-check before [channelCopyKey] (big playlists): [name] can only
+/// have a key holding [probe] if it contains it, upper-cased, or has
+/// accented letters (`MONTRÉAL` holds `MONTREAL` once folded).
+bool channelCopyMayMatch(String name, String probe) {
+  if (probe.isEmpty) return true;
+  final upper = name.toUpperCase();
+  return upper.contains(probe) || upper.codeUnits.any((c) => c >= 128);
+}
+
+/// The longest word of a [channelCopyKey] key (`TSN` in `CA|1 TSN`), '' when
+/// none: every name with that key holds it, upper-cased, so a cheap
+/// `contains` skips most channels before their own [channelCopyKey].
+String channelCopyProbe(String key) {
+  final words = key.substring(key.indexOf('|') + 1).split(' ');
+  return words.fold('', (a, b) => b.length > a.length ? b : a);
 }

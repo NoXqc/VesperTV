@@ -21,13 +21,15 @@ import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../screens/sports_live_list_screen.dart';
+import '../screens/sports_screen.dart' show pickChannelForGame;
 import 'hold_to_activate.dart';
 import 'sports_widgets.dart';
 
 /// Left on the remote in the fullscreen live player: a see-through panel
 /// over the left of the picture with up to four tabs — This game (the
 /// other sources of the game on the playing channel, only while one is
-/// found), Last channels, My Teams (today's games of followed teams) and
+/// found, then "Choose a different channel" to search them all), Last
+/// channels, My Teams (today's games of followed teams) and
 /// Live now (games playing right now in the viewer's active leagues). OK
 /// plays the channel / the game's best matched channel in place; holding
 /// OK on a game "pulls" its stats over the stream (see-through
@@ -195,7 +197,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
   }
 
   int get _count => switch (_shown) {
-        _PanelTab.game => _playing?.sources.length ?? 0,
+        // The game's sources + "Choose a different channel".
+        _PanelTab.game => _playing == null ? 0 : _playing!.sources.length + 1,
         _PanelTab.recent => _recent.length,
         _PanelTab.teams => _teamGames.length,
         _PanelTab.live => _liveGames.length,
@@ -306,8 +309,9 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       _tab = _PanelTab.game;
       _index[_PanelTab.game] = at < 0 ? 0 : at;
       _reveal();
-    } else if (_index[_PanelTab.game]! >= n) {
-      _index[_PanelTab.game] = n == 0 ? 0 : n - 1;
+    } else if (_index[_PanelTab.game]! > n) {
+      // n = the "Choose a different channel" row.
+      _index[_PanelTab.game] = n;
     }
   }
 
@@ -360,7 +364,13 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     Channel? channel;
     if (tab == _PanelTab.game) {
       final p = _playing;
-      if (p == null || i >= p.sources.length) return;
+      if (p == null) return;
+      if (i == p.sources.length) {
+        // Never from a resting highlight: it opens a page.
+        if (!fromMove) unawaited(_findChannel(p.game));
+        return;
+      }
+      if (i > p.sources.length) return;
       channel = p.sources[i].channel;
       if (channel.id == widget.current.id) {
         if (!fromMove) widget.onClose();
@@ -397,6 +407,26 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       return;
     }
     await _play(channel);
+  }
+
+  /// "Choose a different channel" (This game's last row): Sports Trak's
+  /// channel search (team-name chips + any word), remembered for the game
+  /// or a team, then the pick plays. For when every matched channel is
+  /// wrong: providers name channels differently, and searching meant
+  /// leaving the game (Discord, 2026-11-18).
+  Future<void> _findChannel(SportsGame game) async {
+    final matcher = SportsChannelMatcher.shared(context.read<EpgService>());
+    final channel = await pickChannelForGame(context, game, matcher);
+    if (!mounted) return;
+    if (channel == null) {
+      _focus.requestFocus();
+      return;
+    }
+    _lastPlaying = null;
+    if (!_keepOpen) widget.onClose();
+    if (channel.id != widget.current.id) await _play(channel);
+    // Kept open: This game follows the pick.
+    if (_keepOpen && mounted) unawaited(_loadSports());
   }
 
   /// Switch channels while moving: the row the highlight rests on plays
@@ -702,7 +732,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
           child: _gameRow(p.game, withChannel: false),
         ),
         Expanded(
-          child: _list(p.sources.length, accent, (i) {
+          child: _list(p.sources.length + 1, accent, (i) {
+            if (i == p.sources.length) return _findRow();
             final m = p.sources[i];
             final c = m.channel;
             final program = epg.getCurrentProgram(c.epgId)?.title ?? '';
@@ -735,6 +766,20 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       ],
     );
   }
+
+  /// This game's last row: search every channel for the game.
+  Widget _findRow() => Row(
+        children: [
+          const SizedBox(
+              width: 36,
+              height: 36,
+              child: Icon(Icons.search, color: Colors.white70)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _twoLines(tr('Choose a different channel'),
+                  tr('Search your channels — it can be remembered for this game or team'))),
+        ],
+      );
 
   Widget _watchingTag(Color accent) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

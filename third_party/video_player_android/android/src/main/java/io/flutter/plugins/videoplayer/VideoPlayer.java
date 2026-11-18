@@ -53,6 +53,8 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @Nullable SurfaceHolder nativeSurfaceHolder;
   // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
   FrameRateProbe frameRateProbe = new FrameRateProbe();
+  // VesperTV patch: Multiview's frame saver; texture players only (StatsBridge).
+  @Nullable public FrameThinning frameThinning;
   private final boolean nativePassthrough;
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -361,13 +363,18 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     onDemandLoadControl = control;
   }
 
+  /** Send log: the bigger movie byte cap in use, 0 = the usual one. */
+  long onDemandBufferBytes() {
+    return onDemandLoadControl == null ? 0 : onDemandLoadControl.onDemandBytesInUse();
+  }
+
   /**
-   * See {@link OnDemandLoadControl#setLiveReserveMs}. Main player only. A negative value is
-   * Gradual: normal fast start, then see {@link #cushionTick}.
+   * See {@link OnDemandLoadControl#setLiveReserveMs} (main player only). A negative value is
+   * Gradual: normal fast start, then see {@link #cushionTick}; texture players (Multiview,
+   * Compatibility video) have no reserve policy but take Gradual too.
    */
   void setLiveBuffer(long ms) {
-    if (onDemandLoadControl == null) return;
-    onDemandLoadControl.setLiveReserveMs(Math.max(0, ms));
+    if (onDemandLoadControl != null) onDemandLoadControl.setLiveReserveMs(Math.max(0, ms));
     liveGradual = ms < 0;
     resetCushion();
     if (liveGradual) mainHandler.postDelayed(cushionTick, CUSHION_SAMPLE_MS);
@@ -421,24 +428,65 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     }
   };
 
-  // Send log (StatsBridge getStats -> Dart LiveReconnectLog): freezes while playing.
+  // Send log (StatsBridge getStats -> Dart LiveReconnectLog / VodStallLog): freezes while
+  // playing. Buffering that starts within 2 s of a seek is the seek's own wait (seekWaits),
+  // not a freeze.
   int stalls;
   long lastStallMs;
+  long lastStallPosMs;
+  long lastStallAheadMs;
+  int seekWaits;
+  long lastSeekWaitMs;
   private long stallStartedAt;
+  private boolean stallAfterSeek;
+  private long seekAt = Long.MIN_VALUE / 2; // no seek yet
   private final Player.Listener stallCounter = new Player.Listener() {
+    @Override
+    public void onPositionDiscontinuity(
+        @NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition,
+        int reason) {
+      if (reason == Player.DISCONTINUITY_REASON_SEEK
+          || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+        seekAt = android.os.SystemClock.elapsedRealtime();
+      }
+    }
+
     @Override
     public void onPlaybackStateChanged(int state) {
       long now = android.os.SystemClock.elapsedRealtime();
       if (state == Player.STATE_BUFFERING && exoPlayer.getPlayWhenReady()
           && stallStartedAt == 0 && exoPlayer.getCurrentPosition() > 0) {
         stallStartedAt = now;
+        stallAfterSeek = now - seekAt < 2000;
+        if (!stallAfterSeek) {
+          lastStallPosMs = exoPlayer.getCurrentPosition();
+          lastStallAheadMs = exoPlayer.getTotalBufferedDuration();
+        }
       } else if (state != Player.STATE_BUFFERING && stallStartedAt != 0) {
-        stalls++;
-        lastStallMs = now - stallStartedAt;
+        if (stallAfterSeek) {
+          seekWaits++;
+          lastSeekWaitMs = now - stallStartedAt;
+        } else {
+          stalls++;
+          lastStallMs = now - stallStartedAt;
+        }
         stallStartedAt = 0;
       }
     }
   };
+
+  int audioUnderruns() {
+    return vodTrace.underruns;
+  }
+
+  int loadErrors() {
+    return vodTrace.loadErrors;
+  }
+
+  @Nullable
+  String lastLoadError() {
+    return vodTrace.lastLoadError;
+  }
 
   boolean isLiveGradual() {
     return liveGradual;

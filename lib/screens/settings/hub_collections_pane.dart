@@ -6,6 +6,7 @@ import '../../utils/app_store.dart';
 import '../../models/hub_collection.dart';
 import '../../services/archive_api_service.dart';
 import '../../services/archive_service.dart';
+import '../../services/stream_badges.dart';
 import '../../widgets/glass_menu.dart';
 import '../../widgets/hold_to_activate.dart';
 import '../../widgets/setting_row.dart';
@@ -94,7 +95,14 @@ class _HubCollectionsPaneState extends State<HubCollectionsPane> {
       _toast(tr(
           '{n} collections added. They show on the Media Hub tab.', {'n': n}));
     } on ArchiveApiException {
-      if (mounted) _toast(tr('No collections in that file.'), error: true);
+      // Or a Nuvio badge pack (also a .json): Stream badges.
+      final badges = await StreamBadges.instance.useIfPack(link);
+      if (!mounted) return;
+      if (badges == null) {
+        _toast(tr('No collections in that file.'), error: true);
+      } else {
+        _toast(tr('Stream badges saved: {n} badges. Turn them on or off under Stream badges.', {'n': badges}));
+      }
     } catch (_) {
       if (mounted) _toast(tr("Couldn't reach that link."), error: true);
     } finally {

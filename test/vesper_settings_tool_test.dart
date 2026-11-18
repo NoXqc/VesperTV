@@ -183,6 +183,48 @@ void main() {
     expect(prefs.hideMovies, isTrue);
   });
 
+  test('newer settings: groups, side panel, Minimalist, Home, goals delay',
+      () async {
+    final r = await box.call(
+        'settings',
+        {
+          'action': 'set',
+          'changes': [
+            {'key': 'keep_groups_open', 'value': true},
+            {'key': 'groups_follow_focus', 'value': true},
+            {'key': 'preview_badges', 'value': false},
+            {'key': 'panel_keep_open', 'value': true},
+            {'key': 'panel_zap_on_move', 'value': true},
+            {'key': 'catchup_keep_playing', 'value': true},
+            {'key': 'hide_home', 'value': true},
+            {'key': 'redzone_button', 'value': false},
+            {'key': 'goal_alert_delay', 'value': '30 seconds'},
+          ],
+        },
+        caller: VesperCaller.remoteApp);
+    expect(r['error'], isNull, reason: '$r');
+    expect(prefs.keepGroupsOpen, isTrue);
+    expect(prefs.groupsFollowFocus, isTrue);
+    expect(prefs.previewBadges, isFalse);
+    expect(prefs.panelKeepOpen, isTrue);
+    expect(prefs.panelZapOnMove, isTrue);
+    expect(storage.getCatchupKeepPlaying(), isTrue);
+    expect(prefs.hideHome, isTrue);
+    expect(storage.getSportsHideRedZone(), isTrue);
+    expect(storage.getGoalAlertDelay(), 30);
+    expect(host.questions.single, contains('Goals alert delay: 30 seconds'));
+    expect(host.questions.single, contains('NFL RedZone button: turn off'));
+
+    // Minimalist turns its settings off, and back as they were.
+    await box.call('settings', {'action': 'set', 'key': 'minimalist', 'value': 'on'});
+    expect(prefs.minimalist, isTrue);
+    expect(prefs.keepGroupsOpen, isFalse);
+    await box.call('settings', {'action': 'set', 'key': 'minimalist', 'value': 'off'});
+    expect(prefs.minimalist, isFalse);
+    expect(prefs.keepGroupsOpen, isTrue);
+    expect(prefs.hideHome, isTrue);
+  });
+
   test('Media Hub playback settings: one changes, the others stay', () async {
     await storage.setArchiveOptionsJson(
         'playback', '{"source":"https://a.example/manifest.json"}');

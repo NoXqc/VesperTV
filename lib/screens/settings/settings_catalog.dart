@@ -10,6 +10,7 @@ import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/audio_delay.dart';
 import '../../services/backup_service.dart';
+import '../../services/content_updates.dart';
 import '../../services/desktop_mini_player.dart';
 import '../../services/desktop_stream_setup.dart';
 import '../../services/device_defaults.dart';
@@ -34,10 +35,12 @@ import '../../services/vesper_ai/vesper_ai.dart';
 import '../vesper_ai/phone_mic_sheet.dart';
 import 'addons_screen.dart';
 import 'archive_posters_screen.dart';
+import 'stream_badges_screen.dart';
 import 'archive_sources_screen.dart';
 import 'backup_screen.dart';
 import 'check_updates_screen.dart';
 import 'community_screen.dart';
+import 'dispatcharr_screen.dart';
 import 'debrid_settings_screen.dart';
 import 'epg_settings_screen.dart';
 import 'home_wallpaper_screen.dart';
@@ -331,6 +334,15 @@ class SettingsCatalog {
                 subtitle: tr(
                     'Rename, hide copies, fallbacks and stream test, from your phone or PC'),
                 page: (_) => const PlaylistEditorScreen()),
+            // Last: few users run a Dispatcharr (owner, 2026-11-18).
+            SettingsLink(
+                id: 'dispatcharr',
+                floating: true,
+                icon: Icons.alt_route,
+                title: 'Dispatcharr',
+                subtitle:
+                    tr("Every stream of a channel in the player's Sources"),
+                page: (_) => const DispatcharrScreen()),
           ]),
         ],
       );
@@ -472,6 +484,13 @@ class SettingsCatalog {
               tr('Removes the TV Shows tab and show search results.'),
               !prefs.hideShows,
               (v) => prefs.setHideShows(!v)),
+          _tab(
+              'tab_whats_new',
+              Icons.new_releases_outlined,
+              tr("What's New"),
+              tr("Removes What's New from Movies and TV Shows: they open on All."),
+              !prefs.hideWhatsNew,
+              (v) => prefs.setHideWhatsNew(!v)),
           _tab(
               'tab_sports',
               Icons.sports_outlined,
@@ -895,6 +914,13 @@ class SettingsCatalog {
                     'Use the largest known file size when starting a title. Resume keeps your selected stream.'),
                 value: archive.autoPlayLargest,
                 onChanged: archive.setAutoPlayLargest),
+          SettingsLink(
+              id: 'stream_badges',
+              floating: true,
+              icon: Icons.local_offer_outlined,
+              title: tr('Stream badges'),
+              subtitle: tr('Picture badges on Media Hub sources (4K, HDR, Atmos…)'),
+              page: (_) => const StreamBadgesScreen()),
           SettingsToggle(
               id: 'auto_trailers',
               icon: Icons.movie_outlined,
@@ -983,17 +1009,17 @@ class SettingsCatalog {
           // App Store rules: no gambling content.
           if (!appStoreBuild)
             SettingsToggle(
-              id: 'sports_odds',
-              icon: Icons.trending_up,
-              title: tr('Show betting odds'),
-              help: tr(
-                  'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
-                  {
-                    'app': AppConstants.appName
-                  }),
-              value: _storage.getSportsShowOdds(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsShowOdds(v))),
+                id: 'sports_odds',
+                icon: Icons.trending_up,
+                title: tr('Show betting odds'),
+                help: tr(
+                    'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
+                    {
+                      'app': AppConstants.appName
+                    }),
+                value: _storage.getSportsShowOdds(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsShowOdds(v))),
         ]),
         SettingsSection(title: tr('Channels'), [
           SettingsLink(
@@ -1250,6 +1276,15 @@ class SettingsCatalog {
                   'When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.'),
               value: prefs.backgroundSync,
               onChanged: prefs.setBackgroundSync),
+          if (ContentUpdates.supported)
+            SettingsToggle(
+                id: 'content_updates',
+                icon: Icons.update,
+                title: tr('Update while VesperTV is closed'),
+                help: tr(
+                    'The guide and your playlists update on their usual schedule even when the app is closed, so they are ready when you open it. Some boxes pause this in standby.'),
+                value: prefs.contentUpdates,
+                onChanged: prefs.setContentUpdates),
         ]),
       ],
     );
@@ -1751,6 +1786,21 @@ class SettingsCatalog {
                   value: !_storage.getMultiviewHideTips(),
                   onChanged: (v) =>
                       _save(() => _storage.setMultiviewHideTips(!v))),
+            if (!usesMediaKit)
+              SettingsChoice(
+                  id: 'multiview_frame_saver',
+                  icon: Icons.speed,
+                  title: tr('Multiview frame saver'),
+                  help: tr(
+                      'Silent Multiview screens skip every other frame (a 50 fps channel plays at 25), so the box can decode more screens at once. The screen with the sound always plays every frame. Auto: only when the box can\'t keep up.'),
+                  options: [
+                    SettingsOption('auto', tr('Auto')),
+                    SettingsOption('always', tr('Always')),
+                    SettingsOption('off', tr('Off')),
+                  ],
+                  selected: _storage.getMultiviewFrameSaver(),
+                  onPick: (v) =>
+                      _save(() => _storage.setMultiviewFrameSaver(v))),
             SettingsToggle(
                 id: 'resume_pill',
                 icon: Icons.touch_app_outlined,

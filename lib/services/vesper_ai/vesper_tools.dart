@@ -26,6 +26,8 @@ import '../channel_name_events.dart';
 import '../desktop_audio.dart';
 import '../desktop_player_control.dart';
 import '../desktop_stream_setup.dart';
+import '../dispatcharr.dart';
+import '../live_sources.dart';
 import '../epg_service.dart';
 import '../guide_link_log.dart';
 import '../guide_matching.dart';
@@ -35,6 +37,7 @@ import '../playlist_edits_diff.dart';
 import '../playlist_editor_epg.dart';
 import '../playlist_manager.dart';
 import '../playlist_session.dart';
+import '../recording_service.dart';
 import '../real_4k_channels.dart';
 import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
@@ -42,12 +45,14 @@ import '../sports_service.dart';
 import '../storage_service.dart';
 import '../stream_languages.dart';
 import '../subtitle_tracks.dart';
+import '../user_groups.dart';
 import '../vod_buffering.dart';
 import 'watch_list.dart';
 import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 import '../../utils/video_hdr_report.dart';
+import '../../widgets/live_source_drawer.dart';
 import '../../widgets/data_pool_card.dart';
 import '../../widgets/desktop_data_pool_card.dart';
 import '../../widgets/desktop_subtitles.dart';
@@ -59,10 +64,12 @@ part 'game_channel_tool.dart';
 part 'hub_rows_tool.dart';
 part 'media_hub_tool.dart';
 part 'my_groups_tool.dart';
+part 'network_folder_tool.dart';
 part 'player_tracks.dart';
 part 'playlist_editor_tool.dart';
 part 'profiles_tool.dart';
 part 'settings_tool.dart';
+part 'sources_tool.dart';
 part 'vesper_help.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
@@ -1171,7 +1178,9 @@ final List<VesperTool> vesperTools = [
         'from search or from this list, a name, or "current" for what is '
         'playing), or clear it. Titles come from the IPTV playlists or from '
         'Media Hub (source: "media_hub"); by name, the playlists are tried '
-        'first, then Media Hub. Use it for lists like "a movie night list for '
+        'first, then Media Hub. Several Media Hub titles with that name = '
+        'a choose list instead (add the right one by ref; media_hub info '
+        'shows cast and director). Prefer a ref from search. Use it for lists like "a movie night list for '
         'Friday": search, then add each pick with a short note.',
     schema: {
       'type': 'object',
@@ -1247,6 +1256,26 @@ final List<VesperTool> vesperTools = [
             (source == 'iptv'
                 ? (await box.findLive(name, limit: 1)).firstOrNull
                 : null);
+      }
+      if (item == null &&
+          action == 'add' &&
+          name.isNotEmpty &&
+          source != 'iptv' &&
+          box.hub != null &&
+          !box.prefs.hideArchive) {
+        // Same name and year from several sources or productions: never
+        // add one at random; the AI compares them (cast, director) first.
+        final same = await _sameNamedHubTitles(box.hub!, name);
+        if (same.isNotEmpty) {
+          return {
+            'added': false,
+            'choose': [for (final t in same) _describeHubTitle(box, t)],
+            'note': '${same.length} Media Hub titles are called '
+                '"${same.first.meta.name}". Pick the right one (media_hub '
+                'info on a ref shows its cast and director), then add it by '
+                'ref.',
+          };
+        }
       }
       if (item == null &&
           name.isNotEmpty &&
@@ -1385,6 +1414,8 @@ final List<VesperTool> vesperTools = [
   _playlistEditorTool,
   _epgMatchingTool,
   _settingsTool,
+  _networkFolderTool,
+  _sourcesTool,
   _profilesTool,
   _parentalTool,
   VesperTool(
