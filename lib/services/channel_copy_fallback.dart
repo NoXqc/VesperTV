@@ -65,7 +65,7 @@ class ChannelCopyFallback {
         if (c.id != channel.id &&
             c.url != channel.url &&
             c.url.isNotEmpty &&
-            (probe.isEmpty || c.name.toUpperCase().contains(probe)) &&
+            channelCopyMayMatch(c.name, probe) &&
             channelCopyKey(c.name) == key)
           c
     ];
