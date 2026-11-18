@@ -2483,6 +2483,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         (_timelineGuideKey.currentState?.focusEntry() ?? false)) {
       return;
     }
+    if (target == 2 && _enterLiveList()) return;
     // See _firstGroupRowFocusNode's own doc comment — only when nothing's
     // already focused in the groups column (so returning to a previously-
     // browsed group still restores where you left off, same as before).
@@ -2503,6 +2504,74 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       });
       WidgetsBinding.instance.scheduleFrame();
     }
+  }
+
+  /// Right into the channel list (the list guide; the Timeline has its own
+  /// [focusEntry]): the row left there when it's still on screen, else the
+  /// playing channel's row when it's in this group, else the first row on
+  /// screen. `_col2Scope.requestFocus()` alone restored a row that was gone
+  /// (another group picked since) or scrolled away: the column itself took
+  /// focus and the recovery sent it to the tabs, or focus went to an
+  /// invisible row (owner photo, 2026-11-18: "right arrow to the channels
+  /// brings me left to the main tab. Sometimes right arrow doesn't do
+  /// anything"). False = not the list guide, nothing to focus.
+  bool _enterLiveList() {
+    if (_tab != 'TV') return false;
+    if (_currentLiveChannels(context.read<PlaylistManager>()).isEmpty) {
+      // Nothing to go to (an empty Favourites): stay on the group. The
+      // column alone took focus and the recovery sent it to the tabs.
+      debugPrint('Guide: Right, but this group has no channels');
+      return true;
+    }
+    final viewport = _liveListViewport();
+    if (viewport == null) return false;
+    bool onScreen(FocusNode n) {
+      if (n.context == null) return false;
+      final r = n.rect;
+      return r.top >= viewport.top - 1 &&
+          r.bottom <= viewport.bottom + 1 &&
+          r.left >= viewport.left - 1 &&
+          r.right <= viewport.right + 1;
+    }
+
+    final remembered = _col2Scope.focusedChild;
+    if (remembered != null &&
+        remembered is! FocusScopeNode &&
+        onScreen(remembered)) {
+      remembered.requestFocus();
+      return true;
+    }
+    final why = remembered == null
+        ? 'no row left there'
+        : remembered.context == null
+            ? 'its row is gone'
+            : 'its row is off screen';
+    final playing = context.read<PlaybackService>().liveChannel;
+    if (playing != null &&
+        _currentLiveChannels(context.read<PlaylistManager>())
+            .any((c) => c.id == playing.id)) {
+      debugPrint('Guide: Right -> playing channel ($why)');
+      unawaited(_restoreLiveFocus());
+      return true;
+    }
+    FocusNode? first;
+    for (final n in _col2Scope.traversalDescendants) {
+      if (n is FocusScopeNode || !n.canRequestFocus || !onScreen(n)) continue;
+      if (first == null || n.rect.top < first.rect.top) first = n;
+    }
+    if (first == null) return false;
+    debugPrint('Guide: Right -> first channel on screen ($why)');
+    first.requestFocus();
+    return true;
+  }
+
+  /// The channel list's visible area on screen, null when it isn't built.
+  Rect? _liveListViewport() {
+    if (!_liveListController.hasClients) return null;
+    final box = _liveListController.position.context.notificationContext
+        ?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
   }
 
   @override
