@@ -6465,6 +6465,12 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 : {
                     g.first.shortName,
                     g.second.shortName,
+                    // Both team codes ("TOR BOS" finds "TOR @ BOS"; GiladG2,
+                    // Discord 2026-11-18).
+                    if (g.first.abbreviation.trim().length >= 2 &&
+                        g.second.abbreviation.trim().length >= 2)
+                      '${g.first.abbreviation.trim()} '
+                          '${g.second.abbreviation.trim()}',
                     g.league.shortName,
                     ...g.broadcasts.take(4),
                   })

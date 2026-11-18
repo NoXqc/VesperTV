@@ -309,6 +309,24 @@ final List<_AiSetting> _aiSettings = [
           'without OK (the panel stays open).',
       (b) => b.prefs.panelZapOnMove,
       (b, on) => b.prefs.setPanelZapOnMove(on)),
+  _AiSetting(
+      'dispatcharr_sources',
+      'playback',
+      'Sources in the player',
+      'Dispatcharr channels (Settings > Dispatcharr): which streams the '
+          "player's Sources lists. first = the channel, the streams "
+          "Dispatcharr merged into it, then VesperTV's own matches (quality "
+          'copies, fallbacks, other playlists); only = the channel and '
+          "Dispatcharr's streams; vesper = VesperTV's matches only.",
+      choices: const [
+        ('first', "Dispatcharr's first"),
+        ('only', "Only Dispatcharr's"),
+        ('vesper', "Only VesperTV's"),
+      ],
+      read: (b) => Dispatcharr.instance.sources.name,
+      write: (b, v) => Dispatcharr.instance
+          .setSources(DispatcharrSources.parse(v as String)),
+      androidOnly: true),
   _switch(
       'catchup_keep_playing',
       'playback',

@@ -417,6 +417,46 @@ class DispatcharrApi {
   }
 }
 
+/// What the player's Sources lists for a channel of the connected
+/// Dispatcharr (Settings > Dispatcharr > Sources in the player). AMD,
+/// 2026-11-18: he expected only the streams he assigned in Dispatcharr,
+/// not VesperTV's own matches (quality copies, fallbacks, other
+/// playlists) as well.
+enum DispatcharrSources {
+  /// The channel, Dispatcharr's streams, then VesperTV's matches.
+  first,
+
+  /// The channel and Dispatcharr's streams only.
+  only,
+
+  /// VesperTV's matches only, as without Dispatcharr.
+  vesper;
+
+  static DispatcharrSources parse(String? name) =>
+      values.where((v) => v.name == name).firstOrNull ?? first;
+}
+
+/// The Sources rows of a Dispatcharr channel in [mode]'s order: [app] is
+/// VesperTV's list (the channel itself first), [streams] Dispatcharr's.
+/// The row playing now ([isCurrent]) always stays.
+List<T> arrangeDispatcharrSources<T>(DispatcharrSources mode, List<T> app,
+    List<T> streams, bool Function(T) isCurrent) {
+  if (app.isEmpty) return streams;
+  final rest = app.skip(1);
+  return switch (mode) {
+    DispatcharrSources.first => [app.first, ...streams, ...rest],
+    DispatcharrSources.only => [
+        app.first,
+        ...streams,
+        ...rest.where(isCurrent)
+      ],
+    DispatcharrSources.vesper => [
+        ...app,
+        ...streams.where(isCurrent),
+      ],
+  };
+}
+
 /// The signed-in Dispatcharr (one server) and the player's lookups on it.
 class Dispatcharr {
   Dispatcharr._();
@@ -434,6 +474,12 @@ class Dispatcharr {
   final Map<int, ({DateTime at, List<DispatcharrStream> streams})> _streams =
       {};
   ({DateTime at, Map<int, String> names})? _names;
+
+  /// See [DispatcharrSources].
+  DispatcharrSources get sources =>
+      DispatcharrSources.parse(_storage?.getDispatcharrSources());
+  Future<void> setSources(DispatcharrSources value) async =>
+      _storage?.setDispatcharrSources(value.name);
 
   void attach(StorageService storage) {
     _storage = storage;

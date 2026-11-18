@@ -1117,7 +1117,12 @@ class PlaybackService extends ChangeNotifier {
         !previous.isLive ||
         !channel.isLive ||
         previous.subtitleUrl != null ||
-        channel.subtitleUrl != null) {
+        channel.subtitleUrl != null ||
+        // replaceLive only takes the URL: a stream with headers (a
+        // Dispatcharr pick's X-API-Key, a provider's User-Agent) needs a
+        // fresh player, or they're dropped (AMD's LOG-AP4L8B, +853: still
+        // Anonymous in Dispatcharr).
+        channel.httpHeaders.isNotEmpty) {
       return false;
     }
     final generation = ++_nativeZapGeneration;

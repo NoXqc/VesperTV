@@ -3841,6 +3841,52 @@ const Map<String, String> kDe = {
       "Im Player listet Quellen alle Streams, die Dispatcharr für den Sender hat. Die Auswahl gilt nur für dich: andere Zuschauer behalten ihren.",
   "Add as a playlist":
       "Als Playlist hinzufügen",
+  "Sources in the player":
+      "Quellen im Player",
+  "Which streams Sources lists for a Dispatcharr channel":
+      "Welche Streams Quellen für einen Dispatcharr-Sender zeigt",
+  "Dispatcharr's first":
+      "Zuerst die von Dispatcharr",
+  "Then VesperTV's matches: quality copies, fallbacks, other playlists":
+      "Dann die von VesperTV gefundenen: andere Qualitäten, Ausweichquellen, andere Playlists",
+  "Only Dispatcharr's":
+      "Nur die von Dispatcharr",
+  "The channel and the streams you assigned to it in Dispatcharr":
+      "Der Sender und die Streams, die du ihm in Dispatcharr zugewiesen hast",
+  "Only VesperTV's":
+      "Nur die von VesperTV",
+  "Quality copies, fallbacks and other playlists, as without Dispatcharr":
+      "Andere Qualitäten, Ausweichquellen und andere Playlists, wie ohne Dispatcharr",
+  "An AI app wants to save the network folder {folder}.":
+      "Eine KI-App möchte den Netzwerkordner {folder} speichern.",
+  "An AI app wants to forget the network folder {folder}.":
+      "Eine KI-App möchte den Netzwerkordner {folder} vergessen.",
+  "Select…":
+      "Auswählen…",
+  "Stop selecting":
+      "Auswahl beenden",
+  "{count} added to Favourites":
+      "{count} zu Favoriten hinzugefügt",
+  "{count} removed from Favourites":
+      "{count} aus Favoriten entfernt",
+  "Add to group…":
+      "Zu Gruppe hinzufügen…",
+  "Add {count} channels to":
+      "{count} Sender hinzufügen zu",
+  "{count} added to {group}":
+      "{count} zu {group} hinzugefügt",
+  "{count} selected · OK: tick · Hold OK: add them · Back: done":
+      "{count} ausgewählt · OK: abhaken · OK halten: hinzufügen · Zurück: fertig",
+  "Subscription ended":
+      "Abo abgelaufen",
+  "Subscription ends today":
+      "Abo endet heute",
+  "Subscription ends tomorrow":
+      "Abo endet morgen",
+  "Subscription ends in {days} days":
+      "Abo endet in {days} Tagen",
+  "Renew with your provider so it keeps playing.":
+      "Verlängere bei deinem Anbieter, damit es weiter läuft.",
   "Add another playlist from it":
       "Weitere Playlist davon hinzufügen",
   "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":

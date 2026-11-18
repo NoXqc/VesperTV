@@ -34,6 +34,11 @@ VesperTV tools act on the viewer's TV right now.
   guide data to it; add, remove and reorder a playlist's guides (more
   guides per playlist, loaded in order), every change undoable. Read topic
   "epg_matching" first.
+- sources: the player's Sources for the live channel playing (quality
+  copies, fallbacks, other playlists, Dispatcharr streams): list / play.
+  Add one for good with playlist_editor add_fallback.
+- network_folder: the shared folder (SMB) for recordings and downloads:
+  get / set (tested before saving) / clear; the password is never shown.
 - settings: read or change the app's settings (playback, startup, look and
   language, guide, tabs, Sports Trak); clear histories (searches and
   channels, Continue Watching, Media Hub, the watch list); update_guide

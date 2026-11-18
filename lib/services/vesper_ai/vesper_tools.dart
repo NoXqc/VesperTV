@@ -26,6 +26,8 @@ import '../channel_name_events.dart';
 import '../desktop_audio.dart';
 import '../desktop_player_control.dart';
 import '../desktop_stream_setup.dart';
+import '../dispatcharr.dart';
+import '../live_sources.dart';
 import '../epg_service.dart';
 import '../guide_link_log.dart';
 import '../guide_matching.dart';
@@ -35,6 +37,7 @@ import '../playlist_edits_diff.dart';
 import '../playlist_editor_epg.dart';
 import '../playlist_manager.dart';
 import '../playlist_session.dart';
+import '../recording_service.dart';
 import '../real_4k_channels.dart';
 import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
@@ -49,6 +52,7 @@ import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 import '../../utils/video_hdr_report.dart';
+import '../../widgets/live_source_drawer.dart';
 import '../../widgets/data_pool_card.dart';
 import '../../widgets/desktop_data_pool_card.dart';
 import '../../widgets/desktop_subtitles.dart';
@@ -60,10 +64,12 @@ part 'game_channel_tool.dart';
 part 'hub_rows_tool.dart';
 part 'media_hub_tool.dart';
 part 'my_groups_tool.dart';
+part 'network_folder_tool.dart';
 part 'player_tracks.dart';
 part 'playlist_editor_tool.dart';
 part 'profiles_tool.dart';
 part 'settings_tool.dart';
+part 'sources_tool.dart';
 part 'vesper_help.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
@@ -1408,6 +1414,8 @@ final List<VesperTool> vesperTools = [
   _playlistEditorTool,
   _epgMatchingTool,
   _settingsTool,
+  _networkFolderTool,
+  _sourcesTool,
   _profilesTool,
   _parentalTool,
   VesperTool(

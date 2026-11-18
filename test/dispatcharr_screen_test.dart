@@ -235,6 +235,43 @@ void main() {
     expect(Dispatcharr.instance.login.value, isNull);
   });
 
+  testWidgets("Sources in the player: Only Dispatcharr's is saved",
+      (tester) async {
+    // AMD (2026-11-18): only the streams he assigned in Dispatcharr.
+    Dispatcharr.instance.api = _api();
+    await _open(tester);
+    await _signIn(tester);
+    expect(Dispatcharr.instance.sources, DispatcharrSources.first);
+    expect(find.text("Dispatcharr's first"), findsOneWidget);
+    await tester.tap(find.text('Sources in the player'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Only Dispatcharr's"));
+    await tester.pumpAndSettle();
+    expect(Dispatcharr.instance.sources, DispatcharrSources.only);
+    expect(find.text("Only Dispatcharr's"), findsOneWidget);
+    await Dispatcharr.instance.setSources(DispatcharrSources.first);
+  });
+
+  test("Sources rows: first, only and VesperTV's order", () {
+    // (name, playing now)
+    const app = [('channel', false), ('HD copy', false), ('other list', true)];
+    const streams = [('Primary', false), ('Secondary', false)];
+    List<String> names(DispatcharrSources m) => [
+          for (final r
+              in arrangeDispatcharrSources(m, app, streams, (r) => r.$2))
+            r.$1
+        ];
+    expect(names(DispatcharrSources.first),
+        ['channel', 'Primary', 'Secondary', 'HD copy', 'other list']);
+    // The app's rows go, except the one playing now.
+    expect(names(DispatcharrSources.only),
+        ['channel', 'Primary', 'Secondary', 'other list']);
+    expect(
+        names(DispatcharrSources.vesper), ['channel', 'HD copy', 'other list']);
+    expect(DispatcharrSources.parse(''), DispatcharrSources.first);
+    expect(DispatcharrSources.parse('only'), DispatcharrSources.only);
+  });
+
   testWidgets('the drawer shows a Dispatcharr stream with what it measured',
       (tester) async {
     Channel ch(String url, String name) => Channel(

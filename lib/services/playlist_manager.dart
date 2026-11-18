@@ -2277,6 +2277,34 @@ class PlaylistManager extends ChangeNotifier {
               c.isFavorite && !_isHiddenForActiveViewer(c.playlistId, c.group))
           .toList());
 
+  /// Hold OK > Select on the TV (owner, 2026-11-18): many live channels
+  /// into or out of Favourites at once, with one save and one rebuild.
+  /// Returns how many changed.
+  Future<int> setLiveFavorites(
+      Iterable<Channel> channels, bool favorite) async {
+    final changed = <Channel>[];
+    for (final c in channels) {
+      c.isFavorite = favorite;
+      if (_favoriteIds.contains(c.id) == favorite) continue;
+      favorite ? _favoriteIds.add(c.id) : _favoriteIds.remove(c.id);
+      changed.add(c);
+    }
+    if (changed.isEmpty) return 0;
+    if (favorite) _rememberSavedLive(changed);
+    final ids = {for (final c in changed) c.id};
+    _invalidateFavoriteCatalog();
+    for (final session in _sessions) {
+      for (final list in [session.channels, session.liveChannels]) {
+        for (final copy in list) {
+          if (ids.contains(copy.id)) copy.isFavorite = favorite;
+        }
+      }
+    }
+    await _storage.setFavorites(_favoriteIds);
+    notifyListeners();
+    return changed.length;
+  }
+
   Future<void> toggleFavorite(Channel channel) async {
     channel.isFavorite = !_favoriteIds.contains(channel.id);
     if (channel.isFavorite) {

@@ -64,6 +64,7 @@ import 'services/storage_service.dart';
 import 'services/game_reminders.dart';
 import 'services/programme_reminders.dart';
 import 'widgets/programme_reminder_overlay.dart';
+import 'widgets/provider_expiry_overlay.dart';
 import 'services/goals_alerts.dart';
 import 'services/episode_alert_lookup.dart';
 import 'services/episode_alerts.dart';
@@ -1700,6 +1701,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),
+              const ProviderExpiryOverlay(),
               const GoalsAlertOverlay(),
               const VesperBubbleOverlay(),
             ],

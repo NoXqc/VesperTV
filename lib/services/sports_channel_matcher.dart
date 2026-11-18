@@ -682,6 +682,21 @@ final Map<String, String> _abbrCanonical = {
 
 String _canonicalAbbr(String code) => _abbrCanonical[code] ?? code;
 
+/// The ways a guide writes [g] in team codes: "TOR @ BOS", "TOR at BOS",
+/// "TOR vs BOS" (either order for vs), "TOR-BOS". Empty for event sports
+/// or a missing code.
+List<String> _codePairTerms(SportsGame g) {
+  if (g.league.kind != SportsKind.team) return const [];
+  final a = g.away.abbreviation.trim();
+  final h = g.home.abbreviation.trim();
+  if (a.length < 2 || h.length < 2 || a == h) return const [];
+  return [
+    for (final sep in [' @ ', '@', ' at ']) '$a$sep$h',
+    for (final (x, y) in [(a, h), (h, a)])
+      for (final sep in [' vs ', ' vs. ', ' v ', ' - ', '-']) '$x$sep$y',
+  ];
+}
+
 /// A channel named after one game in team codes: "B01: 7pm CHA @ DET",
 /// "FB01 : 8:15 DAL @ PHI". [minutes] is the 12-hour clock time written in
 /// the name (minutes past 12), [zone] its US zone tag (et/ct/mt/pt) if any.
@@ -1345,6 +1360,10 @@ class SportsChannelMatcher {
       for (final p in g.league.seriesPhrases) {
         if (p.trim().isNotEmpty) raw.add(p.trim());
       }
+      // Guides that write only the team codes ("TOR @ BOS"; GiladG2,
+      // 2026-11-18): the usual ways a pair is written, never a bare code
+      // ("tor" is in "Doctor").
+      raw.addAll(_codePairTerms(g));
       // Greek clubs: the guide may write them in Greek. Both teams, since
       // a Latin term can't find a Greek title for the other one.
       for (final t in [g.home, g.away]) {
@@ -1511,6 +1530,14 @@ class SportsChannelMatcher {
       // for event sports, the event or its series ("Formula 1: Qualifying",
       // "PGA Tour Golf").
       final (from, to) = _guideWindow(g);
+      final awayCode = g.away.abbreviation.trim().toLowerCase();
+      final homeCode = g.home.abbreviation.trim().toLowerCase();
+      final codes = g.league.kind == SportsKind.team &&
+              awayCode.length >= 2 &&
+              homeCode.length >= 2 &&
+              awayCode != homeCode
+          ? (' $awayCode ', ' $homeCode ')
+          : null;
       final series = [
         for (final p in g.league.seriesPhrases) sportsNormalize(p)
       ];
@@ -1519,7 +1546,13 @@ class SportsChannelMatcher {
         if (start.isBefore(from) || !start.isBefore(to)) continue;
         final title = sportsNormalize(p.title);
         final byName = groups.every((group) => group.any(title.contains));
-        if (!byName && !series.any(title.contains)) continue;
+        // Both team codes as words ("TOR @ BOS", GiladG2 on Discord,
+        // 2026-11-18): some guides write only those.
+        final byCode = !byName &&
+            codes != null &&
+            title.contains(codes.$1) &&
+            title.contains(codes.$2);
+        if (!byName && !byCode && !series.any(title.contains)) continue;
         if (!byName &&
             g.league.kind == SportsKind.team &&
             namesOtherGame(g, title)) {
@@ -1528,14 +1561,14 @@ class SportsChannelMatcher {
         final diff = g.end != null
             ? 0 // golf: all day, nothing to be early or late for
             : start.difference(g.start).inMinutes;
-        if (byName && !_byEpgId.containsKey(p.channelId)) {
+        if ((byName || byCode) && !_byEpgId.containsKey(p.channelId)) {
           hiddenInGuide ??= _hiddenByEpgId[p.channelId];
         }
         for (final i in _byEpgId[p.channelId] ?? const <int>[]) {
           add(
               i,
               MatchReason.guide,
-              (byName ? 80 : 70) -
+              (byName ? 80 : (byCode ? 75 : 70)) -
                   math.min(diff.abs(), 60) ~/ 6 +
                   _regionBias(i, g.league),
               p.title,

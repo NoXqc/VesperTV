@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
@@ -38,6 +39,7 @@ import '../services/playback_service.dart';
 import '../services/guide_key.dart';
 import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
+import '../services/user_groups.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../utils/scroll_safety.dart';
@@ -909,6 +911,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// mean either "favourite" or "hide" here, unlike the plain list where
   /// hold has only ever meant one thing.
   Future<void> _showChannelOptions(Channel channel) async {
+    if (_selection.value != null) return _showSelectionOptions();
     final playlist = context.read<PlaylistManager>();
     final menuViewer = context.read<StorageService>().getActiveViewerId();
     final isFavorited = channel.isFavorite;
@@ -1045,6 +1048,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 : tr('Add to Favourites')),
           ),
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('select'),
+            child: Text(tr('Select…')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('hide'),
             child: Text(
                 isHidden ? tr('Unhide this channel') : tr('Hide this channel')),
@@ -1161,6 +1168,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               'Up / Down moves {name}. OK when done.', {'name': channel.name})),
           duration: const Duration(seconds: 3),
         ));
+      case 'select':
+        _selection.value = {channel.id: channel};
       case 'favorite':
         _toggleFavoriteWithFeedback(context, channel);
       case 'hide':
@@ -1340,6 +1349,144 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// inside its group or Favourites (plain list and Timeline guide alike, see
   /// [_movingChannelBindings]), OK or Back finishes.
   Channel? _movingChannel;
+
+  /// "Select" (hold OK on a channel > Select; owner, 2026-11-18: many
+  /// channels into Favourites at once): the ticked channels by id, null =
+  /// not selecting. OK ticks / unticks a row (plain list and Timeline guide
+  /// alike), hold OK = what to do with them, Back ends it. A notifier: a
+  /// tick never rebuilds the TV screen (CLAUDE.md §10, frame cost (3)).
+  final _selection = ValueNotifier<Map<String, Channel>?>(null);
+
+  void _toggleSelected(Channel channel) {
+    final ticked = Map.of(_selection.value ?? const <String, Channel>{});
+    if (ticked.remove(channel.id) == null) ticked[channel.id] = channel;
+    _selection.value = ticked;
+  }
+
+  void _endSelection() => _selection.value = null;
+
+  /// Hold OK while selecting: Favourites for the ticked channels, or stop.
+  Future<void> _showSelectionOptions() async {
+    final ticked = _selection.value;
+    if (ticked == null) return;
+    final n = ticked.length;
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        maxWidth: 360,
+        title: Text(tr('{count} selected', {'count': n})),
+        children: [
+          if (n > 0) ...[
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop('add'),
+              child: Text(tr('Add to Favourites')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('remove'),
+              child: Text(tr('Remove from Favourites')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('group'),
+              child: Text(tr('Add to group…')),
+            ),
+          ],
+          TvDialogOption(
+            autofocus: n == 0,
+            onPressed: () => Navigator.of(context).pop('done'),
+            child: Text(tr('Stop selecting')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'done') {
+      _endSelection();
+      return;
+    }
+    if (choice == 'group') {
+      await _addSelectionToGroup(ticked.values.toList());
+      return;
+    }
+    final add = choice == 'add';
+    final count = await context
+        .read<PlaylistManager>()
+        .setLiveFavorites(ticked.values, add);
+    if (!mounted) return;
+    _endSelection();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(add
+          ? tr('{count} added to Favourites', {'count': count})
+          : tr('{count} removed from Favourites', {'count': count})),
+      duration: const Duration(seconds: 3),
+    ));
+  }
+
+  /// Selection > Add to group… (owner, 2026-11-18: custom groups too, not
+  /// only Favourites): one of the viewer's own groups or a new one. A copy:
+  /// the channels stay in their own groups as well (playlist editor's Copy
+  /// to group, [PlaylistManager.placeChannels]).
+  Future<void> _addSelectionToGroup(List<Channel> channels) async {
+    final playlist = context.read<PlaylistManager>();
+    final picked = await showMoveToGroupDialog(
+      context,
+      channelName: '',
+      userGroups: playlist.userGroups,
+      currentGroup: '',
+      providerGroup: '',
+      title: tr('Add {count} channels to', {'count': channels.length}),
+    );
+    final name = picked?.title;
+    if (name == null || !mounted) return;
+    final title = playlist.userGroups.contains(name)
+        ? name
+        : await playlist.createUserGroup(name);
+    final r =
+        await playlist.placeChannels(channels, GroupRef.own(title), copy: true);
+    if (!mounted) return;
+    _endSelection();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          tr('{count} added to {group}', {'count': r.changed, 'group': title})),
+      duration: const Duration(seconds: 3),
+    ));
+  }
+
+  /// While selecting: how many are ticked and the keys, over the guide.
+  Widget _buildSelectionBar() => ValueListenableBuilder<Map<String, Channel>?>(
+        valueListenable: _selection,
+        builder: (context, ticked, _) => ticked == null
+            ? const SizedBox.shrink()
+            : Positioned(
+                top: 8,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
+                      child: Text(
+                          tr('{count} selected · OK: tick · Hold OK: add them · Back: done',
+                              {'count': ticked.length}),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+              ),
+      );
 
   /// Given to whichever plain-list row shows [_movingChannel], so focus
   /// follows the channel to its new index after each step.
@@ -2430,6 +2577,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _endChannelMove();
       return;
     }
+    if (_selection.value != null) {
+      _endSelection();
+      return;
+    }
     if (_compact) {
       // The bottom bar replaced the tabs page as the way between
       // tabs: content -> groups -> exit; "More" (page 0) -> groups.
@@ -2721,6 +2872,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _catchupRowFocusNode.dispose();
     _currentChannelFocusNode.dispose();
     _movingChannelFocusNode.dispose();
+    _selection.dispose();
     _firstLiveChannelFocusNode.dispose();
     _col0Scope.dispose();
     _col1Scope.dispose();
@@ -4233,6 +4385,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               if (!prefs.isTelevision &&
                   (_movingChannel != null || _movingGroupKey != null))
                 _buildTouchMoveBar(),
+              _buildSelectionBar(),
             ],
           ),
         ),
@@ -6262,6 +6415,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               _endChannelMove();
               return;
             }
+            if (_selection.value != null) {
+              _toggleSelected(channel);
+              return;
+            }
             if (_timelineFilterActive) _closeTimelineFilter();
             _previewOrOpenCatchup(channel, at);
           },
@@ -6275,10 +6432,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               _endChannelMove();
               return;
             }
+            if (_selection.value != null) {
+              _toggleSelected(channel);
+              return;
+            }
             if (_timelineFilterActive) _closeTimelineFilter();
             _previewOrOpenChannel(channel);
           },
           movingChannelId: _movingChannel?.id,
+          selection: _selection,
           playlistTags: !_mixFavorites,
           onFocusChanged: _onGuideFocusChanged,
           onShowOptions: _showChannelOptions,
@@ -6668,8 +6830,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Hold opens the channel menu (favourite, hide, Move Up / Down) — the
     // same one the Timeline guide's hold opens.
     final row = HoldToActivate(
-      onTap: () =>
-          isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
+      onTap: () => isMoving
+          ? _endChannelMove()
+          : _selection.value != null
+              ? _toggleSelected(channel)
+              : _previewOrOpenChannel(channel),
       onHold: () => isMoving ? _endChannelMove() : _showChannelOptions(channel),
       child: _SelectableRow(
         selected: isSelected || isMoving,
@@ -6678,8 +6843,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             : isSelected
                 ? _currentChannelFocusNode
                 : (i == 0 ? _firstLiveChannelFocusNode : null),
-        onTap: () =>
-            isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
+        onTap: () => isMoving
+            ? _endChannelMove()
+            : _selection.value != null
+                ? _toggleSelected(channel)
+                : _previewOrOpenChannel(channel),
         onLongPress: () =>
             isMoving ? _endChannelMove() : _showChannelOptions(channel),
         leading: SizedBox(
@@ -6708,6 +6876,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             children: [
               RecDot(channel: channel),
               Real4kTag(channelId: channel.id),
+              _SelectionCheck(_selection, channel.id),
               if (isMoving)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
@@ -9649,6 +9818,7 @@ class _TimelineGuide extends StatefulWidget {
       required this.onFocusChanged,
       required this.onShowOptions,
       this.movingChannelId,
+      this.selection,
       this.playlistTags = true,
       required this.filterFocusNode,
       required this.onFilterToggle,
@@ -9707,6 +9877,9 @@ class _TimelineGuide extends StatefulWidget {
 
   /// Row in "Move Up / Down" mode (marked in the channel column).
   final String? movingChannelId;
+
+  /// Ticked rows while selecting ([_TvHomeScreenState._selection]).
+  final ValueListenable<Map<String, Channel>?>? selection;
 
   /// Playlist name tags on mixed-playlist rows (off when the user mixes
   /// Favourites across playlists on purpose).
@@ -10739,8 +10912,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                         itemBuilder: (context, i) => _ChannelLabel(
                             channel: widget.channels[i],
                             playlistTag: _playlistTagFor(i),
-                            moving: widget.channels[i].id ==
-                                widget.movingChannelId),
+                            moving:
+                                widget.channels[i].id == widget.movingChannelId,
+                            selection: widget.selection),
                       ),
                     ),
                   ),
@@ -11185,11 +11359,44 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
 /// itself focusable; D-pad focus lives entirely on the programme blocks in
 /// [_TimelineRow], same as the plain channel list never puts focus on a
 /// row's logo.
+/// The gold check on a ticked row while selecting (hold OK > Select);
+/// nothing otherwise. Listens itself: a tick repaints only this.
+class _SelectionCheck extends StatelessWidget {
+  const _SelectionCheck(this.selection, this.id);
+  final ValueListenable<Map<String, Channel>?> selection;
+  final String id;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<Map<String, Channel>?>(
+        valueListenable: selection,
+        builder: (context, ticked, _) => ticked == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Icon(
+                    ticked.containsKey(id)
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: 20,
+                    color: ticked.containsKey(id)
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.white38),
+              ),
+      );
+}
+
 class _ChannelLabel extends StatelessWidget {
   const _ChannelLabel(
-      {required this.channel, this.playlistTag, this.moving = false});
+      {required this.channel,
+      this.playlistTag,
+      this.moving = false,
+      this.selection});
 
   final Channel channel;
+
+  /// Ticked rows while selecting: a check after the name.
+  final ValueListenable<Map<String, Channel>?>? selection;
 
   /// "Move Up / Down" in progress on this row: gold outline + arrows.
   final bool moving;
@@ -11240,6 +11447,7 @@ class _ChannelLabel extends StatelessWidget {
               ),
             ),
             if (moving) const Icon(Icons.swap_vert, color: Colors.amber),
+            if (selection case final sel?) _SelectionCheck(sel, channel.id),
           ],
         ),
       ),

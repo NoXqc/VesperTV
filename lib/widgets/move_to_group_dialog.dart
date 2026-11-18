@@ -22,12 +22,13 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
   required List<String> userGroups,
   required String currentGroup,
   required String providerGroup,
+  String? title,
 }) async {
   final moved = currentGroup != providerGroup;
   final choice = await showGlassMenu<String>(
     context: context,
     builder: (context) => GlassMenuDialog(
-      title: Text(tr('Move {name} to', {'name': channelName}),
+      title: Text(title ?? tr('Move {name} to', {'name': channelName}),
           maxLines: 2, overflow: TextOverflow.ellipsis),
       children: [
         for (final g in userGroups)

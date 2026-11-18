@@ -9,8 +9,11 @@ import '../../services/dispatcharr.dart';
 import '../../services/phone_pairing_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../utils/constants.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/phone_pair_panel.dart';
+import '../../widgets/setting_row.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'add_playlist_screen.dart';
 
@@ -298,6 +301,45 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
         ),
       );
 
+  static String _sourcesLabel(DispatcharrSources m) => switch (m) {
+        DispatcharrSources.first => tr("Dispatcharr's first"),
+        DispatcharrSources.only => tr("Only Dispatcharr's"),
+        DispatcharrSources.vesper => tr("Only VesperTV's"),
+      };
+
+  static String _sourcesHelp(DispatcharrSources m) => switch (m) {
+        DispatcharrSources.first => tr(
+            "Then VesperTV's matches: quality copies, fallbacks, other playlists"),
+        DispatcharrSources.only =>
+          tr('The channel and the streams you assigned to it in Dispatcharr'),
+        DispatcharrSources.vesper => tr(
+            'Quality copies, fallbacks and other playlists, as without Dispatcharr'),
+      };
+
+  /// Sources in the player ([DispatcharrSources]; AMD, 2026-11-18).
+  Future<void> _pickSources() async {
+    final current = _d.sources;
+    final picked = await showGlassMenu<DispatcharrSources>(
+      context: context,
+      builder: (dialog) => GlassMenuDialog(
+        title: Text(tr('Sources in the player')),
+        children: [
+          for (final m in DispatcharrSources.values)
+            TvMenuTile(
+              autofocus: m == current,
+              icon: m == current ? Icons.check : Icons.circle_outlined,
+              title: _sourcesLabel(m),
+              subtitle: _sourcesHelp(m),
+              onTap: () => Navigator.pop(dialog, m),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _d.setSources(picked);
+    if (mounted) setState(() {});
+  }
+
   Widget _connected(DispatcharrLogin l) {
     final manager = context.watch<PlaylistManager>();
     final linked = _linked(manager, l.server);
@@ -344,6 +386,14 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
         Text(
           tr('In the player, Sources lists every stream Dispatcharr has for the channel. Picking one plays it for you only: other viewers keep theirs.'),
           style: dim,
+        ),
+        const SizedBox(height: 12),
+        SettingRow(
+          icon: Icons.low_priority,
+          title: tr('Sources in the player'),
+          subtitle: tr('Which streams Sources lists for a Dispatcharr channel'),
+          trailing: SettingValue(text: _sourcesLabel(_d.sources)),
+          onTap: _pickSources,
         ),
         if (account != null && account.xcPassword == null) ...[
           const SizedBox(height: 8),

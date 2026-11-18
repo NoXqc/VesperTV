@@ -457,6 +457,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-18 - +851..+859 (merged to local main, not pushed, not released):** Dispatcharr > Sources in the player
+  (`DispatcharrSources`: first / only / vesper; the channel's own row says Automatic) + `X-API-Key` on picked Dispatcharr
+  streams (user shown instead of Anonymous). **`PlaybackService._reuseNativeLive` never reuses the player for a channel
+  with httpHeaders** (NativeVideoSurface.replaceLive takes only the URL: AMD's LOG-AP4L8B). Sources list shared in
+  `services/live_sources.dart`. Vesper AI tools `sources`, `network_folder`, settings key `dispatcharr_sources`. TV hold
+  OK > Select… (tick channels: Favourites / Add to group…, `_selection` ValueNotifier). Subscription ending reminder
+  (`provider_expiry_overlay.dart`, Xtream expiresAt, once a day). Leagues: Ekstraklasa + Polish I liga (TheSportsDB),
+  Swiss, Eerste Divisie, Irish. Guide titles in team codes ("TOR @ BOS") + picker chip. Network folder result above
+  the buttons. Next build > 859.
 - **Claude, 2026-11-18 - This game: Choose a different channel (`claude/game-search-sources`, +850 on the Homatics):** Discord request via the
   owner (a game's 2-3 matched channels were all wrong for one provider's names; searching meant leaving the game). The player's Left
   panel This game tab ends with **Choose a different channel** (`PlayerSidePanel._findChannel`, Android + Windows): Sports Trak's own

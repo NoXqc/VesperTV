@@ -3900,6 +3900,52 @@ const Map<String, String> kEl = {
       "Στην αναπαραγωγή, οι Πηγές δείχνουν όλες τις ροές που έχει το Dispatcharr για το κανάλι. Η επιλογή ισχύει μόνο για εσάς: οι άλλοι θεατές κρατούν τη δική τους.",
   "Add as a playlist":
       "Προσθήκη ως λίστα",
+  "Sources in the player":
+      "Πηγές στο πρόγραμμα αναπαραγωγής",
+  "Which streams Sources lists for a Dispatcharr channel":
+      "Ποιες ροές δείχνουν οι Πηγές για ένα κανάλι Dispatcharr",
+  "Dispatcharr's first":
+      "Πρώτα του Dispatcharr",
+  "Then VesperTV's matches: quality copies, fallbacks, other playlists":
+      "Μετά όσες βρίσκει το VesperTV: αντίγραφα άλλης ποιότητας, εφεδρικές, άλλες λίστες",
+  "Only Dispatcharr's":
+      "Μόνο του Dispatcharr",
+  "The channel and the streams you assigned to it in Dispatcharr":
+      "Το κανάλι και οι ροές που του όρισες στο Dispatcharr",
+  "Only VesperTV's":
+      "Μόνο του VesperTV",
+  "Quality copies, fallbacks and other playlists, as without Dispatcharr":
+      "Αντίγραφα άλλης ποιότητας, εφεδρικές και άλλες λίστες, όπως χωρίς Dispatcharr",
+  "An AI app wants to save the network folder {folder}.":
+      "Μια εφαρμογή AI θέλει να αποθηκεύσει τον φάκελο δικτύου {folder}.",
+  "An AI app wants to forget the network folder {folder}.":
+      "Μια εφαρμογή AI θέλει να ξεχάσει τον φάκελο δικτύου {folder}.",
+  "Select…":
+      "Επιλογή…",
+  "Stop selecting":
+      "Τέλος επιλογής",
+  "{count} added to Favourites":
+      "{count} προστέθηκαν στα Αγαπημένα",
+  "{count} removed from Favourites":
+      "{count} αφαιρέθηκαν από τα Αγαπημένα",
+  "Add to group…":
+      "Προσθήκη σε ομάδα…",
+  "Add {count} channels to":
+      "Προσθήκη {count} καναλιών σε",
+  "{count} added to {group}":
+      "{count} προστέθηκαν στο {group}",
+  "{count} selected · OK: tick · Hold OK: add them · Back: done":
+      "{count} επιλεγμένα · OK: σημείωση · Κράτα OK: προσθήκη · Πίσω: τέλος",
+  "Subscription ended":
+      "Η συνδρομή έληξε",
+  "Subscription ends today":
+      "Η συνδρομή λήγει σήμερα",
+  "Subscription ends tomorrow":
+      "Η συνδρομή λήγει αύριο",
+  "Subscription ends in {days} days":
+      "Η συνδρομή λήγει σε {days} ημέρες",
+  "Renew with your provider so it keeps playing.":
+      "Ανανέωσε με τον πάροχό σου για να συνεχίσει η αναπαραγωγή.",
   "Add another playlist from it":
       "Προσθήκη άλλης λίστας από αυτόν",
   "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":

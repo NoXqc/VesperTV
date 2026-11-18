@@ -263,9 +263,8 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
               if (box.maxWidth < 560) {
                 return Column(children: [address, folder, user, password]);
               }
-              Widget pair(Widget a, Widget b) => Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              Widget pair(Widget a, Widget b) =>
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Expanded(child: a),
                     const SizedBox(width: 12),
                     Expanded(child: b),
@@ -273,6 +272,25 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
               return Column(
                   children: [pair(address, folder), pair(user, password)]);
             }),
+            // Above the buttons: below them it was off screen on a TV
+            // (owner photo, 2026-11-18).
+            if (_result != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                if (_busy)
+                  const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                else
+                  Icon(_ok ? Icons.check_circle : Icons.error_outline,
+                      size: 18,
+                      color: _ok ? Colors.greenAccent : Colors.redAccent),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_result!)),
+              ]),
+              const SizedBox(height: 12),
+            ],
             Wrap(spacing: 12, runSpacing: 8, children: [
               OutlinedButton(
                 focusNode: _testFocus,
@@ -299,22 +317,6 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
                   child: Text(tr('Remove')),
                 ),
             ]),
-            if (_result != null) ...[
-              const SizedBox(height: 14),
-              Row(children: [
-                if (_busy)
-                  const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                else
-                  Icon(_ok ? Icons.check_circle : Icons.error_outline,
-                      size: 18,
-                      color: _ok ? Colors.greenAccent : Colors.redAccent),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_result!)),
-              ]),
-            ],
           ],
         ),
       ),

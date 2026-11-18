@@ -391,6 +391,20 @@ class StorageService {
       ? _prefs.remove(AppConstants.keyDispatcharr)
       : _prefs.setString(AppConstants.keyDispatcharr, json);
 
+  /// Settings > Dispatcharr > Sources in the player ([DispatcharrSources]
+  /// name), '' = the default. Device-only, like the sign-in.
+  String getDispatcharrSources() =>
+      _prefs.getString(AppConstants.keyDispatcharrSources) ?? '';
+  Future<void> setDispatcharrSources(String name) =>
+      _prefs.setString(AppConstants.keyDispatcharrSources, name);
+
+  /// The day (YYYY-MM-DD) the "subscription ends soon" card last showed
+  /// (`ProviderExpiryOverlay`): once a day at most. Device-only.
+  String getProviderExpiryNoticeDay() =>
+      _prefs.getString(AppConstants.keyProviderExpiryNoticeDay) ?? '';
+  Future<void> setProviderExpiryNoticeDay(String day) =>
+      _prefs.setString(AppConstants.keyProviderExpiryNoticeDay, day);
+
   /// Settings > Playback > Stream badges — see `StreamBadges`.
   String getStreamBadgesUrl() =>
       _prefs.getString(AppConstants.keyStreamBadgesUrl) ?? '';
