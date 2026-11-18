@@ -3942,6 +3942,7 @@ const Map<String, String> kFr = {
       "Les sources affichent les étiquettes de VesperTV",
   "Every stream of a channel in the player's Sources":
       "Tous les flux d'une chaîne dans les Sources du lecteur",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr a basculé la chaîne sur {stream}.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Dispatcharr a refusé la connexion enregistrée. Reconnectez-vous.",
   "Dispatcharr doesn't answer right now.":

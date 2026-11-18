@@ -36,9 +36,17 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
   final own = app.first.$1;
   final server = Dispatcharr.instance.login.value?.server ?? '';
   final key = Dispatcharr.instance.login.value?.apiKey;
+  // A picked stream plays in the channel's own format (clayts450).
+  final format = dispatcharrOutputFormat(own.url);
+  // Admin, on the channel itself: the stream Dispatcharr plays for it now
+  // is marked, so a switch shows where the channel is.
+  final onChannel = playing.url == own.url;
+  final active =
+      onChannel ? await Dispatcharr.instance.activeStreamOf(own) : null;
   final streams = <LiveSourceRow>[];
   for (final s in merged.streams) {
-    final url = DispatcharrApi.streamUrl(server, s.hash);
+    final url = DispatcharrApi.streamUrl(server, s.hash, format: format);
+    Dispatcharr.instance.notePick(url, own, s.id);
     if (app.any((r) => r.$1.url == url)) continue;
     final c = Channel(
       id: own.id,
@@ -64,7 +72,7 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
           'Dispatcharr',
           if (merged.accounts[s.accountId] case final a?) a,
         ].join(' · '),
-        current: url == playing.url,
+        current: url == playing.url || (onChannel && s.id == active),
         quality: s.quality,
       )
     ));
@@ -87,4 +95,22 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
   // Only Dispatcharr's: no VesperTV fallback to add either.
   if (mode == DispatcharrSources.only) canAdd = false;
   return (rows: rows, canAdd: canAdd);
+}
+
+/// Plays [source], picked in the live Sources list while [playing] plays,
+/// through [play] (the player's own way to open a source of the playing
+/// channel). A Dispatcharr stream, for an admin account, is a switch of
+/// the channel on the server instead ([Dispatcharr.switchChannelTo]): the
+/// player stays on (or goes back to) the channel. Returns the message to
+/// show, or null.
+Future<String?> playPickedLiveSource(Channel playing, Channel source,
+    Future<void> Function(Channel source) play) async {
+  final channel = await Dispatcharr.instance.switchChannelTo(source);
+  if (channel == null) {
+    await play(source);
+    return null;
+  }
+  if (playing.url != channel.url) await play(channel);
+  return tr(
+      'Dispatcharr switched the channel to {stream}.', {'stream': source.name});
 }

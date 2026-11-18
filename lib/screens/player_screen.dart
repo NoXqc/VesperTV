@@ -838,7 +838,12 @@ class _PlayerScreenState extends State<PlayerScreen>
           return;
         }
         if (picked != liveSourceAdd) {
-          await _playback.playLiveSource(sources[picked]);
+          final note = await playPickedLiveSource(
+              playing, sources[picked], _playback.playLiveSource);
+          if (note != null && mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(note)));
+          }
           return;
         }
         await manager.ensureLiveChannelsLoaded();

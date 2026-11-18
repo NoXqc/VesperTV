@@ -3832,6 +3832,7 @@ const Map<String, String> kDe = {
       "Quellen zeigen die eigenen Tags von VesperTV",
   "Every stream of a channel in the player's Sources":
       "Alle Streams eines Senders in den Quellen des Players",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr hat den Sender auf {stream} umgeschaltet.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Dispatcharr hat die gespeicherte Anmeldung abgelehnt. Bitte erneut anmelden.",
   "Dispatcharr doesn't answer right now.":

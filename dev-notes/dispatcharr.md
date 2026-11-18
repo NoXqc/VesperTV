@@ -56,7 +56,7 @@ The Homatics (10.0.0.64) can't reach the PC (192.168.1.224): `adb reverse tcp:91
 address `127.0.0.1:9191` on the box.
 
 ## Not done
-- No server-side "switch for everyone" (admin `change_stream`).
+- ~~No server-side "switch for everyone" (admin `change_stream`).~~ Done +865, see below.
 - No Dispatcharr Multiview plugin control (layouts are server-side; no client API).
 - Windows / iOS players.
 
@@ -114,3 +114,28 @@ address `127.0.0.1:9191` on the box.
   `MONTREAL`, `_plainUpper`). `channelCopyMayMatch` keeps accented names past the probe pre-filter
   (300k channels still ~48 ms). Also applies to Combine playlists, Multiview copies and Sports copies.
   `test/channel_copy_region_test.dart`.
+
+## +865 (2026-11-18): same format + Dispatcharr switches the channel (clayts450)
+clayts450 tested three settings pairs: a picked stream played in **Dispatcharr's** default format while the
+channel played in **VesperTV's** (the Xtream link's `.ts` / `.m3u8` forces the format in `stream_xc`; the
+preview link `/proxy/ts/stream/{hash}` had none), and a picked stream played **on its own** (Dispatcharr's
+preview worker), so Dispatcharr's channel failover was off for it. His goal: Dispatcharr keeps control, same
+format, a smooth "manual failover".
+- **Format:** `dispatcharrOutputFormat(own.url)` (after `LiveStreamFormat.urlFor`) -> `?output_format=hls|mpegts|fmp4`
+  on every Dispatcharr row (`_resolve_output_format` reads it; checked on the PC's server: hls = 302 to
+  `/proxy/hls/{token}/index.m3u8`, mpegts = `video/mp2t`). Android's `_streamUsesHls` treats `output_format=hls`
+  as HLS at once (before: a failed read, a sniff, a retry).
+- **Admin = Dispatcharr switches:** `Dispatcharr.switchChannelTo` -> `POST /proxy/ts/change_stream/{channel uuid}`
+  `{"stream_id"}` with `X-API-Key` (IsAdmin; DRF's ApiKeyAuthentication covers it). The player stays on the
+  channel (no reconnect); a viewer on a preview goes back to the channel. **Switches the channel for everyone
+  watching it on that server.** Checked on the PC's server: a 45 s curl of the channel kept receiving bytes
+  through the switch, `/proxy/ts/status/{uuid}` then reported the new `stream_id`. Xtream refs need the uuid:
+  `GET /api/channels/channels/{id}/` (cached). Admin = `users/me` `user_level >= 10`, asked once per sign-in.
+  Not admin / refused / not playing on the server = the stream plays on its own, in the matched format.
+- Sources marks the stream the channel plays now (`activeStreamOf`, admin, 2 s cap) when on the channel.
+- Snack bar "Dispatcharr switched the channel to {stream}." (7 languages). Vesper AI `sources` play uses it too.
+- **iOS / Windows / macOS / Linux:** `DesktopPlayerScreen` had no live Sources: `_openLiveSources` (same
+  `liveSourceRows` + `playPickedLiveSource`), a Sources button in the computer bar (after Reload) and the
+  iPhone top bar (live, no Media Hub sources). No "Add another source" row there. Not run on a device.
+- Tests: `test/dispatcharr_switch_test.dart` (format rule, admin / non-admin / refused switch, active stream,
+  pick helper). Analyze 16, 2139 tests.

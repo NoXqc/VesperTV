@@ -3523,6 +3523,7 @@ const Map<String, String> kPl = {
       "Źródła pokazują własne etykiety VesperTV",
   "Every stream of a channel in the player's Sources":
       "Wszystkie strumienie kanału w Źródłach odtwarzacza",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr przełączył kanał na {stream}.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Dispatcharr odrzucił zapisane logowanie. Zaloguj się ponownie.",
   "Dispatcharr doesn't answer right now.":
