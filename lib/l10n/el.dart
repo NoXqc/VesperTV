@@ -3882,4 +3882,46 @@ const Map<String, String> kEl = {
       "Αφαίρεση πακέτου σημάτων",
   "Sources show VesperTV's own tags":
       "Οι πηγές δείχνουν τις ετικέτες του VesperTV",
+  "Every stream of a channel in the player's Sources":
+      "Όλες οι ροές ενός καναλιού στις Πηγές της αναπαραγωγής",
+  "Dispatcharr refused the saved sign-in. Sign in again.":
+      "Το Dispatcharr απέρριψε την αποθηκευμένη σύνδεση. Συνδεθείτε ξανά.",
+  "Dispatcharr doesn't answer right now.":
+      "Το Dispatcharr δεν απαντά αυτή τη στιγμή.",
+  "Couldn't find a Dispatcharr server at that address.":
+      "Δεν βρέθηκε διακομιστής Dispatcharr σε αυτή τη διεύθυνση.",
+  "Connected to {server} as {user}":
+      "Συνδέθηκε στο {server} ως {user}",
+  "No playlist loads from this server yet.":
+      "Καμία λίστα δεν φορτώνει ακόμα από αυτόν τον διακομιστή.",
+  "Playlists on this server: {names}":
+      "Λίστες σε αυτόν τον διακομιστή: {names}",
+  "In the player, Sources lists every stream Dispatcharr has for the channel. Picking one plays it for you only: other viewers keep theirs.":
+      "Στην αναπαραγωγή, οι Πηγές δείχνουν όλες τις ροές που έχει το Dispatcharr για το κανάλι. Η επιλογή ισχύει μόνο για εσάς: οι άλλοι θεατές κρατούν τη δική τους.",
+  "Add as a playlist":
+      "Προσθήκη ως λίστα",
+  "Add another playlist from it":
+      "Προσθήκη άλλης λίστας από αυτόν",
+  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
+      "Το Dispatcharr συγκεντρώνει πολλές ροές παρόχων σε κάθε κανάλι. Συνδεθείτε για να δείτε και να επιλέξετε αυτές τις ροές από τις Πηγές της αναπαραγωγής.",
+  "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
+      "Ο κωδικός σας στέλνεται μόνο στον διακομιστή σας, μία φορά. Το VesperTV κρατά το κλειδί API του Dispatcharr (ένα υπάρχον επαναχρησιμοποιείται, δεν αντικαθίσταται ποτέ), όχι τον κωδικό.",
+  "Too many tries. Wait a minute, then connect again.":
+      "Πάρα πολλές προσπάθειες. Περιμένετε ένα λεπτό και συνδεθείτε ξανά.",
+  "This Dispatcharr user has no XC password, so it would be added as an M3U playlist. For an Xtream playlist (steadier, with catch-up, movies and shows), give the user an XC password in Dispatcharr (Users > Edit), then come back here.":
+      "Αυτός ο χρήστης Dispatcharr δεν έχει κωδικό XC, οπότε θα προστεθεί ως λίστα M3U. Για λίστα Xtream (πιο σταθερή, με catch-up, ταινίες και σειρές), δώστε στον χρήστη κωδικό XC στο Dispatcharr (Users > Edit) και επιστρέψτε εδώ.",
+  "Enter the server address, then your user name and password or your API key.":
+      "Εισαγάγετε τη διεύθυνση του διακομιστή και μετά το όνομα χρήστη και τον κωδικό ή το κλειδί API.",
+  "Dispatcharr refused this API key.":
+      "Το Dispatcharr απέρριψε αυτό το κλειδί API.",
+  "Or your API key":
+      "Ή το κλειδί API σας",
+  "Instead of the user name and password":
+      "Αντί για όνομα χρήστη και κωδικό",
+  "Your Dispatcharr only allows the password sign-in from some networks. Use your API key instead.":
+      "Το Dispatcharr σας επιτρέπει τη σύνδεση με κωδικό μόνο από ορισμένα δίκτυα. Χρησιμοποιήστε το κλειδί API.",
+  "Dispatcharr refused the sign-in (HTTP {code}).":
+      "Το Dispatcharr απέρριψε τη σύνδεση (HTTP {code}).",
+  "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
+      "Ο κωδικός σας λειτουργεί, αλλά ο διακομιστής αρνήθηκε να δώσει το κλειδί API (HTTP {code}). Επικολλήστε το κλειδί API.",
 };

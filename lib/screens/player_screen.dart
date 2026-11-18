@@ -19,6 +19,7 @@ import '../services/playback_service.dart';
 import '../services/remote_buttons.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
+import '../services/dispatcharr.dart';
 import '../services/playlist_manager.dart';
 import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
@@ -826,16 +827,48 @@ class _PlayerScreenState extends State<PlayerScreen>
       while (mounted && _playback.currentChannel?.id == channel.id) {
         final playing = _playback.currentChannel!;
         final sources = manager.liveSourcesFor(playing);
+        final entries = [
+          for (final c in sources)
+            LiveSourceEntry(
+              channel: c,
+              playlist: manager.playlistNameFor(c.playlistId).trim(),
+              current: c.url == playing.url,
+            ),
+        ];
+        // A channel of a Dispatcharr server: the streams it merged into it
+        // (AMD, 2026-11-17), played through its proxy for this viewer only.
+        final merged = await Dispatcharr.instance.streamsFor(sources.first);
+        if (!mounted || _playback.currentChannel?.id != channel.id) return;
+        if (merged != null) {
+          final own = sources.first;
+          final server = Dispatcharr.instance.login.value?.server ?? '';
+          for (final s in merged.streams) {
+            final url = DispatcharrApi.streamUrl(server, s.hash);
+            if (sources.any((c) => c.url == url)) continue;
+            final c = Channel(
+              id: own.id,
+              rawId: own.rawId,
+              playlistId: own.playlistId,
+              name: s.name.isEmpty ? own.name : s.name,
+              group: own.group,
+              url: url,
+              logoUrl: own.logoUrl,
+              httpHeaders: own.httpHeaders,
+            );
+            sources.add(c);
+            entries.add(LiveSourceEntry(
+              channel: c,
+              playlist: [
+                'Dispatcharr',
+                if (merged.accounts[s.accountId] case final a?) a,
+              ].join(' · '),
+              current: url == playing.url,
+              quality: s.quality,
+            ));
+          }
+        }
         final picked = await showLiveSourceDrawer(context,
-            canAdd: !manager.activeViewerRestricted,
-            entries: [
-              for (final c in sources)
-                LiveSourceEntry(
-                  channel: c,
-                  playlist: manager.playlistNameFor(c.playlistId).trim(),
-                  current: c.url == playing.url,
-                ),
-            ]);
+            canAdd: !manager.activeViewerRestricted, entries: entries);
         if (!mounted ||
             picked == null ||
             _playback.currentChannel?.id != channel.id) {

@@ -35,6 +35,7 @@ import 'services/launcher_channels.dart';
 import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
+import 'services/dispatcharr.dart';
 import 'services/stream_badges.dart';
 import 'services/catalog_database.dart';
 import 'services/cloud_sync_service.dart';
@@ -713,6 +714,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       ArchivePosters.pattern = _storage.getArchivePosterPattern();
       // Loads its pack the first time a source list needs it.
       StreamBadges.instance.attach(_storage);
+      Dispatcharr.instance.attach(_storage);
 
       Real4kChannels.init(_storage);
       ArchiveReadyWatch.instance.init(_storage);

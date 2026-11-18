@@ -40,6 +40,7 @@ import 'archive_sources_screen.dart';
 import 'backup_screen.dart';
 import 'check_updates_screen.dart';
 import 'community_screen.dart';
+import 'dispatcharr_screen.dart';
 import 'debrid_settings_screen.dart';
 import 'epg_settings_screen.dart';
 import 'home_wallpaper_screen.dart';
@@ -333,6 +334,15 @@ class SettingsCatalog {
                 subtitle: tr(
                     'Rename, hide copies, fallbacks and stream test, from your phone or PC'),
                 page: (_) => const PlaylistEditorScreen()),
+            // Last: few users run a Dispatcharr (owner, 2026-11-18).
+            SettingsLink(
+                id: 'dispatcharr',
+                floating: true,
+                icon: Icons.alt_route,
+                title: 'Dispatcharr',
+                subtitle:
+                    tr("Every stream of a channel in the player's Sources"),
+                page: (_) => const DispatcharrScreen()),
           ]),
         ],
       );

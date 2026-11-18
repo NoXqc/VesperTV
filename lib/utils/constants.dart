@@ -54,6 +54,8 @@ class AppConstants {
   static const String keyArchivePosterPattern = 'vesper_archive_poster_pattern';
   // Media Hub stream badge pack (StreamBadges): its address + last download
   // (ms since epoch), device-only; the pack itself is a file.
+  /// Settings > Playlists & sources > Dispatcharr (`DispatcharrLogin`).
+  static const String keyDispatcharr = 'vesper_dispatcharr';
   static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
   static const String keyStreamBadgesFetched = 'vesper_stream_badges_fetched';
   static const String keyStreamBadgesOn = 'vesper_stream_badges_on';

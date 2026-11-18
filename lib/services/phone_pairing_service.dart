@@ -51,7 +51,11 @@ enum PairingKind {
   /// Settings > Recordings > Network folder: the shared folder, the folder
   /// inside it, user name and password ([PairingResult.server] / [name] /
   /// [username] / [password]).
-  networkFolder;
+  networkFolder,
+
+  /// [mediaServer] with the phone page worded for Dispatcharr (Settings >
+  /// Playlists & sources > Dispatcharr); same 'server' payload.
+  dispatcharr;
 
   bool get isWifiOnly => this != playlist;
 
@@ -63,7 +67,7 @@ enum PairingKind {
   String? get mode => switch (this) {
         playlist => null,
         link || apiKey || poster || badges => 'link',
-        mediaServer => 'server',
+        mediaServer || dispatcharr => 'server',
         photo || wallpaper => 'photo',
         networkFolder => 'smb',
       };
@@ -80,6 +84,7 @@ class PairingResult {
     this.password = '',
     this.m3uUrl = '',
     this.epgUrl = '',
+    this.apiKey = '',
     this.photo,
   });
 
@@ -97,6 +102,10 @@ class PairingResult {
   final String password;
   final String m3uUrl;
   final String epgUrl;
+
+  /// 'server' from the Dispatcharr form: a pasted API key, in place of
+  /// [username] / [password].
+  final String apiKey;
   final Uint8List? photo;
 
   /// Null when the payload isn't something the form could have produced.
@@ -138,11 +147,15 @@ class PairingResult {
       m3uUrl: s('m3u', 2000),
       epgUrl: s('epg', 2000),
       link: s('link', 4000),
+      apiKey: s('key', 200),
     );
     if (mode == 'link') return r.link.isNotEmpty ? r : null;
     if (mode == 'smb') return r.server.isNotEmpty ? r : null;
     if (mode == 'server') {
-      return r.server.isNotEmpty && r.username.isNotEmpty ? r : null;
+      return r.server.isNotEmpty &&
+              (r.username.isNotEmpty || r.apiKey.isNotEmpty)
+          ? r
+          : null;
     }
     if (mode == 'xtream' &&
         r.server.isNotEmpty &&
@@ -190,6 +203,7 @@ class PhonePairingSession {
         PairingKind.poster => 'poster',
         PairingKind.badges => 'badges',
         PairingKind.networkFolder => 'smb',
+        PairingKind.dispatcharr => 'dispatcharr',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null

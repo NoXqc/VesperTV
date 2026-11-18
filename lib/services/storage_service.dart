@@ -383,6 +383,14 @@ class StorageService {
   Future<void> setArchivePosterPattern(String pattern) =>
       _prefs.setString(AppConstants.keyArchivePosterPattern, pattern);
 
+  /// Settings > Playlists & sources > Dispatcharr: the server and its API
+  /// key as JSON (`DispatcharrLogin`), '' = not connected. Device-only.
+  String getDispatcharr() =>
+      _prefs.getString(AppConstants.keyDispatcharr) ?? '';
+  Future<void> setDispatcharr(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyDispatcharr)
+      : _prefs.setString(AppConstants.keyDispatcharr, json);
+
   /// Settings > Playback > Stream badges — see `StreamBadges`.
   String getStreamBadgesUrl() =>
       _prefs.getString(AppConstants.keyStreamBadgesUrl) ?? '';

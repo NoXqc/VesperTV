@@ -143,7 +143,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     final saves = isKey ||
         widget.kind == PairingKind.poster ||
         widget.kind == PairingKind.badges;
-    final isServer = widget.kind == PairingKind.mediaServer;
+    final isServer = widget.kind == PairingKind.mediaServer ||
+        widget.kind == PairingKind.dispatcharr;
     final isFolder = widget.kind == PairingKind.networkFolder;
     final isPhoto = widget.kind == PairingKind.photo ||
         widget.kind == PairingKind.wallpaper;

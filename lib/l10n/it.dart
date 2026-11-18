@@ -3927,4 +3927,46 @@ const Map<String, String> kIt = {
       "Rimuovi pacchetto di badge",
   "Sources show VesperTV's own tags":
       "Le fonti mostrano le etichette di VesperTV",
+  "Every stream of a channel in the player's Sources":
+      "Tutti i flussi di un canale nelle Fonti del lettore",
+  "Dispatcharr refused the saved sign-in. Sign in again.":
+      "Dispatcharr ha rifiutato l'accesso salvato. Accedi di nuovo.",
+  "Dispatcharr doesn't answer right now.":
+      "Dispatcharr non risponde in questo momento.",
+  "Couldn't find a Dispatcharr server at that address.":
+      "Nessun server Dispatcharr trovato a quell'indirizzo.",
+  "Connected to {server} as {user}":
+      "Connesso a {server} come {user}",
+  "No playlist loads from this server yet.":
+      "Nessuna playlist viene ancora caricata da questo server.",
+  "Playlists on this server: {names}":
+      "Playlist su questo server: {names}",
+  "In the player, Sources lists every stream Dispatcharr has for the channel. Picking one plays it for you only: other viewers keep theirs.":
+      "Nel lettore, Fonti elenca tutti i flussi che Dispatcharr ha per il canale. Sceglierne uno lo riproduce solo per te: gli altri spettatori mantengono il loro.",
+  "Add as a playlist":
+      "Aggiungi come playlist",
+  "Add another playlist from it":
+      "Aggiungi un'altra playlist da esso",
+  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
+      "Dispatcharr riunisce più flussi dei fornitori in ogni canale. Accedi per vedere e scegliere quei flussi dalle Fonti del lettore.",
+  "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
+      "La tua password viene inviata solo al tuo server, una volta. VesperTV conserva la tua chiave API di Dispatcharr (una esistente viene riutilizzata, mai sostituita), non la password.",
+  "Too many tries. Wait a minute, then connect again.":
+      "Troppi tentativi. Attendi un minuto, poi riconnettiti.",
+  "This Dispatcharr user has no XC password, so it would be added as an M3U playlist. For an Xtream playlist (steadier, with catch-up, movies and shows), give the user an XC password in Dispatcharr (Users > Edit), then come back here.":
+      "Questo utente Dispatcharr non ha una password XC, quindi verrebbe aggiunto come playlist M3U. Per una playlist Xtream (più stabile, con catch-up, film e serie), assegnagli una password XC in Dispatcharr (Users > Edit), poi torna qui.",
+  "Enter the server address, then your user name and password or your API key.":
+      "Inserisci l'indirizzo del server, poi nome utente e password oppure la chiave API.",
+  "Dispatcharr refused this API key.":
+      "Dispatcharr ha rifiutato questa chiave API.",
+  "Or your API key":
+      "Oppure la tua chiave API",
+  "Instead of the user name and password":
+      "Al posto di nome utente e password",
+  "Your Dispatcharr only allows the password sign-in from some networks. Use your API key instead.":
+      "Il tuo Dispatcharr consente l'accesso con password solo da alcune reti. Usa la tua chiave API.",
+  "Dispatcharr refused the sign-in (HTTP {code}).":
+      "Dispatcharr ha rifiutato l'accesso (HTTP {code}).",
+  "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
+      "La password funziona, ma il server ha rifiutato di fornire la chiave API (HTTP {code}). Incolla invece la chiave API.",
 };

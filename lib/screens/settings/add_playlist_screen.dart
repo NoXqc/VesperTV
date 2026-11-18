@@ -39,7 +39,7 @@ void _ensureVisible(BuildContext context) {
 /// accounts, which decides what the catalog warm-up (see [PlaylistManager])
 /// actually fetches.
 class AddPlaylistScreen extends StatefulWidget {
-  const AddPlaylistScreen({super.key, this.editPlaylistId});
+  const AddPlaylistScreen({super.key, this.editPlaylistId, this.prefill});
 
   /// Set when opened from `PlaylistManagerScreen`'s detail panel to edit
   /// an existing playlist's login details, instead of adding a new one —
@@ -48,6 +48,11 @@ class AddPlaylistScreen extends StatefulWidget {
   /// prefilled from a `PlaylistProfile` instead of starting blank, and
   /// saving updates that profile in place instead of creating a new one.
   final String? editPlaylistId;
+
+  /// A new playlist's details filled in ahead (Settings > Dispatcharr >
+  /// Add as a playlist): the user checks them and saves. Ignored when
+  /// [editPlaylistId] is set.
+  final PlaylistProfile? prefill;
 
   @override
   State<AddPlaylistScreen> createState() => _AddPlaylistScreenState();
@@ -220,10 +225,11 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       }
     }
     _editingProfile = existing;
+    final seed = existing ?? widget.prefill;
 
-    _mode = existing?.mode ?? 'm3u';
-    _nameController = TextEditingController(text: existing?.name ?? '');
-    _m3uController = TextEditingController(text: existing?.m3uUrl ?? '');
+    _mode = seed?.mode ?? 'm3u';
+    _nameController = TextEditingController(text: seed?.name ?? '');
+    _m3uController = TextEditingController(text: seed?.m3uUrl ?? '');
     // For an Xtream profile, epgUrl is usually just the auto-derived
     // xmltv.php link (see _save) rather than something the user actually
     // typed in — pre-filling this field with that would make a later
@@ -239,15 +245,17 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
             password: existing.xtreamPassword ?? '')
         : null;
     _epgController = TextEditingController(
-        text: existing?.epgUrl == existingAutoEpg
-            ? ''
-            : (existing?.epgUrl ?? ''));
+        text: existing == null
+            ? (seed?.isXtream == true ? '' : (seed?.epgUrl ?? ''))
+            : existing.epgUrl == existingAutoEpg
+                ? ''
+                : (existing.epgUrl ?? ''));
     _xtreamServerController =
-        TextEditingController(text: existing?.xtreamServer ?? '');
+        TextEditingController(text: seed?.xtreamServer ?? '');
     _xtreamUsernameController =
-        TextEditingController(text: existing?.xtreamUsername ?? '');
+        TextEditingController(text: seed?.xtreamUsername ?? '');
     _xtreamPasswordController =
-        TextEditingController(text: existing?.xtreamPassword ?? '');
+        TextEditingController(text: seed?.xtreamPassword ?? '');
     HardwareKeyboard.instance.addHandler(_handleFieldEscapeKey);
     for (final node in _allTrackedFields) {
       node.addListener(_trackTextFieldFocus);

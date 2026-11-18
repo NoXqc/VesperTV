@@ -17,11 +17,18 @@ const liveSourceAdd = -1;
 /// One row of the live Sources drawer.
 class LiveSourceEntry {
   const LiveSourceEntry(
-      {required this.channel, required this.playlist, required this.current});
+      {required this.channel,
+      required this.playlist,
+      required this.current,
+      this.quality});
 
   final Channel channel;
   final String playlist;
   final bool current;
+
+  /// What the source measured (Dispatcharr's probe: `1080p · H.264`);
+  /// null = the quality its name claims ([liveSourceQuality]).
+  final String? quality;
 }
 
 /// The quality a source's name claims (4K / FHD / HD / SD), or null.
@@ -259,7 +266,7 @@ class _LiveSourceDrawerState extends State<_LiveSourceDrawer> {
                     if (i == entries.length) return _addRow(i == _index);
                     final e = entries[i];
                     final focused = i == _index;
-                    final quality = liveSourceQuality(e.channel);
+                    final quality = e.quality ?? liveSourceQuality(e.channel);
                     return GestureDetector(
                       onTap: () => _select(i),
                       child: Container(
@@ -552,7 +559,8 @@ class _LiveSourceSearchState extends State<_LiveSourceSearch> {
       key: const ValueKey('live-source-search'),
       color: RefinedFinish.surface(context, const Color(0xF011131A)),
       child: SafeArea(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
             child: Row(children: [
@@ -630,7 +638,8 @@ class _LiveSourceSearchState extends State<_LiveSourceSearch> {
                                 : Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: focused ? scheme.primary : Colors.white24,
+                                color:
+                                    focused ? scheme.primary : Colors.white24,
                                 width: focused ? 2 : 1),
                           ),
                           focused: focused),
