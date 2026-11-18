@@ -185,7 +185,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       case 'hub':
         if (prefs.hideArchive) return false;
         _returnToTv = true;
-        _parkLiveChannel();
+        _parkLiveChannel(resumeOnReturn: true);
         Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => ArchiveScreen(initialQuery: query)));
         return true;
@@ -372,8 +372,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (_tab != tab || resetFavorites) {
       _onTabChanged(tab, restoreLiveFocus: false);
     }
-    // Back from Media Hub on Windows: its preview channel again.
-    if (_tab == 'TV') _resumeParkedDesktop();
+    // Back from Media Hub: its preview channel again.
+    if (_tab == 'TV') {
+      _resumeParkedDesktop();
+      _resumeParkedLive();
+    }
     _timelineFilterController.clear();
     setState(() {
       _focusDepth = 0;
@@ -1692,10 +1695,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (tab == 'TV') _resumeParkedDesktop();
+    if (tab == 'TV') {
+      _resumeParkedDesktop();
+      _resumeParkedLive();
+    }
     if (_isBrowseTab(tab) ||
         (tab == 'Home' && !HomeScreen.showsMiniPlayer(context))) {
-      unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
+      unawaited(_parkLiveChannel(
+          keepNativeSurface: _isBrowseTab(tab), resumeOnReturn: true));
     }
   }
 
@@ -1705,8 +1712,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// resume" pill and hold-Right still bring it back (a fresh start, same as
   /// the cold-launch resume). Movies/TV Shows keep an already-running native
   /// beta player instead, so returning does not reconnect. Android only —
-  /// Windows has its own stack.
-  Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
+  /// Windows has its own stack. [resumeOnReturn]: a page the viewer comes
+  /// back from to the guide (Media Hub, Home, Movies / TV Shows), which then
+  /// plays the channel again ([_resumeParkedLive]).
+  Future<void> _parkLiveChannel(
+      {bool keepNativeSurface = false, bool resumeOnReturn = false}) async {
     // Windows / iPhone: the preview's player kept playing under Movies
     // (Windows user, 2026-11-14: "Live TV keeps playing in the background").
     // PlaybackService has nothing playing there, so the rest is a no-op.
@@ -1733,9 +1743,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // returning to TV or holding Right reuses the same controller. Legacy
     // platform views still park to avoid showing video over the catalog.
     if (keepNativeSurface && playback.usesNativeSurface) return;
+    if (resumeOnReturn) _parkedLiveChannel = resumeTo;
     await playback.stop();
     // stop() clears the pending channel, so set it after.
     playback.setPendingResumeChannel(resumeTo);
+  }
+
+  /// Android: the channel [_parkLiveChannel] stopped for Media Hub, Home or
+  /// Movies / TV Shows (or Multiview left with), played again in the guide's
+  /// preview when the TV tab comes back. It only waited behind the "Hold >
+  /// to resume" pill before (AMD, 2026-11-17: "when you return from
+  /// Multiview or from the Media Hub the last channel doesn't play").
+  /// Nothing happens when something else plays by then.
+  Channel? _parkedLiveChannel;
+
+  void _resumeParkedLive() {
+    final parked = _parkedLiveChannel;
+    _parkedLiveChannel = null;
+    // Windows / iPhone never get here: their preview is DesktopMiniPlayer.
+    if (parked == null) return;
+    final playback = context.read<PlaybackService>();
+    if (playback.isPlayingSomething) return;
+    unawaited(playback.play(parked));
   }
 
   /// Windows: the preview channel [_parkLiveChannel] stopped, played again
@@ -3400,7 +3429,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       unawaited(_pushOverLiveVideo(route));
       return;
     }
-    _parkLiveChannel();
+    _parkLiveChannel(resumeOnReturn: true);
     Navigator.of(context).push(route);
   }
 
@@ -4521,7 +4550,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               if (!context.watch<AppPreferences>().hideArchive)
                 item(Icons.local_movies_outlined, tr('Media Hub'), false, () {
                   _returnToTv = true;
-                  _parkLiveChannel();
+                  _parkLiveChannel(resumeOnReturn: true);
                   Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ArchiveScreen()));
                 }),
@@ -4621,7 +4650,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         collapsed: collapsed,
         onTap: () {
           _returnToTv = true;
-          _parkLiveChannel();
+          _parkLiveChannel(resumeOnReturn: true);
           Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
         },
@@ -4645,9 +4674,30 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // through on top of whichever multiview cell has audio
     // focus — stopping it here is the same fix as the Windows
     // branch above, just a different background player.
-    unawaited(context.read<PlaybackService>().stop());
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const MultiviewScreen()));
+    final playback = context.read<PlaybackService>();
+    final before = playback.liveChannel;
+    unawaited(playback.stop());
+    // Back from Multiview the guide plays the screen that had the sound,
+    // else the channel from before (AMD, 2026-11-17: nothing played).
+    // Multiview has already closed its other screens (1-connection
+    // accounts).
+    unawaited(Navigator.of(context)
+        .push<MultiviewReturn>(
+            MaterialPageRoute(builder: (_) => const MultiviewScreen()))
+        .then((back) {
+      if (!mounted) return;
+      final heard = back?.channel;
+      final channel = heard != null && heard.isLive
+          ? heard
+          : (before != null && before.isLive ? before : null);
+      if (channel == null) return;
+      if (_tab == 'TV') {
+        _parkedLiveChannel = channel;
+        _resumeParkedLive();
+      } else {
+        playback.setPendingResumeChannel(channel);
+      }
+    }));
   }
 
   Widget _buildTabsColumn({required bool collapsed}) {
