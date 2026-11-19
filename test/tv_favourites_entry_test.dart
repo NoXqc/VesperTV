@@ -5,6 +5,7 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/m3u_group.dart';
 import 'package:nox_iptv/screens/home_screen.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
+import 'package:nox_iptv/services/guide_key.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/archive_service.dart';
 import 'package:nox_iptv/services/epg_service.dart';
@@ -199,6 +200,53 @@ void main() {
       await close(tester);
     });
   }
+
+  for (final view in ['live', 'timeline']) {
+    testWidgets('launch resume with the guide shows the playing group: $view',
+        (tester) async {
+      // Owner's iPhone (2026-11-19): resume with the guide opened
+      // Favourites, "No channels found", for a channel that isn't one.
+      prefs.guideViewMode = view;
+      playback.currentChannel = playlist.live;
+      await open(tester);
+      expectFavorites(tester); // a plain launch still opens on Favourites
+      GuideKey.showPlayingGroupOnHome();
+      await tester.pumpAndSettle();
+      // Favourites no longer selected: the list is the channel's group.
+      expect(
+          find.byWidgetPredicate((widget) =>
+              widget.runtimeType.toString() == '_SelectableRow' &&
+              (widget as dynamic).label == 'Favourites' &&
+              (widget as dynamic).selected == true),
+          findsNothing);
+      expect(find.text(playlist.live.name), findsWidgets);
+      expect(find.text('Favourite channel'), findsNothing);
+      // A favourite playing: Favourites.
+      playback.currentChannel = playlist.favorite;
+      GuideKey.showPlayingGroupOnHome();
+      await tester.pumpAndSettle();
+      expectFavorites(tester);
+      await close(tester);
+    });
+  }
+
+  testWidgets('launch full-screen resume asked before the home mounts',
+      (tester) async {
+    // Owner's phone (+891), Startup = TV full screen: the player opens
+    // before the TV home; Back showed Favourites, "No channels found".
+    playback.currentChannel = playlist.live;
+    GuideKey.guideLayoutBehindPlayer(); // what the launch's resume calls
+    await open(tester);
+    expect(
+        find.byWidgetPredicate((widget) =>
+            widget.runtimeType.toString() == '_SelectableRow' &&
+            (widget as dynamic).label == 'Favourites' &&
+            (widget as dynamic).selected == true),
+        findsNothing);
+    expect(find.text(playlist.live.name), findsWidgets);
+    expect(find.text('Favourite channel'), findsNothing);
+    await close(tester);
+  });
 
   testWidgets('startup Home returns to Favourites with a pending other channel',
       (tester) async {

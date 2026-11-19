@@ -61,6 +61,7 @@ import '../widgets/player_controls.dart';
 import '../widgets/rec_cue.dart';
 import '../widgets/sports_matchup_stats.dart';
 import '../widgets/settings_scaffold.dart';
+import '../widgets/sports_trak_name.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
@@ -2293,8 +2294,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           // sliver of the screen, so nothing could be swiped
                           // (owner, 2026-10-18). The whole page scrolls instead.
                           ? SingleChildScrollView(
-                              padding: EdgeInsets.fromLTRB(
-                                  _narrow ? 12 : 24, 12, _narrow ? 12 : 24, 32),
+                              padding: EdgeInsets.fromLTRB(_narrow ? 12 : 24,
+                                  _narrow ? 4 : 12, _narrow ? 12 : 24, 32),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -2305,8 +2306,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                             )
                           : !_railLayout
                               ? Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                                  // Phones (iPhone): the page starts right
+                                  // under the status bar.
+                                  padding: EdgeInsets.fromLTRB(
+                                      _narrow ? 12 : 24,
+                                      _narrow ? 4 : 12,
+                                      _narrow ? 12 : 24,
+                                      0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -2844,7 +2850,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   double _guideRowExtent(bool compact) =>
       (compact ? 70.0 : 54.0) * _guideTextScale;
   double get _guideHeaderExtent => 30.0 * _guideTextScale;
+  double get _guideLeagueExtent => 28.0 * _guideTextScale;
   static const _guideTopPad = 6.0;
+
+  /// Phones' Guide: compact rows have no league tag, so a league line
+  /// starts each league's run of games (owner's iPhone photo, 2026-11-19:
+  /// Stars then Colts, hockey into football with nothing between). Not
+  /// when one league is picked: every row is that league.
+  bool _guideLeagueLines(bool compact) => compact && _leagueFilter == null;
+
+  static bool _leagueLineBefore(List<SportsGame> games, int i) =>
+      i == 0 || games[i].league.id != games[i - 1].league.id;
 
   SportsGame? get _guideGame {
     final games = _guideGames;
@@ -2899,15 +2915,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void _guideKeepVisible(List<_Section> sections, String key) {
     final pos = _guideScroll.position;
     final row = _guideRowExtent(_guideIsCompact);
+    final lines = _guideLeagueLines(_guideIsCompact);
     var offset = _guideTopPad;
     double? top;
     for (final s in sections) {
       final headerTop = offset;
       offset += _guideHeaderExtent;
       for (final (i, g) in s.games.indexed) {
+        final lineTop = offset;
+        if (lines && _leagueLineBefore(s.games, i)) {
+          offset += _guideLeagueExtent;
+        }
         if (_gameKey(g) == key) {
-          // A section's header comes along with its first row.
-          top = i == 0 ? headerTop : offset;
+          // A section's header (and a league line) come along with the row.
+          top = i == 0 ? headerTop : lineTop;
           break;
         }
         offset += row;
@@ -3096,11 +3117,43 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         );
       }
 
+      Widget leagueLine(SportsLeague l, String id) => SizedBox(
+            key: ValueKey('guide-league-$id'),
+            height: _guideLeagueExtent,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 2),
+              child: Row(children: [
+                SportsLogo(url: l.logoUrl, size: 14, fallback: l.shortName),
+                const SizedBox(width: 6),
+                Text(l.shortName.toUpperCase(),
+                    maxLines: 1,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70)),
+                const SizedBox(width: 10),
+                const Expanded(
+                    child: Divider(height: 1, color: Colors.white24)),
+              ]),
+            ),
+          );
+      final lines = _guideLeagueLines(compact);
       final items = <Object>[
-        for (final s in sections) ...[s, ...s.games]
+        for (final s in sections) ...[
+          s,
+          for (final (i, g) in s.games.indexed) ...[
+            if (lines && _leagueLineBefore(s.games, i))
+              (league: g.league, id: '${s.id}-$i'),
+            g,
+          ],
+        ]
       ];
-      Widget build(Object item) =>
-          item is _Section ? header(item) : row(item as SportsGame);
+      Widget build(Object item) => switch (item) {
+            _Section s => header(s),
+            (league: SportsLeague l, id: String id) => leagueLine(l, id),
+            _ => row(item as SportsGame),
+          };
       final list = inPage
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3580,35 +3633,53 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             child: Row(children: _leagueControls(mode: true)),
           ));
     }
+    final text = Theme.of(context).textTheme;
+    // Flexible: a narrow screen with large text overflowed here.
+    final title = Flexible(
+      child: Text(AppConstants.sportsTabName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: (_narrow ? text.titleLarge : text.headlineSmall)
+              ?.copyWith(fontWeight: FontWeight.w800)),
+    );
+    // Not a lazy ListView: Up from the day row focuses the selected
+    // league's chip, and once enough leagues are added it sat off
+    // screen, unbuilt — Up did nothing. ~20 chips, all built is fine.
+    final leagues = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: _leagueControls(mode: mode)),
+    );
+    if (_narrow) {
+      // Phones (owner, 2026-11-19, iPhone photo): beside the big title only
+      // two leagues fit. The TV tab's short wordmark ("Sports" + a small
+      // gold "Trak") leads the chips and scrolls away with them.
+      return SizedBox(
+        height: 44,
+        child: Row(children: [
+          const SportsBackButton(),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                SportsTrakName(
+                    style: (text.titleLarge ?? const TextStyle())
+                        .copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(width: 12),
+                ..._leagueControls(mode: mode),
+              ]),
+            ),
+          ),
+        ]),
+      );
+    }
     return SizedBox(
       height: 44,
       child: Row(
         children: [
           const SportsBackButton(),
-          // Flexible: a narrow screen with large text overflowed here.
-          Flexible(
-            child: Text(AppConstants.sportsTabName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-          ),
+          title,
           const SizedBox(width: 16),
-          Expanded(
-            // Not a lazy ListView: Up from the day row focuses the selected
-            // league's chip, and once enough leagues are added it sat off
-            // screen, unbuilt — Up did nothing. ~20 chips, all built is fine.
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ..._leagueControls(mode: mode),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: leagues),
         ],
       ),
     );

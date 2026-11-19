@@ -1457,7 +1457,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       } catch (e) {
         debugPrint('Resume: early start failed: $e');
       }
-      final navigator = _navigatorKey.currentState;
+      var navigator = _navigatorKey.currentState;
+      // The app's first frame (its navigator) can still be ahead: the
+      // early play can return before it, and the player was silently never
+      // opened (owner's phone +893: the home on Favourites instead).
+      for (var i = 0; navigator == null && mounted && i < 30; i++) {
+        await WidgetsBinding.instance.endOfFrame;
+        navigator = _navigatorKey.currentState;
+      }
+      if (navigator == null || !mounted) {
+        debugPrint('Resume: early play, no navigator to open the player');
+      }
       if (navigator != null && mounted) {
         debugPrint('Resume: full screen (started before the UI)');
         PerfDiagnostics.mark('playerPushed');
@@ -1528,11 +1538,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             'Resume: ${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'}');
         if (usesMediaKit) {
           if (fullscreen) {
+            // No forced landscape on a phone: nobody asked for this one
+            // (owner's iPhone, 2026-11-19: it turned sideways by itself).
             _navigatorKey.currentState?.push(MaterialPageRoute(
-                builder: (_) => DesktopPlayerScreen(channel: channel)));
+                builder: (_) =>
+                    DesktopPlayerScreen(channel: channel, turnSideways: false)));
+            GuideKey.showPlayingGroupOnHome();
           } else if (inGuide &&
               DesktopMiniPlayer.instance.channel.value == null) {
             DesktopMiniPlayer.instance.play(channel);
+            if (!elsewhere) GuideKey.showPlayingGroupOnHome();
           }
         } else if (inGuide) {
           if (_playbackService.isPlayingSomething) return;
