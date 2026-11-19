@@ -124,6 +124,7 @@ const Map<String, String> kDe = {
   "Search sources": "Quellen durchsuchen",
   "Show row": "Reihe anzeigen",
   "Sources": "Quellen",
+  "Servers": "Server",
   "Sources · searching…": "Quellen · Suche läuft…",
   "Unavailable": "Nicht verfügbar",
   "subtitles": "Untertitel",
@@ -3444,6 +3445,7 @@ const Map<String, String> kDe = {
       "Ein Link, Stremio, ein Medienserver oder Trakt / Simkl",
   "Catalogs":
       "Kataloge",
+  "More catalogs": "Weitere Kataloge",
   "Lists":
       "Listen",
   "Built in":

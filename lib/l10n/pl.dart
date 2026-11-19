@@ -127,6 +127,7 @@ const Map<String, String> kPl = {
   "Search sources": "Szukaj w źródłach",
   "Show row": "Pokaż wiersz",
   "Sources": "Źródła",
+  "Servers": "Serwery",
   "Sources · searching…": "Źródła · wyszukiwanie…",
   "Unavailable": "Niedostępne",
   "subtitles": "napisy",
@@ -3199,6 +3200,7 @@ const Map<String, String> kPl = {
   "A link, Stremio, a media server or Trakt / Simkl":
       "Link, Stremio, serwer multimediów lub Trakt / Simkl",
   "Catalogs": "Katalogi",
+  "More catalogs": "Więcej katalogów",
   "Lists": "Listy",
   "Built in": "Wbudowane",
   "Under Other": "W Inne",
