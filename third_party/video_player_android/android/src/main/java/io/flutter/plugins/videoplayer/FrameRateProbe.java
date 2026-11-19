@@ -22,6 +22,8 @@ final class FrameRateProbe implements VideoFrameMetadataListener {
   private final long[] times = new long[FRAMES];
   private int count = 0;
   private volatile double fps = -1;
+  /** The gaps the estimate came from, in ms, for Send log ("" until then). */
+  private volatile String gapsText = "";
   // One immutable observation crosses from the playback thread to the stats reader.
   private static final class HdrSample {
     final Format input;
@@ -41,6 +43,10 @@ final class FrameRateProbe implements VideoFrameMetadataListener {
     return fps;
   }
 
+  String gapsText() {
+    return gapsText;
+  }
+
   @Override
   public void onVideoFrameAboutToBeRendered(
       long presentationTimeUs,
@@ -58,15 +64,44 @@ final class FrameRateProbe implements VideoFrameMetadataListener {
     // A seek or restart goes back in time: start over.
     if (count > 0 && presentationTimeUs <= times[count - 1]) count = 0;
     times[count++] = presentationTimeUs;
-    if (count == FRAMES) fps = fromTimes(times);
+    if (count == FRAMES) {
+      fps = fromTimes(times);
+      gapsText = gapsText(times);
+    }
   }
 
-  /** 1 s over the median gap: a dropped or repeated frame doesn't skew it. */
+  /**
+   * 1 s over the average gap, leaving out a dropped frame (a gap over 1.6x the median) or a
+   * repeated one (under 0.6x). Was 1 s over the median gap: a 50 fps H.264 channel whose
+   * timestamps alternate unevenly (e.g. 17 / 23 ms) gave a median of 17 ms = 58.8 fps, so the
+   * player bar said 59 FPS while the Data pool counted 49.77 shown per second (Fire TV,
+   * LOG-EVPPYN, 2026-11-19), and Match frame rate could pick a 60 Hz mode.
+   */
   static double fromTimes(long[] t) {
     long[] gaps = new long[t.length - 1];
     for (int i = 1; i < t.length; i++) gaps[i - 1] = t[i] - t[i - 1];
-    Arrays.sort(gaps);
-    long median = gaps[gaps.length / 2];
-    return median > 0 ? 1_000_000.0 / median : -1;
+    long[] sorted = gaps.clone();
+    Arrays.sort(sorted);
+    long median = sorted[sorted.length / 2];
+    if (median <= 0) return -1;
+    long sum = 0;
+    int n = 0;
+    for (long g : gaps) {
+      if (g * 10 >= median * 6 && g * 10 <= median * 16) {
+        sum += g;
+        n++;
+      }
+    }
+    return n > 0 && sum > 0 ? 1_000_000.0 * n / sum : -1;
+  }
+
+  /** "17.0 23.0 ..." ms, for Send log. */
+  static String gapsText(long[] t) {
+    StringBuilder b = new StringBuilder();
+    for (int i = 1; i < t.length; i++) {
+      if (b.length() > 0) b.append(' ');
+      b.append(String.format(java.util.Locale.US, "%.1f", (t[i] - t[i - 1]) / 1000.0));
+    }
+    return b.toString();
   }
 }

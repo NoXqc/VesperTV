@@ -34,6 +34,40 @@ final class StreamStats implements TransferListener {
       new java.util.concurrent.atomic.AtomicInteger();
   @Nullable volatile String lastReconnect;
 
+  /**
+   * The player's first network requests ({sent ns, answered ns, ended ns, byte position, bytes}),
+   * for Send log: how long a slow catch-up panel takes per request (Fire TV, 2026-11-19: a `.ts`
+   * catch-up start = the first bytes, the end of the file for its length, then back to the start).
+   */
+  private static final int MAX_OPENS = 8;
+  private final Object opensLock = new Object();
+  private final java.util.ArrayList<long[]> opens = new java.util.ArrayList<>();
+  @Nullable private long[] currentOpen;
+
+  /** "+0.00s @0 B answered 0.61s, 1.2 MB in 0.70s | ...", or "" before any request. */
+  String opensText() {
+    synchronized (opensLock) {
+      if (opens.isEmpty()) return "";
+      long t0 = opens.get(0)[0];
+      StringBuilder b = new StringBuilder();
+      for (long[] o : opens) {
+        if (b.length() > 0) b.append(" | ");
+        b.append(String.format(Locale.US, "+%.2fs @%s answered %s, %s", (o[0] - t0) / 1e9,
+            sizeText(o[3]), o[1] < 0 ? "-" : String.format(Locale.US, "%.2fs", (o[1] - o[0]) / 1e9),
+            sizeText(o[4])));
+        if (o[2] >= 0) b.append(String.format(Locale.US, " in %.2fs", (o[2] - o[0]) / 1e9));
+      }
+      return b.toString();
+    }
+  }
+
+  private static String sizeText(long bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return String.format(Locale.US, "%.0f KB", bytes / 1024.0);
+    if (bytes < 1024L * 1024 * 1024) return String.format(Locale.US, "%.1f MB", bytes / 1048576.0);
+    return String.format(Locale.US, "%.2f GB", bytes / 1073741824.0);
+  }
+
   /** A single progressive resource (not HLS/DASH): what LiveReconnectDataSource wraps. */
   boolean isProgressive() {
     return fileUri != null;
@@ -87,11 +121,26 @@ final class StreamStats implements TransferListener {
 
   @Override
   public void onTransferInitializing(
-      @NonNull DataSource source, @NonNull DataSpec dataSpec, boolean isNetwork) {}
+      @NonNull DataSource source, @NonNull DataSpec dataSpec, boolean isNetwork) {
+    if (!isNetwork) return;
+    synchronized (opensLock) {
+      if (opens.size() >= MAX_OPENS) {
+        currentOpen = null;
+        return;
+      }
+      currentOpen = new long[] {System.nanoTime(), -1, -1, dataSpec.position, 0};
+      opens.add(currentOpen);
+    }
+  }
 
   @Override
   public void onTransferStart(
       @NonNull DataSource source, @NonNull DataSpec dataSpec, boolean isNetwork) {
+    if (isNetwork) {
+      synchronized (opensLock) {
+        if (currentOpen != null && currentOpen[1] < 0) currentOpen[1] = System.nanoTime();
+      }
+    }
     if (!isNetwork || fileUri == null || !fileUri.equals(dataSpec.uri)) return;
     long size = fileSizeFromHeaders(source.getResponseHeaders(), dataSpec);
     if (size > 0) fileSizeBytes.set(size);
@@ -103,10 +152,22 @@ final class StreamStats implements TransferListener {
       @NonNull DataSpec dataSpec,
       boolean isNetwork,
       int bytesTransferred) {
-    if (isNetwork) bytes.addAndGet(bytesTransferred);
+    if (!isNetwork) return;
+    bytes.addAndGet(bytesTransferred);
+    synchronized (opensLock) {
+      if (currentOpen != null) currentOpen[4] += bytesTransferred;
+    }
   }
 
   @Override
   public void onTransferEnd(
-      @NonNull DataSource source, @NonNull DataSpec dataSpec, boolean isNetwork) {}
+      @NonNull DataSource source, @NonNull DataSpec dataSpec, boolean isNetwork) {
+    if (!isNetwork) return;
+    synchronized (opensLock) {
+      if (currentOpen != null) {
+        currentOpen[2] = System.nanoTime();
+        currentOpen = null;
+      }
+    }
+  }
 }

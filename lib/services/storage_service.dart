@@ -856,6 +856,14 @@ class StorageService {
   Future<void> setCatchupKeepPlaying(bool value) =>
       _prefs.setBool(AppConstants.keyCatchupKeepPlaying, value);
 
+  /// Playlist ids whose Xtream catch-up asks the `.ts` link
+  /// (services/catchup_format.dart).
+  Set<String> getCatchupTsPlaylists() =>
+      (_prefs.getStringList(AppConstants.keyCatchupTsPlaylists) ?? const [])
+          .toSet();
+  Future<void> setCatchupTsPlaylists(Set<String> ids) => _prefs.setStringList(
+      AppConstants.keyCatchupTsPlaylists, ids.toList()..sort());
+
   bool getSkipSegments() =>
       _prefs.getBool(AppConstants.keySkipSegments) ?? true;
   Future<void> setSkipSegments(bool value) =>

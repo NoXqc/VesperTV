@@ -414,3 +414,32 @@ Strings were already translated. Website/bot deployment status is in root HANDOF
 - **Compatibility video / texture:** the `reportOnly` mode must stop the ENDED reconnect loop.
 - **DST:** offset taken from `server_info` at each auth; persisted value can be 1 h stale after
   a DST change until the next re-auth (accept; log it).
+
+## Slow `.m3u8` panels and Dispatcharr (+898, 2026-11-19)
+Andrew12345 (Fire TV, LOG-76X9CH): catch-up took 12.6 s and 44 s to start (the second: a 30 s read timeout,
+then 13 s), live TS channels started normally and TiviMate is "instant". The player was ready in 0.1 s; the
+wait was the panel answering the `.m3u8` (it builds the HLS archive on demand). TiviMate most likely asks `.ts`.
+Dispatcharr 0.34.1 `/timeshift/` only takes `.ts` (`.m3u8` = 404 "Channel not found", checked on the test
+container). `services/catchup_format.dart` (`CatchupFormat`, shared by `PlaybackService` and `DesktopCatchup`):
+`.ts` for a playlist saved in `vesper_catchup_ts_playlists` or a channel on the signed-in Dispatcharr, else
+`.m3u8` first. Android: no picture (controller not initialized) after `hlsPatience` (4 s) = the same request as
+`.ts`, saved for the playlist (`_watchCatchupStart`); a refused `.m3u8` saves it too (was per launch only).
+Desktop / iOS: same choice; a `.m3u8` that fails to open retries as `.ts` (none before); no 4 s check there
+(media_kit keeps the old picture size while a new file opens). Send log: `Catchup: ready after X s (.ts)`,
+`Catchup: this playlist asks .ts from now on (why)`.
+
+**+899 back buffer:** LOG-EVPPYN (same Fire TV, `.ts`): +10 came back in 0.1-0.25 s (already downloaded: ~100 s
+kept ahead), -10 froze 17 s and 11.9 s (nothing kept behind the playhead: the slow panel was asked again, one
+`ProtocolException` on the way). Catch-up links (`CatchupFormat.isArchiveLink`, path contains `timeshift`) now
+create the player with `backBufferDurationMs` 30 s (`streamController`, ExoPlayer `setBackBuffer(.., true)`):
+-10 within the last 30 s replays from memory. Larger jumps back still ask the panel. `test/catchup_back_buffer_test.dart`.
+
+**+900:** (1) `FrameRateProbe.fromTimes` = 1 s over the AVERAGE gap of the first 16 frames, gaps outside 0.6-1.6x the
+median left out (was the median gap: Andrew's 50 fps H.264 channel showed "59 FPS" on the bar while the Data pool
+counted 49.77 shown/s; Match frame rate reads the same number). `ptsGaps` in StatsBridge, added to the
+`DisplayMatch:` line. `FrameRateProbeTest` (4). (2) `PlaybackService` skips the 250 ms wait before `play()` when the
+native surface is on (the player was attached before prepare): ~0.3 s off every catch-up / movie start; needs a box
+check (the wait was for the Formuler platform-view black frame). (3) `StreamStats` records each player's first 8
+network requests (sent / answered / bytes); `Catchup: server requests ...` after ready, to see whether a slow `.ts`
+start is the first request or the end-of-file length read (media3 TsExtractor reads the last PCR, then seeks back).
+Native suite 252 pass.

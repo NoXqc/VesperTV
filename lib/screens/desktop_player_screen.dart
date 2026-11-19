@@ -31,6 +31,7 @@ import '../widgets/player_clock_pill.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_audio_button.dart';
 import '../services/desktop_catchup.dart';
+import '../services/catchup_format.dart';
 import '../utils/time_format.dart';
 import '../widgets/desktop_data_pool_card.dart';
 import '../widgets/desktop_quality_badges.dart';
@@ -186,6 +187,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           .firstOrNull,
       guide: (live) => context.read<EpgService>().getPrograms(live.epgId),
       keepPlaying: () => context.read<StorageService>().getCatchupKeepPlaying(),
+      format: CatchupFormat(context.read<StorageService>()),
       onLive: _playLiveAgain);
 
   /// Playing a catch-up programme of [_currentChannel] (still the live
