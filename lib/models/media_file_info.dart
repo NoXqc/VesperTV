@@ -1,8 +1,14 @@
+import '../services/archive_service.dart' show ArchiveStreamOption;
+
 /// Display metadata for the selected Media Hub stream. No playable URLs or tokens.
 class MediaFileInfo {
-  const MediaFileInfo({required this.source, this.sizeBytes});
+  const MediaFileInfo({required this.source, this.sizeBytes, this.option});
   final String source;
   final int? sizeBytes;
+
+  /// The picked source, for its badges in the OK popup (Discord, Kal-el23,
+  /// 2026-11-18). In memory only, like the rest of this class.
+  final ArchiveStreamOption? option;
 
   String? get formattedSize => formatSize(sizeBytes);
 

@@ -84,6 +84,16 @@ class StreamBadge {
   }
 }
 
+/// A pack group about the picture's quality, the kinds VesperTV's own gold
+/// tags show: resolution, release (WEB-DL, Remux, BluRay), HDR / Dolby
+/// Vision, codec. Not audio, channels, languages, services, cached... The
+/// player's OK popup shows only these (owner, 2026-11-18: "just the
+/// quality badges like the original tag").
+bool streamBadgeQualityGroup(String name) => RegExp(
+        r'resolution|release|source|visual|hdr|dynamic|video|encod|codec|quality',
+        caseSensitive: false)
+    .hasMatch(name);
+
 class StreamBadgePack {
   StreamBadgePack({
     required this.groups,
