@@ -60,6 +60,7 @@ import 'services/sports_channel_matcher.dart';
 import 'services/sports_service.dart';
 import 'models/channel.dart';
 import 'widgets/recording_conflict_dialog.dart';
+import 'widgets/tv_canvas.dart';
 import 'services/playlist_manager.dart';
 import 'services/playlist_session.dart';
 import 'services/storage_service.dart';
@@ -195,7 +196,8 @@ Future<void> _main() async {
   // real box, confirmed do) drift out of sync: every poster re-fetches
   // from scratch on a cold start, not just the first one ever.
   CachedNetworkImageProvider.defaultCacheManager = persistentImageCacheManager;
-  runApp(const NoxIptvApp());
+  // Apple TV: drawn on an Android TV box's 960x540 canvas (TvCanvas).
+  runApp(isAppleTv ? const TvCanvas(child: NoxIptvApp()) : const NoxIptvApp());
 }
 
 /// Flutter's default ImageCache holds up to 1000 decoded images / ~100MB —

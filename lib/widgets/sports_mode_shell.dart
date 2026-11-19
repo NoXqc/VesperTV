@@ -9,6 +9,7 @@ import 'roll_down_menu.dart';
 import 'sports_mode_live_panel.dart';
 import 'sports_widgets.dart';
 import 'ink_layer.dart';
+import 'tv_canvas.dart';
 
 class SportsModeRailEntry {
   const SportsModeRailEntry({
@@ -146,9 +147,8 @@ class SportsModeShellState extends State<SportsModeShell> {
   Future<void> openMenu() async {
     _menuNode.requestFocus();
     final box = _menuNode.context?.findRenderObject() as RenderBox?;
-    final anchor = box != null && box.hasSize
-        ? box.localToGlobal(Offset.zero) & box.size
-        : null;
+    final anchor =
+        box != null && box.hasSize ? overlayRectOf(context, box) : null;
     final items = _menuEntries.where((e) => e.enabled).toList();
     final id = await showRollDownMenu<String>(context,
         anchor: anchor,

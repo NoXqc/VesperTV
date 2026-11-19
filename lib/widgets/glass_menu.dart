@@ -83,8 +83,11 @@ class GlassFrost {
       }
       if (page == null) return;
       if (kDebugMode && page.debugNeedsPaint) return;
-      final origin = page.localToGlobal(Offset.zero);
-      final size = page.size;
+      // On screen, through any transform above the page (Apple TV draws
+      // the app scaled up, TvCanvas): the painter compares it with the
+      // panel's own on-screen rect.
+      final onScreen = MatrixUtils.transformRect(
+          page.getTransformTo(null), Offset.zero & page.size);
       unawaited(page.toImage(pixelRatio: _scale).then((raw) async {
         final recorder = ui.PictureRecorder();
         Canvas(recorder).drawImage(
@@ -101,7 +104,7 @@ class GlassFrost {
           image.dispose();
           return;
         }
-        _frost.value = _Frost(image, origin & size);
+        _frost.value = _Frost(image, onScreen);
       }).catchError((Object _) {}));
     } catch (_) {
       // No frost: the panel keeps its plain look.
@@ -153,7 +156,7 @@ class _Frost {
   const _Frost(this.image, this.rect);
   final ui.Image image;
 
-  /// Where the captured page sits on screen (logical pixels).
+  /// Where the captured page sits on screen (root coordinates).
   final Rect rect;
 }
 

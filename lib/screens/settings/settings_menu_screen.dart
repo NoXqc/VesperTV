@@ -18,6 +18,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'settings_catalog.dart';
+import '../../widgets/tv_canvas.dart';
 
 /// Settings (rebuilt 2026-11-10, owner: "if I'm brand new to this app and I
 /// open the settings I get discouraged"): two glass panels over the
@@ -711,7 +712,7 @@ class SettingsItemTile extends StatelessWidget {
     Rect? anchor;
     const width = 320.0;
     if (box != null && box.hasSize) {
-      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final rect = overlayRectOf(rowContext, box);
       final left = (rect.right - width).clamp(rect.left, rect.right);
       anchor = Rect.fromLTWH(left, rect.top, width, rect.height);
     }

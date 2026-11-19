@@ -91,6 +91,7 @@ import '../services/vesper_ai/vesper_ai.dart';
 import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/app_store.dart';
+import '../widgets/tv_canvas.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -1976,7 +1977,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final renderObject =
         FocusManager.instance.primaryFocus?.context?.findRenderObject();
     if (renderObject is! RenderBox || !renderObject.attached) return;
-    final topLeft = renderObject.localToGlobal(Offset.zero);
+    final focused = FocusManager.instance.primaryFocus!.context!;
+    final topLeft = overlayRectOf(focused, renderObject).topLeft;
     final size = renderObject.size;
     final overlay = Overlay.of(context, rootOverlay: true);
     _leftEdgeHintOverlay = OverlayEntry(
