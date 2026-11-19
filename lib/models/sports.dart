@@ -25,6 +25,10 @@ enum SportsKind {
   tennis,
 }
 
+/// Which side of international cricket a [SportsLeague.cricketInternational]
+/// league shows.
+enum CricketInternational { men, women }
+
 class SportsLeague {
   const SportsLeague({
     required this.id,
@@ -42,7 +46,16 @@ class SportsLeague {
     this.espnGroup,
     this.espnScoreboardGroup,
     this.cityNames = false,
+    this.cricketInternational,
   });
+
+  /// Matches between countries (Tests, ODIs, T20Is), read from ESPN's cricket
+  /// scorepanel: every series on a date, each tour its own ESPN league
+  /// ("India tour of New Zealand 2026/27"), so no single scoreboard has them.
+  /// Kept: matches whose `class.internationalClassId` is set (0 = domestic,
+  /// 1-3 = men's Test / ODI / T20I, others = women's). Null for every other
+  /// league.
+  final CricketInternational? cricketInternational;
 
   /// One team per city: event channels may name a game by the cities
   /// alone ("QMJHL 05: Cape Breton @ Quebec", owner's provider,
@@ -113,6 +126,11 @@ class SportsLeague {
 
   /// The `{sport}` part of [espnPath]: "hockey", "rugby", "cricket"...
   String get sport => espnPath.split('/').first;
+
+  /// False for cricket: ESPN has no cricket team schedule (404) and a
+  /// league scoreboard takes no date range, so a team's season can't be
+  /// loaded: no My Teams follow, no Schedule calendar.
+  bool get hasTeamSchedules => sport != 'cricket';
 
   /// PDC darts: tournament days, not matches (see the bank entry).
   bool get isDarts => sport == 'darts';
@@ -1623,10 +1641,13 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl: 'https://a.espncdn.com/i/teamlogos/ncaa_conf/500/20.png',
       region: 'College'),
   // Rugby (ESPN, checked 2026-11-01: scoreboards + tables; ESPN has no
-  // per-competition rugby logos, so the generic rugby icon). Cricket and
-  // PDC darts come from TheSportsDB: cricket has scores (runs) but no
-  // tables on the free tier; darts is one card per tournament day, no
-  // matches or scores, and usually no start time (a date-only card).
+  // per-competition rugby logos, so the generic rugby icon). Cricket is
+  // ESPN too since 2026-11-19 (it was TheSportsDB: runs only, 3 games a
+  // day, no tables): `cricket/{ESPN league id}`, the same id every season,
+  // live scores + tables; ESPN has no cricket team schedules
+  // ([SportsLeague.hasTeamSchedules]). PDC darts comes from TheSportsDB:
+  // one card per tournament day, no matches or scores, and usually no
+  // start time (a date-only card).
   SportsLeague(
       id: 'rugby.six-nations',
       espnPath: 'rugby/180659',
@@ -1709,66 +1730,74 @@ const List<SportsLeague> kSportsLeagueBank = [
       shortName: 'NRL',
       logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/nrl.png',
       region: 'Rugby'),
+  // Matches between countries come from ESPN's cricket scorepanel (all
+  // series of a date; see [SportsLeague.cricketInternational]). The path is
+  // only read for its sport.
+  SportsLeague(
+      id: 'cricket.international',
+      espnPath: 'cricket/international',
+      name: 'International Cricket',
+      shortName: 'INTL',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-cricket.png',
+      region: 'Cricket',
+      hasStandings: false,
+      cricketInternational: CricketInternational.men),
+  SportsLeague(
+      id: 'cricket.international-women',
+      espnPath: 'cricket/international-women',
+      name: "Women's International Cricket",
+      shortName: 'INTL W',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-cricket.png',
+      region: 'Cricket',
+      hasStandings: false,
+      cricketInternational: CricketInternational.women),
   SportsLeague(
       id: 'cricket.ipl',
-      espnPath: 'cricket/ipl',
-      sportsDbId: '4460',
+      espnPath: 'cricket/8048',
       name: 'Indian Premier League',
       shortName: 'IPL',
-      logoUrl:
-          'https://r2.thesportsdb.com/images/media/league/badge/gaiti11741709844.png',
-      region: 'Cricket',
-      hasStandings: false),
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/cricket/500/8048.png',
+      region: 'Cricket'),
   SportsLeague(
       id: 'cricket.bbl',
-      espnPath: 'cricket/bbl',
-      sportsDbId: '4461',
+      espnPath: 'cricket/8044',
       name: 'Big Bash League',
       shortName: 'BBL',
-      logoUrl:
-          'https://r2.thesportsdb.com/images/media/league/badge/yko7ny1546635346.png',
-      region: 'Cricket',
-      hasStandings: false),
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/cricket/500/8044.png',
+      region: 'Cricket'),
   SportsLeague(
       id: 'cricket.psl',
-      espnPath: 'cricket/psl',
-      sportsDbId: '5067',
+      espnPath: 'cricket/8679',
       name: 'Pakistan Super League',
       shortName: 'PSL',
       logoUrl:
           'https://r2.thesportsdb.com/images/media/league/badge/4xo0kt1709121687.png',
-      region: 'Cricket',
-      hasStandings: false),
+      region: 'Cricket'),
   SportsLeague(
       id: 'cricket.sa20',
-      espnPath: 'cricket/sa20',
-      sportsDbId: '5532',
+      espnPath: 'cricket/21275',
       name: 'SA20',
       shortName: 'SA20',
       logoUrl:
           'https://r2.thesportsdb.com/images/media/league/badge/aakvuk1734183412.png',
-      region: 'Cricket',
-      hasStandings: false),
+      region: 'Cricket'),
   SportsLeague(
       id: 'cricket.cpl',
-      espnPath: 'cricket/cpl',
-      sportsDbId: '5176',
+      espnPath: 'cricket/8623',
       name: 'Caribbean Premier League',
       shortName: 'CPL',
-      logoUrl:
-          'https://r2.thesportsdb.com/images/media/league/badge/5mjjnj1645179844.png',
-      region: 'Cricket',
-      hasStandings: false),
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/cricket/500/8623.png',
+      region: 'Cricket'),
   SportsLeague(
       id: 'cricket.t20-blast',
-      espnPath: 'cricket/t20-blast',
-      sportsDbId: '4463',
+      espnPath: 'cricket/8053',
       name: 'T20 Blast',
       shortName: 'BLAST',
       logoUrl:
           'https://r2.thesportsdb.com/images/media/league/badge/m1lsns1649766933.png',
-      region: 'Cricket',
-      hasStandings: false),
+      region: 'Cricket'),
   SportsLeague(
       id: 'darts.pdc',
       espnPath: 'darts/pdc',
@@ -1897,7 +1926,14 @@ class SportsGame {
     this.leaders = const [],
     this.situation,
     this.odds,
+    this.lastDay,
   });
+
+  /// Multi-day cricket (Tests) still being played: the last scheduled day.
+  /// The match shows on every local day from [start] to here (a five-day
+  /// Test is one ESPN event). Not [end]: that makes a card read like golf
+  /// and a recording run until it.
+  final DateTime? lastDay;
 
   /// Betting lines from the scoreboard (ESPN lists one sportsbook's), only
   /// before / during a game. Shown only with Settings > Sports Trak >
