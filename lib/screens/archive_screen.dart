@@ -21,6 +21,7 @@ import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/archive_row_settings.dart';
 import '../widgets/collection_tile.dart';
+import '../widgets/desktop_row_scroller.dart';
 import '../widgets/trimmed_logo.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
@@ -280,6 +281,86 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// The focused title is a Jellyfin/Emby/Plex item: its rating is the
   /// server's community rating, not IMDb's.
   bool _focusedFromServer = false;
+
+  /// Computers: the poster the mouse rests on shows in the hero and the
+  /// backdrop after [_hoverDwell] (owner, 2026-11-19: a small delay, so
+  /// sweeping across a row doesn't swap backdrops on every poster). Off the
+  /// posters, the hero goes back to the selected (focused) title.
+  static const _hoverDwell = Duration(milliseconds: 350);
+  Timer? _hoverTimer;
+  ({
+    ArchiveMeta meta,
+    HubFolder? folder,
+    String? label,
+    bool fromServer
+  })? _selectedHero;
+
+  /// A click picked this card (row key, index): it goes wide at once
+  /// instead of after the remote's 2 s rest.
+  (String, int)? _clickedCard;
+
+  /// Runs for a moment after each key in the rows: the row moving under a
+  /// resting pointer sends hovers the mouse never made.
+  Timer? _rowKeyQuiet;
+
+  void _showInHero(ArchiveMeta meta,
+      {HubFolder? folder, String? label, bool fromServer = false}) {
+    if (identical(_focused, meta) && identical(_focusedFolder, folder)) {
+      return;
+    }
+    _focused = meta;
+    _focusedFolder = folder;
+    _focusedLabel = label;
+    _focusedFromServer = fromServer;
+    _focusChanged();
+  }
+
+  void _onCardHover(ArchiveRow row, int i, ArchiveMeta meta, bool hovering) {
+    _hoverTimer?.cancel();
+    if (!hovering) {
+      _hoverTimer = Timer(_hoverDwell, () {
+        final selected = _selectedHero;
+        if (!mounted || selected == null) return;
+        _showInHero(selected.meta,
+            folder: selected.folder,
+            label: selected.label,
+            fromServer: selected.fromServer);
+      });
+      return;
+    }
+    if (_rowKeyQuiet?.isActive ?? false) return;
+    final label = row.labelAt(i);
+    final fromServer = row.sourceAt(i).server != null;
+    _hoverTimer = Timer(_hoverDwell, () {
+      if (mounted) _showInHero(meta, label: label, fromServer: fromServer);
+    });
+  }
+
+  /// Computers: drag with the mouse + arrows at both ends.
+  Widget _mouseRow(ArchiveRow row, Widget list, {double arrowTop = 0}) {
+    if (!isDesktopTarget) return list;
+    return DesktopRowScroller(
+      controller: _rowScroll(row.key),
+      arrowTop: arrowTop,
+      arrowHeight: PosterCard.posterHeight,
+      onNearEnd: row.collection != null
+          ? null
+          : () => context.read<ArchiveService>().loadMore(row),
+      child: list,
+    );
+  }
+
+  /// Computers: a wide card left of card [i] in [row] went back to a
+  /// poster, which slid the cards after it left by the difference (out
+  /// from under the pointer). Scroll back by as much so they stay put.
+  void _keepPlaceAfterCollapse(ArchiveRow row, int i, int? wideBefore) {
+    if (!isDesktopTarget || wideBefore == null || wideBefore >= i) return;
+    final c = _rowScrolls[row.key];
+    if (c == null || !c.hasClients || c.positions.length != 1) return;
+    final to = c.offset - (_wideExtent - _cardExtent);
+    c.jumpTo(to < 0 ? 0 : to);
+  }
+
   late final VoidCallback _releaseResumeHint;
 
   @override
@@ -406,6 +487,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     WidgetsBinding.instance.removeObserver(this);
     appRouteObserver.unsubscribe(this);
     _widePreviewTimer?.cancel();
+    _hoverTimer?.cancel();
+    _rowKeyQuiet?.cancel();
     _contentScope.removeListener(_onContentFocus);
     _barScope.removeListener(_onContentFocus);
     _railScope.removeListener(_onRailFocus);
@@ -539,15 +622,28 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   }
 
   void _armWidePreview(ArchiveRow row, int i) {
+    final clicked = _clickedCard;
+    _clickedCard = null;
+    final wideBefore = _extentBuilders[row.key]?.$1;
     // The step itself no longer rebuilds the screen ([_focusTick]): a card
     // that had gone wide needs one to shrink back.
-    if (_clearWidePreview() && mounted) setState(() {});
+    if (_clearWidePreview() && mounted) {
+      setState(() {});
+      _keepPlaceAfterCollapse(row, i, wideBefore);
+    }
     final type = _type;
     final id = row.items[i].id;
     final node = _node(row.key, i);
     if (row.collection != null ||
         !_canPreview ||
         !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
+      return;
+    }
+    // Computers: a click opens the card wide at once (owner, 2026-11-19);
+    // the keyboard keeps the remote's 2 s rest.
+    if (clicked != null && clicked.$1 == row.key && clicked.$2 == i) {
+      setState(() => _expandedCard = (row.key, i, id));
+      _revealFocusedAfterLayout(row, i);
       return;
     }
     _widePreviewTimer = Timer(const Duration(seconds: 2), () {
@@ -598,8 +694,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// Reveal before focusing so lazy cards exist; reconcile after layout
   /// when a previously expanded card collapses or a row reaches its end.
   void _focusCard(ArchiveRow row, int i) {
+    final wideBefore = _extentBuilders[row.key]?.$1;
     if (!(_nodes[row.key]?[i]?.hasFocus ?? false) && _clearWidePreview()) {
       setState(() {});
+      _keepPlaceAfterCollapse(row, i, wideBefore);
     }
     _revealCard(row, i);
     _focusWhenBuilt(_node(row.key, i));
@@ -615,7 +713,20 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           tiles ? CollectionTile.slotOf(row.folders[i].shape) : _cardExtent;
       final start =
           _rowPadding + (tiles ? _tileStart(row, i) : i * _cardExtent);
-      if (_wideCards) {
+      if (isDesktopTarget) {
+        // Computers: only bring the card fully into view. The mouse picks
+        // what it can see; moving the pick to the left edge (the TV's way,
+        // below) felt weird there (owner, 2026-11-19).
+        final width = !tiles && _wideIndex(row) == i ? _wideExtent : slot;
+        double? to;
+        if (start < pos.pixels + _rowPadding) {
+          to = start - _rowPadding;
+        } else if (start + width >
+            pos.pixels + pos.viewportDimension - _rowPadding) {
+          to = start + width - pos.viewportDimension + _rowPadding;
+        }
+        if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
+      } else if (_wideCards) {
         // Move the row from the selector's position, showing the upcoming
         // titles immediately. At the actual end, retain the natural clamp.
         c.jumpTo((start - _rowPadding).clamp(0.0, pos.maxScrollExtent));
@@ -733,6 +844,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
+      _selectedHero = null;
+      _hoverTimer?.cancel();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
     await service.setGenre(type, genre);
@@ -871,6 +984,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
+      _selectedHero = null;
+      _hoverTimer?.cancel();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
@@ -913,6 +1028,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       return KeyEventResult.ignored;
     }
     if (rows.isEmpty) return KeyEventResult.ignored;
+    _rowKeyQuiet?.cancel();
+    _rowKeyQuiet = Timer(const Duration(milliseconds: 600), () {});
+    _hoverTimer?.cancel();
     final row = rows[_focusedRow.clamp(0, rows.length - 1)];
     final hidden = _rowHidden(row);
     final onEye = _eyeNodes[row.key]?.hasFocus ?? false;
@@ -1505,6 +1623,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
+      _selectedHero = null;
+      _hoverTimer?.cancel();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
     await service.setNewest(type, !service.newest(type));
@@ -2071,142 +2191,170 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         if (row.collection != null)
           SizedBox(
             height: PosterCard.height + 16,
-            child: ListView.builder(
-              controller: _rowScroll(row.key),
-              scrollDirection: Axis.horizontal,
-              // Room above: the focused tile grows and its top edge was cut
-              // by the row (owner photo, 2026-11-11).
-              padding:
-                  const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
-              itemExtentBuilder: _tileExtentBuilder(row),
-              scrollCacheExtent:
-                  const ScrollCacheExtent.pixels(_cardExtent * 5),
-              itemCount: row.folders.length,
-              itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: CollectionTile(
-                  key: ValueKey('collection-tile-${row.key}-$i'),
-                  folder: row.folders[i],
-                  focusNode: _node(row.key, i),
-                  // A phone has no focus: every tile on screen plays.
-                  animate: !(context.read<AppPreferences?>()?.isTelevision ??
-                          false) &&
-                      _narrow,
-                  onTap: () => _openFolder(row, i),
-                  onHold: () => _tileMenu(row, i),
-                  onFocusGained: () {
-                    _focusedRowKey = row.key;
-                    _lastIndex[row.key] = i;
-                    _focusedRow = r;
-                    _focused = row.items[i];
-                    _focusedFolder = row.folders[i];
-                    _focusedLabel = row.collection!.label;
-                    _focusedFromServer = false;
-                    _focusChanged();
-                    _revealFocusedAfterLayout(row, i);
-                  },
-                ),
-              ),
-            ),
-          )
-        else if (!_rowHidden(row))
-          SizedBox(
-            height: PosterCard.height + 16,
-            child: ListView.builder(
-              controller: _rowScroll(row.key),
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
-              // Exact slot width: [_focusCard]'s jump lands where the card
-              // really is, even far past the built ones (the TV tab's rows
-              // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
-              // built early, so Right always finds the next one ready. Always
-              // a builder (never switching to itemExtent): another sliver type
-              // would rebuild the cards and drop the focus.
-              itemExtentBuilder: _extentBuilder(row.key, wideAt),
-              scrollCacheExtent:
-                  const ScrollCacheExtent.pixels(_cardExtent * 5),
-              itemCount: row.items.length,
-              itemBuilder: (_, i) {
-                final meta = row.items[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ValueListenableBuilder<Set<String>>(
-                    valueListenable: ArchiveReadyWatch.instance.tags,
-                    builder: (context, ready, _) => PosterCard(
-                      ready: ready.contains(meta.id),
-                      fetching: ArchiveReadyWatch.instance.fetching.value
-                          .contains(meta.id),
+            child: _mouseRow(
+                row,
+                arrowTop: 6,
+                ListView.builder(
+                  controller: _rowScroll(row.key),
+                  scrollDirection: Axis.horizontal,
+                  // Room above: the focused tile grows and its top edge was cut
+                  // by the row (owner photo, 2026-11-11).
+                  padding:
+                      const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
+                  itemExtentBuilder: _tileExtentBuilder(row),
+                  scrollCacheExtent:
+                      const ScrollCacheExtent.pixels(_cardExtent * 5),
+                  itemCount: row.folders.length,
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: CollectionTile(
+                      key: ValueKey('collection-tile-${row.key}-$i'),
+                      folder: row.folders[i],
                       focusNode: _node(row.key, i),
-                      title: meta.name,
-                      imageUrl: meta.posterUrl,
-                      wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
-                      wideImageUrl: meta.backgroundUrl,
-                      wideLogoUrl: meta.logo,
-                      rating: row.continuations != null
-                          ? (row.continuations![i].episodeLabel.isNotEmpty
-                              ? row.continuations![i].episodeLabel
-                              : meta.year)
-                          : meta.year,
-                      progressFraction: row.continuations?[i].progress,
-                      tag: row.continuations == null
-                          ? meta.releaseTag?.label
-                          : null,
-                      tagStrong: row.continuations == null &&
-                          meta.releaseTag == HubReleaseTag.isNew,
-                      sourceLabel: row.continuations != null
-                          ? (row.upcoming
-                              ? tr('Airs {date}', {
-                                  'date': (row.continuations![i].episode
-                                              ?.released ??
-                                          '')
-                                      .split('T')
-                                      .first
-                                })
-                              : row.continuations![i].resume
-                                  ? tr('Resume')
-                                  : meta.type == ArchiveType.movie
-                                      ? tr('Play')
-                                      : row.continuations![i].episode == null
-                                          ? tr('Continue series')
-                                          : tr('Next episode'))
-                          : null,
-                      // Touch: first tap shows the title in the hero, a second
-                      // opens it, in both orientations (a phone on its side is
-                      // over 700 wide and opened at once, owner 2026-11-02).
-                      tapToPreview: Theme.of(context).platform ==
-                              TargetPlatform.android &&
+                      // A phone has no focus: every tile on screen plays.
+                      animate:
                           !(context.read<AppPreferences?>()?.isTelevision ??
-                              false),
-                      onTap: () => row.continuations != null
-                          ? _openContinuation(row.continuations![i])
-                          : _open(row.sourceAt(i), meta),
-                      isFavorite: context
-                          .read<ArchiveService>()
-                          .isFavorite(row.sourceAt(i), meta),
-                      onToggleFavorite: () =>
-                          holdArchiveTitle(context, row, row.sourceAt(i), meta),
+                                  false) &&
+                              _narrow,
+                      onTap: () => _openFolder(row, i),
+                      onHold: () => _tileMenu(row, i),
                       onFocusGained: () {
-                        service.prioritizeRow(row);
-                        service.retainSearchFocus(row);
+                        _hoverTimer?.cancel();
                         _focusedRowKey = row.key;
                         _lastIndex[row.key] = i;
-                        if (i >= row.items.length - 12) {
-                          context.read<ArchiveService>().loadMore(row);
-                        }
-                        _armWidePreview(row, i);
                         _focusedRow = r;
-                        _focused = meta;
-                        _focusedFolder = null;
-                        _focusedLabel = row.labelAt(i);
-                        _focusedFromServer = row.sourceAt(i).server != null;
+                        _focused = row.items[i];
+                        _focusedFolder = row.folders[i];
+                        _focusedLabel = row.collection!.label;
+                        _focusedFromServer = false;
+                        _selectedHero = (
+                          meta: row.items[i],
+                          folder: row.folders[i],
+                          label: row.collection!.label,
+                          fromServer: false,
+                        );
                         _focusChanged();
                         _revealFocusedAfterLayout(row, i);
                       },
                     ),
                   ),
-                );
-              },
-            ),
+                )),
+          )
+        else if (!_rowHidden(row))
+          SizedBox(
+            height: PosterCard.height + 16,
+            child: _mouseRow(
+                row,
+                ListView.builder(
+                  controller: _rowScroll(row.key),
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
+                  // Exact slot width: [_focusCard]'s jump lands where the card
+                  // really is, even far past the built ones (the TV tab's rows
+                  // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
+                  // built early, so Right always finds the next one ready. Always
+                  // a builder (never switching to itemExtent): another sliver type
+                  // would rebuild the cards and drop the focus.
+                  itemExtentBuilder: _extentBuilder(row.key, wideAt),
+                  scrollCacheExtent:
+                      const ScrollCacheExtent.pixels(_cardExtent * 5),
+                  itemCount: row.items.length,
+                  itemBuilder: (_, i) {
+                    final meta = row.items[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ValueListenableBuilder<Set<String>>(
+                        valueListenable: ArchiveReadyWatch.instance.tags,
+                        builder: (context, ready, _) => PosterCard(
+                          ready: ready.contains(meta.id),
+                          fetching: ArchiveReadyWatch.instance.fetching.value
+                              .contains(meta.id),
+                          focusNode: _node(row.key, i),
+                          title: meta.name,
+                          imageUrl: meta.posterUrl,
+                          wideWidth:
+                              i == wideAt ? PosterCard.wideCardWidth : null,
+                          wideImageUrl: meta.backgroundUrl,
+                          wideLogoUrl: meta.logo,
+                          rating: row.continuations != null
+                              ? (row.continuations![i].episodeLabel.isNotEmpty
+                                  ? row.continuations![i].episodeLabel
+                                  : meta.year)
+                              : meta.year,
+                          progressFraction: row.continuations?[i].progress,
+                          tag: row.continuations == null
+                              ? meta.releaseTag?.label
+                              : null,
+                          tagStrong: row.continuations == null &&
+                              meta.releaseTag == HubReleaseTag.isNew,
+                          sourceLabel: row.continuations != null
+                              ? (row.upcoming
+                                  ? tr('Airs {date}', {
+                                      'date': (row.continuations![i].episode
+                                                  ?.released ??
+                                              '')
+                                          .split('T')
+                                          .first
+                                    })
+                                  : row.continuations![i].resume
+                                      ? tr('Resume')
+                                      : meta.type == ArchiveType.movie
+                                          ? tr('Play')
+                                          : row.continuations![i].episode ==
+                                                  null
+                                              ? tr('Continue series')
+                                              : tr('Next episode'))
+                              : null,
+                          // Touch: first tap shows the title in the hero, a second
+                          // opens it, in both orientations (a phone on its side is
+                          // over 700 wide and opened at once, owner 2026-11-02).
+                          tapToPreview: Theme.of(context).platform ==
+                                  TargetPlatform.android &&
+                              !(context.read<AppPreferences?>()?.isTelevision ??
+                                  false),
+                          onTap: () => row.continuations != null
+                              ? _openContinuation(row.continuations![i])
+                              : _open(row.sourceAt(i), meta),
+                          isFavorite: context
+                              .read<ArchiveService>()
+                              .isFavorite(row.sourceAt(i), meta),
+                          onToggleFavorite: () => holdArchiveTitle(
+                              context, row, row.sourceAt(i), meta),
+                          onHover: isDesktopTarget
+                              ? (on) => _onCardHover(row, i, meta, on)
+                              : null,
+                          onSelect: isDesktopTarget
+                              ? () => _clickedCard = (row.key, i)
+                              : null,
+                          onFocusGained: () {
+                            _hoverTimer?.cancel();
+                            _selectedHero = (
+                              meta: meta,
+                              folder: null,
+                              label: row.labelAt(i),
+                              fromServer: row.sourceAt(i).server != null,
+                            );
+                            service.prioritizeRow(row);
+                            service.retainSearchFocus(row);
+                            _focusedRowKey = row.key;
+                            _lastIndex[row.key] = i;
+                            if (i >= row.items.length - 12) {
+                              context.read<ArchiveService>().loadMore(row);
+                            }
+                            _armWidePreview(row, i);
+                            _focusedRow = r;
+                            _focused = meta;
+                            _focusedFolder = null;
+                            _focusedLabel = row.labelAt(i);
+                            _focusedFromServer = row.sourceAt(i).server != null;
+                            _focusChanged();
+                            _revealFocusedAfterLayout(row, i);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                )),
           ),
       ],
     );

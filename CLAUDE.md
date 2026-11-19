@@ -457,6 +457,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-19 - Media Hub rows with a mouse (computers), +869 (merged to local main, not pushed, not released):**
+  owner on PC/Linux. `isDesktopTarget` only (TV/phones unchanged): hovering a poster 350 ms shows its backdrop + hero (small
+  delay so a sweep doesn't swap backdrops; off the posters the selected title comes back; hovers right after an arrow key are
+  ignored), a click selects + widens the card at once (`PosterCard.onSelect`), a click on the selected card or a double click
+  opens it, the row no longer jumps the pick to the left edge (`_revealCard` only brings it into view) and a shrinking wide
+  card to its left doesn't slide it away (`_keepPlaceAfterCollapse`). `widgets/desktop_row_scroller.dart`: own mouse drag
+  (Flutter's Scrollable starts a mouse drag after 1 px, which ate clicks; this one starts at kTouchSlop like the tap), arrows on
+  row hover toward more (animateTo one screen: computers only), loads more near the end. Owner-tested on Windows ("very well
+  done"). `test/archive_mouse_rows_test.dart`. Analyze 16, 2132 tests. Next build > 869.
 - **Claude, 2026-11-18 - release 1.0.70 (beta), +861 (latest):** owner said "Commit merge and /cutr". Android first; same day owner asked "push windows and Linux": Windows zip (from 026e521) + Linux `VesperTV-1.0.70-861-linux-x64.tar.gz` (CI from e689309, apt step now times out/retries) added, site/README point at 1.0.70. Was Android only;
   Windows stays 1.0.68, Linux 1.0.63 (+702). Since 1.0.69: group tools (TV Group management shown first + All / Shown /
   Hidden + Countries "Hide every group"; editor Groups tab hidden fold, bulk hide, country chips + Keep only; Discord
