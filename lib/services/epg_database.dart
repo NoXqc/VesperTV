@@ -52,7 +52,7 @@ class EpgDatabase {
 
   Future<Database> _open(String path) => openDatabase(
         path,
-        version: 2,
+        version: 3,
         // Write-ahead log, as CatalogDatabase: a commit appends to one file
         // instead of copying pages to a rollback journal and syncing both.
         // A provider's guide refresh (~255k programmes) took 3.5 min on a
@@ -67,7 +67,14 @@ class EpgDatabase {
           }
         },
         // The sports index is built lazily, outside cold-start guide loading.
-        onUpgrade: (db, oldVersion, newVersion) async {},
+        // 3: stop -> (stop, start), see [createSchema] (built once).
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 3) {
+            await db.execute('CREATE INDEX IF NOT EXISTS '
+                'idx_programme_stop_start ON programme(stop, start)');
+            await db.execute('DROP INDEX IF EXISTS idx_programme_stop');
+          }
+        },
         onCreate: (db, version) => createSchema(db),
       );
 
@@ -89,7 +96,11 @@ class EpgDatabase {
               PRIMARY KEY (channel_id, start)
             ) WITHOUT ROWID
           ''');
-    await db.execute('CREATE INDEX idx_programme_stop ON programme(stop)');
+    // (stop, start): the launch's "on in the next hours" slice is answered
+    // inside the index (13 s on the Homatics with stop alone, owner
+    // 2026-11-19); "stop > x" queries use it like the old stop index.
+    await db.execute(
+        'CREATE INDEX idx_programme_stop_start ON programme(stop, start)');
     await db.execute(
         'CREATE INDEX idx_programme_source ON programme(source_url, gen)');
   }
@@ -134,21 +145,54 @@ class EpgDatabase {
   Future<Map<String, List<EpgRow>>> programmesBetween(
       int fromMs, int toMs) async {
     final db = await _database;
-    final rows = await db.rawQuery(
-      'SELECT channel_id, start, stop, title, descr FROM programme '
-      'WHERE stop > ? AND start < ? ORDER BY channel_id, start',
-      [fromMs, toMs],
-    );
+    // 13-16 s on the Homatics with ~8000 channels (owner, 2026-11-19), and
+    // the time was the data, not the search: so descriptions only for
+    // what's on at [fromMs] (the info cards and the player bar show them;
+    // a guide row loads its own full rows), and pages in the (stop, start)
+    // index's own order, so a guide row's query gets its turn between two
+    // pages instead of after the whole slice. Bounded on stop too
+    // (programmes up to 2 days long).
+    const page = 3000;
     final result = <String, List<EpgRow>>{};
-    for (final r in rows) {
-      final id = r['channel_id'] as String;
-      (result[id] ??= []).add((
-        channelId: id,
-        startMs: r['start'] as int,
-        stopMs: r['stop'] as int,
-        title: r['title'] as String,
-        description: r['descr'] as String?,
-      ));
+    final maxStop = toMs + 2 * Duration.millisecondsPerDay;
+    int? lastStop, lastStart;
+    String? lastId;
+    while (true) {
+      final rows = await db.rawQuery(
+        'SELECT channel_id, start, stop, title, '
+        'CASE WHEN start <= ? THEN descr END AS descr FROM programme '
+        'WHERE stop > ? AND stop < ? AND start < ? '
+        '${lastStop == null ? '' : 'AND (stop > ? OR (stop = ? AND (start > ? '
+            'OR (start = ? AND channel_id > ?)))) '}'
+        'ORDER BY stop, start, channel_id LIMIT $page',
+        [
+          fromMs,
+          fromMs,
+          maxStop,
+          toMs,
+          if (lastStop != null) ...[
+            lastStop,
+            lastStop,
+            lastStart,
+            lastStart,
+            lastId
+          ],
+        ],
+      );
+      for (final r in rows) {
+        final id = r['channel_id'] as String;
+        (result[id] ??= []).add((
+          channelId: id,
+          startMs: r['start'] as int,
+          stopMs: r['stop'] as int,
+          title: r['title'] as String,
+          description: r['descr'] as String?,
+        ));
+      }
+      if (rows.length < page) break;
+      lastStop = rows.last['stop'] as int;
+      lastStart = rows.last['start'] as int;
+      lastId = rows.last['channel_id'] as String;
     }
     return result;
   }
