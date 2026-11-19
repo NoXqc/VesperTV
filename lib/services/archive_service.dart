@@ -1961,9 +1961,46 @@ class ArchiveService extends ChangeNotifier {
     ];
   }
 
-  /// Everything a tile's page lists: its own catalogs, then [folderExtras].
+  /// Everything a tile's page lists: its own catalogs, then [folderExtras];
+  /// a [browseFolder] lists its one catalog.
   List<(ArchiveSource, ArchiveCatalog)> folderPageCatalogs(HubFolder folder) =>
-      [...folderCatalogs(folder), ...folderExtras(folder)];
+      switch (_browsed[folder.id]) {
+        final sc? => [sc],
+        null => [...folderCatalogs(folder), ...folderExtras(folder)],
+      };
+
+  /// The catalogs of [type] the add-ons keep off the home screen
+  /// ([ArchiveCatalog.homeHidden]: AIOMetadata's Home switch off = a
+  /// required genre). Never rows: the tab's More catalogs button opens them
+  /// one at a time (woodbooger, 2026-11-19: "I'd still like to be able to
+  /// browse these catalogues", as Stremio's Discover does). Under Other only
+  /// while Other is picked, like the rows.
+  List<(ArchiveSource, ArchiveCatalog)> browseOnlyCatalogs(ArchiveType type) {
+    final other = genre(type) == otherGenre;
+    bool hidden(ArchiveCatalog c) =>
+        c.type == type && c.homeHidden && !c.searchOnly;
+    return [
+      // Asked on every bar build: the cheap checks first.
+      for (final s in enabledSources)
+        if (s.tracker == null &&
+            s.underOther == other &&
+            s.catalogs.any(hidden) &&
+            _showCatalogs(s))
+          for (final c in s.catalogs)
+            if (hidden(c)) (s, c),
+    ];
+  }
+
+  /// Catalogs opened from More catalogs, by [browseFolder] id.
+  final Map<String, (ArchiveSource, ArchiveCatalog)> _browsed = {};
+
+  /// [catalog] of [source] as a page of its own (the collection tiles'
+  /// grid, [loadFolder] / [folderRows]), without a tile's extra catalogs.
+  HubFolder browseFolder(ArchiveSource source, ArchiveCatalog catalog) {
+    final id = 'browse:${_rowKey(source, catalog)}';
+    _browsed[id] = (source, catalog);
+    return HubFolder(id: id, title: catalog.name, sources: const []);
+  }
 
   (Object?, Object?, int, ArchiveType)? _tileRowsFor;
   List<ArchiveRow> _tileRows = const [];

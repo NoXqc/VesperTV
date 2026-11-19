@@ -144,8 +144,8 @@ void main() {
       'TV Shows',
       'Watch list',
       'Refresh',
-      'Media Hub sources',
-      'Connect Jellyfin / Emby'
+      'Sources',
+      'Servers'
     ]) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
@@ -155,9 +155,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     expect(
-        Focus.of(tester.element(find.text('Connect Jellyfin / Emby')))
-            .hasPrimaryFocus,
-        isTrue,
+        Focus.of(tester.element(find.text('Servers'))).hasPrimaryFocus, isTrue,
         reason: 'End focus: ${FocusManager.instance.primaryFocus}; '
             'widget: ${FocusManager.instance.primaryFocus?.context?.widget}');
     expect(tester.takeException(), isNull);
@@ -241,8 +239,8 @@ void main() {
       'TV Shows',
       'Watch list',
       'Refresh',
-      'Media Hub sources',
-      'Connect Jellyfin / Emby'
+      'Sources',
+      'Servers'
     ]) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
@@ -254,7 +252,7 @@ void main() {
       expect(rect.bottom, lessThanOrEqualTo(360));
     }
     for (final label in [
-      'Media Hub sources',
+      'Sources',
       'Refresh',
       'Watch list',
       'TV Shows',

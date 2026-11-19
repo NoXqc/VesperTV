@@ -62,6 +62,17 @@ than search; now a required genre alone keeps it as `ArchiveCatalog.homeHidden` 
 never fetched by the tab's refresh, never searched, no genre filter options; collection tiles use it, requested
 without a genre (AIOMetadata answers it like `genre=None`, checked). `test/hub_collections_test.dart`.
 
+**More catalogs (+889, 2026-11-19, woodbooger on Discord):** his TMDB Top Rated catalogs (Home switch off in
+AIOMetadata) stayed off the rows as he wanted, but nothing could open them (Stremio lists such catalogs in
+Discover). The Media Hub bar (TV / computer) and the phone Menu now have **More catalogs** after the genre button,
+shown only when an enabled add-on of that type has home-hidden catalogs (not while searching; an add-on under
+Other only while Other is picked). The picker lists them (add-on name added when several add-ons have some); OK opens
+the catalog in `ArchiveCatalogScreen.folder` through `ArchiveService.browseFolder` (a `browse:<rowKey>` folder whose
+page is that one catalog: no tile extras, so the series catalog of the same name stays out). Still never a row.
+`ArchiveService.browseOnlyCatalogs`, `test/hub_more_catalogs_test.dart`. Sources saved before +721 lost these
+catalogs at parse time: the Media Hub Refresh re-reads manifests.
++890 (owner on +889): one OK opened the first catalog: the Homatics' OK repeat (~420 ms) reached the picker's autofocused entry. `_FloatingPanel` (More catalogs, genres, search) now swallows activate-key repeats (`HubPanel: OK repeat ignored`). Same build: the rail is 190 wide (was 240) with **Sources** / **Servers** (were Media Hub sources / Connect Jellyfin / Emby; owner photo).
+
 ## On Home (+722, owner: "having these gifs-category to home if a user chose so")
 Collection menu (Settings > Media Hub sources > Collections) > **Show on Home** (`HubCollection.onHome`, stored
 `home`). Home gets `HomeRowKind.collections` ("Collections": placed under Continue Watching / New episodes / Watch

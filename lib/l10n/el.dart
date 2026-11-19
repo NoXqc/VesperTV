@@ -131,6 +131,7 @@ const Map<String, String> kEl = {
   "Search sources": "Πηγές αναζήτησης",
   "Show row": "Εμφάνιση σειράς",
   "Sources": "Πηγές",
+  "Servers": "Διακομιστές",
   "Sources · searching…": "Πηγές · αναζήτηση…",
   "Unavailable": "Μη διαθέσιμο",
   "subtitles": "υπότιτλοι",
@@ -3503,6 +3504,7 @@ const Map<String, String> kEl = {
       "Σύνδεσμος, Stremio, διακομιστής ή Trakt / Simkl",
   "Catalogs":
       "Κατάλογοι",
+  "More catalogs": "Περισσότεροι κατάλογοι",
   "Lists":
       "Λίστες",
   "Built in":

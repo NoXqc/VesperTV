@@ -90,6 +90,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
   final _barNewestNode = FocusNode(debugLabel: 'archive-bar-newest');
+  final _barCatalogsNode = FocusNode(debugLabel: 'archive-bar-catalogs');
   final _barSourceNode = FocusNode(debugLabel: 'archive-search-source');
   final _barManageNode = FocusNode(debugLabel: 'archive-bar-manage');
   final _barBackNode = FocusNode(debugLabel: 'archive-bar-back');
@@ -456,7 +457,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// Icon + both paddings + the label gap: an entry fits even while the
   /// rail starts to open (labels appear at once, the width animates).
   static const double _railSlim = 80;
-  static const double _railWide = 240;
+  // 190 (was 240): short entry names, the rail takes less of the screen
+  // (owner photo, 2026-11-19).
+  static const double _railWide = 190;
 
   /// Search's pull-out and dialog take the focus: the rail stays open
   /// behind them instead of closing under the menu.
@@ -505,6 +508,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     _barClearNode.dispose();
     _barGenreNode.dispose();
     _barNewestNode.dispose();
+    _barCatalogsNode.dispose();
     _barBackNode.dispose();
     _barManageNode.dispose();
     _barSourceNode.dispose();
@@ -1358,13 +1362,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                   _railButton(
                     node: _railSourcesNode,
                     icon: Icons.extension_outlined,
-                    label: tr('Media Hub sources'),
+                    label: tr('Sources'),
                     onTap: _openSources,
                   ),
                   _railButton(
                     node: _railServerNode,
                     icon: Icons.dns_outlined,
-                    label: tr('Connect Jellyfin / Emby'),
+                    label: tr('Servers'),
                     onTap: _connectMediaServer,
                   ),
                 ],
@@ -1597,6 +1601,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// The floating bar's buttons, in order (for explicit Left/Right).
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
         if (service.genres(_type).isNotEmpty) _barGenreNode,
+        if (_showMoreCatalogs(service)) _barCatalogsNode,
         if (_showNewest(service)) _barNewestNode,
         if (_narrow && service.canSearch(_type)) _railSearchNode,
         if (service.searchQuery(_type) != null) ...[
@@ -1607,6 +1612,65 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         _barManageNode,
       ];
+
+  /// More catalogs: only when an add-on keeps catalogs of this type off
+  /// the home screen ([ArchiveService.browseOnlyCatalogs]), not while
+  /// searching.
+  bool _showMoreCatalogs(ArchiveService service) =>
+      service.searchQuery(_type) == null &&
+      service.browseOnlyCatalogs(_type).isNotEmpty;
+
+  /// The catalogs an add-on keeps off the home screen (AIOMetadata's Home
+  /// switch off), one button each; OK opens the whole catalog as a grid,
+  /// like Expand catalog (woodbooger, 2026-11-19). The add-on's name is
+  /// added when several add-ons have some.
+  Future<void> _pickMoreCatalog(ArchiveService service) async {
+    final type = _type;
+    final list = service.browseOnlyCatalogs(type);
+    if (list.isEmpty) return;
+    final several = {for (final (s, _) in list) s.key}.length > 1;
+    String label((ArchiveSource, ArchiveCatalog) sc) {
+      final name = sc.$2.name.isEmpty ? sc.$2.id : sc.$2.name;
+      return several ? '$name · ${sc.$1.name}' : name;
+    }
+
+    final narrow = MediaQuery.sizeOf(context).width < 700;
+    final picked = await showDialog<int>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => _FloatingPanel(
+        title: tr('More catalogs'),
+        width: narrow ? 360 : 660,
+        child: Flexible(
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: narrow ? 1 : 2,
+              mainAxisExtent: 50,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: list.length,
+            itemBuilder: (_, i) => _BarButton(
+              autofocus: i == 0,
+              expand: true,
+              icon: Icons.grid_view_rounded,
+              label: label(list[i]),
+              onTap: () => Navigator.of(ctx).pop(i),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted || type != _type) return;
+    final (source, catalog) = list[picked];
+    debugPrint('MediaHub: more catalogs -> ${catalog.wire}/${catalog.id}');
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ArchiveCatalogScreen.folder(
+            folder: service.browseFolder(source, catalog),
+            collection: source.name)));
+    if (mounted) _refreshHistoryProgress();
+  }
 
   /// The Newest button: only when a source has a release-year catalog, and
   /// not under Other (custom catalogs have none).
@@ -1722,6 +1786,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               : _genreName(genre),
           genre != null,
           () => _pickGenre(service)
+        ),
+      if (_showMoreCatalogs(service))
+        (
+          Icons.grid_view_rounded,
+          tr('More catalogs'),
+          false,
+          () => _pickMoreCatalog(service)
         ),
       if (_showNewest(service))
         (
@@ -1862,6 +1933,20 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 6),
                         color: Colors.white24,
                       ),
+                    if (_showMoreCatalogs(service)) ...[
+                      _BarButton(
+                        focusNode: _barCatalogsNode,
+                        icon: Icons.grid_view_rounded,
+                        label: tr('More catalogs'),
+                        onTap: () => _pickMoreCatalog(service),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
+                    ],
                     if (_showNewest(service)) ...[
                       _BarButton(
                         focusNode: _barNewestNode,
@@ -2584,44 +2669,68 @@ class _FloatingPanel extends StatelessWidget {
   final Widget child;
   final double width;
 
+  /// One OK = one pick. The Homatics remote sends an OK repeat ~420 ms
+  /// after a press when its release is late, and Flutter turns repeats into
+  /// ActivateIntent: the OK that opened the panel then picked its focused
+  /// entry (owner, +889: More catalogs opened the first catalog on one
+  /// press; the genre picker closed on All genres). A held OK has no use
+  /// here, so the panel swallows activate-key repeats (as `_RowEye` does).
+  static KeyEventResult _swallowRepeats(FocusNode node, KeyEvent event) {
+    if (event is! KeyRepeatEvent || !isActivateKey(event.logicalKey)) {
+      return KeyEventResult.ignored;
+    }
+    debugPrint('HubPanel: OK repeat ignored');
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-            maxWidth: width,
-            maxHeight: MediaQuery.sizeOf(context).height * 0.8),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.12),
-                Colors.white.withValues(alpha: 0.04),
-              ],
-            ),
-            color: const Color(0xF20D0D10),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white24),
-            boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 24)],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 0, 6, 14),
-                child: Text(title,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
-              ),
-              child,
+      // Not a focus target itself (CLAUDE.md §10): only sees the keys of
+      // the entries inside.
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _swallowRepeats,
+        child: _panel(context),
+      ),
+    );
+  }
+
+  Widget _panel(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          maxWidth: width, maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.12),
+              Colors.white.withValues(alpha: 0.04),
             ],
           ),
+          color: const Color(0xF20D0D10),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white24),
+          boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 24)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 0, 6, 14),
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w700)),
+            ),
+            child,
+          ],
         ),
       ),
     );

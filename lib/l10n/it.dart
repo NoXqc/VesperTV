@@ -131,6 +131,7 @@ const Map<String, String> kIt = {
   "Search sources": "Fonti di ricerca",
   "Show row": "Mostra riga",
   "Sources": "Fonti",
+  "Servers": "Server",
   "Sources · searching…": "Fonti · ricerca…",
   "Unavailable": "Non disponibile",
   "subtitles": "sottotitoli",
@@ -3548,6 +3549,7 @@ const Map<String, String> kIt = {
       "Un link, Stremio, un server o Trakt / Simkl",
   "Catalogs":
       "Cataloghi",
+  "More catalogs": "Altri cataloghi",
   "Lists":
       "Liste",
   "Built in":

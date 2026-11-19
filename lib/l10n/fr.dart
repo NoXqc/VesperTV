@@ -130,6 +130,7 @@ const Map<String, String> kFr = {
   "Search sources": "Sources de recherche",
   "Show row": "Afficher la rangée",
   "Sources": "Sources",
+  "Servers": "Serveurs",
   "Sources · searching…": "Sources · recherche…",
   "Unavailable": "Indisponible",
   "subtitles": "sous-titres",
@@ -3554,6 +3555,7 @@ const Map<String, String> kFr = {
       "Un lien, Stremio, un serveur multimédia ou Trakt / Simkl",
   "Catalogs":
       "Catalogues",
+  "More catalogs": "Autres catalogues",
   "Lists":
       "Listes",
   "Built in":

@@ -131,6 +131,7 @@ const Map<String, String> kEs = {
   "Search sources": "Fuentes de búsqueda",
   "Show row": "Mostrar fila",
   "Sources": "Fuentes",
+  "Servers": "Servidores",
   "Sources · searching…": "Fuentes · buscando…",
   "Unavailable": "No disponible",
   "subtitles": "subtítulos",
@@ -3541,6 +3542,7 @@ const Map<String, String> kEs = {
       "Un enlace, Stremio, un servidor o Trakt / Simkl",
   "Catalogs":
       "Catálogos",
+  "More catalogs": "Más catálogos",
   "Lists":
       "Listas",
   "Built in":
