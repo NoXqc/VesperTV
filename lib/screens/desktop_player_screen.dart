@@ -85,6 +85,7 @@ class DesktopPlayerScreen extends StatefulWidget {
     this.existingPlayer,
     this.existingController,
     this.catchupAt,
+    this.turnSideways = true,
   });
 
   final Channel channel;
@@ -112,6 +113,11 @@ class DesktopPlayerScreen extends StatefulWidget {
   final Player? existingPlayer;
   final VideoController? existingController;
   final DateTime? catchupAt;
+
+  /// iPhone: the player turns the phone's screen sideways when it opens.
+  /// False for the launch's resume, which nobody tapped (owner, 2026-11-19:
+  /// the app went landscape by itself); Rotate still turns it.
+  final bool turnSideways;
 
   @override
   State<DesktopPlayerScreen> createState() => _DesktopPlayerScreenState();
@@ -518,6 +524,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || MediaQuery.sizeOf(context).shortestSide >= 600) return;
+        if (!widget.turnSideways) return;
         unawaited(SystemChrome.setPreferredOrientations([
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight
@@ -706,13 +713,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     pane.width.isFinite &&
                     pane.height.isFinite &&
                     pane.height > 0;
+                final box =
+                    known ? fit.sizeIn(pane, rect.width / rect.height) : pane;
+                _logPictureFit(fit, rect, pane, box);
                 return OverflowBox(
                   maxWidth: double.infinity,
                   maxHeight: double.infinity,
                   child: SizedBox.fromSize(
-                    size: known
-                        ? fit.sizeIn(pane, rect.width / rect.height)
-                        : pane,
+                    size: box,
                     child: Video(
                         controller: _videoController,
                         controls: NoVideoControls,
@@ -734,6 +742,25 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 textScaler: TextScaler.linear(prefs.subtitleScale))),
       ],
     );
+  }
+
+  String? _pictureFitLogged;
+
+  /// Send log: the sizes behind the picture, once per change (an iPhone
+  /// user, 2026-11-19: full screen "too wide", not 16:9, in every picture
+  /// mode). `video` is what media_kit reports (mpv's aspect-corrected
+  /// size), `decoded` the stream's own pixels, `box` what's drawn.
+  void _logPictureFit(VideoFit fit, Rect? rect, Size pane, Size box) {
+    if (!pane.isFinite || !box.isFinite) return;
+    String s(double w, double h) => '${w.round()}x${h.round()}';
+    final state = _player.state;
+    final line = 'PictureFit: ${fit.name} video '
+        '${rect == null ? 'none' : s(rect.width, rect.height)} decoded '
+        '${state.width ?? 0}x${state.height ?? 0} pane '
+        '${s(pane.width, pane.height)} box ${s(box.width, box.height)}';
+    if (line == _pictureFitLogged) return;
+    _pictureFitLogged = line;
+    debugPrint(line);
   }
 
   /// Touch: landscape <-> portrait, whatever the rotation lock says (the
