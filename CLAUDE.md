@@ -457,6 +457,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-19 evening - catch-up speed, frame rate, focus (see HANDOFF "STATE NOW"):** Xtream catch-up asks
+  `.m3u8` first (exact start, cheap seeks; dev-notes/catchup-plan.md) but some panels build HLS on demand (12-44 s,
+  Fire TV LOG-76X9CH) and Dispatcharr's `/timeshift/` serves `.ts` only (`.m3u8` = 404): `services/catchup_format.dart`
+  saves `.ts` per playlist (after a refusal or 4 s without a picture), catch-up keeps a 30 s back buffer (-10 was a
+  12-17 s server round trip), `FrameRateProbe` uses the average gap (ms-rounded PTS 16/17 ms read 58.82 fps = no
+  60 Hz match). Branch `claude/catchup-ts-fallback` uncommitted; +900 on the Downloader link. Merged in main 8d6bd5f:
+  Media Hub **More catalogs** (AIOMetadata Home-off catalogs) + smaller rail. Committed, not merged: Dispatcharr
+  Connect adds its playlist (9cb0d57), one player-bar focus ring (9ead7a5). Next build > 901.
 - **Claude, 2026-11-19 - Media Hub rows with a mouse (computers), +869 (merged to local main, not pushed, not released):**
   owner on PC/Linux. `isDesktopTarget` only (TV/phones unchanged): hovering a poster 350 ms shows its backdrop + hero (small
   delay so a sweep doesn't swap backdrops; off the posters the selected title comes back; hovers right after an arrow key are
