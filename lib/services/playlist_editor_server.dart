@@ -10,7 +10,6 @@ import '../models/channel.dart';
 import '../l10n/l10n.dart';
 import 'epg_channel_info.dart';
 import 'playlist_editor_epg.dart';
-import '../utils/channel_name_matching.dart';
 import '../utils/group_regions.dart';
 import 'phone_pairing_service.dart' show privateLanIpv4;
 import 'playback_service.dart';
@@ -73,6 +72,9 @@ class PlaylistEditorServer extends ChangeNotifier {
       } catch (_) {}
     }
     server ??= await HttpServer.bind(InternetAddress.anyIPv4, 0);
+    // A big playlist's channel list is ~9 MB of JSON (56k channels):
+    // ~1 MB gzipped, which every browser accepts (Discord, 2026-11-19).
+    server.autoCompress = true;
     _server = server;
     _address = 'http://${ip?.address ?? '127.0.0.1'}:${server.port}';
     server.listen(
@@ -572,9 +574,10 @@ class PlaylistEditorServer extends ChangeNotifier {
               if (p.moved != null) 'mv': p.moved,
               if (p.copies.isNotEmpty) 'cp': p.copies,
             },
-            'k': channelCopyKey(c.name),
             if (c.epgIdOverride != null) 'eo': c.epgIdOverride,
             'q': e.copyRank(c),
+            // 5.1 or more measured: above the 2.0 copies in Duplicates.
+            if (e.audioRank(c) > 1) 'qa': 1,
             if (e.probes[c.rawId] case final p?) 'p': p.label,
             if (!s.isLiveHidden(c.rawId) && _epgMissing(c)) 'ne': 1,
           },

@@ -1051,6 +1051,7 @@ const Map<String, String> kFr = {
   'Language': "Langue",
   'Follows the device language': "Suit la langue de l'appareil",
   'Automatic': "Automatique",
+  "Fallback": "Secours",
   'Startup': "Démarrage",
   'Resume last channel in full screen':
       "Reprendre la dernière chaîne en plein écran",

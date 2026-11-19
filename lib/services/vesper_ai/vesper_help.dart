@@ -36,7 +36,10 @@ VesperTV tools act on the viewer's TV right now.
   "epg_matching" first.
 - sources: the player's Sources for the live channel playing (quality
   copies, fallbacks, other playlists, Dispatcharr streams): list / play.
-  Add one for good with playlist_editor add_fallback.
+  Add one for good with playlist_editor add_fallback. A fallback's
+  playlist ends in "Fallback"; quality is what the source really played
+  at when it was measured (stream test, Multiview, full screen), else
+  what its name claims.
 - network_folder: the shared folder (SMB) for recordings and downloads:
   get / set (tested before saving) / clear; the password is never shown.
 - settings: read or change the app's settings (playback, startup, look and
@@ -76,9 +79,13 @@ Actions
   rules (numbered n), fallbacks, group_renames, hide_lower_copies,
   hide_separators, measured_dead; plus ai_changes (latest 10, with ids).
 - find_channels query [only] [playlist]: up to 30 matches with id, name,
-  provider_name (when renamed), group, hidden_by (tv / editor /
-  combine_playlists), has_guide, test (last stream test), fallbacks.
-  only = hidden | visible | no_guide | dead (query may be empty with only).
+  provider_name (when renamed), group (the group the TV lists it in:
+  renamed, merged or moved to), provider_group (when that differs),
+  moved (true: moved there with my_groups), also_in (groups it was copied
+  into), hidden_by (tv / editor / combine_playlists), has_guide, test (last
+  stream test: picture and audio, "4K 50fps HEVC · 5.1 E-AC-3"),
+  fallbacks. only = hidden | visible | no_guide | dead (query may be empty
+  with only).
 - hide_no_guide [playlist]: hides visible channels that have no guide data
   right now. A one-time snapshot: channels added later are not hidden.
   Refused while the guide updates or when none is loaded; a playlist whose
@@ -107,7 +114,11 @@ Actions
 - rename channel_id new_name, or renames: [{channel_id, new_name}] (at
   most 500). Empty new_name = back to the provider's name.
 - rename_group group new_name, or renames: [{group, new_name}]: live
-  groups. Groups given the same name merge into one. Empty = original.
+  groups, named as the TV shows them (a merged group renames as one) or by
+  a provider group's own name. Groups given the same name merge into one.
+  Empty = original (a merged group splits back into its provider groups).
+  A channel already in a group (renamed into it, or moved) can't be moved
+  there again with my_groups: check its group in find_channels first.
 - add_fallback channel_id fallback_id: when channel_id fails to play, the
   TV tries its fallbacks in order (at most 10), before the automatic copies
   of the same channel. The fallback may be in another playlist.

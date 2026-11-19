@@ -1047,6 +1047,7 @@ const Map<String, String> kIt = {
   'Language': "Lingua",
   'Follows the device language': "Segue la lingua del dispositivo",
   'Automatic': "Automatica",
+  "Fallback": "Riserva",
   'Startup': "Avvio",
   'Resume last channel in full screen':
       "Riprendi l'ultimo canale a schermo intero",

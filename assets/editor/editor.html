@@ -103,7 +103,7 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
     <div class="card"><h3 style="margin-top:0">Several playlists</h3>
       <p>In <b>Playlists</b>: <b>use other playlists as fallback</b> (a failing channel switches to the same channel from another provider), and <b>Combine playlists</b> (one lineup: a channel the first playlist already has is hidden in the others and kept as a fallback). Playlist order is the order in Playlist Manager on the TV.</p></div>
     <div class="card warn"><h3 style="margin-top:0">Stream test (careful)</h3>
-      <p>Opens each chosen stream for a few seconds to read its real quality and find dead links. Providers can block an account or your internet address after many connections in a row: test small batches (at most 60), stop any video on the TV first. Progress shows at the top of every tab.</p></div>
+      <p>Opens each chosen stream for a few seconds to read its real quality (picture, and audio: 5.1 or stereo) and find dead links. In Duplicates, a 5.1 copy sorts above a stereo one of the same picture. Providers can block an account or your internet address after many connections in a row: test small batches (at most 60), stop any video on the TV first. Progress shows at the top of every tab.</p></div>
     <div class="card"><h3 style="margin-top:0">Undo</h3>
       <p>Untick a switch, delete a rule, select channels then <b>Show</b> / <b>Reset name</b>, clear a group's new name, then save. On the TV: hold OK on a channel, Use the provider's name.</p></div>
   </section>
@@ -295,8 +295,7 @@ async function load(id) {
   for (const k of ['names','logos','fallbacks']) edits[k] = edits[k] || {};
   for (const k of ['hidden','shown','rules']) edits[k] = edits[k] || [];
   sel.clear(); setDirty(false);
-  const groups = [...new Set(data.channels.map(c => c.g))].sort((a, b) => a.localeCompare(b));
-  $('grp').innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option>${esc(g)}</option>`).join('');
+  $('grp').value = ''; groupOptions();
   $('lower').checked = !!edits.hideLowerCopies; $('sep').checked = !!edits.hideSeparators;
   $('status').textContent = data.channels.length + ' live channels';
   renderAll();
@@ -316,12 +315,28 @@ function copyKey(name) {
 }
 function copies() { const m = new Map(); for (const c of data.channels) { const k = copyKey(shownName(c)); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(c); } return m; }
 function isHidden(c) { return c.th || c.gh || c.eh; }
+// The group the TV lists the channel in: where it was moved, else its group's
+// name after a rename / merge (Groups tab), else the provider's (Discord,
+// 2026-11-19: Duplicates showed the provider's group for moved channels).
+function groupNow(c) { return c.mv || (edits.groupNames && edits.groupNames[c.g]) || c.g; }
+// The group filter lists and matches the groups the TV shows (renamed,
+// merged, moved to, copied into), not the provider's names (Discord,
+// 2026-11-19: a renamed group's channels looked like they were elsewhere).
+function groupOptions() {
+  const keep = $('grp').value, set = new Set();
+  for (const c of data.channels) { set.add(groupNow(c)); for (const g of c.cp || []) set.add(g); }
+  const groups = [...set].sort((a, b) => a.localeCompare(b));
+  $('grp').innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option>${esc(g)}</option>`).join('');
+  $('grp').value = set.has(keep) ? keep : '';
+}
+function inGroup(c, g) { return groupNow(c) === g || (c.cp || []).includes(g); }
+function groupCell(c) { const now = groupNow(c); return now === c.g ? esc(c.g) : `${esc(now)}<div class="dim" style="font-size:12px" title="The provider's group">${esc(c.g)}</div>`; }
 function info(c) {
   const t = [];
   if (c.th) t.push('<span class="tag">hidden on TV</span>');
   if (c.gh) t.push('<span class="tag">group hidden</span>');
   if (c.eh) t.push('<span class="tag r">hidden by editor</span>');
-  if (c.mv) t.push(`<span class="tag g" title="Moved: shown only in this group on the TV">moved to ${esc(c.mv)}</span>`);
+  if (c.mv) t.push(`<span class="tag g" title="Moved from ${esc(c.g)}: shown only in ${esc(c.mv)} on the TV. Reset group puts it back.">moved</span>`);
   for (const g of c.cp || []) t.push(`<span class="tag ok" title="Copy: also shown in this group on the TV">copy in ${esc(g)}</span>`);
   if (c.p) t.push(`<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>`);
   if (c.eo) t.push(`<button class="tag g" data-guide="${esc(c.r)}" title="Linked guide channel: ${esc(c.eo)}">guide linked</button>`);
@@ -335,7 +350,7 @@ function filtered() {
   const q = $('q').value.trim().toLowerCase(), g = $('grp').value, f = $('flt').value, cp = f === 'dupes' ? copies() : null;
   const keyOf = c => copyKey(shownName(c));
   return data.channels.filter(c => {
-    if (g && c.g !== g) return false;
+    if (g && !inGroup(c, g)) return false;
     if (q && !(c.n.toLowerCase().includes(q) || (edits.names[c.r] || '').toLowerCase().includes(q))) return false;
     switch (f) {
       case 'visible': return !isHidden(c);
@@ -358,7 +373,7 @@ function renderChannels() {
       <td><input type="checkbox" data-s="${esc(c.r)}" ${sel.has(c.r) ? 'checked' : ''}></td>
       <td class="wide">${logo ? `<img class="logo" loading="lazy" src="${esc(logo)}" referrerpolicy="no-referrer">` : ''}</td>
       <td><input class="name" data-n="${esc(c.r)}" value="${esc(edits.names[c.r] || c.d || c.n)}" title="${esc(c.n)}"><div class="dim" style="font-size:12px">${esc(c.n)}</div></td>
-      <td class="wide dim">${esc(c.g)}</td><td>${info(c)}</td>
+      <td class="wide dim">${groupCell(c)}</td><td>${info(c)}</td>
       <td><button data-fb="${esc(c.r)}" title="Fallback channels">Fallbacks</button></td></tr>`;
   }).join('');
   $('rows').innerHTML = rows;
@@ -369,8 +384,9 @@ function renderDupes() {
   const q = $('dq').value.trim().toLowerCase();
   const groups = [...copies().values()].filter(l => l.length > 1 && (!q || l.some(c => (c.n + ' ' + shownName(c)).toLowerCase().includes(q))));
   $('dupeList').innerHTML = groups.slice(0, 300).map(l => {
-    l = [...l].sort((a, b) => b.q - a.q);
-    return `<div class="card"><table>${l.map(c => `<tr class="${c.eh ? 'hidden-row' : ''}"><td>${esc(shownName(c))}<div class="dim" style="font-size:12px">${shownName(c) !== c.n ? esc(c.n) + ' · ' : ''}${esc(c.g)}</div></td>
+    // Picture first, then 5.1 audio over 2.0 (stream test).
+    l = [...l].sort((a, b) => b.q - a.q || (b.qa || 0) - (a.qa || 0));
+    return `<div class="card"><table>${l.map(c => `<tr class="${c.eh ? 'hidden-row' : ''}"><td>${esc(shownName(c))}<div class="dim" style="font-size:12px">${shownName(c) !== c.n ? esc(c.n) + ' · ' : ''}<span title="${groupNow(c) === c.g ? '' : esc('Provider group: ' + c.g)}">${esc(groupNow(c))}</span></div></td>
       <td>${c.eh ? '<span class="tag">fallback</span>' : '<span class="tag g">listed</span>'} ${c.p ? `<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>` : ''}</td>
       <td><label><input type="checkbox" data-shown="${esc(c.r)}" ${edits.shown.includes(c.r) ? 'checked' : ''}> Always show</label></td></tr>`).join('')}</table></div>`;
   }).join('') + (groups.length > 300 ? `<p class="dim">${groups.length - 300} more, refine the search.</p>` : '') + (groups.length ? '' : '<p class="dim">No copies found.</p>');
@@ -463,7 +479,7 @@ function placedMsg(r, copy) {
 }
 function applyPlacements(map) {
   for (const c of data.channels) { delete c.mv; delete c.cp; const p = map[c.r]; if (p) { if (p.mv) c.mv = p.mv; if (p.cp) c.cp = p.cp; } }
-  renderChannels();
+  groupOptions(); renderChannels();
 }
 function updateMvGo() { $('mvGo').disabled = !(mv.pick !== null || (!$('mvWhere').value && $('mvNew').value.trim())); }
 function renderMvList() {
@@ -662,7 +678,8 @@ async function linkGuide(id) {
   if (!guideCurrent(epoch, playlist, raw)) return;
   const c = data.channels.find(x => x.r === raw); c.eo = id || undefined; if (id) c.ne = 0;
   closeGuide(); renderChannels();
-  $('status').textContent = id ? 'Linked. The TV reloads the guide in about 20 seconds.' : 'Unlinked.';
+  $('status').textContent = id ? 'Linked. The TV reloads the guide in about 20 seconds.'
+    : "Unlinked: the TV goes back to the channel's own guide (the guide reloads in about 20 seconds). A logo you chose stays: Guide and logo > Use provider logo, then Save to TV.";
 }
 $('gdQ').addEventListener('input', gdSearch);
 $('gdSource').onchange = gdSearch;

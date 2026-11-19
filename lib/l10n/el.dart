@@ -3978,4 +3978,5 @@ const Map<String, String> kEl = {
       "Το Dispatcharr απέρριψε τη σύνδεση (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "Ο κωδικός σας λειτουργεί, αλλά ο διακομιστής αρνήθηκε να δώσει το κλειδί API (HTTP {code}). Επικολλήστε το κλειδί API.",
+  "Fallback": "Εφεδρική",
 };

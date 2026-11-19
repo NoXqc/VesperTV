@@ -15,14 +15,23 @@ typedef LiveSourceRow = (Channel, LiveSourceEntry);
 /// [canAdd]: "Add another source" is offered.
 Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
     PlaylistManager manager, Channel playing) async {
+  final sources = manager.liveSourcesFor(playing);
   final app = <LiveSourceRow>[
-    for (final c in manager.liveSourcesFor(playing))
+    for (final c in sources)
       (
         c,
         LiveSourceEntry(
           channel: c,
-          playlist: manager.playlistNameFor(c.playlistId).trim(),
+          // The editor's own fallbacks say so, like Dispatcharr's and
+          // Tuliprox's rows name their server (owner, 2026-11-19).
+          playlist: [
+            manager.playlistNameFor(c.playlistId).trim(),
+            if (manager.isEditorFallback(sources.first, c)) tr('Fallback'),
+          ].where((s) => s.isNotEmpty).join(' · '),
           current: c.url == playing.url,
+          // What it really played at (stream test, Multiview, full
+          // screen) beats what its name claims.
+          quality: manager.measuredOf(c)?.label,
         )
       ),
   ];

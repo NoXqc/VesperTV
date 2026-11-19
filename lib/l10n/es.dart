@@ -1048,6 +1048,7 @@ const Map<String, String> kEs = {
   'Language': "Idioma",
   'Follows the device language': "Usa el idioma del dispositivo",
   'Automatic': "Automático",
+  "Fallback": "Respaldo",
   'Startup': "Inicio",
   'Resume last channel in full screen':
       "Reanudar el último canal en pantalla completa",

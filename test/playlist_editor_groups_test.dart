@@ -231,6 +231,32 @@ void main() {
     },
   );
 
+  test('a guide link can be unlinked', () async {
+    // Discord, 2026-11-19: "pressing Unlink doesn't do anything".
+    final bbc = raw('BBC One');
+    Future<Object?> eo() async {
+      final ch = (await request('/api/channels?pl=q')).data['channels'] as List;
+      return (ch.firstWhere((c) => c['r'] == bbc) as Map)['eo'];
+    }
+
+    final linked = await request(
+      '/api/epg/link?pl=q',
+      body: {'r': bbc, 'id': 'premiersports2.ie'},
+    );
+    expect(linked.status, 200);
+    expect(await eo(), 'premiersports2.ie');
+    final unlinked = await request(
+      '/api/epg/link?pl=q',
+      body: {'r': bbc, 'id': null},
+    );
+    expect(unlinked.status, 200);
+    expect(await eo(), isNull);
+    // The TV guide redraws on a link change (it isn't a live list change).
+    final before = manager.liveViewSignature();
+    await request('/api/epg/link?pl=q', body: {'r': bbc, 'id': 'bbc1.uk'});
+    expect(manager.liveViewSignature(), isNot(before));
+  });
+
   test('move into a new custom group, then put it back', () async {
     final moved = await request(
       '/api/place?pl=p',
