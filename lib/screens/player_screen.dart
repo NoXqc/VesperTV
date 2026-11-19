@@ -50,7 +50,16 @@ import '../widgets/player_touch_lock.dart';
 /// The route every full-screen player opens with, except from the guide's
 /// preview with the native surface on ([PlayerGlideRoute]).
 class PlayerPageRoute<T> extends MaterialPageRoute<T> {
-  PlayerPageRoute({required super.builder, super.settings});
+  PlayerPageRoute(
+      {required super.builder, super.settings, this.instant = false});
+
+  /// No page transition: the launch's full-screen resume, which should
+  /// look like the app opened on the channel (TiviMate, owner 2026-11-19).
+  final bool instant;
+
+  @override
+  Duration get transitionDuration =>
+      instant ? Duration.zero : super.transitionDuration;
 }
 
 /// Full screen from the Live list / Timeline guide preview while the native
@@ -66,7 +75,13 @@ class PlayerPageRoute<T> extends MaterialPageRoute<T> {
 /// ([NativeVideoSurface.gliding]). `PlayerGlide:` lines in Send log give
 /// each glide's frame count and worst frame.
 class PlayerGlideRoute<T> extends PageRoute<T> {
-  PlayerGlideRoute({required this.builder, required this.from});
+  PlayerGlideRoute(
+      {required this.builder, required this.from, this.instant = false});
+
+  /// The launch's full-screen resume: already full screen ([from] is the
+  /// screen), no glide in; Back still shrinks it into the guide's preview
+  /// (the plain page's zoom-out read as a flash, owner 2026-11-19).
+  final bool instant;
 
   final WidgetBuilder builder;
 
@@ -121,7 +136,8 @@ class PlayerGlideRoute<T> extends PageRoute<T> {
 
   // The page's first frame plus the glide (which starts after it).
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 700);
+  Duration get transitionDuration =>
+      instant ? Duration.zero : const Duration(milliseconds: 700);
 
   @override
   Duration get reverseTransitionDuration => glide;
@@ -260,8 +276,13 @@ class _PlayerGlideState extends State<_PlayerGlide>
   @override
   void initState() {
     super.initState();
-    NativeVideoSurface.gliding = widget.route;
     _page.addStatusListener(_onPageStatus);
+    if (widget.route.instant) {
+      _t.value = 1;
+      widget.route.glided.complete();
+      return;
+    }
+    NativeVideoSurface.gliding = widget.route;
     // After the page's first frame and the one after it: that build is the
     // heavy part, and the glide's clock must not count it.
     WidgetsBinding.instance.addPostFrameCallback((_) async {

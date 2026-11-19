@@ -9,6 +9,11 @@ abstract interface class GuideTarget {
   /// TV tab, focus on the playing channel in the guide.
   void openGuide();
 
+  /// The launch's full-screen resume covers the home: lay it out as after
+  /// opening a channel from the guide (columns folded), so Back doesn't
+  /// show the tabs and groups first.
+  void guideLayoutBehindPlayer();
+
   /// Vesper AI's "open": 'tv', 'guide', 'movies', 'series', 'home', 'hub',
   /// 'sports', 'search' (with [query]) or 'settings', through the home's own
   /// openers. False when that section is hidden.
@@ -39,9 +44,38 @@ class GuideKey {
       _pending = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => target.openGuide());
     }
+    if (_layoutPending) {
+      _layoutPending = false;
+      target.guideLayoutBehindPlayer();
+    }
+  }
+
+  static bool _layoutPending = false;
+
+  /// See [GuideTarget.guideLayoutBehindPlayer]; the TV home can still be
+  /// mounting (the player opens right after the launch's first frame).
+  static void guideLayoutBehindPlayer() {
+    if (_targets.isEmpty) {
+      _layoutPending = true;
+      return;
+    }
+    _targets.last.guideLayoutBehindPlayer();
   }
 
   static void unregister(GuideTarget target) => _targets.remove(target);
+
+  /// The launch's "Resume last channel with the guide open": the TV home on
+  /// screen puts focus on the playing channel's guide row, like Back from
+  /// full screen (it stayed on the groups column, owner 2026-11-19).
+  /// Nothing when another page covers the home.
+  static void focusPlayingOnHome() {
+    for (final target in _targets.reversed) {
+      final route = target.guideRoute;
+      if (route == null || !route.isCurrent) continue;
+      target.openGuide();
+      return;
+    }
+  }
 
   /// Opens a TV home when none is open (the Sports Mode root registers its
   /// own "Live TV" page opener).

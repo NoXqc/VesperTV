@@ -158,8 +158,44 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       return;
     }
     if (_focusDepth >= 2) return;
-    unawaited(_restoreLiveFocus());
+    if (context.read<AppPreferences>().guideViewMode == 'timeline') {
+      _focusPlayingInGuide();
+    } else {
+      unawaited(_restoreLiveFocus());
+    }
   }
+
+  @override
+  void guideLayoutBehindPlayer() {
+    // After the frame: this can come while the home registers (initState).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _tab != 'TV' || _focusDepth >= 2) return;
+      // No fold animation: tickers are paused under the player, so it ran
+      // only once Back showed the home (the tabs and groups flashed, owner
+      // +880). Zero-length animations finish without a ticker.
+      setState(() {
+        _focusDepth = 2;
+        _instantColumns = true;
+        _holdGuideLayout = true;
+      });
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Under the launch's resumed player the home never had guide focus, so
+  /// Back's pop gives focus back to what it had (a group row or a tab) for
+  /// a few frames before [_focusPlayingInGuide] lands: the columns opened
+  /// and folded again (owner, +881). Folded until the guide has focus, or
+  /// [didPopNext]'s deadline.
+  bool _holdGuideLayout = false;
+  DateTime? _holdGuideUntil;
+
+  /// The columns jump to their widths (see [guideLayoutBehindPlayer]);
+  /// cleared when the home is on screen again.
+  bool _instantColumns = false;
+
+  Duration get _columnSlide =>
+      _instantColumns ? Duration.zero : const Duration(milliseconds: 200);
 
   /// Vesper AI's "open" ([GuideKey.openSection]), through the same openers
   /// as the tabs and the sidebar (Settings PIN, parking, Back to TV).
@@ -357,6 +393,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           primary.context != null) {
         return;
       }
+      debugPrint('GuideFocus: recovery (nothing focused, depth $_focusDepth)');
       if (_focusDepth == 1 && _firstGroupRowFocusNode.context != null) {
         _firstGroupRowFocusNode.requestFocus();
       } else {
@@ -2524,6 +2561,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   void _onColumnFocus(int depth) {
+    if (_holdGuideLayout) {
+      if (depth < 2) {
+        debugPrint('GuideFocus: column $depth focused, layout held');
+        return;
+      }
+      _holdGuideLayout = false;
+    }
     if (_focusDepth != depth) setState(() => _focusDepth = depth);
   }
 
@@ -2911,6 +2955,34 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    debugPrint('GuideFocus: back on the TV home (tab $_tab, depth '
+        '$_focusDepth, full screen '
+        '${context.read<PlaybackService>().isFullscreenActive}, '
+        'returnToTv $_returnToTv)');
+    if (_instantColumns) {
+      // The first frame on screen still jumps (it may be the one that
+      // applies the folded layout); slides animate again after it.
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _instantColumns = false);
+    }
+    if (_holdGuideLayout) {
+      // The guide restore releases it ([_onColumnFocus]). Back soon after
+      // the launch comes before the live lists (~7 s on the Homatics): the
+      // guide can't list the channel yet, so it waits for them (retries in
+      // [_focusPlayingInGuide]); after 6 s the layout follows focus again.
+      // A 0.7 s limit put the tabs back and Back's glide shrank into that
+      // layout's preview (owner, +885).
+      _holdGuideUntil = DateTime.now().add(const Duration(seconds: 6));
+      Future<void>.delayed(const Duration(seconds: 6), () {
+        if (!mounted || !_holdGuideLayout) return;
+        _holdGuideLayout = false;
+        if (!_gridFocusHasPrimary()) {
+          debugPrint('GuideFocus: guide never took focus, tabs column');
+          _tabFocusNode(_tab).requestFocus();
+          setState(() => _focusDepth = 0);
+        }
+      });
+    }
     if (_startupSportsCovered) {
       _startupSportsCovered = false;
       setState(() => _videoHiddenForSports = false);
@@ -3017,19 +3089,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // to go back to guide... doesn't bring us back to the current
       // channel but where we last were before."
       if (context.read<AppPreferences>().guideViewMode == 'timeline') {
-        final playback = context.read<PlaybackService>();
-        // Catch-up: its live channel's row, at the playhead.
-        final channel = playback.liveChannel;
-        final session = playback.catchup;
-        final controller = playback.controller;
-        if (channel != null) {
-          _timelineGuideKey.currentState?.restoreFocusToChannel(channel.id,
-              at: session == null || controller == null
-                  ? null
-                  : session.playhead(controller.value.position));
-        } else {
-          _col0Scope.requestFocus();
-        }
+        _focusPlayingInGuide();
       } else {
         _restoreLiveFocus();
       }
@@ -3204,6 +3264,68 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// this just re-asserts the one thing that's supposed to be true
   /// whenever this screen becomes visible again: the playing channel's
   /// row is what's in view and focused.
+  /// Timeline guide: focus on the playing channel's row (catch-up: its live
+  /// channel, at the playhead). When the guide doesn't list it yet (a group
+  /// change on this same rebuild: the launch's full-screen resume left the
+  /// home on another group), the next frames try again; the tabs column
+  /// only when it never shows up. Back from that resume opened the tabs,
+  /// the groups and the guide (owner, 2026-11-19).
+  bool _gridFocusHasPrimary() =>
+      _timelineGuideKey.currentState?.hasRowFocus ?? false;
+
+  void _focusPlayingInGuide([int tries = 3]) {
+    if (!mounted) return;
+    final playback = context.read<PlaybackService>();
+    final channel = playback.liveChannel;
+    if (channel == null) {
+      _col0Scope.requestFocus();
+      return;
+    }
+    final session = playback.catchup;
+    final controller = playback.controller;
+    final guide = _timelineGuideKey.currentState;
+    final done = guide?.restoreFocusToChannel(channel.id,
+            at: session == null || controller == null
+                ? null
+                : session.playhead(controller.value.position)) ??
+        false;
+    debugPrint('GuideFocus: restore ${done ? 'row found' : 'no row'}'
+        '${guide == null ? ' (no guide)' : ''}, tries left $tries');
+    if (done) {
+      // Once more after Back's page animation, unless the guide has focus
+      // by then: after the launch's full-screen resume something else took
+      // it (the groups column's Favourites, owner photo +878).
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+        final inGuide = _gridFocusHasPrimary();
+        debugPrint('GuideFocus: after the animation, '
+            '${inGuide ? 'in the guide' : 'elsewhere: again'} '
+            '(primary ${FocusManager.instance.primaryFocus?.debugLabel})');
+        if (!inGuide) {
+          _timelineGuideKey.currentState
+              ?.restoreFocusToChannel(channel.id, at: null);
+        }
+      });
+      return;
+    }
+    // Held after the launch's resume: the live lists may still be loading;
+    // try again until the guide lists the channel (didPopNext's deadline).
+    final until = _holdGuideUntil;
+    if (_holdGuideLayout && until != null && DateTime.now().isBefore(until)) {
+      Future<void>.delayed(const Duration(milliseconds: 250), () {
+        if (mounted && _holdGuideLayout) _focusPlayingInGuide(tries);
+      });
+      return;
+    }
+    if (tries <= 0) {
+      _col0Scope.requestFocus();
+      return;
+    }
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _focusPlayingInGuide(tries - 1));
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   Future<void> _restoreLiveFocus() async {
     final playback = context.read<PlaybackService>();
     final channel = playback.liveChannel;
@@ -4888,7 +5010,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final tapToExpand =
         collapsed && !context.read<AppPreferences>().isTelevision;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: _columnSlide,
       width: collapsed ? collapsedWidth : expandedWidth,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -5675,7 +5797,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         topBar,
         if (showSort)
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
+            duration: _columnSlide,
             left: tabsWidth + 1,
             width: groupsWidth,
             top: 0,
@@ -10762,16 +10884,20 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// just restored whatever was focused before Select was pressed, not
   /// the channel actually playing. Reported directly as "brings us back
   /// to where we last were, not the current channel."
-  void restoreFocusToChannel(String channelId, {DateTime? at}) {
+  /// A programme block (a row) has focus.
+  bool get hasRowFocus => _gridFocusScope.hasFocus;
+
+  /// False when [channelId] isn't in this guide's list (yet).
+  bool restoreFocusToChannel(String channelId, {DateTime? at}) {
     final rowIndex = widget.channels.indexWhere((c) => c.id == channelId);
-    if (rowIndex < 0) return;
+    if (rowIndex < 0) return false;
     final live = at == null ||
         DateTime.now().difference(at) <= const Duration(minutes: 2);
     // Back to live from catch-up (LIVE, Fast-forward): the guide follows.
     if (live && widget.anchor != null) {
       widget.holdFocus?.requestFocus();
       widget.onShiftWindow?.call(null, rowIndex, null);
-      return;
+      return true;
     }
     // Back from a catch-up programme: its row at the playhead (another
     // window when that is outside this one).
@@ -10779,7 +10905,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         DateTime.now().difference(at) > const Duration(minutes: 2)) {
       if (at.isBefore(_windowStart) || !at.isBefore(_windowEnd)) {
         widget.onShiftWindow?.call(at, rowIndex, at);
-        return;
+        return true;
       }
       _ensureRowVisible(rowIndex);
       _cursorSlot = _floorToSlot(at);
@@ -10789,19 +10915,30 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       }
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _focusRowAt(rowIndex, at, 3));
-      return;
+      return true;
     }
     _ensureRowVisible(rowIndex);
     // Always deferred, not tried synchronously first — unlike
     // moveVertical's single-row step, this jump can be arbitrarily far
     // from wherever the guide happened to be scrolled, so the target row
-    // is very unlikely to already be built.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // is very unlikely to already be built. A few frames more when it
+    // still isn't (the guide's first build after a launch).
+    void focusRow(int tries) {
       if (!mounted) return;
       final blocks = _rowBlocks[rowIndex];
       final best =
           blocks == null ? null : _bestBlockFor(blocks, DateTime.now());
-      if (best == null) return;
+      debugPrint('GuideFocus: row $rowIndex '
+          '${best == null ? 'not built (${blocks?.length ?? 0} blocks)' : 'focused'}');
+      if (best == null) {
+        if (tries > 0) {
+          _ensureRowVisible(rowIndex);
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => focusRow(tries - 1));
+          WidgetsBinding.instance.scheduleFrame();
+        }
+        return;
+      }
       _cursorSlot = null;
       // Back to the current time, not wherever the focused block's own
       // left edge is — a long programme that began earlier used to drag
@@ -10813,7 +10950,10 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
             .clamp(0.0, _gridHScroll.position.maxScrollExtent));
       }
       _focusBlock(best.node);
-    });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => focusRow(4));
+    return true;
   }
 
   @override
@@ -10829,7 +10969,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
             : prefs.guideCompact || _isShortPhoneScreen(context)
                 ? 48
                 : _normalRowHeight;
-    _channelColumnWidth = prefs.compactUi ? 136 : (prefs.largeUi ? 210 : 160);
+    // Number + logo + name on one line, like TiviMate (owner photo,
+    // 2026-11-19): wider than the old two-line column (136/160/210).
+    _channelColumnWidth = prefs.compactUi ? 190 : (prefs.largeUi ? 300 : 240);
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -10911,6 +11053,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                         itemExtent: _rowHeight,
                         itemBuilder: (context, i) => _ChannelLabel(
                             channel: widget.channels[i],
+                            number: i + 1,
                             playlistTag: _playlistTagFor(i),
                             moving:
                                 widget.channels[i].id == widget.movingChannelId,
@@ -11389,11 +11532,15 @@ class _SelectionCheck extends StatelessWidget {
 class _ChannelLabel extends StatelessWidget {
   const _ChannelLabel(
       {required this.channel,
+      this.number,
       this.playlistTag,
       this.moving = false,
       this.selection});
 
   final Channel channel;
+
+  /// Position in the list shown (1-based), before the logo like TiviMate's.
+  final int? number;
 
   /// Ticked rows while selecting: a check after the name.
   final ValueListenable<Map<String, Channel>?>? selection;
@@ -11408,9 +11555,12 @@ class _ChannelLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tag = playlistTag;
-    // Compact UI: smaller logo and name; one line under a playlist tag
-    // (the 40 px row has no room for two).
+    // Number, logo and name on one line (TiviMate's guide); Compact UI
+    // smaller.
     final logo = _compactUi ? 24.0 : (_largeUi ? 42.0 : 32.0);
+    // The programme titles' size (12): 14 cut most names short (owner
+    // photo, +875).
+    final fontSize = _compactUi ? 11.0 : (_largeUi ? 14.0 : 12.0);
     final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(
@@ -11418,6 +11568,17 @@ class _ChannelLabel extends StatelessWidget {
             8, tag == null ? 0 : (_compactUi ? 11 : 12), 8, 0),
         child: Row(
           children: [
+            if (number case final n?)
+              SizedBox(
+                width: fontSize * 2.2,
+                child: Text(
+                  '$n',
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: Colors.white60, fontSize: fontSize),
+                ),
+              ),
+            if (number != null) SizedBox(width: _compactUi ? 6 : 10),
             SizedBox(
               width: logo,
               height: logo,
@@ -11436,14 +11597,14 @@ class _ChannelLabel extends StatelessWidget {
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
             ),
-            SizedBox(width: _compactUi ? 6 : 8),
+            SizedBox(width: _compactUi ? 6 : 10),
             Expanded(
               child: Text(
                 channel.name,
-                maxLines: _compactUi && tag != null ? 1 : 2,
+                maxLines: 1,
+                softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: Colors.white, fontSize: _compactUi ? 12 : 13),
+                style: TextStyle(color: Colors.white, fontSize: fontSize),
               ),
             ),
             if (moving) const Icon(Icons.swap_vert, color: Colors.amber),

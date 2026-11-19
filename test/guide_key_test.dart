@@ -20,6 +20,9 @@ class _HomeState extends State<_Home> implements GuideTarget {
   @override
   void openGuide() => setState(() => opened++);
 
+  @override
+  void guideLayoutBehindPlayer() {}
+
   String? section;
 
   @override
