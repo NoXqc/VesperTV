@@ -4003,8 +4003,8 @@ const Map<String, String> kIt = {
       "Rinnova con il tuo provider per continuare a guardare.",
   "Add another playlist from it":
       "Aggiungi un'altra playlist da esso",
-  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
-      "Dispatcharr riunisce più flussi dei fornitori in ogni canale. Accedi per vedere e scegliere quei flussi dalle Fonti del lettore.",
+  "Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player's Sources.":
+      "Dispatcharr riunisce più flussi dei fornitori in ogni canale. Accedi per caricare i suoi canali e scegliere quei flussi dalle Fonti del lettore.",
   "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
       "La tua password viene inviata solo al tuo server, una volta. VesperTV conserva la tua chiave API di Dispatcharr (una esistente viene riutilizzata, mai sostituita), non la password.",
   "Too many tries. Wait a minute, then connect again.":
