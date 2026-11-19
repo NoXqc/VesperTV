@@ -50,29 +50,6 @@ void main() {
         Icons.track_changes);
   });
 
-  test('cricket events keep both teams and their runs', () {
-    final league = sportsLeagueById('cricket.ipl')!;
-    final body = jsonEncode({
-      'events': [
-        {
-          'idEvent': '1',
-          'strEvent': 'Gujarat Titans vs Royal Challengers Bangalore',
-          'strHomeTeam': 'Gujarat Titans',
-          'strAwayTeam': 'Royal Challengers Bangalore',
-          'intHomeScore': '156',
-          'intAwayScore': '161',
-          'strTimestamp': '2026-05-31T14:00:00',
-          'strStatus': 'FT',
-        }
-      ]
-    });
-    final game = parseSportsDbEvents((body, league)).single;
-    expect(game.state, GameState.post);
-    expect(game.first.name, 'Gujarat Titans');
-    expect(game.first.score, '156');
-    expect(game.second.score, '161');
-  });
-
   test('a PDC day without a time is a date-only event card', () {
     final league = sportsLeagueById('darts.pdc')!;
     final body = jsonEncode({

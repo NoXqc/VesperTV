@@ -96,6 +96,17 @@ List<SportsStandingColumn> sportsStandingColumns(SportsLeague league) {
   }
   final sport = league.espnPath.split('/').first;
   switch (sport) {
+    // ESPN's cricket table (checked 2026-11-19 on BBL / PSL / CPL / Blast):
+    // no net run rate, only these.
+    case 'cricket':
+      return const [
+        SportsStandingColumn('M', 'matchesPlayed'),
+        SportsStandingColumn('W', 'matchesWon'),
+        SportsStandingColumn('L', 'matchesLost'),
+        SportsStandingColumn('T', 'matchesTied'),
+        SportsStandingColumn('NR', 'noresult'),
+        SportsStandingColumn('PTS', 'matchPoints', width: 50),
+      ];
     case 'rugby' || 'rugby-league':
       return const [
         SportsStandingColumn('GP', 'gamesPlayed'),
@@ -175,7 +186,9 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     // Racing tables list drivers, who can't be followed — not offered
     // when the point is adding a team.
     bool usable(SportsLeague l) =>
-        l.hasStandings && !(widget.addingTeam && l.kind != SportsKind.team);
+        l.hasStandings &&
+        !(widget.addingTeam &&
+            (l.kind != SportsKind.team || !l.hasTeamSchedules));
     _leagues = [
       for (final l in widget.leagues)
         if (usable(l)) l
@@ -324,8 +337,10 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     }
   }
 
-  /// My Teams holds teams; a driver or constructor has no schedule there.
-  bool get _canFollow => _league.kind == SportsKind.team;
+  /// My Teams holds teams; a driver or constructor has no schedule there,
+  /// and neither has a cricket team ([SportsLeague.hasTeamSchedules]).
+  bool get _canFollow =>
+      _league.kind == SportsKind.team && _league.hasTeamSchedules;
 
   Future<void> _toggleFollow(SportsTeam team) async {
     if (!_canFollow) return;
@@ -345,6 +360,8 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
   /// Hold OK on a team row: its Schedule, or Follow / Unfollow.
   Future<void> _teamMenu(SportsTeam team) async {
     final league = _league;
+    // Nothing to offer: no schedule, no follow.
+    if (!league.hasTeamSchedules) return;
     final followed = widget.follows.isFollowed(league.id, team.id);
     final action = await showSportsTeamMenu(context,
         team: team, followed: followed, canFollow: _canFollow);

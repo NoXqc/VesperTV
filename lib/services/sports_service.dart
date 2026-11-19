@@ -160,7 +160,12 @@ class SportsService {
         final carriedOver = local == today &&
             g.state == GameState.live &&
             start.isBefore(local);
-        if (sameDay || carriedOver || _tournamentDay(g, local)) games.add(g);
+        if (sameDay ||
+            carriedOver ||
+            _tournamentDay(g, local) ||
+            _matchDay(g, local)) {
+          games.add(g);
+        }
       }
     }
     games.sort((a, b) {
@@ -200,6 +205,19 @@ class SportsService {
     final first = easternDate(g.start);
     final last = easternDate(end);
     return !localDay.isBefore(first) && !localDay.isAfter(last);
+  }
+
+  /// A Test still being played ([SportsGame.lastDay]) shows on each local
+  /// day from its start to its last day.
+  static bool _matchDay(SportsGame g, DateTime localDay) {
+    final last = g.lastDay;
+    if (last == null) return false;
+    DateTime date(DateTime t) {
+      final l = t.toLocal();
+      return DateTime(l.year, l.month, l.day);
+    }
+
+    return !localDay.isBefore(date(g.start)) && !localDay.isAfter(date(last));
   }
 
   /// TheSportsDB leagues go through its rate-limit bucket, ESPN's through
@@ -315,6 +333,8 @@ class SportsService {
     if (league.sportsDbId != null) {
       return _downloadDbSchedule(league, teamId, key);
     }
+    // ESPN has no cricket team schedule (404, checked 2026-11-19).
+    if (!league.hasTeamSchedules) return null;
     final base = '$_base/${league.espnPath}/teams/$teamId/schedule';
     try {
       final responses = await Future.wait([
@@ -472,6 +492,11 @@ class SportsService {
     if (game.league.kind == SportsKind.tennis) {
       return Future.value(const SportsGameSummary());
     }
+    // Cricket: no box score the stats pop-up can read (and international
+    // matches would need their series id).
+    if (game.league.sport == 'cricket') {
+      return Future.value(const SportsGameSummary());
+    }
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
     final window = game.state == GameState.live
@@ -599,6 +624,9 @@ class SportsService {
       ]..sort();
       return starts.firstOrNull;
     }
+    // The scorepanel has no dateless or date-range form (a range is HTTP
+    // 400), and international cricket is on most days.
+    if (league.cricketInternational != null) return null;
     var hit = _windowStarts[league.id];
     if (hit == null ||
         DateTime.now().difference(hit.$2) > const Duration(minutes: 30)) {
@@ -838,9 +866,11 @@ class SportsService {
     // days either side are fetched too (see [gamesForDay]).
     final url = db
         ? SportsDbSource.dayUrl(league, date)
-        : Uri.parse(
-            '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}'
-            '${_groupQuery(league, '&')}');
+        : league.cricketInternational != null
+            ? Uri.parse('$_cricketPanel?dates=${_espnDate(date)}')
+            : Uri.parse(
+                '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}'
+                '${_groupQuery(league, '&')}');
     try {
       final response = await _get(league, url);
       if (response.statusCode != 200) {
@@ -902,7 +932,11 @@ class _CacheEntry {
   final value = jsonDecode(body);
   final games =
       db ? parseSportsDbEvents(args) : _parseEspnEvents(value, league);
-  final events = value is Map ? value['events'] : null;
+  final events = league.cricketInternational != null
+      ? cricketPanelEvents(value, league.cricketInternational!)
+      : value is Map
+          ? value['events']
+          : null;
   final known = events is List
       ? events.isEmpty || games.isNotEmpty
       : db && value is Map && value.containsKey('events') && events == null;
@@ -916,8 +950,139 @@ List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
   return _parseEspnEvents(jsonDecode(body), league);
 }
 
+/// ESPN's cricket scorepanel for one date: every series on it, domestic and
+/// international (`scores[].events[]`).
+const _cricketPanel =
+    'https://site.web.api.espn.com/apis/site/v2/sports/cricket/scorepanel';
+
+/// The matches of an international-cricket league ([SportsLeague
+/// .cricketInternational]) in a scorepanel: `class.internationalClassId`
+/// 0 = domestic (also A teams), 1-3 = men's Test / ODI / T20I, anything else
+/// = women's. Null when the body isn't a scorepanel.
+@visibleForTesting
+List<Map<String, dynamic>>? cricketPanelEvents(
+    dynamic json, CricketInternational side) {
+  if (json is! Map<String, dynamic>) return null;
+  final scores = json['scores'];
+  if (scores is! List) return null;
+  final out = <Map<String, dynamic>>[];
+  for (final s in scores) {
+    if (s is! Map) continue;
+    final series = ((s['leagues'] as List?)?.firstOrNull as Map?)?['name'];
+    for (final e in (s['events'] as List?) ?? const []) {
+      if (e is! Map<String, dynamic>) continue;
+      final comp = (e['competitions'] as List?)?.firstOrNull as Map?;
+      final cls = (comp?['class'] as Map?)?['internationalClassId']?.toString();
+      final id = int.tryParse(cls ?? '') ?? 0;
+      if (id == 0) continue;
+      final men = id <= 3;
+      if (men != (side == CricketInternational.men)) continue;
+      out.add({...e, if (series != null) '_series': series.toString()});
+    }
+  }
+  return out;
+}
+
+/// One ESPN cricket match (scorepanel or a league scoreboard). Scores drop
+/// ESPN's overs detail ("98 & 285/8 (86 ov)" -> "98 & 285/8"); the status
+/// says the day and session while it's on ("Day 3", "Day 1 · Stumps") and
+/// the result once it's over ("South Africa won by 9 wkts"). A Test still
+/// being played carries its last day ([SportsGame.lastDay]) so it shows on
+/// each day.
+SportsGame? _parseCricketMatch(Map<String, dynamic> e, SportsLeague league) {
+  final comp = Map<String, dynamic>.of(
+      (e['competitions'] as List).first as Map<String, dynamic>);
+  // Cricket's `leaders` are `{$ref: …}` links, not lists (the team-sport
+  // leader reader threw on them and every match was dropped), and its
+  // `situation` / `odds` aren't the shapes those readers know.
+  comp
+    ..remove('leaders')
+    ..remove('situation')
+    ..remove('odds')
+    ..['competitors'] = [
+      for (final c in (comp['competitors'] as List?) ?? const [])
+        if (c is Map) ({...c.cast<String, dynamic>()}..remove('leaders')),
+    ];
+  final game = _parseEvent({
+    ...e,
+    'competitions': [comp]
+  }, league);
+  if (game == null) return null;
+  final status = (e['status'] ?? comp['status']) as Map<String, dynamic>?;
+  final type = status?['type'] as Map<String, dynamic>?;
+  final summary = status?['summary']?.toString().trim() ?? '';
+  final session = status?['session']?.toString().trim() ?? '';
+  final description = type?['description']?.toString().trim() ?? '';
+  final statusText = switch (game.state) {
+    GameState.live => [
+        if (session.isNotEmpty) session,
+        if (description.isNotEmpty && description != 'Live') description,
+      ].join(' · '),
+    GameState.post => summary.isNotEmpty ? summary : game.statusText,
+    GameState.pre => game.statusText,
+  };
+  final multiDay =
+      ((comp['class'] as Map?)?['eventType'] ?? '').toString() == 'Test';
+  final endRaw = (comp['endDate'] ?? e['endDate'])?.toString();
+  final lastDay = multiDay && game.state != GameState.post && endRaw != null
+      ? DateTime.tryParse(endRaw)?.toUtc()
+      : null;
+  SportsTeam side(SportsTeam t) {
+    final score = t.score;
+    final cut = score?.indexOf(' (') ?? -1;
+    return SportsTeam(
+      id: t.id,
+      name: t.name,
+      // ESPN's short name for a country is its code ("SA"): the full name
+      // reads better on a card, the code stays the abbreviation.
+      shortName: t.name,
+      abbreviation: t.abbreviation,
+      logoUrl: t.logoUrl,
+      color: t.color,
+      record: t.record,
+      score: cut > 0 ? score!.substring(0, cut) : score,
+      pollRank: t.pollRank,
+    );
+  }
+
+  return SportsGame(
+    id: game.id,
+    league: league,
+    start: game.start,
+    state: game.state,
+    statusText: statusText.isEmpty ? game.statusText : statusText,
+    home: side(game.home),
+    away: side(game.away),
+    broadcasts: game.broadcasts,
+    leaders: game.leaders,
+    odds: game.odds,
+    lastDay: lastDay,
+  );
+}
+
 List<SportsGame> _parseEspnEvents(dynamic json, SportsLeague league) {
   if (json is! Map<String, dynamic>) return const [];
+  if (league.sport == 'cricket') {
+    // International: the scorepanel, filtered; a league (IPL, BBL...): its
+    // own scoreboard's `events`.
+    final side = league.cricketInternational;
+    final events = side != null
+        ? cricketPanelEvents(json, side)
+        : [
+            for (final e in (json['events'] as List?) ?? const [])
+              if (e is Map<String, dynamic>) e
+          ];
+    final games = <SportsGame>[];
+    for (final e in events ?? const <Map<String, dynamic>>[]) {
+      try {
+        final game = _parseCricketMatch(e, league);
+        if (game != null) games.add(game);
+      } catch (_) {
+        // One malformed match shouldn't drop the day.
+      }
+    }
+    return games;
+  }
   final events = json['events'];
   if (events is! List) return const [];
   final games = <SportsGame>[];
@@ -1949,12 +2114,18 @@ SportsStandings parseEspnStandings((String, SportsLeague) args) {
           // Skip a malformed team rather than the whole table.
         }
       }
-      if (rows.isNotEmpty) {
+      // T20 Blast also lists a "Cross Pool" table: every team again, by
+      // their games against the other group.
+      final crossPool = league.sport == 'cricket' &&
+          (node['name']?.toString() ?? '').contains('Cross Pool');
+      if (rows.isNotEmpty && !crossPool) {
         groups.add(SportsStandingGroup(
           // "2026-27 English Premier League" → "English Premier League";
           // the season is shown on its own.
-          name: (node['name'] ?? league.name)
-              .toString()
+          // Cricket tables name their only group "".
+          name: ((node['name']?.toString() ?? '').isEmpty
+                  ? league.name
+                  : node['name'].toString())
               .replaceFirst(RegExp(r'^\d{4}(-\d{2})?\s+'), ''),
           rows: _sortStandings(rows, league),
         ));
@@ -2023,7 +2194,9 @@ List<SportsStandingRow> _sortStandings(
     List<SportsStandingRow> rows, SportsLeague league) {
   double num(SportsStandingRow r, String k) =>
       double.tryParse(r.stat(k).replaceAll('+', '')) ?? 0;
-  final key = league.soccer || league.kind == SportsKind.racing
+  final key = league.soccer ||
+          league.kind == SportsKind.racing ||
+          league.sport == 'cricket'
       ? 'rank'
       : 'playoffSeed';
   final ranked = rows.every((r) => num(r, key) > 0);
