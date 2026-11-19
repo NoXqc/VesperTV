@@ -5,7 +5,9 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/media_file_info.dart';
 import 'package:nox_iptv/services/archive_service.dart';
 import 'package:nox_iptv/services/archive_stream_size.dart';
+import 'package:nox_iptv/widgets/gold_tag.dart';
 import 'package:nox_iptv/widgets/media_file_info_overlay.dart';
+import 'package:nox_iptv/widgets/stream_badge_row.dart';
 
 void main() {
   const provider = ArchiveSource(
@@ -123,5 +125,33 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     requests.dispose();
+  });
+  testWidgets(
+      'the popup shows the picked source badges (gold tags without a pack)',
+      (tester) async {
+    final requests = ValueNotifier<int>(0);
+    addTearDown(requests.dispose);
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Stack(children: [
+      MediaFileInfoOverlay(
+          info: archiveMediaFileInfo(const ArchiveStreamOption(
+              source: provider,
+              stream: ArchiveStream(
+                  name: 'TB+ 4K', title: 'Movie 2160p WEB-DL HDR10 5.93 GB'))),
+          requests: requests),
+    ]))));
+    requests.value++;
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(StreamBadgeRow), findsOneWidget);
+    expect(find.byType(GoldTag), findsWidgets);
+    // A plain MediaFileInfo (no source picked) has no badge row.
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Stack(children: [
+      MediaFileInfoOverlay(
+          info: const MediaFileInfo(source: 'TB+'), requests: requests),
+    ]))));
+    expect(find.byType(StreamBadgeRow), findsNothing);
   });
 }

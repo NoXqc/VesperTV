@@ -2066,6 +2066,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                   icon: Icons.swap_horiz,
                                                   tooltip: tr('Sources'),
                                                   onPressed: _openSources,
+                                                )
+                                              // Live: the channel's other
+                                              // sources (a remote finds them
+                                              // in the Down options row;
+                                              // phones had no way in).
+                                              else if (channel.isLive &&
+                                                  playback.catchup == null)
+                                                _TopBarIconButton(
+                                                  icon: Icons.swap_horiz,
+                                                  tooltip: tr('Sources'),
+                                                  onPressed: _openLiveSources,
                                                 ),
                                               _TopBarIconButton(
                                                 icon: Icons.search,

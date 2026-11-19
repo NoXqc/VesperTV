@@ -196,6 +196,27 @@ void main() {
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 
+  testWidgets('phone: a live channel has Sources in the top bar',
+      (tester) async {
+    await open(tester, live: true);
+    await tester.tapAt(const Offset(250, 300));
+    await tester.pumpAndSettle();
+    final sources = find.byTooltip('Sources').hitTestable();
+    expect(sources, findsOneWidget);
+    await tester.tap(sources);
+    await tester.pumpAndSettle();
+    // The live source list (the playing channel is its first row).
+    expect(find.text('Live channel'), findsWidgets);
+    expect(find.byTooltip('Lock touch controls').hitTestable(), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('phone: a movie has no live Sources button', (tester) async {
+    await open(tester);
+    await tester.tapAt(const Offset(250, 300));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Sources'), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets(
       'lock survives rotation and episode changes; reopening starts unlocked',
       (tester) async {
