@@ -4031,4 +4031,69 @@ const Map<String, String> kFr = {
       "Dispatcharr a refusé la connexion (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "Votre mot de passe fonctionne, mais votre serveur a refusé de donner votre clé API (HTTP {code}). Collez plutôt votre clé API.",
+  // Tuliprox (2026-11-19)
+  "Tuliprox refused the saved sign-in. Sign in again.":
+      "Tuliprox a refusé la connexion enregistrée. Reconnectez-vous.",
+  "Tuliprox doesn't answer right now.":
+      "Tuliprox ne répond pas pour le moment.",
+  "This login can't see the server's streams. Sign in with an admin login to list a channel's sources.":
+      "Cette connexion ne voit pas les flux du serveur. Connectez-vous avec un compte admin pour lister les sources d'une chaîne.",
+  "Enter the Web UI address, your user name and password.":
+      "Entrez l'adresse de l'interface Web, votre nom d'utilisateur et votre mot de passe.",
+  "Couldn't find a Tuliprox Web UI at that address. Add its path, for example /admin.":
+      "Aucune interface Web Tuliprox à cette adresse. Ajoutez son chemin, par exemple /admin.",
+  "Tuliprox refused the sign-in (HTTP {code}).":
+      "Tuliprox a refusé la connexion (HTTP {code}).",
+  "Watching now: {n}":
+      "En visionnement : {n}",
+  "Provider connections in use":
+      "Connexions fournisseur utilisées",
+  "In the player, Sources lists the providers Tuliprox merged into the channel and the one on air. Picking one switches the stream on the server, for everyone watching that channel.":
+      "Dans le lecteur, Sources liste les fournisseurs que Tuliprox a réunis dans la chaîne et celui en ondes. En choisir un change le flux sur le serveur, pour tous ceux qui regardent cette chaîne.",
+  "Tuliprox can merge the same channel from several providers into one and switch between them on the server. Sign in with your Tuliprox Web UI login to see and switch those sources from the player's Sources.":
+      "Tuliprox peut réunir la même chaîne de plusieurs fournisseurs en une seule et passer de l'un à l'autre sur le serveur. Connectez-vous avec votre compte de l'interface Web Tuliprox pour voir et changer ces sources depuis Sources dans le lecteur.",
+  "Web UI address":
+      "Adresse de l'interface Web",
+  "Your password is only sent to your server, once. VesperTV keeps a sign-in token, not the password.":
+      "Votre mot de passe n'est envoyé qu'une fois, à votre serveur. VesperTV garde un jeton de connexion, pas le mot de passe.",
+  "Changing source to {stream}…":
+      "Changement de source vers {stream}…",
+  "Source changed to {stream}.":
+      "Source changée : {stream}.",
+  "Tuliprox didn't switch the source.":
+      "Tuliprox n'a pas changé la source.",
+  "Switch a channel's providers from the player's Sources":
+      "Changer les fournisseurs d'une chaîne depuis Sources dans le lecteur",
+  "Add a playlist from this server":
+      "Ajouter une liste de ce serveur",
+  "Use an existing user":
+      "Utiliser un utilisateur existant",
+  "Pick a user, then type its password":
+      "Choisissez un utilisateur, puis tapez son mot de passe",
+  "Create a user for this TV":
+      "Créer un utilisateur pour ce téléviseur",
+  "A new user with 1 connection and a password VesperTV picks":
+      "Un nouvel utilisateur avec 1 connexion et un mot de passe choisi par VesperTV",
+  "This login can't manage the server's users.":
+      "Cette connexion ne peut pas gérer les utilisateurs du serveur.",
+  "Pick a user":
+      "Choisir un utilisateur",
+  "Which playlist?":
+      "Quelle liste?",
+  "Create {user} on {playlist}?":
+      "Créer {user} sur {playlist}?",
+  "1 connection, a password VesperTV picks. You can delete the user in the Tuliprox Web UI.":
+      "1 connexion, un mot de passe choisi par VesperTV. Vous pouvez supprimer l'utilisateur dans l'interface Web Tuliprox.",
+  "Tuliprox didn't create the user (HTTP {code}).":
+      "Tuliprox n'a pas créé l'utilisateur (HTTP {code}).",
+  "Tuliprox's first":
+      "Tuliprox d'abord",
+  "Only Tuliprox's":
+      "Seulement Tuliprox",
+  "The channel and the providers Tuliprox merged into it":
+      "La chaîne et les fournisseurs que Tuliprox y a réunis",
+  "Quality copies, fallbacks and other playlists, as without Tuliprox":
+      "Copies de qualité, secours et autres listes, comme sans Tuliprox",
+  "Which streams Sources lists for a Tuliprox channel":
+      "Les flux que Sources liste pour une chaîne Tuliprox",
 };

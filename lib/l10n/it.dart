@@ -4025,4 +4025,69 @@ const Map<String, String> kIt = {
       "Dispatcharr ha rifiutato l'accesso (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "La password funziona, ma il server ha rifiutato di fornire la chiave API (HTTP {code}). Incolla invece la chiave API.",
+  // Tuliprox (2026-11-19)
+  "Tuliprox refused the saved sign-in. Sign in again.":
+      "Tuliprox ha rifiutato l'accesso salvato. Accedi di nuovo.",
+  "Tuliprox doesn't answer right now.":
+      "Tuliprox non risponde in questo momento.",
+  "This login can't see the server's streams. Sign in with an admin login to list a channel's sources.":
+      "Questo accesso non vede gli stream del server. Accedi con un account amministratore per vedere le fonti di un canale.",
+  "Enter the Web UI address, your user name and password.":
+      "Inserisci l'indirizzo della Web UI, il nome utente e la password.",
+  "Couldn't find a Tuliprox Web UI at that address. Add its path, for example /admin.":
+      "Nessuna Web UI di Tuliprox a questo indirizzo. Aggiungi il suo percorso, per esempio /admin.",
+  "Tuliprox refused the sign-in (HTTP {code}).":
+      "Tuliprox ha rifiutato l'accesso (HTTP {code}).",
+  "Watching now: {n}":
+      "Stanno guardando: {n}",
+  "Provider connections in use":
+      "Connessioni ai provider in uso",
+  "In the player, Sources lists the providers Tuliprox merged into the channel and the one on air. Picking one switches the stream on the server, for everyone watching that channel.":
+      "Nel player, Fonti mostra i provider che Tuliprox ha unito nel canale e quello in onda. Sceglierne uno cambia lo stream sul server, per tutti quelli che guardano quel canale.",
+  "Tuliprox can merge the same channel from several providers into one and switch between them on the server. Sign in with your Tuliprox Web UI login to see and switch those sources from the player's Sources.":
+      "Tuliprox può unire lo stesso canale di più provider in uno e passare dall'uno all'altro sul server. Accedi con il tuo account della Web UI di Tuliprox per vedere e cambiare queste fonti da Fonti nel player.",
+  "Web UI address":
+      "Indirizzo della Web UI",
+  "Your password is only sent to your server, once. VesperTV keeps a sign-in token, not the password.":
+      "La password viene inviata solo al tuo server, una volta. VesperTV conserva un token di accesso, non la password.",
+  "Changing source to {stream}…":
+      "Cambio fonte su {stream}…",
+  "Source changed to {stream}.":
+      "Fonte cambiata: {stream}.",
+  "Tuliprox didn't switch the source.":
+      "Tuliprox non ha cambiato la fonte.",
+  "Switch a channel's providers from the player's Sources":
+      "Cambia i provider di un canale da Fonti nel player",
+  "Add a playlist from this server":
+      "Aggiungi una playlist da questo server",
+  "Use an existing user":
+      "Usa un utente esistente",
+  "Pick a user, then type its password":
+      "Scegli un utente, poi scrivi la sua password",
+  "Create a user for this TV":
+      "Crea un utente per questa TV",
+  "A new user with 1 connection and a password VesperTV picks":
+      "Un nuovo utente con 1 connessione e una password scelta da VesperTV",
+  "This login can't manage the server's users.":
+      "Questo accesso non può gestire gli utenti del server.",
+  "Pick a user":
+      "Scegli un utente",
+  "Which playlist?":
+      "Quale playlist?",
+  "Create {user} on {playlist}?":
+      "Creare {user} su {playlist}?",
+  "1 connection, a password VesperTV picks. You can delete the user in the Tuliprox Web UI.":
+      "1 connessione, una password scelta da VesperTV. Puoi eliminare l'utente nella Web UI di Tuliprox.",
+  "Tuliprox didn't create the user (HTTP {code}).":
+      "Tuliprox non ha creato l'utente (HTTP {code}).",
+  "Tuliprox's first":
+      "Prima Tuliprox",
+  "Only Tuliprox's":
+      "Solo Tuliprox",
+  "The channel and the providers Tuliprox merged into it":
+      "Il canale e i provider che Tuliprox vi ha unito",
+  "Quality copies, fallbacks and other playlists, as without Tuliprox":
+      "Copie di qualità, riserve e altre playlist, come senza Tuliprox",
+  "Which streams Sources lists for a Tuliprox channel":
+      "Quali stream Fonti mostra per un canale Tuliprox",
 };

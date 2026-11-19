@@ -3980,4 +3980,69 @@ const Map<String, String> kEl = {
       "Το Dispatcharr απέρριψε τη σύνδεση (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "Ο κωδικός σας λειτουργεί, αλλά ο διακομιστής αρνήθηκε να δώσει το κλειδί API (HTTP {code}). Επικολλήστε το κλειδί API.",
+  // Tuliprox (2026-11-19)
+  "Tuliprox refused the saved sign-in. Sign in again.":
+      "Το Tuliprox απέρριψε την αποθηκευμένη σύνδεση. Συνδεθείτε ξανά.",
+  "Tuliprox doesn't answer right now.":
+      "Το Tuliprox δεν απαντά αυτή τη στιγμή.",
+  "This login can't see the server's streams. Sign in with an admin login to list a channel's sources.":
+      "Αυτή η σύνδεση δεν βλέπει τις ροές του διακομιστή. Συνδεθείτε με λογαριασμό διαχειριστή για να δείτε τις πηγές ενός καναλιού.",
+  "Enter the Web UI address, your user name and password.":
+      "Εισαγάγετε τη διεύθυνση του Web UI, το όνομα χρήστη και τον κωδικό σας.",
+  "Couldn't find a Tuliprox Web UI at that address. Add its path, for example /admin.":
+      "Δεν βρέθηκε Web UI του Tuliprox σε αυτή τη διεύθυνση. Προσθέστε τη διαδρομή του, για παράδειγμα /admin.",
+  "Tuliprox refused the sign-in (HTTP {code}).":
+      "Το Tuliprox απέρριψε τη σύνδεση (HTTP {code}).",
+  "Watching now: {n}":
+      "Βλέπουν τώρα: {n}",
+  "Provider connections in use":
+      "Συνδέσεις παρόχων σε χρήση",
+  "In the player, Sources lists the providers Tuliprox merged into the channel and the one on air. Picking one switches the stream on the server, for everyone watching that channel.":
+      "Στο πρόγραμμα αναπαραγωγής, οι Πηγές δείχνουν τους παρόχους που ένωσε το Tuliprox στο κανάλι και αυτόν που παίζει τώρα. Αν επιλέξετε έναν, η ροή αλλάζει στον διακομιστή, για όλους όσους βλέπουν το κανάλι.",
+  "Tuliprox can merge the same channel from several providers into one and switch between them on the server. Sign in with your Tuliprox Web UI login to see and switch those sources from the player's Sources.":
+      "Το Tuliprox μπορεί να ενώσει το ίδιο κανάλι από πολλούς παρόχους σε ένα και να αλλάζει ανάμεσά τους στον διακομιστή. Συνδεθείτε με τον λογαριασμό σας στο Web UI του Tuliprox για να βλέπετε και να αλλάζετε αυτές τις πηγές από τις Πηγές του προγράμματος αναπαραγωγής.",
+  "Web UI address":
+      "Διεύθυνση Web UI",
+  "Your password is only sent to your server, once. VesperTV keeps a sign-in token, not the password.":
+      "Ο κωδικός σας στέλνεται μόνο στον διακομιστή σας, μία φορά. Το VesperTV κρατά ένα διακριτικό σύνδεσης, όχι τον κωδικό.",
+  "Changing source to {stream}…":
+      "Αλλαγή πηγής σε {stream}…",
+  "Source changed to {stream}.":
+      "Η πηγή άλλαξε: {stream}.",
+  "Tuliprox didn't switch the source.":
+      "Το Tuliprox δεν άλλαξε την πηγή.",
+  "Switch a channel's providers from the player's Sources":
+      "Αλλαγή παρόχων ενός καναλιού από τις Πηγές του προγράμματος αναπαραγωγής",
+  "Add a playlist from this server":
+      "Προσθήκη λίστας από αυτόν τον διακομιστή",
+  "Use an existing user":
+      "Χρήση υπάρχοντος χρήστη",
+  "Pick a user, then type its password":
+      "Επιλέξτε χρήστη και πληκτρολογήστε τον κωδικό του",
+  "Create a user for this TV":
+      "Δημιουργία χρήστη για αυτή την τηλεόραση",
+  "A new user with 1 connection and a password VesperTV picks":
+      "Νέος χρήστης με 1 σύνδεση και κωδικό που επιλέγει το VesperTV",
+  "This login can't manage the server's users.":
+      "Αυτή η σύνδεση δεν μπορεί να διαχειριστεί τους χρήστες του διακομιστή.",
+  "Pick a user":
+      "Επιλογή χρήστη",
+  "Which playlist?":
+      "Ποια λίστα;",
+  "Create {user} on {playlist}?":
+      "Δημιουργία του {user} στη λίστα {playlist};",
+  "1 connection, a password VesperTV picks. You can delete the user in the Tuliprox Web UI.":
+      "1 σύνδεση, κωδικός από το VesperTV. Μπορείτε να διαγράψετε τον χρήστη στο Web UI του Tuliprox.",
+  "Tuliprox didn't create the user (HTTP {code}).":
+      "Το Tuliprox δεν δημιούργησε τον χρήστη (HTTP {code}).",
+  "Tuliprox's first":
+      "Πρώτα του Tuliprox",
+  "Only Tuliprox's":
+      "Μόνο του Tuliprox",
+  "The channel and the providers Tuliprox merged into it":
+      "Το κανάλι και οι πάροχοι που ένωσε σε αυτό το Tuliprox",
+  "Quality copies, fallbacks and other playlists, as without Tuliprox":
+      "Αντίγραφα ποιότητας, εφεδρικές πηγές και άλλες λίστες, όπως χωρίς Tuliprox",
+  "Which streams Sources lists for a Tuliprox channel":
+      "Ποιες ροές δείχνουν οι Πηγές για ένα κανάλι Tuliprox",
 };

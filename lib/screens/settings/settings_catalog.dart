@@ -41,6 +41,7 @@ import 'backup_screen.dart';
 import 'check_updates_screen.dart';
 import 'community_screen.dart';
 import 'dispatcharr_screen.dart';
+import 'tuliprox_screen.dart';
 import 'debrid_settings_screen.dart';
 import 'epg_settings_screen.dart';
 import 'home_wallpaper_screen.dart';
@@ -343,6 +344,14 @@ class SettingsCatalog {
                 subtitle:
                     tr("Every stream of a channel in the player's Sources"),
                 page: (_) => const DispatcharrScreen()),
+            SettingsLink(
+                id: 'tuliprox',
+                floating: true,
+                icon: Icons.call_split,
+                title: 'Tuliprox',
+                subtitle: tr(
+                    "Switch a channel's providers from the player's Sources"),
+                page: (_) => const TuliproxScreen()),
           ]),
         ],
       );
@@ -919,7 +928,8 @@ class SettingsCatalog {
               floating: true,
               icon: Icons.local_offer_outlined,
               title: tr('Stream badges'),
-              subtitle: tr('Picture badges on Media Hub sources (4K, HDR, Atmos…)'),
+              subtitle:
+                  tr('Picture badges on Media Hub sources (4K, HDR, Atmos…)'),
               page: (_) => const StreamBadgesScreen()),
           SettingsToggle(
               id: 'auto_trailers',

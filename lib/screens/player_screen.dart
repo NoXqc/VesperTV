@@ -829,6 +829,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// A Tuliprox source switch reaches the screen after the buffer: the
+  /// player watches for it (and unsticks it), then says it changed.
+  void _watchServerSwitch(String name) {
+    unawaited(_playback.watchSourceSwitch().then((landed) {
+      if (!landed || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('Source changed to {stream}.', {'stream': name}))));
+    }));
+  }
+
   /// Live: the playing channel's other sources (quality copies, editor
   /// fallbacks, the same channel in other playlists), picked by hand; the
   /// last row adds one (a playlist editor fallback) and reopens the list.
@@ -860,7 +870,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
-              playing, sources[picked], _playback.playLiveSource);
+              playing, sources[picked], _playback.playLiveSource,
+              onServerSwitch: _watchServerSwitch);
           if (note != null && mounted) {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text(note)));
