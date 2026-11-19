@@ -4007,8 +4007,8 @@ const Map<String, String> kFr = {
       "Renouvelez auprès de votre fournisseur pour continuer à regarder.",
   "Add another playlist from it":
       "Ajouter une autre liste de lecture",
-  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
-      "Dispatcharr regroupe plusieurs flux de fournisseurs dans chaque chaîne. Connectez-vous pour voir et choisir ces flux dans les Sources du lecteur.",
+  "Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player's Sources.":
+      "Dispatcharr regroupe plusieurs flux de fournisseurs dans chaque chaîne. Connectez-vous pour charger ses chaînes et choisir ces flux dans les Sources du lecteur.",
   "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
       "Votre mot de passe n'est envoyé qu'à votre serveur, une seule fois. VesperTV garde votre clé API Dispatcharr (une clé existante est réutilisée, jamais remplacée), pas le mot de passe.",
   "Too many tries. Wait a minute, then connect again.":

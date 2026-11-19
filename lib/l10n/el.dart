@@ -3956,8 +3956,8 @@ const Map<String, String> kEl = {
       "Ανανέωσε με τον πάροχό σου για να συνεχίσει η αναπαραγωγή.",
   "Add another playlist from it":
       "Προσθήκη άλλης λίστας από αυτόν",
-  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
-      "Το Dispatcharr συγκεντρώνει πολλές ροές παρόχων σε κάθε κανάλι. Συνδεθείτε για να δείτε και να επιλέξετε αυτές τις ροές από τις Πηγές της αναπαραγωγής.",
+  "Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player's Sources.":
+      "Το Dispatcharr συγκεντρώνει πολλές ροές παρόχων σε κάθε κανάλι. Συνδεθείτε για να φορτώσετε τα κανάλια του και να επιλέγετε αυτές τις ροές από τις Πηγές της αναπαραγωγής.",
   "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
       "Ο κωδικός σας στέλνεται μόνο στον διακομιστή σας, μία φορά. Το VesperTV κρατά το κλειδί API του Dispatcharr (ένα υπάρχον επαναχρησιμοποιείται, δεν αντικαθίσταται ποτέ), όχι τον κωδικό.",
   "Too many tries. Wait a minute, then connect again.":

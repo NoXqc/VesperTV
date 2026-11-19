@@ -3994,8 +3994,8 @@ const Map<String, String> kEs = {
       "Renueva con tu proveedor para seguir viendo.",
   "Add another playlist from it":
       "Añadir otra lista desde él",
-  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
-      "Dispatcharr reúne varias emisiones de proveedores en cada canal. Inicia sesión para ver y elegir esas emisiones desde las Fuentes del reproductor.",
+  "Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player's Sources.":
+      "Dispatcharr reúne varias emisiones de proveedores en cada canal. Inicia sesión para cargar sus canales y elegir esas emisiones desde las Fuentes del reproductor.",
   "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
       "Tu contraseña solo se envía a tu servidor, una vez. VesperTV guarda tu clave API de Dispatcharr (una existente se reutiliza, nunca se reemplaza), no la contraseña.",
   "Too many tries. Wait a minute, then connect again.":

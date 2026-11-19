@@ -3897,8 +3897,8 @@ const Map<String, String> kDe = {
       "Verlängere bei deinem Anbieter, damit es weiter läuft.",
   "Add another playlist from it":
       "Weitere Playlist davon hinzufügen",
-  "Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player's Sources.":
-      "Dispatcharr fasst mehrere Anbieter-Streams in jedem Sender zusammen. Melde dich an, um diese Streams in den Quellen des Players zu sehen und auszuwählen.",
+  "Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player's Sources.":
+      "Dispatcharr fasst mehrere Anbieter-Streams in jedem Sender zusammen. Melde dich an, um seine Sender zu laden und diese Streams in den Quellen des Players auszuwählen.",
   "Your password is only sent to your server, once. VesperTV keeps your Dispatcharr API key (an existing one is reused, never replaced), not the password.":
       "Dein Passwort wird nur einmal an deinen Server gesendet. VesperTV speichert deinen Dispatcharr-API-Schlüssel (ein vorhandener wird weiterverwendet, nie ersetzt), nicht das Passwort.",
   "Too many tries. Wait a minute, then connect again.":

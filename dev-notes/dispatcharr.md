@@ -11,6 +11,15 @@ other streams are only visible through its REST API.
   version, which playlists load from that server (same host / port), **Add as a playlist** (opens
   Add Playlist filled in: Xtream with the user's Dispatcharr XC password, else
   `/output/m3u` + `/output/epg`; `AddPlaylistScreen.prefill`) and Disconnect.
+- **Connect adds the playlist itself (+888, 2026-11-19):** roman (LOG-G67D3G, iOS build on a
+  Mac) connected and saw "no playlist/content/groups": Add as a playlist was a second step nobody
+  expected. Now, when no playlist loads from that server yet, Connect opens Add Playlist with
+  `autoSave: true`: it saves at once (same Xtream login check, rollback on failure, "Download
+  content" question, guide refresh, back to the first page). A refused login leaves the form open
+  with the error; Back = the Dispatcharr page with Add as a playlist (fills in, no auto-save).
+  A server that already has a playlist (same host / port) adds nothing. Disconnect keeps the
+  playlist. Send log: `Dispatcharr: adding its playlist (Xtream|M3U)`; the connect line says
+  `xcLogin=yes/no` (it was `XC password=…`, which the log's redaction blanked).
 - **Player > Sources** (`player_screen.dart _openLiveSources`): on a channel of that server, after
   the usual sources, one row per Dispatcharr stream: stream name, `Dispatcharr · <M3U account>`
   (account names only for admins: `/api/m3u/accounts/` is admin-only), and what Dispatcharr

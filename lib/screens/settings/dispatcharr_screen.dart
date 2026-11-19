@@ -193,11 +193,26 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
           SnackBar(content: Text(error), backgroundColor: Colors.red.shade900));
       return;
     }
+    final manager = context.read<PlaylistManager>();
+    final linked = _linked(manager, server).length;
+    // "xcLogin", not "XC password=": Send log's redaction hides any
+    // `password=` value, true/false included (roman's LOG-G67D3G).
     debugPrint('Dispatcharr: connected to ${Dispatcharr.hostOf(server)} '
         '(${key.isNotEmpty ? 'API key' : 'password'}), '
-        'admin=${account!.admin}, XC password=${account.xcPassword != null}, '
-        'playlists on it: ${_linked(context.read<PlaylistManager>(), server).length}');
+        'admin=${account!.admin}, '
+        'xcLogin=${account.xcPassword != null ? 'yes' : 'no'}, '
+        'playlists on it: $linked');
     _check(account.login);
+    // Connect loads the channels too (roman, 2026-11-19: "I see the
+    // connection, but no playlist/content/groups"): with no playlist from
+    // this server yet, its playlist is added at once through Add Playlist
+    // (same checks, download question and guide as a manual add).
+    if (linked == 0) {
+      debugPrint('Dispatcharr: adding its playlist '
+          '(${account.xcPassword != null ? 'Xtream' : 'M3U'})');
+      await _addPlaylist(manager, autoSave: true);
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _addFocus.requestFocus();
     });
@@ -244,7 +259,9 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
 
   /// Opens Add Playlist with this account's Xtream login (the user's
   /// Dispatcharr XC password), else the server's M3U + guide links.
-  Future<void> _addPlaylist(PlaylistManager manager) async {
+  /// [autoSave] (Connect): saved straight away, no second press.
+  Future<void> _addPlaylist(PlaylistManager manager,
+      {bool autoSave = false}) async {
     final l = _d.login.value;
     if (l == null) return;
     final xc = _account?.xcPassword;
@@ -261,8 +278,9 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
       syncFrequencyDays: AppConstants.defaultSyncFrequencyDays,
       createdAt: DateTime.now(),
     );
-    await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AddPlaylistScreen(prefill: profile)));
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            AddPlaylistScreen(prefill: profile, autoSave: autoSave)));
     if (mounted) setState(() {});
   }
 
@@ -434,7 +452,7 @@ class _DispatcharrScreenState extends State<DispatcharrScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(tr(
-                'Dispatcharr merges several provider streams into each channel. Sign in to see and pick those streams from the player\'s Sources.')),
+                'Dispatcharr merges several provider streams into each channel. Sign in to load its channels and to pick those streams from the player\'s Sources.')),
             const SizedBox(height: 16),
             if (login != null)
               _connected(login)
