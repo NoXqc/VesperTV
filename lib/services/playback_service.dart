@@ -33,6 +33,7 @@ import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
 import 'live_reconnect_log.dart';
+import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
@@ -921,6 +922,95 @@ class PlaybackService extends ChangeNotifier {
     await play(live);
   }
 
+  /// When the viewer last paused (Play/Pause), so [watchSourceSwitch]
+  /// never undoes their own pause.
+  DateTime? _viewerPausedAt;
+
+  static const _statsChannel = MethodChannel('vespertv/stats');
+
+  /// After a server switched the open live stream to another source
+  /// (Tuliprox, [Tuliprox.switchTo]): the new source only reaches the screen
+  /// once the buffered video has played (often ~25 s), and its timestamps
+  /// jump there. ExoPlayer was then left paused, or with the picture stuck
+  /// while the sound went on, until Pause/Play (owner, 2026-11-19, Homatics).
+  /// From the expected arrival on, this gives a stuck picture one Pause/Play
+  /// and a pause the viewer didn't ask for a Play (no reconnect: the old
+  /// automatic reload fought the provider's connection limit). Returns true
+  /// once the picture moves after the arrival, false when the channel or
+  /// player changed or nothing settled in time. Android only.
+  Future<bool> watchSourceSwitch() async {
+    final c = controller;
+    final ch = currentChannel;
+    if (c == null || ch == null || kIsWeb || !Platform.isAndroid) return false;
+    final start = clock();
+    final id = SubtitleTracks.playerIdOf(c);
+    Future<Map<Object?, Object?>?> stats() async {
+      try {
+        return await _statsChannel
+            .invokeMapMethod<Object?, Object?>('getStats', {'playerId': id});
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final first = await stats();
+    final bufferedMs = (first?['bufferedMs'] as num?)?.toInt() ?? 0;
+    final arrival = start.add(Duration(milliseconds: bufferedMs));
+    final deadline = arrival.add(const Duration(seconds: 25));
+    debugPrint(
+        'SourceSwitch: lands in ~${(bufferedMs / 1000).toStringAsFixed(1)} s');
+    int? lastFrames;
+    var stuckPolls = 0;
+    var movingPolls = 0;
+    var nudges = 0;
+    while (clock().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (controller != c || currentChannel?.id != ch.id) return false;
+      final now = clock();
+      final m = await stats();
+      final frames = (m?['rendered'] as num?)?.toInt();
+      final moved = frames != null && lastFrames != null && frames > lastFrames;
+      lastFrames = frames ?? lastFrames;
+      // Before the switch reaches the screen the old source plays on.
+      if (now.isBefore(arrival.subtract(const Duration(seconds: 1)))) continue;
+      final viewerPaused =
+          _viewerPausedAt != null && _viewerPausedAt!.isAfter(start);
+      if (viewerPaused) return false;
+      if (!c.value.isPlaying) {
+        if (nudges >= 3) return false;
+        nudges++;
+        debugPrint('SourceSwitch: paused on its own, Play');
+        await c.play();
+        stuckPolls = 0;
+        continue;
+      }
+      if (moved) {
+        stuckPolls = 0;
+        // Two seconds of moving picture after the arrival: landed.
+        if (++movingPolls >= 4 && now.isAfter(arrival)) {
+          debugPrint('SourceSwitch: landed after '
+              '${now.difference(start).inMilliseconds} ms, $nudges nudge(s)');
+          notifyListeners();
+          return true;
+        }
+        continue;
+      }
+      movingPolls = 0;
+      if (++stuckPolls >= 3 && nudges < 3) {
+        nudges++;
+        stuckPolls = 0;
+        debugPrint('SourceSwitch: picture stuck, Pause/Play');
+        await c.pause();
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        if (controller != c) return false;
+        await c.play();
+      }
+    }
+    debugPrint(
+        'SourceSwitch: no steady picture by the deadline, $nudges nudge(s)');
+    return false;
+  }
+
   /// Play/Pause from the remote or the bar. Pausing a live channel with
   /// catch-up remembers when; Play after [timeshiftAfter] resumes from
   /// that moment through catch-up (owner, 2026-10-27: pause = timeshift),
@@ -930,6 +1020,7 @@ class PlaybackService extends ChangeNotifier {
     final ch = currentChannel;
     if (c == null) return;
     if (c.value.isPlaying) {
+      _viewerPausedAt = clock();
       if (ch != null && ch.hasCatchup) _livePausedAt = clock();
       await c.pause();
       notifyListeners();

@@ -57,6 +57,7 @@ class AppConstants {
   /// Settings > Playlists & sources > Dispatcharr (`DispatcharrLogin`).
   static const String keyDispatcharr = 'vesper_dispatcharr';
   static const String keyDispatcharrSources = 'vesper_dispatcharr_sources';
+  static const String keyTuliprox = 'vesper_tuliprox';
   static const String keyProviderExpiryNoticeDay =
       'vesper_provider_expiry_notice_day';
   static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';

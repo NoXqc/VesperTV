@@ -398,6 +398,14 @@ class StorageService {
   Future<void> setDispatcharrSources(String name) =>
       _prefs.setString(AppConstants.keyDispatcharrSources, name);
 
+  /// Settings > Playlists & sources > Tuliprox: the Web UI address, user
+  /// name and token as JSON (`TuliproxLogin`), '' = not connected.
+  /// Device-only: never in a backup, a transfer or sync.
+  String getTuliprox() => _prefs.getString(AppConstants.keyTuliprox) ?? '';
+  Future<void> setTuliprox(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyTuliprox)
+      : _prefs.setString(AppConstants.keyTuliprox, json);
+
   /// The day (YYYY-MM-DD) the "subscription ends soon" card last showed
   /// (`ProviderExpiryOverlay`): once a day at most. Device-only.
   String getProviderExpiryNoticeDay() =>
@@ -1799,6 +1807,8 @@ class StorageService {
     AppConstants.keyArchiveReadyWatch,
     AppConstants.keyContentUpdates,
     AppConstants.keyContentUpdatesNextDue,
+    AppConstants.keyDispatcharr,
+    AppConstants.keyTuliprox,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
@@ -1849,6 +1859,9 @@ class StorageService {
     AppConstants.keyCloudTransfer,
     AppConstants.keyLastAutoBackup,
     AppConstants.keyContentUpdatesNextDue,
+    // Server sign-ins (a token / API key) never leave the device.
+    AppConstants.keyDispatcharr,
+    AppConstants.keyTuliprox,
   };
 
   static bool _backupable(String key) =>
