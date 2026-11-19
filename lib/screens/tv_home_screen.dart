@@ -166,6 +166,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   @override
+  void showPlayingGroup() {
+    if (!mounted || _tab != 'TV') return;
+    // No pick: [_effectiveLiveGroup] resolves the playing channel's group.
+    setState(() => _selectedGroup = null);
+  }
+
+  @override
   void guideLayoutBehindPlayer() {
     // After the frame: this can come while the home registers (initState).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3234,7 +3241,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // first real group, not Favourites, even after that fix landed.
     // liveChannel: a catch-up programme counts as its live channel (it
     // has its own id, in no group: Favourites jumped to the real group).
-    final playing = playback.liveChannel ?? playback.pendingResumeChannel;
+    // iPhone / iPad / computers: the mini player's channel (PlaybackService
+    // plays nothing there).
+    final playing = playback.liveChannel ??
+        playback.pendingResumeChannel ??
+        (usesMediaKitTarget ? DesktopMiniPlayer.instance.channel.value : null);
     if (playing != null) {
       // A favorited channel lands on the pinned "Favourites" entry, not
       // its own real provider group — same priority already established
@@ -10108,6 +10119,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   /// Narrower with Compact UI (set each build).
   static double _channelColumnWidth = 160;
+
+  /// A phone: the old two-line channel column, no number ([build]).
+  static bool _phoneColumn = false;
   static const double _rulerHeight = 32;
 
   /// How often the "now" line (and every row's now/later styling) redraws
@@ -10971,7 +10985,14 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                 : _normalRowHeight;
     // Number + logo + name on one line, like TiviMate (owner photo,
     // 2026-11-19): wider than the old two-line column (136/160/210).
-    _channelColumnWidth = prefs.compactUi ? 190 : (prefs.largeUi ? 300 : 240);
+    // Phones keep that old column: one-line names left the programmes a
+    // sliver of a 390 px screen (owner's phone, +891).
+    _phoneColumn = !prefs.isTelevision &&
+        !isDesktopTarget &&
+        MediaQuery.sizeOf(context).shortestSide < 600;
+    _channelColumnWidth = _phoneColumn
+        ? (prefs.compactUi ? 136 : (prefs.largeUi ? 210 : 160))
+        : (prefs.compactUi ? 190 : (prefs.largeUi ? 300 : 240));
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -11053,7 +11074,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                         itemExtent: _rowHeight,
                         itemBuilder: (context, i) => _ChannelLabel(
                             channel: widget.channels[i],
-                            number: i + 1,
+                            number: _phoneColumn ? null : i + 1,
                             playlistTag: _playlistTagFor(i),
                             moving:
                                 widget.channels[i].id == widget.movingChannelId,
@@ -11561,6 +11582,8 @@ class _ChannelLabel extends StatelessWidget {
     // The programme titles' size (12): 14 cut most names short (owner
     // photo, +875).
     final fontSize = _compactUi ? 11.0 : (_largeUi ? 14.0 : 12.0);
+    // Phones: the name on two lines in the narrow column (before +886).
+    final phone = _TimelineGuideState._phoneColumn;
     final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(
@@ -11597,12 +11620,12 @@ class _ChannelLabel extends StatelessWidget {
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
             ),
-            SizedBox(width: _compactUi ? 6 : 10),
+            SizedBox(width: _compactUi || phone ? 6 : 10),
             Expanded(
               child: Text(
                 channel.name,
-                maxLines: 1,
-                softWrap: false,
+                maxLines: phone && !(_compactUi && tag != null) ? 2 : 1,
+                softWrap: phone,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: Colors.white, fontSize: fontSize),
               ),

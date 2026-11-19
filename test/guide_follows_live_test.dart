@@ -138,8 +138,9 @@ void main() {
         const MethodChannel('vespertv/stats'), (_) async => null);
   });
 
-  Future<void> pumpHome(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1280, 720);
+  Future<void> pumpHome(WidgetTester tester,
+      {Size size = const Size(1280, 720), bool television = true}) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({
@@ -150,7 +151,7 @@ void main() {
     await storage.init();
     final prefs = AppPreferences(storage);
     await prefs.init();
-    prefs.isTelevision = true;
+    prefs.isTelevision = television;
     prefs.guideViewMode = 'timeline';
     prefs.guideFullVideo = false;
     final playlist = _Playlist(storage);
@@ -173,10 +174,16 @@ void main() {
             navigatorObservers: [appRouteObserver],
             home: const TvHomeScreen())));
     await tester.pumpAndSettle();
-    final tabFocus = Focus.of(tester.element(find.text('TV')));
-    await tester.tap(find.text('News'));
+    final tabFocus =
+        television ? Focus.of(tester.element(find.text('TV'))) : null;
+    // A phone opens on the Favourites page: back to the groups first.
+    if (find.text('News').evaluate().isEmpty) {
+      await tester.tap(find.byIcon(Icons.arrow_back).first);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('News').first);
     await tester.pumpAndSettle();
-    tabFocus.requestFocus();
+    tabFocus?.requestFocus();
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
@@ -211,6 +218,28 @@ void main() {
     await tester.tap(find.text(title));
     await tester.pumpAndSettle();
   }
+
+  Finder channelLabels() => find.byWidgetPredicate(
+      (w) => w.runtimeType.toString() == '_ChannelLabel');
+
+  testWidgets('TV guide: number + logo + name on one line (240 wide)',
+      (tester) async {
+    await pumpHome(tester);
+    final label = channelLabels().first;
+    expect((tester.widget(label) as dynamic).number, 1);
+    expect(tester.getSize(label).width, 240);
+  });
+
+  testWidgets('phone guide keeps the narrow two-line channel column',
+      (tester) async {
+    // Owner's phone (+891): the TV's one-line column (240 wide) left the
+    // programmes a sliver of a 390 px screen.
+    await pumpHome(tester, size: const Size(400, 850), television: false);
+    final label = channelLabels().first;
+    expect((tester.widget(label) as dynamic).number, isNull);
+    expect(tester.getSize(label).width, 160);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('another group opens at the live half-hour', (tester) async {
     await pumpHome(tester);

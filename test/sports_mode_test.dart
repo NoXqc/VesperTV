@@ -41,6 +41,7 @@ import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/models/m3u_group.dart';
 import 'package:nox_iptv/utils/constants.dart';
+import 'package:nox_iptv/widgets/sports_trak_name.dart';
 import 'package:nox_iptv/utils/refined_finish.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:nox_iptv/utils/tv_theme.dart';
@@ -1170,6 +1171,32 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('phone: the short wordmark leads the league chips',
+      (tester) async {
+    // Owner's iPhone photo (2026-11-19): beside the big title only All and
+    // NHL fit. The TV tab's "Sports" + small gold "Trak" instead, in the
+    // chips' own scrolling row.
+    await prefs.setSportsMode(false);
+    prefs.isTelevision = false;
+    await open(tester, feed: _Feed([]), size: const Size(390, 844));
+    expect(find.text(AppConstants.sportsTabName), findsNothing);
+    final mark = tester.getRect(find.byType(SportsTrakName).first);
+    final all = tester.getRect(find.text('All').first);
+    final nhl = tester.getRect(find.text('NHL').first);
+    expect((all.center.dy - mark.center.dy).abs(), lessThan(8),
+        reason: 'one row');
+    expect(nhl.right, lessThanOrEqualTo(390), reason: 'NHL fits beside it');
+    // A tablet keeps the title and the chips on one row.
+    await disposePage(tester);
+    await open(tester, feed: _Feed([]), size: const Size(1000, 700));
+    final tvTitle =
+        tester.getRect(find.text(AppConstants.sportsTabName).first);
+    final tvAll = tester.getRect(find.text('All').first);
+    expect(tvAll.top, lessThan(tvTitle.bottom));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   for (final mode in [false, true]) {
     testWidgets(
         'compact league strip keeps full names in Edit leagues: mode=$mode',
@@ -1759,6 +1786,49 @@ void main() {
       expect(find.text('Tomorrow'), findsWidgets);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
+    testWidgets('phone: a league line where the league changes',
+        (tester) async {
+      // Owner's iPhone photo (2026-11-19): Stars (NHL) then Colts (NFL)
+      // with nothing between; phone rows have no league tag.
+      await prefs.setSportsMode(false);
+      prefs.isTelevision = false;
+      await storage.setSportsLayout('guide');
+      final nfl = _game(3, GameState.pre);
+      await open(tester,
+          games: [
+            _game(1, GameState.pre),
+            _game(2, GameState.pre),
+            SportsGame(
+                id: 'colts',
+                league: sportsLeagueById('nfl')!,
+                start: nfl.start,
+                state: nfl.state,
+                statusText: nfl.statusText,
+                home: nfl.home,
+                away: nfl.away),
+          ],
+          size: const Size(390, 844));
+      final lines = find.byWidgetPredicate((w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('guide-league-'));
+      expect(lines, findsNWidgets(2));
+      final nflLine = tester.getRect(lines.last);
+      expect(find.descendant(of: lines.last, matching: find.text('NFL')),
+          findsOneWidget);
+      expect(
+          nflLine.top,
+          greaterThanOrEqualTo(tester
+              .getRect(find.byKey(const ValueKey('guide-row-nhl:game2')))
+              .bottom));
+      expect(
+          nflLine.bottom,
+          lessThanOrEqualTo(tester
+              .getRect(find.byKey(const ValueKey('guide-row-nfl:colts')))
+              .top));
       expect(tester.takeException(), isNull);
       await disposePage(tester);
     });
