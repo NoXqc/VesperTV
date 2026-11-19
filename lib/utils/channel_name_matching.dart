@@ -143,7 +143,38 @@ String _plainUpper(String text) {
 /// but tags of one country are one tag ([_sameRegion]: `QC` = `CA`), and
 /// accents don't count. Anything else that differs (East/West, 1/2,
 /// ESPN/ESPN+) keeps them apart.
+///
+/// Remembered per name ([_copyKeys]): the editor layer, Combine playlists,
+/// Sources and the editor page each ask for every channel of a playlist,
+/// and on a 57k-channel playlist each pass froze a Homatics for seconds
+/// (LOG-PJTTML, 2026-11-19: "not responding" at launch).
 String channelCopyKey(String name) {
+  final hit = _copyKeys[name];
+  if (hit != null) return hit;
+  final key = _channelCopyKey(name);
+  if (_copyKeys.length >= _copyKeysMax) _copyKeys.clear();
+  _copyKeys[name] = key;
+  return key;
+}
+
+final _copyKeys = <String, String>{};
+
+/// About 12 MB at most; a bigger set of names starts over (each name is
+/// then worked out again, as before the cache).
+const _copyKeysMax = 120000;
+
+/// [channelCopyKey] of each name, worked out without the cache: for an
+/// isolate (the live list is read on one at launch). The main isolate
+/// hands the result to [rememberChannelCopyKeys].
+Map<String, String> channelCopyKeysOf(Iterable<String> names) =>
+    {for (final n in names) n: _channelCopyKey(n)};
+
+void rememberChannelCopyKeys(Map<String, String> keys) {
+  if (_copyKeys.length + keys.length > _copyKeysMax) _copyKeys.clear();
+  if (keys.length <= _copyKeysMax) _copyKeys.addAll(keys);
+}
+
+String _channelCopyKey(String name) {
   final rest = _stripLeadingTag(name);
   final rawTag = _plainUpper(name.substring(0, name.length - rest.length))
       .replaceAll(_punctuation, '');

@@ -7,7 +7,9 @@ import 'package:nox_iptv/models/xtream_series.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/epg_service.dart';
+import 'package:nox_iptv/services/live_sources.dart';
 import 'package:nox_iptv/services/playback_service.dart';
+import 'package:nox_iptv/services/playlist_edits.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/vesper_ai/vesper_tools.dart';
@@ -169,6 +171,40 @@ void main() {
     expect(visible().first, 'CA: TSN 1');
   });
 
+  test('groups as the TV shows them: merged, renamed as one, moved',
+      () async {
+    // Discord, 2026-11-19: renamed and merged groups showed the provider's
+    // names, so channels looked like they were somewhere else.
+    await edit({
+      'action': 'rename_group',
+      'renames': [
+        {'group': 'CA| SPORTS', 'new_name': 'SPORTS'},
+        {'group': 'FR| SPORTS', 'new_name': 'SPORTS'},
+      ],
+    });
+    var found = await edit({'action': 'find_channels', 'query': 'TSN 1'});
+    var tsn = (found['channels'] as List).first as Map;
+    expect(tsn['group'], 'SPORTS');
+    expect(tsn['provider_group'], 'CA| SPORTS');
+
+    // The merged group by its TV name: both provider groups follow.
+    await edit(
+        {'action': 'rename_group', 'group': 'SPORTS', 'new_name': 'ALL SPORT'});
+    expect(manager.editorSession('p')!.edits.groupNames,
+        {'CA| SPORTS': 'ALL SPORT', 'FR| SPORTS': 'ALL SPORT'});
+
+    final picks = await manager.createUserGroup('Picks');
+    final canal = manager
+        .visibleChannels(category: 'tv')
+        .firstWhere((c) => c.name == 'CANAL+ SPORT');
+    await manager.moveChannelToGroup(canal, picks);
+    found = await edit({'action': 'find_channels', 'query': 'CANAL'});
+    tsn = (found['channels'] as List).first as Map;
+    expect(tsn['group'], 'Picks');
+    expect(tsn['moved'], true);
+    expect(tsn['provider_group'], 'FR| SPORTS');
+  });
+
   test('fallback channel is tried first when the channel fails', () async {
     final tsn1 = await idOf('CA: TSN 1');
     final canal = await idOf('CANAL+ SPORT');
@@ -204,6 +240,23 @@ void main() {
             .take(2),
         [tsn1, canal]);
     expect(manager.failoverCandidatesFor(channel).first.id, canal);
+    // The drawer tags the editor's fallback and shows what it measured
+    // (owner, 2026-11-19: like Dispatcharr's and Tuliprox's rows).
+    await manager.recordMeasured(
+        other,
+        ProbeResult(
+            ok: true,
+            at: DateTime.now(),
+            height: 2160,
+            width: 3840,
+            audioLayout: '5.1',
+            audioCodec: 'E-AC-3',
+            audioChannels: 6));
+    final (:rows, canAdd: _) = await liveSourceRows(manager, channel);
+    expect(rows.first.$2.playlist, isNot(contains('Fallback')));
+    expect(rows[1].$1.id, canal);
+    expect(rows[1].$2.playlist, endsWith('Fallback'));
+    expect(rows[1].$2.quality, '4K · 5.1 E-AC-3');
   });
 
   test('no on the TV changes nothing', () async {

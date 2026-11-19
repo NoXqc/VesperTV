@@ -3612,4 +3612,5 @@ const Map<String, String> kPl = {
       "Dispatcharr odrzucił logowanie (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "Hasło działa, ale serwer odmówił wydania klucza API (HTTP {code}). Wklej zamiast tego klucz API.",
+  "Fallback": "Zapasowe",
 };

@@ -3921,4 +3921,5 @@ const Map<String, String> kDe = {
       "Dispatcharr hat die Anmeldung abgelehnt (HTTP {code}).",
   "Your password works, but your server refused to hand over your API key (HTTP {code}). Paste your API key instead.":
       "Dein Passwort funktioniert, aber dein Server hat die Herausgabe deines API-Schlüssels verweigert (HTTP {code}). Füge stattdessen deinen API-Schlüssel ein.",
+  "Fallback": "Ersatz",
 };
