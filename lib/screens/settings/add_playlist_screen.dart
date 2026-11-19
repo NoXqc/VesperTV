@@ -39,7 +39,8 @@ void _ensureVisible(BuildContext context) {
 /// accounts, which decides what the catalog warm-up (see [PlaylistManager])
 /// actually fetches.
 class AddPlaylistScreen extends StatefulWidget {
-  const AddPlaylistScreen({super.key, this.editPlaylistId, this.prefill});
+  const AddPlaylistScreen(
+      {super.key, this.editPlaylistId, this.prefill, this.autoSave = false});
 
   /// Set when opened from `PlaylistManagerScreen`'s detail panel to edit
   /// an existing playlist's login details, instead of adding a new one —
@@ -53,6 +54,12 @@ class AddPlaylistScreen extends StatefulWidget {
   /// Add as a playlist): the user checks them and saves. Ignored when
   /// [editPlaylistId] is set.
   final PlaylistProfile? prefill;
+
+  /// Saves [prefill] as soon as the screen opens, as if Add Playlist was
+  /// pressed: Settings > Dispatcharr > Connect already has the login, so
+  /// connecting loads the channels in one step (roman, 2026-11-19). A
+  /// failure leaves the form open with the error, like a manual save.
+  final bool autoSave;
 
   @override
   State<AddPlaylistScreen> createState() => _AddPlaylistScreenState();
@@ -265,8 +272,13 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     // focused in the left pane) rather than leaving initial focus to
     // Flutter's own scan across two now-separate FocusScopes, which has
     // no reason to prefer one over the other.
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _currentModeListFocus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _currentModeListFocus.requestFocus();
+      if (widget.autoSave && existing == null && widget.prefill != null) {
+        _save();
+      }
+    });
   }
 
   @override
@@ -847,8 +859,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-          // A multi-pane tool: the glass panel spans the screen.
-          wide: true,
+            // A multi-pane tool: the glass panel spans the screen.
+            wide: true,
             title: _editingProfile != null
                 ? tr('Edit Playlist')
                 : tr('Add Playlist'),

@@ -24,8 +24,50 @@ const _server = 'http://10.0.0.5:9191';
 class _Playlists extends GuidePlaylist {
   _Playlists(super.storage);
   final entries = <PlaylistProfile>[];
+  final loads = <String>[];
+
+  /// What the next load fails with (a refused Xtream login), else null.
+  String? loadError;
+  String? _error;
+
   @override
   List<PlaylistProfile> get profiles => entries;
+
+  @override
+  String? get error => _error;
+
+  @override
+  Future<void> addPlaylist(PlaylistProfile profile) async {
+    entries.add(profile);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> loadPlaylist(String playlistId) async {
+    loads.add(playlistId);
+    _error = loadError;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> removePlaylist(String playlistId) async {
+    entries.removeWhere((p) => p.id == playlistId);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> warmAllCategories(String playlistId) async {}
+}
+
+class _Epg extends GuideEpg {
+  _Epg(super.storage);
+  final refreshed = <String>[];
+
+  @override
+  Future<void> refresh(String url,
+      {required Set<String> knownChannelIds}) async {
+    refreshed.add(url);
+  }
 }
 
 http.Response _json(Object body, [int status = 200]) =>
@@ -56,7 +98,7 @@ Future<_Playlists> _open(WidgetTester tester) async {
   await prefs.init();
   final playlist = _Playlists(storage);
   final playback = PlaybackService(storage, playlist);
-  final epg = GuideEpg(storage);
+  final epg = _Epg(storage);
   Dispatcharr.instance.attach(storage);
   await tester.pumpWidget(MultiProvider(providers: [
     Provider.value(value: storage),
@@ -81,21 +123,54 @@ Future<void> _signIn(WidgetTester tester) async {
 void main() {
   tearDown(() => Dispatcharr.instance.save(null));
 
-  testWidgets('sign in keeps the key, then offers the server as a playlist',
+  testWidgets('connect adds and loads the server as a playlist at once',
       (tester) async {
+    // roman (LOG-G67D3G, 2026-11-19): connected, "but no
+    // playlist/content/groups": Add as a playlist was a second step.
     Dispatcharr.instance.api = _api();
-    await _open(tester);
+    final playlists = await _open(tester);
     await _signIn(tester);
-    expect(find.text('Connected to $_server as amd'), findsOneWidget);
-    expect(
-        find.text('No playlist loads from this server yet.'), findsOneWidget);
     // Saved: the API key, never the password.
     final login = Dispatcharr.instance.login.value!;
     expect(login.server, _server);
     expect(login.apiKey, 'k');
     expect(jsonEncode(login.toJson()), isNot(contains('secret')));
 
-    // Add as a playlist = Add Playlist, Xtream, filled in.
+    // Saved without a second press: Xtream with the XC password, loaded.
+    expect(playlists.entries, hasLength(1));
+    final added = playlists.entries.single;
+    expect(added.name, 'Dispatcharr');
+    expect(added.mode, 'xtream');
+    expect(added.xtreamServer, _server);
+    expect(added.xtreamUsername, 'amd');
+    expect(added.xtreamPassword, 'xc1');
+    expect(playlists.loads, [added.id]);
+    // A new Xtream playlist asks what to download, like a manual add.
+    expect(find.text('Download content'), findsOneWidget);
+    await tester.tap(find.text('Download All'));
+    await tester.pumpAndSettle();
+    // Back at the first page (here Dispatcharr), naming the new playlist.
+    expect(find.text('Playlists on this server: Dispatcharr'), findsOneWidget);
+    expect(find.text('Add another playlist from it'), findsOneWidget);
+  });
+
+  testWidgets('a refused playlist login stays on Add Playlist, adds nothing',
+      (tester) async {
+    Dispatcharr.instance.api = _api();
+    final playlists = await _open(tester);
+    playlists.loadError = 'Authentication failed';
+    await _signIn(tester);
+    expect(playlists.loads, hasLength(1));
+    expect(playlists.entries, isEmpty);
+    expect(find.textContaining('Authentication failed'), findsWidgets);
+    // Back: still connected, and Add as a playlist fills the form in
+    // without saving it by itself.
+    playlists.loadError = null;
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Connected to $_server as amd'), findsOneWidget);
+    expect(
+        find.text('No playlist loads from this server yet.'), findsOneWidget);
     await tester.tap(find.text('Add as a playlist'));
     await tester.pumpAndSettle();
     expect(find.text('Add Playlist'), findsWidgets);
@@ -104,6 +179,7 @@ void main() {
         .map((f) => f.controller?.text)
         .toList();
     expect(values, containsAll(['Dispatcharr', _server, 'amd', 'xc1']));
+    expect(playlists.loads, hasLength(1));
   });
 
   testWidgets('a playlist on the same server is named', (tester) async {
@@ -128,19 +204,18 @@ void main() {
     expect(find.text('Connect'), findsOneWidget);
   });
 
-  testWidgets('no Xtream password: the M3U and guide links are filled in',
+  testWidgets('no Xtream password: connect adds the M3U and guide links',
       (tester) async {
     Dispatcharr.instance.api = _api(xc: null);
-    await _open(tester);
+    final playlists = await _open(tester);
     await _signIn(tester);
+    final added = playlists.entries.single;
+    expect(added.mode, 'm3u');
+    expect(added.m3uUrl, '$_server/output/m3u');
+    expect(added.epgUrl, '$_server/output/epg');
+    expect(playlists.loads, [added.id]);
+    expect(find.text('Playlists on this server: Dispatcharr'), findsOneWidget);
     expect(find.textContaining('has no XC password'), findsOneWidget);
-    await tester.tap(find.text('Add as a playlist'));
-    await tester.pumpAndSettle();
-    final values = tester
-        .widgetList<TextField>(find.byType(TextField))
-        .map((f) => f.controller?.text)
-        .toList();
-    expect(values, containsAll(['$_server/output/m3u', '$_server/output/epg']));
   });
 
   testWidgets('a pasted API key signs in without a password', (tester) async {
@@ -239,7 +314,17 @@ void main() {
       (tester) async {
     // AMD (2026-11-18): only the streams he assigned in Dispatcharr.
     Dispatcharr.instance.api = _api();
-    await _open(tester);
+    final playlists = await _open(tester);
+    // Already has its playlist, so Connect stays on this page.
+    playlists.entries.add(PlaylistProfile(
+        id: 'd',
+        name: 'Home Dispatcharr',
+        mode: 'xtream',
+        xtreamServer: _server,
+        xtreamUsername: 'amd',
+        xtreamPassword: 'xc1',
+        sortOrder: 0,
+        createdAt: DateTime(2026)));
     await _signIn(tester);
     expect(Dispatcharr.instance.sources, DispatcharrSources.first);
     expect(find.text("Dispatcharr's first"), findsOneWidget);
