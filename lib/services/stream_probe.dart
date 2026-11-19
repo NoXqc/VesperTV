@@ -72,7 +72,18 @@ class StreamProbe {
     int? bestH, bestW;
     double? fps;
     String? codec;
+    String? audioCodec;
     String? bestVariant;
+    // Audio renditions' CHANNELS ("6", "16/JOC"): the most speakers.
+    int? audioChannels;
+    for (final line in lines) {
+      if (!line.startsWith('#EXT-X-MEDIA') || !line.contains('TYPE=AUDIO')) {
+        continue;
+      }
+      final n = int.tryParse(
+          RegExp(r'CHANNELS="(\d+)').firstMatch(line)?.group(1) ?? '');
+      if (n != null && n > (audioChannels ?? 0)) audioChannels = n;
+    }
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
       if (!line.startsWith('#EXT-X-STREAM-INF')) continue;
@@ -91,6 +102,15 @@ class StreamProbe {
                 : c.contains('avc1')
                     ? 'H.264'
                     : null;
+        audioCodec = c == null
+            ? null
+            : c.contains('ec-3')
+                ? 'E-AC-3'
+                : c.contains('ac-3')
+                    ? 'AC-3'
+                    : c.contains('mp4a')
+                        ? 'AAC'
+                        : null;
         for (var j = i + 1; j < lines.length; j++) {
           final v = lines[j].trim();
           if (v.isNotEmpty && !v.startsWith('#')) {
@@ -101,13 +121,23 @@ class StreamProbe {
       }
     }
     if (bestH != null) {
+      // 16 is Atmos (JOC) over 5.1 in Apple's spelling: shown as 5.1.
+      final ch = audioChannels == 16 ? 6 : audioChannels?.clamp(1, 8);
       return ProbeResult(
           ok: true,
           at: now,
           height: bestH,
           width: bestW,
           fps: fps,
-          codec: codec);
+          codec: codec,
+          audioCodec: audioCodec,
+          audioChannels: ch,
+          audioLayout: switch (ch) {
+            null => null,
+            6 => '5.1',
+            8 => '7.1',
+            final n => '$n.0',
+          });
     }
     // A media playlist (or a master without RESOLUTION): read a segment.
     var media = text;
@@ -196,6 +226,11 @@ class StreamProbe {
     int? pmtPid;
     int? videoPid;
     var videoType = 0;
+    var pmtRead = false;
+    // Audio tracks: pid -> the kind [_audioOf] reads (Discord, 2026-11-19:
+    // "add audio probe to test ... 5.1 preferred over 2.0").
+    final audioKind = <int, int>{};
+    final audioEs = <int, BytesBuilder>{};
     final es = BytesBuilder(copy: false);
     final pts = <int>[];
     for (var p = start; p + 188 <= bytes.length; p += 188) {
@@ -217,7 +252,8 @@ class StreamProbe {
             break;
           }
         }
-      } else if (pid == pmtPid && pusi && videoPid == null) {
+      } else if (pid == pmtPid && pusi && !pmtRead) {
+        pmtRead = true;
         final t = off + 1 + bytes[off];
         final end = t + 3 + _secLen(bytes, t) - 4;
         final infoLen = ((bytes[t + 10] & 0x0F) << 8) | bytes[t + 11];
@@ -225,12 +261,32 @@ class StreamProbe {
           final type = bytes[k];
           final epid = ((bytes[k + 1] & 0x1F) << 8) | bytes[k + 2];
           final esLen = ((bytes[k + 3] & 0x0F) << 8) | bytes[k + 4];
-          if (type == 0x1B || type == 0x24) {
+          if ((type == 0x1B || type == 0x24) && videoPid == null) {
             videoPid = epid;
             videoType = type;
-            break;
+          } else {
+            final kind = _audioKind(
+                type, bytes, k + 5, (k + 5 + esLen).clamp(0, bytes.length));
+            if (kind != null) audioKind[epid] = kind;
           }
           k += 5 + esLen;
+        }
+      } else if (audioKind.containsKey(pid)) {
+        // The first few frames of each audio track, from a PES start.
+        var o = off;
+        if (pusi &&
+            o + 9 < p + 188 &&
+            bytes[o] == 0 &&
+            bytes[o + 1] == 0 &&
+            bytes[o + 2] == 1) {
+          o += 9 + bytes[o + 8];
+        }
+        final b = audioEs[pid];
+        if (o < p + 188 && (b != null || pusi)) {
+          final into = b ?? (audioEs[pid] = BytesBuilder(copy: false));
+          if (into.length < 16 * 1024) {
+            into.add(Uint8List.sublistView(bytes, o, p + 188));
+          }
         }
       } else if (videoPid != null && pid == videoPid) {
         if (pusi &&
@@ -254,8 +310,24 @@ class StreamProbe {
         }
       }
     }
+    // The richest audio track (most speakers; the first on a tie).
+    ({String codec, String? layout, int? channels})? audio;
+    for (final e in audioKind.entries) {
+      final data = audioEs[e.key]?.takeBytes() ?? Uint8List(0);
+      final a = audioFrom(e.value, data);
+      if (a == null) continue;
+      if (audio == null || (a.channels ?? 0) > (audio.channels ?? 0)) {
+        audio = a;
+      }
+    }
     if (videoPid == null) {
-      return ProbeResult(ok: true, at: at, codec: null);
+      return ProbeResult(
+          ok: true,
+          at: at,
+          codec: null,
+          audioLayout: audio?.layout,
+          audioCodec: audio?.codec,
+          audioChannels: audio?.channels);
     }
     final hevc = videoType == 0x24;
     final dims = _findSps(es.takeBytes(), hevc);
@@ -266,7 +338,134 @@ class StreamProbe {
       height: dims?.$2,
       fps: _fpsFromPts(pts),
       codec: hevc ? 'HEVC' : 'H.264',
+      audioLayout: audio?.layout,
+      audioCodec: audio?.codec,
+      audioChannels: audio?.channels,
     );
+  }
+
+  /// Kinds of audio track [audioFrom] reads.
+  static const kindMpegAudio = 1,
+      kindAdts = 2,
+      kindLatm = 3,
+      kindDolby = 4,
+      kindDts = 5;
+
+  /// The audio kind of a PMT entry ([type] + its descriptors in
+  /// [from]..[to]), or null for anything that isn't audio. DVB carries
+  /// Dolby and DTS as private data (0x06) marked by a descriptor; ATSC by
+  /// their own stream types.
+  static int? _audioKind(int type, Uint8List b, int from, int to) {
+    switch (type) {
+      case 0x03 || 0x04:
+        return kindMpegAudio;
+      case 0x0F:
+        return kindAdts;
+      case 0x11:
+        return kindLatm;
+      case 0x81 || 0x87:
+        return kindDolby;
+      case 0x82:
+        return kindDts;
+      case 0x06:
+        for (var d = from; d + 2 <= to;) {
+          final tag = b[d], len = b[d + 1];
+          if (tag == 0x6A || tag == 0x7A) return kindDolby;
+          if (tag == 0x7B) return kindDts;
+          if (tag == 0x05 && len >= 4 && d + 6 <= to) {
+            final id = String.fromCharCodes(b, d + 2, d + 6);
+            if (id == 'AC-3' || id == 'EAC3') return kindDolby;
+            if (id.startsWith('DTS')) return kindDts;
+          }
+          d += 2 + len;
+        }
+        return null;
+    }
+    return null;
+  }
+
+  /// Codec, speaker layout (`5.1`) and speaker count (with the LFE) from the
+  /// first frame headers of one audio track; layout and count null when
+  /// the header doesn't say (LATM, DTS) or no frame was found.
+  @visibleForTesting
+  static ({String codec, String? layout, int? channels})? audioFrom(
+      int kind, Uint8List d) {
+    switch (kind) {
+      case kindAdts:
+        for (var i = 0; i + 7 <= d.length; i++) {
+          if (d[i] != 0xFF || (d[i + 1] & 0xF6) != 0xF0) continue;
+          if ((d[i + 2] >> 2) & 0x0F > 12) continue;
+          final len =
+              ((d[i + 3] & 0x03) << 11) | (d[i + 4] << 3) | (d[i + 5] >> 5);
+          if (len < 7) continue;
+          // The next frame must follow, when it's in the bytes read.
+          final next = i + len;
+          if (next + 2 <= d.length &&
+              (d[next] != 0xFF || (d[next + 1] & 0xF6) != 0xF0)) {
+            continue;
+          }
+          final cfg = ((d[i + 2] & 0x01) << 2) | (d[i + 3] >> 6);
+          return switch (cfg) {
+            0 => (codec: 'AAC', layout: null, channels: null),
+            7 => (codec: 'AAC', layout: '7.1', channels: 8),
+            6 => (codec: 'AAC', layout: '5.1', channels: 6),
+            _ => (codec: 'AAC', layout: '$cfg.0', channels: cfg),
+          };
+        }
+        return (codec: 'AAC', layout: null, channels: null);
+      case kindLatm:
+        return (codec: 'AAC', layout: null, channels: null);
+      case kindDts:
+        return (codec: 'DTS', layout: null, channels: null);
+      case kindMpegAudio:
+        for (var i = 0; i + 4 <= d.length; i++) {
+          if (d[i] != 0xFF || (d[i + 1] & 0xE0) != 0xE0) continue;
+          final layer = (d[i + 1] >> 1) & 0x03;
+          final bitrate = d[i + 2] >> 4;
+          if (layer == 0 || bitrate == 0 || bitrate == 15) continue;
+          if ((d[i + 2] >> 2) & 0x03 == 3) continue;
+          final mono = d[i + 3] >> 6 == 3;
+          return (
+            codec: layer == 1 ? 'MP3' : 'MP2',
+            layout: mono ? '1.0' : '2.0',
+            channels: mono ? 1 : 2,
+          );
+        }
+        return (codec: 'MP2', layout: null, channels: null);
+      case kindDolby:
+        for (var i = 0; i + 8 <= d.length; i++) {
+          if (d[i] != 0x0B || d[i + 1] != 0x77) continue;
+          final bsid = d[i + 5] >> 3;
+          int acmod, lfe;
+          String codec;
+          if (bsid > 10 && bsid <= 16) {
+            // E-AC-3: acmod and lfeon right after fscod / numblkscod.
+            codec = 'E-AC-3';
+            acmod = (d[i + 4] >> 1) & 0x07;
+            lfe = d[i + 4] & 0x01;
+          } else if (bsid <= 8) {
+            // AC-3 BSI: acmod, mix levels that depend on it, then lfeon.
+            codec = 'AC-3';
+            final bits = _Bits(Uint8List.sublistView(d, i + 6));
+            try {
+              acmod = bits.u(3);
+              if (acmod & 0x1 != 0 && acmod != 0x1) bits.skip(2);
+              if (acmod & 0x4 != 0) bits.skip(2);
+              if (acmod == 0x2) bits.skip(2);
+              lfe = bits.u(1);
+            } on FormatException {
+              continue;
+            }
+          } else {
+            continue;
+          }
+          const fronts = [2, 1, 2, 3, 3, 4, 4, 5];
+          final n = fronts[acmod];
+          return (codec: codec, layout: '$n.$lfe', channels: n + lfe);
+        }
+        return (codec: 'Dolby', layout: null, channels: null);
+    }
+    return null;
   }
 
   static int _secLen(Uint8List b, int t) =>

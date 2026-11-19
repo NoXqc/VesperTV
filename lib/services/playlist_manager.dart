@@ -1311,7 +1311,9 @@ class PlaylistManager extends ChangeNotifier {
         r.at.difference(old.at) < const Duration(days: 1)) {
       return;
     }
-    s.edits.probes[channel.rawId] = r;
+    // Keeps what this one didn't measure (a stream test's audio).
+    s.edits.probes[channel.rawId] =
+        old != null && !old.isStale ? r.fillFrom(old) : r;
     await _storage.setPlaylistEditsJson(s.profile.id, s.edits.encode());
   }
 
@@ -1339,6 +1341,15 @@ class PlaylistManager extends ChangeNotifier {
     }
     return out;
   }
+
+  /// Whether [source] is one of the playlist editor's fallbacks of live
+  /// [channel]: the Sources drawer tags it (owner, 2026-11-19).
+  bool isEditorFallback(Channel channel, Channel source) =>
+      _sessionFor(channel.playlistId)
+          ?.edits
+          .fallbacks[channel.rawId]
+          ?.contains('${source.playlistId}::${source.rawId}') ??
+      false;
 
   /// Adds [fallback] to the playlist editor's fallbacks of live [channel]
   /// (player Sources > Add another source): tried first when [channel]
@@ -2914,7 +2925,9 @@ class PlaylistManager extends ChangeNotifier {
               ? _countKey(null, own)
               : to != null
                   ? _countKey(to.playlistId, to.title)
-                  : _countKey(s.profile.id, c.group);
+                  // The group's shown title: groups renamed or merged in
+                  // the playlist editor showed 0 (Discord, 2026-11-19).
+                  : _countKey(s.profile.id, s.edits.groupTitle(c.group));
           out[key] = (out[key] ?? 0) + 1;
           if (_myGroups.copies.isNotEmpty) {
             for (final r in _myGroups.copiesOf(c.id)) {
@@ -3014,6 +3027,9 @@ class PlaylistManager extends ChangeNotifier {
           Object.hashAllUnordered(s.mergeHidden),
       ]),
       'favourites': _favoritesVersion,
+      'guideLinks': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) s.guideLinksVersion,
+      ]),
       'init': _initializing.hashCode,
       'error': error.hashCode,
       'merge': _storage.getMergePlaylists().hashCode,
@@ -3133,9 +3149,12 @@ class PlaylistManager extends ChangeNotifier {
     final own = _myGroups.groupOf(channel.id);
     if (own != null) return own;
     final to = _myGroups.providerMoveOf(channel.id);
-    return to != null && isPlaylistEnabled(to.playlistId!)
-        ? to.title
-        : channel.group;
+    if (to != null && isPlaylistEnabled(to.playlistId!)) return to.title;
+    // Under the title the TV lists it by: in a group renamed or merged in
+    // the playlist editor the TV never offered Move Up / Down, and the
+    // playing channel's group wasn't found (Discord, 2026-11-19).
+    return _sessionFor(channel.playlistId)?.edits.groupTitle(channel.group) ??
+        channel.group;
   }
 
   /// Into the viewer's own group [title] (created if new), or back to its

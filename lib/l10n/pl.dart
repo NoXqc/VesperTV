@@ -3677,4 +3677,5 @@ const Map<String, String> kPl = {
       "Kopie jakości, zapasowe i inne playlisty, jak bez Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Które strumienie Źródła pokazują dla kanału Tuliprox",
+  "Fallback": "Zapasowe",
 };

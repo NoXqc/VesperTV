@@ -13,6 +13,7 @@ import '../models/vod_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
 import '../utils/catalog_sort.dart';
+import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import 'catalog_database.dart';
 import 'channel_name_events.dart';
@@ -223,14 +224,32 @@ class PlaylistSession {
   /// Re-stamps editor names/logos and recomputes [editHidden].
   /// Never lets a bad saved layer stop the playlist from loading (it runs
   /// inside every load path): on any error the channels show unedited.
-  void applyEdits() {
+  /// [hidden]: [PlaylistEdits.apply]'s result for the current channels and
+  /// edits, already worked out (on the isolate that read the live list).
+  void applyEdits({Set<String>? hidden}) {
+    final sw = Stopwatch()..start();
     try {
-      editHidden = edits.apply(allLiveChannels);
+      editHidden = hidden ?? edits.apply(allLiveChannels);
     } catch (e) {
       debugPrint('PlaylistSession[${profile.id}]: editor layer skipped: $e');
       editHidden = {};
     }
+    final applied = sw.elapsedMilliseconds;
     onEditsApplied?.call();
+    // Which edits cost what on a big playlist (LOG-PJTTML: 5.4 s per save
+    // on a 57k-channel list, the edits it held unknown).
+    if (sw.elapsedMilliseconds >= 200) {
+      final e = edits;
+      final rules = e.rules.where((r) => r.enabled);
+      debugPrint('EditsApply: playlist=${profile.id} '
+          'n=${allLiveChannels.length} '
+          'apply=${applied}ms after=${sw.elapsedMilliseconds - applied}ms '
+          'hidden=${editHidden.length} names=${e.names.length} '
+          'rules=${rules.where((r) => r.type == 'replace').length}r/'
+          '${rules.where((r) => r.type == 'hide').length}h '
+          'lower=${e.hideLowerCopies} separators=${e.hideSeparators} '
+          'groupNames=${e.groupNames.length}');
+    }
     unawaited(_trackFirstSeen());
   }
 
@@ -265,6 +284,12 @@ class PlaylistSession {
   /// `Channel.epgIdOverride` wherever this session (re)builds its channel
   /// lists (the same loops that stamp `isFavorite`).
   Map<String, String> epgIdOverrides = {};
+
+  /// Bumped on every guide link change ([setEpgIdOverride] and its bulk
+  /// forms), for `PlaylistManager.liveViewSignature`: the TV guide redraws
+  /// at once (Discord, 2026-11-19: Unlink in the editor seemed to do
+  /// nothing while the TV kept the old guide).
+  int guideLinksVersion = 0;
 
   /// See [AppConstants.keyChannelLinks]'s doc comment. Keyed by
   /// [Channel.rawId] -> the linked channel elsewhere. Unlike
@@ -987,11 +1012,17 @@ class PlaylistSession {
     onNotify();
     try {
       List<Channel> loaded;
+      // The editor layer worked out on the isolate, for these edits.
+      ({String edits, Set<String> hidden})? appliedThere;
       // Path, not contents — see StorageService.cacheFilePath.
       final path = await storage
           .cacheFilePath(_cacheName(AppConstants.cacheFileLiveChannels));
       if (path != null) {
-        loaded = await compute(_readChannelsFile, path);
+        final sent = edits.encode();
+        final read = await compute(_readLiveChannelsFile, (path, sent));
+        loaded = read.channels;
+        rememberChannelCopyKeys(read.keys);
+        appliedThere = (edits: sent, hidden: read.hidden);
         PerfDiagnostics.mark('liveDecoded');
         try {
           liveListFetchedAt = await File(path).lastModified();
@@ -1011,13 +1042,22 @@ class PlaylistSession {
       }
       final fromFile = loaded;
       PerfDiagnostics.timedSync('liveLoad n=${fromFile.length}', () {
-        final unique = Channel.withUniqueIds(fromFile);
+        // Read from the file: the isolate already made the ids unique.
+        final unique =
+            appliedThere != null ? fromFile : Channel.withUniqueIds(fromFile);
         for (final channel in unique) {
           channel.isFavorite = favoriteIds().contains(channel.id);
           channel.epgIdOverride = epgIdOverrides[channel.rawId];
         }
         liveChannels = unique;
-        applyEdits();
+        final there = appliedThere;
+        // Unless the edits changed meanwhile, the isolate's result stands
+        // (it also stamped the names and logos on these channels).
+        if (there != null && there.edits == edits.encode()) {
+          applyEdits(hidden: there.hidden);
+        } else {
+          applyEdits();
+        }
       });
       lastLoadSummary = {...?lastLoadSummary, 'tv': liveChannels.length};
     } catch (e) {
@@ -2212,6 +2252,7 @@ class PlaylistSession {
     for (final channel in liveChannels) {
       if (channel.rawId == rawId) channel.epgIdOverride = epgIdOverrides[rawId];
     }
+    guideLinksVersion++;
     onNotify();
   }
 
@@ -2236,6 +2277,7 @@ class PlaylistSession {
       final id = newOverrides[channel.rawId];
       if (id != null) channel.epgIdOverride = id;
     }
+    guideLinksVersion++;
     onNotify();
   }
 
@@ -2261,6 +2303,7 @@ class PlaylistSession {
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
       }
     }
+    guideLinksVersion++;
     onNotify();
   }
 
@@ -2412,6 +2455,24 @@ Map<String, int> _readFirstSeen(String path) => {
     };
 
 String _encodeFirstSeen(Map<String, int> seen) => jsonEncode(seen);
+
+/// [_readChannelsFile], then the playlist editor layer ([PlaylistEdits.apply]
+/// with the saved edits JSON: it stamps names and logos on the channels and
+/// says which it hides) and every shown name's [channelCopyKey], for
+/// Combine playlists. All of it here: on the main thread it froze a
+/// Homatics for 5.5 s with a 57k-channel list, and a key press then made
+/// Android close the app as not responding (LOG-PJTTML, 2026-11-19).
+({List<Channel> channels, Set<String> hidden, Map<String, String> keys})
+    _readLiveChannelsFile((String, String) args) {
+  final (path, editsJson) = args;
+  final channels = _readChannelsFile(path);
+  final hidden = PlaylistEdits.decode(editsJson).apply(channels);
+  return (
+    channels: channels,
+    hidden: hidden,
+    keys: channelCopyKeysOf(channels.map((c) => c.name)),
+  );
+}
 
 /// Also makes the ids unique here, on the isolate: on the main thread that
 /// pass over a big list cost a visible stall right after the splash (the

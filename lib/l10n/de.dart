@@ -3986,4 +3986,5 @@ const Map<String, String> kDe = {
       "Qualitätskopien, Ausweichquellen und andere Playlists, wie ohne Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Welche Streams Quellen für einen Tuliprox-Sender listet",
+  "Fallback": "Ersatz",
 };

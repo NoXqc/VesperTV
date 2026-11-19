@@ -4045,4 +4045,5 @@ const Map<String, String> kEl = {
       "Αντίγραφα ποιότητας, εφεδρικές πηγές και άλλες λίστες, όπως χωρίς Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Ποιες ροές δείχνουν οι Πηγές για ένα κανάλι Tuliprox",
+  "Fallback": "Εφεδρική",
 };
