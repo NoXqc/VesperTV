@@ -28,7 +28,7 @@ Grab the latest release from the [Releases](../../releases) page or
   Later updates install from **Settings > Check for updates**.
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
   [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
-- **Linux (beta, x64)**: `VesperTV-1.0.70-861-linux-x64.tar.gz` from the
+- **Linux (beta, x64)**: `VesperTV-1.0.70-869-linux-x64.tar.gz` from the
   [1.0.70 release](../../releases/tag/1.0.70). **Works on the Steam Deck** (SteamOS) and on
   Ubuntu 24.04+ / Linux Mint 22+. It needs the system libmpv (`sudo apt install libmpv2`); on a
   Steam Deck, run it in Desktop Mode inside an Ubuntu 24.04 [distrobox](https://distrobox.it/).
