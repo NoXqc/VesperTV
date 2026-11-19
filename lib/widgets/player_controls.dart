@@ -27,6 +27,7 @@ import 'audio_delay_adjuster.dart';
 import 'data_pool_card.dart';
 import 'epg_guide.dart';
 import 'gold_tag.dart';
+import 'hold_to_activate.dart';
 import 'live_buffer_picker.dart';
 import 'native_video_hole.dart';
 import 'rec_cue.dart';
@@ -1194,15 +1195,13 @@ class PlayerControls extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (onToggleFavorite != null)
-                            IconButton(
-                              icon: Icon(
-                                isFavorite == true
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                color: isFavorite == true
-                                    ? Colors.amber
-                                    : Colors.white,
-                              ),
+                            _RingIconButton(
+                              icon: isFavorite == true
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: isFavorite == true
+                                  ? Colors.amber
+                                  : Colors.white,
                               tooltip: isFavorite == true
                                   ? tr('Remove from favorites')
                                   : tr('Add to favorites'),
@@ -1213,9 +1212,8 @@ class PlayerControls extends StatelessWidget {
                           // within this episode" the way the buttons either side
                           // of play/pause already do.
                           if (onPrevious != null)
-                            IconButton(
-                              icon: const Icon(Icons.skip_previous,
-                                  color: Colors.white),
+                            _RingIconButton(
+                              icon: Icons.skip_previous,
                               tooltip: tr('Previous episode'),
                               onPressed: onPrevious,
                             ),
@@ -1233,14 +1231,12 @@ class PlayerControls extends StatelessWidget {
                                     : target);
                               },
                             ),
-                          IconButton(
+                          _RingIconButton(
                             tooltip: value.isPlaying ? tr('Pause') : tr('Play'),
                             focusNode: playFocusNode,
-                            icon: Icon(
-                                value.isPlaying
-                                    ? Icons.pause
-                                    : Icons.play_arrow,
-                                color: Colors.white),
+                            icon: value.isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
                             // The service's toggle: pausing a live
                             // channel with catch-up is a timeshift.
                             onPressed: () => ownsPlayer
@@ -1260,9 +1256,8 @@ class PlayerControls extends StatelessWidget {
                               },
                             ),
                           if (onNext != null)
-                            IconButton(
-                              icon: const Icon(Icons.skip_next,
-                                  color: Colors.white),
+                            _RingIconButton(
+                              icon: Icons.skip_next,
                               tooltip: tr('Next episode'),
                               onPressed: onNext,
                             ),
@@ -1488,8 +1483,8 @@ class PlayerControls extends StatelessWidget {
   List<Widget> _catchupLeading(
           BuildContext context, PlaybackService playback, CatchupSession s) =>
       [
-        IconButton(
-          icon: const Icon(Icons.skip_previous, color: Colors.white),
+        _RingIconButton(
+          icon: Icons.skip_previous,
           tooltip: tr('Previous programme'),
           onPressed: () {
             onActivity?.call();
@@ -1498,8 +1493,8 @@ class PlayerControls extends StatelessWidget {
             if (before != null) playback.playCatchup(s.live, before.start);
           },
         ),
-        IconButton(
-          icon: const Icon(Icons.restart_alt, color: Colors.white),
+        _RingIconButton(
+          icon: Icons.restart_alt,
           tooltip: tr('Watch from the start'),
           onPressed: () {
             onActivity?.call();
@@ -1513,8 +1508,8 @@ class PlayerControls extends StatelessWidget {
   List<Widget> _catchupTrailing(
           BuildContext context, PlaybackService playback, CatchupSession s) =>
       [
-        IconButton(
-          icon: const Icon(Icons.skip_next, color: Colors.white),
+        _RingIconButton(
+          icon: Icons.skip_next,
           tooltip: tr('Next programme'),
           onPressed: () {
             onActivity?.call();
@@ -3609,36 +3604,7 @@ class _SkipButtonState extends State<_SkipButton> {
         onTapCancel: _endHold,
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: RefinedFinish.decorate(
-              context,
-              BoxDecoration(
-                shape: BoxShape.circle,
-                color: _focused ? null : Colors.transparent,
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.black,
-                          Color.lerp(
-                              Colors.black, scheme.primaryContainer, 0.4)!,
-                          Colors.black,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      )
-                    : null,
-                border: _focused
-                    ? Border.all(color: scheme.primary, width: 2)
-                    : null,
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.45),
-                            blurRadius: 12)
-                      ]
-                    : const [],
-              ),
-              focused: _focused),
+          decoration: _ringDecoration(context, _focused),
           // `scheme.tertiary` — a dedicated icon/symbol-glyph accent,
           // separate from the border/gradient accent (`scheme.primary`)
           // — see `buildPaletteColorScheme`'s own doc comment for why
@@ -3646,6 +3612,108 @@ class _SkipButtonState extends State<_SkipButton> {
           child: Icon(widget.icon,
               color: _focused ? scheme.tertiary : Colors.white,
               size: widget.iconSize),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bar's round-button focus look: accent ring, dark sheen and glow, on
+/// at once (no fade). [_SkipButton] and [_RingIconButton] share it, so the
+/// bar has one focus highlight.
+Decoration _ringDecoration(BuildContext context, bool focused) {
+  final scheme = Theme.of(context).colorScheme;
+  return RefinedFinish.decorate(
+      context,
+      BoxDecoration(
+        shape: BoxShape.circle,
+        color: focused ? null : Colors.transparent,
+        gradient: focused
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.black,
+                  Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
+                  Colors.black,
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              )
+            : null,
+        border: focused ? Border.all(color: scheme.primary, width: 2) : null,
+        boxShadow: focused
+            ? [
+                BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.45),
+                    blurRadius: 12)
+              ]
+            : const [],
+      ),
+      focused: focused);
+}
+
+/// A round bar button (star, previous / next, restart, play / pause) with
+/// [_SkipButton]'s focus ring. Stock IconButtons showed Material's faint
+/// grey focus circle, fading in, beside the -10 / +10 rings (owner photos,
+/// 2026-11-19: "two focus highlights is weird, the lighter one is barely
+/// noticeable"). OK acts on the press only: the Homatics remote sends an
+/// OK repeat ~420 ms after a press, which paused and played again.
+class _RingIconButton extends StatefulWidget {
+  const _RingIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.color = Colors.white,
+    this.focusNode,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  /// The icon's colour at rest (the star is amber when set).
+  final Color color;
+  final FocusNode? focusNode;
+
+  @override
+  State<_RingIconButton> createState() => _RingIconButtonState();
+}
+
+class _RingIconButtonState extends State<_RingIconButton> {
+  bool _focused = false;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!isActivateKey(event.logicalKey)) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) widget.onPressed?.call();
+    // The repeat and the release too: nothing else may act on them.
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rest = widget.color;
+    return Tooltip(
+      message: widget.tooltip,
+      child: Semantics(
+        button: true,
+        label: widget.tooltip,
+        child: Focus(
+          focusNode: widget.focusNode,
+          onKeyEvent: _onKey,
+          onFocusChange: (f) => setState(() => _focused = f),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onPressed,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: _ringDecoration(context, _focused),
+              child: Icon(widget.icon,
+                  color: _focused && rest == Colors.white
+                      ? scheme.tertiary
+                      : rest),
+            ),
+          ),
         ),
       ),
     );
