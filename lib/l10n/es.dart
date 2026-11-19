@@ -3929,6 +3929,7 @@ const Map<String, String> kEs = {
       "Las fuentes muestran las etiquetas de VesperTV",
   "Every stream of a channel in the player's Sources":
       "Todas las emisiones de un canal en las Fuentes del reproductor",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr cambió el canal a {stream}.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Dispatcharr rechazó el inicio de sesión guardado. Vuelve a iniciar sesión.",
   "Dispatcharr doesn't answer right now.":

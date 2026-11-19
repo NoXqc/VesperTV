@@ -1900,6 +1900,11 @@ bool unlearnHlsUrl(String url, Object error) {
 
 bool _streamUsesHls(String url) {
   final uri = Uri.parse(url);
+  // A Dispatcharr stream picked in Sources names its format (it has no
+  // .m3u8 in the path): opened as HLS at once, not after a failed read
+  // and a sniff (clayts450, 2026-11-18: the switch should be smooth).
+  final format = uri.queryParameters['output_format']?.toLowerCase();
+  if (format == 'hls' || format == 'm3u8') return true;
   return _hlsUrls.contains(url) ||
       (_hlsHosts.contains(uri.host) &&
           uri.path.toLowerCase().endsWith('.ts') &&

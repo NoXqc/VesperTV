@@ -70,8 +70,15 @@ final _sourcesTool = VesperTool(
         if (e.current) return {'note': '${c.sourceName} is already playing.'};
         await _confirmRemote(box, caller, 'An AI app wants to play {title}.',
             {'title': c.sourceName});
-        await box.playback.playLiveSource(c);
-        return {'playing': c.sourceName, 'channel': playing.name};
+        final switched =
+            await playPickedLiveSource(playing, c, box.playback.playLiveSource);
+        return {
+          'playing': c.sourceName,
+          'channel': playing.name,
+          if (switched != null)
+            'note': 'Dispatcharr switched the channel itself, for everyone '
+                'watching it on that server.',
+        };
       default:
         throw VesperToolError('action must be list or play.');
     }

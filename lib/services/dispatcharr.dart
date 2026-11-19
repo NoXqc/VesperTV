@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
+import 'live_stream_format.dart';
 import 'storage_service.dart';
 
 /// Dispatcharr (github.com/Dispatcharr/Dispatcharr): a server that merges
@@ -24,7 +25,12 @@ import 'storage_service.dart';
 /// /by-uuids/`, `GET /api/channels/channels/{id}/streams/` (ordered as the
 /// channel uses them, with `stream_hash` and `stream_stats`).
 /// `/proxy/ts/stream/{stream_hash}` plays one stream (Dispatcharr's own
-/// stream preview; no login, the server's network rules apply).
+/// stream preview; no login, the server's network rules apply), in the
+/// format `?output_format=` asks for (else the user's / server's default).
+/// Admins: `POST /proxy/ts/change_stream/{channel uuid}` `{"stream_id"}`
+/// switches a playing channel to another of its streams (what Dispatcharr's
+/// own Switch Stream does; the viewers keep their connection) and
+/// `GET /proxy/ts/status/{channel uuid}` says which stream it is on.
 class DispatcharrLogin {
   const DispatcharrLogin(
       {required this.server, required this.apiKey, required this.username});
@@ -184,6 +190,31 @@ class DispatcharrChannelRef {
   String toString() => id != null ? 'id $id' : 'uuid ${uuid ?? '?'}';
 }
 
+/// The format Dispatcharr serves the channel at [url] in, as its
+/// `output_format` names it: an Xtream link's extension decides (`.ts` =
+/// mpegts, `.m3u8` = hls, `.mp4` = fmp4; VesperTV's Stream format HLS
+/// turns `.ts` into `.m3u8` when it plays, [LiveStreamFormat]), else an
+/// `output_format` / `output` query. Null = Dispatcharr's default for the
+/// user (an M3U channel link). A picked stream asks for the same, or it
+/// played in the other format (clayts450, 2026-11-18: MPEG-TS channel,
+/// HLS stream, or the reverse, whenever the two settings differed).
+String? dispatcharrOutputFormat(String url) {
+  final u = Uri.tryParse(LiveStreamFormat.urlFor(url));
+  if (u == null) return null;
+  final path = u.path.toLowerCase();
+  if (path.endsWith('.m3u8')) return 'hls';
+  if (path.endsWith('.ts')) return 'mpegts';
+  if (path.endsWith('.mp4')) return 'fmp4';
+  final q = (u.queryParameters['output_format'] ?? u.queryParameters['output'])
+      ?.toLowerCase();
+  return switch (q) {
+    'hls' || 'm3u8' => 'hls',
+    'ts' || 'mpegts' => 'mpegts',
+    'mp4' || 'fmp4' => 'fmp4',
+    _ => null,
+  };
+}
+
 /// [url] as a channel of the Dispatcharr at [server], or null when it is
 /// another server or not a channel URL. Host and port must match (the
 /// scheme may differ: a reverse proxy can add https).
@@ -249,9 +280,11 @@ class DispatcharrApi {
     return u.replaceAll(RegExp(r'/+$'), '');
   }
 
-  /// The URL that plays one stream through Dispatcharr's proxy.
-  static String streamUrl(String server, String hash) =>
-      '$server/proxy/ts/stream/$hash';
+  /// The URL that plays one stream through Dispatcharr's proxy, in
+  /// [format] ([dispatcharrOutputFormat]) when given.
+  static String streamUrl(String server, String hash, {String? format}) =>
+      '$server/proxy/ts/stream/$hash'
+      '${format == null ? '' : '?output_format=$format'}';
 
   static Map<String, String> _headers({String? apiKey, String? bearer}) => {
         'Accept': 'application/json',
@@ -385,6 +418,33 @@ class DispatcharrApi {
     return ((j.first as Map)['id'] as num?)?.toInt();
   }
 
+  /// Channel [channelId]'s uuid (what the proxy routes take).
+  Future<String?> channelUuid(DispatcharrLogin login, int channelId) async {
+    final j = await _get(login.server, '/api/channels/channels/$channelId/',
+        apiKey: login.apiKey);
+    final uuid = j is Map ? j['uuid'] : null;
+    return uuid is String && uuid.isNotEmpty ? uuid : null;
+  }
+
+  /// Switches the playing channel [uuid] to its stream [streamId], for
+  /// every viewer of it (admins only: 403 otherwise; an error when the
+  /// channel isn't playing on the server).
+  Future<void> changeStream(
+      DispatcharrLogin login, String uuid, int streamId) async {
+    await _post(
+        login.server, '/proxy/ts/change_stream/$uuid', {'stream_id': streamId},
+        apiKey: login.apiKey);
+  }
+
+  /// The stream channel [uuid] plays now, or null when it isn't playing
+  /// (admins only).
+  Future<int?> activeStreamId(DispatcharrLogin login, String uuid) async {
+    final j = await _get(login.server, '/proxy/ts/status/$uuid',
+        apiKey: login.apiKey);
+    final id = j is Map ? j['stream_id'] : null;
+    return id is num ? id.toInt() : (id is String ? int.tryParse(id) : null);
+  }
+
   /// Channel [channelId]'s streams, in the order Dispatcharr tries them.
   Future<List<DispatcharrStream>> channelStreams(
       DispatcharrLogin login, int channelId) async {
@@ -471,6 +531,16 @@ class Dispatcharr {
   final login = ValueNotifier<DispatcharrLogin?>(null);
 
   final Map<String, int?> _uuidIds = {};
+  final Map<int, String?> _idUuids = {};
+
+  /// Whether the signed-in account is an admin (only admins may switch a
+  /// channel's stream), asked once per sign-in.
+  Future<bool>? _admin;
+
+  /// The Dispatcharr streams the last Sources lists offered, by URL: the
+  /// channel they belong to and the stream id ([switchChannelTo]).
+  final Map<String, ({Channel channel, DispatcharrChannelRef ref, int id})>
+      _picks = {};
   final Map<int, ({DateTime at, List<DispatcharrStream> streams})> _streams =
       {};
   ({DateTime at, Map<int, String> names})? _names;
@@ -499,6 +569,9 @@ class Dispatcharr {
   Future<void> save(DispatcharrLogin? value) async {
     login.value = value;
     _uuidIds.clear();
+    _idUuids.clear();
+    _admin = null;
+    _picks.clear();
     _streams.clear();
     _names = null;
     await _storage
@@ -540,6 +613,82 @@ class Dispatcharr {
       return null;
     } catch (e) {
       debugPrint('Dispatcharr: streams for $ref failed ($e)');
+      return null;
+    }
+  }
+
+  /// Remembers that the Sources row [url] is stream [streamId] of
+  /// [channel] (a playlist channel of this server).
+  void notePick(String url, Channel channel, int streamId) {
+    final ref = refOf(channel);
+    if (ref != null) _picks[url] = (channel: channel, ref: ref, id: streamId);
+  }
+
+  /// Whether the signed-in account is a Dispatcharr admin.
+  Future<bool> isAdmin() {
+    final l = login.value;
+    if (l == null) return Future.value(false);
+    return _admin ??= api.check(l).then((a) => a.admin).catchError((Object e) {
+      debugPrint('Dispatcharr: account check failed ($e)');
+      _admin = null;
+      return false;
+    });
+  }
+
+  Future<String?> _uuidOf(DispatcharrLogin l, DispatcharrChannelRef ref) async {
+    if (ref.uuid != null) return ref.uuid;
+    final id = ref.id;
+    if (id == null) return null;
+    if (!_idUuids.containsKey(id)) _idUuids[id] = await api.channelUuid(l, id);
+    return _idUuids[id];
+  }
+
+  /// [source] is a Dispatcharr stream from the Sources list and this
+  /// account is an admin: Dispatcharr switches its channel to that stream
+  /// (Switch Stream in its own web page), so the player stays on the
+  /// channel, in the same format, and Dispatcharr's failover keeps working
+  /// (clayts450, 2026-11-18: playing the stream on its own took that away).
+  /// It switches the channel for everyone watching it on that server.
+  /// Returns the channel to be on; null = not switched (not a Dispatcharr
+  /// stream, not an admin, or the server refused): play [source] itself.
+  Future<Channel?> switchChannelTo(Channel source) async {
+    final pick = _picks[source.url];
+    final l = login.value;
+    if (pick == null || l == null) return null;
+    try {
+      if (!await isAdmin().timeout(const Duration(seconds: 4))) {
+        debugPrint('Dispatcharr: not an admin, the stream plays on its own');
+        return null;
+      }
+      final uuid =
+          await _uuidOf(l, pick.ref).timeout(const Duration(seconds: 4));
+      if (uuid == null) return null;
+      await api
+          .changeStream(l, uuid, pick.id)
+          .timeout(const Duration(seconds: 8));
+      debugPrint('Dispatcharr: channel ${pick.ref} switched to stream '
+          '${pick.id}');
+      return pick.channel;
+    } catch (e) {
+      debugPrint('Dispatcharr: switch to stream ${pick.id} failed ($e), '
+          'it plays on its own');
+      return null;
+    }
+  }
+
+  /// The stream [channel] plays on the server now, for an admin; null when
+  /// unknown (not an admin, not playing, no answer within [timeout]).
+  Future<int?> activeStreamOf(Channel channel,
+      {Duration timeout = const Duration(seconds: 2)}) async {
+    final l = login.value;
+    final ref = refOf(channel);
+    if (l == null || ref == null) return null;
+    try {
+      if (!await isAdmin().timeout(timeout)) return null;
+      final uuid = await _uuidOf(l, ref).timeout(timeout);
+      if (uuid == null) return null;
+      return await api.activeStreamId(l, uuid).timeout(timeout);
+    } catch (_) {
       return null;
     }
   }

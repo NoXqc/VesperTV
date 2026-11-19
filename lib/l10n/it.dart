@@ -3936,6 +3936,7 @@ const Map<String, String> kIt = {
       "Le fonti mostrano le etichette di VesperTV",
   "Every stream of a channel in the player's Sources":
       "Tutti i flussi di un canale nelle Fonti del lettore",
+  "Dispatcharr switched the channel to {stream}.": "Dispatcharr ha passato il canale a {stream}.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Dispatcharr ha rifiutato l'accesso salvato. Accedi di nuovo.",
   "Dispatcharr doesn't answer right now.":

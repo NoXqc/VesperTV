@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
+import '../services/live_sources.dart';
+import '../widgets/live_source_drawer.dart';
 import '../widgets/archive_source_drawer.dart';
 import '../widgets/channel_schedule_panel.dart';
 import '../utils/playback_modal_back_guard.dart';
@@ -332,6 +334,60 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         _rootFocus.requestFocus();
       }
     }
+  }
+
+  /// Live: the playing channel's other sources (quality copies, playlist
+  /// editor fallbacks, the same channel in other playlists, the streams of
+  /// a Dispatcharr channel), as Android's player lists them
+  /// ([liveSourceRows]). This player (iPhone / iPad, Windows, macOS, Linux)
+  /// had none (owner, 2026-11-18: iOS needs the Dispatcharr Sources too).
+  /// No "Add another source" row here: the playlist editor adds them.
+  Future<void> _openLiveSources() async {
+    if (!_isLive || _inCatchup || _sourceDrawerOpen) return;
+    final manager = context.read<PlaylistManager>();
+    final playing = _currentChannel;
+    _sourceBackGuard.opened();
+    setState(() => _controlsVisible = false);
+    try {
+      final (:rows, canAdd: _) = await liveSourceRows(manager, playing);
+      if (!mounted || _currentChannel.id != playing.id) return;
+      final picked = await showLiveSourceDrawer(context,
+          entries: [for (final r in rows) r.$2]);
+      if (!mounted ||
+          picked == null ||
+          picked < 0 ||
+          _currentChannel.id != playing.id) {
+        return;
+      }
+      final note =
+          await playPickedLiveSource(playing, rows[picked].$1, _playLiveSource);
+      if (note != null && mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(note)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('Could not switch stream. Try another source.'))));
+      }
+    } finally {
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
+    }
+  }
+
+  /// The playing live channel from another source (same channel, same
+  /// history and favourite: only the stream changes, like Android's
+  /// `PlaybackService.playLiveSource`).
+  Future<void> _playLiveSource(Channel source) async {
+    final channel = _currentChannel.copyWith(
+        url: source.url, httpHeaders: source.httpHeaders);
+    if (channel.url == _currentChannel.url) return;
+    debugPrint('DesktopPlayer: source picked -> ${source.name}');
+    setState(() => _currentChannel = channel);
+    await _openMedia(channel);
   }
 
   /// True once [_handleBack] has handed the live session to
@@ -1205,6 +1261,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Reload channel'),
                 onPressed: _reload,
               ),
+            if (_isLive && !_inCatchup)
+              IconButton(
+                icon: const Icon(Icons.swap_horiz, color: Colors.white),
+                tooltip: tr('Sources'),
+                onPressed: _openLiveSources,
+              ),
             // Back keeps a live channel playing in the guide's preview;
             // Stop ends it (Windows user, 2026-11-14).
             if (_isLive)
@@ -1453,6 +1515,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     tooltip: tr('Sources'),
                     icon: const Icon(Icons.swap_horiz, color: Colors.white),
                     onPressed: _openSources,
+                  )
+                else if (_isLive && !_inCatchup)
+                  IconButton(
+                    tooltip: tr('Sources'),
+                    icon: const Icon(Icons.swap_horiz, color: Colors.white),
+                    onPressed: _openLiveSources,
                   ),
                 if (IosPip.available && !_inCatchup)
                   IconButton(

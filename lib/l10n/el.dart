@@ -3891,6 +3891,7 @@ const Map<String, String> kEl = {
       "Οι πηγές δείχνουν τις ετικέτες του VesperTV",
   "Every stream of a channel in the player's Sources":
       "Όλες οι ροές ενός καναλιού στις Πηγές της αναπαραγωγής",
+  "Dispatcharr switched the channel to {stream}.": "Το Dispatcharr άλλαξε το κανάλι σε {stream}.",
   "Dispatcharr refused the saved sign-in. Sign in again.":
       "Το Dispatcharr απέρριψε την αποθηκευμένη σύνδεση. Συνδεθείτε ξανά.",
   "Dispatcharr doesn't answer right now.":
