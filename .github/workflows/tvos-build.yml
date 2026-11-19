@@ -8,8 +8,9 @@
 # What it does:
 # - Builds libmpv for Apple TV (tools/tvos/build_mpv_framework.sh, cached)
 #   for the media_kit video plugin (third_party/media_kit_video_tvos).
-# - Builds the app for the Apple TV simulator and runs it there: screenshots
-#   and the app's log come back as the "tvos-test" artifact.
+# - Builds the app for the Apple TV simulator and runs it there: a UI tour
+#   (lib/services/ci_tour.dart, tools/tvos/sim_tour.sh) with a public channel
+#   list; screenshots and the app's log come back as the "tvos-test" artifact.
 # - Player smoke test: lib/tvos_player_smoke.dart plays an HLS, a raw .ts and
 #   an MKV sample through media_kit on the simulator (screenshots + log).
 # - Compiles a release (AOT) device build without signing, to catch what
@@ -106,13 +107,16 @@ jobs:
           LANG: en_US.UTF-8
         run: |
           rc=0
-          flutter-tvos build tvos --simulator --debug -v > out/build-simulator.log 2>&1 || rc=$?
+          # VESPER_CI_TOUR: the app walks its own screens (lib/services/ci_tour.dart).
+          flutter-tvos build tvos --simulator --debug --dart-define=VESPER_CI_TOUR=true -v > out/build-simulator.log 2>&1 || rc=$?
           grep -E "error:|Mpv|Built |BUILD" out/build-simulator.log | tail -40
           exit $rc
 
-      - name: Run the app on the Apple TV simulator
+      # Screenshots of the real screens (TV guide, a channel playing, full
+      # screen, Sports Trak, Settings, Search): out/tour-NN-<stop>.png.
+      - name: UI tour on the Apple TV simulator
         if: ${{ !inputs.testflight }}
-        run: bash tools/tvos/sim_run.sh app 15 45 90
+        run: bash tools/tvos/sim_tour.sh 420
 
       - name: Build the player smoke test
         if: ${{ always() && !inputs.testflight }}

@@ -61,6 +61,7 @@ import 'services/sports_service.dart';
 import 'models/channel.dart';
 import 'widgets/recording_conflict_dialog.dart';
 import 'widgets/tv_canvas.dart';
+import 'services/ci_tour.dart';
 import 'services/playlist_manager.dart';
 import 'services/playlist_session.dart';
 import 'services/storage_service.dart';
@@ -198,6 +199,8 @@ Future<void> _main() async {
   CachedNetworkImageProvider.defaultCacheManager = persistentImageCacheManager;
   // Apple TV: drawn on an Android TV box's 960x540 canvas (TvCanvas).
   runApp(isAppleTv ? const TvCanvas(child: NoxIptvApp()) : const NoxIptvApp());
+  // tvOS workflow only (a build constant): walks the app for screenshots.
+  if (CiTour.enabled) unawaited(CiTour.run());
 }
 
 /// Flutter's default ImageCache holds up to 1000 decoded images / ~100MB —
@@ -712,6 +715,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      if (CiTour.enabled) await CiTour.seed(_storage);
       // An update that ran with the app closed stops once the app is on
       // screen; it shares the databases and saves sync times (Settings >
       // Startup > Update while VesperTV is closed).
