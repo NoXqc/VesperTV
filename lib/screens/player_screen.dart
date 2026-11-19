@@ -2066,6 +2066,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                               // Media Hub: other files of
                                               // this title (a remote uses
                                               // Right; touch has no key).
+                                              // Live: the tab on the right
+                                              // edge (see below).
                                               if (widget.sources != null)
                                                 _TopBarIconButton(
                                                   icon: Icons.swap_horiz,
@@ -2487,6 +2489,38 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     child: Center(
                                       child:
                                           PlayerSidePanelTab(onTap: _openPanel),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Touch, live: the same tab on the right edge opens
+                          // the channel's Sources drawer (a remote has Sources
+                          // in the options row).
+                          if (_touch &&
+                              channel.isLive &&
+                              playback.catchup == null)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                ignoring: !_topVisible ||
+                                    _panelOpen ||
+                                    _sourceDrawerOpen,
+                                child: AnimatedOpacity(
+                                  opacity: _topVisible && !_panelOpen ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: SafeArea(
+                                    left: false,
+                                    child: Center(
+                                      child: PlayerSidePanelTab(
+                                        onTap: _openLiveSources,
+                                        rightEdge: true,
+                                        icon: Icons.swap_horiz,
+                                        label: tr('Sources'),
+                                      ),
                                     ),
                                   ),
                                 ),
