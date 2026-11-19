@@ -156,6 +156,13 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     }
     double ptsFps = player.frameRateProbe.fps();
     if (ptsFps > 0) m.put("ptsFps", ptsFps);
+    String gaps = player.frameRateProbe.gapsText();
+    if (!gaps.isEmpty()) m.put("ptsGaps", gaps);
+    @Nullable StreamStats requests = player.streamStats;
+    if (requests != null) {
+      String opens = requests.opensText();
+      if (!opens.isEmpty()) m.put("opens", opens);
+    }
     result.success(m);
   }
 
