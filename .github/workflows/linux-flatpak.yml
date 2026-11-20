@@ -98,6 +98,26 @@ jobs:
           grep -n '<release ' linux/flatpak/app.vespertv.VesperTV.metainfo.xml
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: VesperTV-${{ needs.bundle.outputs.version }}-x86_64.flatpak
+          # The artifact gets "-x86_64" added.
+          bundle: VesperTV-${{ needs.bundle.outputs.version }}.flatpak
           manifest-path: linux/flatpak/app.vespertv.VesperTV.yml
           cache-key: flatpak-builder-${{ hashFiles('linux/flatpak/app.vespertv.VesperTV.yml') }}
+      - name: Smoke test (install the bundle, libraries, 20 s run under Xvfb)
+        run: |
+          b="$(find . -maxdepth 2 -name 'VesperTV-*.flatpak' | head -1)"
+          echo "bundle: $b"
+          flatpak install -y --noninteractive --system "$b"
+          # Everything the app and libmpv load must come from /app or the runtime.
+          flatpak run --command=sh app.vespertv.VesperTV -c '
+            for f in /app/vespertv/vespertv /app/vespertv/lib/*.so /app/lib/libmpv.so.2; do
+              ldd "$f" | grep "not found" | sed "s|^|MISSING ($f): |"
+            done
+            echo "libraries checked"' | tee ldd.txt
+          ! grep -q MISSING ldd.txt
+          set +e
+          timeout 20 xvfb-run -a flatpak run app.vespertv.VesperTV > run.log 2>&1
+          code=$?
+          set -e
+          tail -60 run.log
+          echo "exit $code (124 = still running after 20 s = started fine)"
+          [ "$code" = 124 ]
