@@ -193,12 +193,23 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // track default and would show it by itself; it stays off until the
   // viewer picks it ([desktopCaptionsWanted]), then follows them on zaps.
   native.setProperty('sub-create-cc-track', 'yes');
-  player.stream.track.listen((t) {
-    if (isClosedCaptionTrack(t.subtitle) &&
-        desktopCaptionsWanted[player] != true) {
+  // Checked again when the track list changes: mpv can pick the captions
+  // track before the list naming its codec arrives (the selection alone
+  // then reads as an unknown codec), and an Apple TV viewer had captions
+  // on (Discord, 2026-11-20).
+  void captionsOff() {
+    if (desktopCaptionsWanted[player] == true) return;
+    final current = player.state.track.subtitle;
+    if (current.id == 'no') return;
+    final listed =
+        player.state.tracks.subtitle.where((t) => t.id == current.id);
+    if (isClosedCaptionTrack(current) || listed.any(isClosedCaptionTrack)) {
       unawaited(player.setSubtitleTrack(SubtitleTrack.no()));
     }
-  });
+  }
+
+  player.stream.track.listen((_) => captionsOff());
+  player.stream.tracks.listen((_) => captionsOff());
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
   player.stream.log.listen((log) {
     if (log.level == 'error' || log.level == 'fatal') {

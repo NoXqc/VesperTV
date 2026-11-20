@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../utils/desktop_platform.dart';
 import '../models/channel.dart';
+import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
@@ -16,8 +17,10 @@ import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
 import '../l10n/l10n.dart';
 import '../services/desktop_stream_setup.dart';
-import '../services/desktop_live_recovery.dart';
+import '../services/desktop_live_recovery.dart';
 import '../widgets/glass_menu.dart';
+import '../widgets/tv_dialog_option.dart';
+import '../widgets/tv_text_field_gate.dart';
 import 'multiview_screen.dart' show swapRotation;
 
 /// Windows-only: a grid of simultaneously-playing live channels —
@@ -38,8 +41,20 @@ import 'multiview_screen.dart' show swapRotation;
 /// tapping a filled cell makes it the audio-focused one, mirroring
 /// TiviMate's own "tap to swap audio" multiview behavior rather than
 /// trying to invent a different convention.
+///
+/// With a TV remote (Apple TV) the screens are the focus stops: the first
+/// one has focus on open (a gold-white frame), OK on an empty one opens the
+/// channel picker, on a playing one gives it the sound, and on the one with
+/// the sound opens Change channel / Reload / Remove (the hover buttons on
+/// each screen are for a mouse only).
 class DesktopMultiviewScreen extends StatefulWidget {
-  const DesktopMultiviewScreen({super.key});
+  const DesktopMultiviewScreen({super.key, this.initialChannel});
+
+  /// Plays on the first screen when Multiview opens: the player bar's
+  /// Multiview button brings the channel it was playing. Back returns the
+  /// channel with the sound ([Navigator.pop] result) so the player can go
+  /// on with it.
+  final Channel? initialChannel;
 
   @override
   State<DesktopMultiviewScreen> createState() => _DesktopMultiviewScreenState();
@@ -86,7 +101,24 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   /// Bumped on every swap: the big screen flashes gold once.
   int _swapCount = 0;
 
-  final _keys = FocusNode(debugLabel: 'desktop-multiview');
+  /// Swap mode's arrows. Not a focus stop itself: a focusable wrapper the
+  /// size of the screen left a remote nowhere to go (every screen lies
+  /// inside it, so no arrow found a neighbour) and OK on it did nothing:
+  /// "clicking on the + does nothing" on Apple TV (Discord, 2026-11-20).
+  /// Its key handler sees the keys of whatever has focus inside.
+  final _keys = FocusNode(
+      debugLabel: 'desktop-multiview',
+      canRequestFocus: false,
+      skipTraversal: true);
+
+  /// One focus stop per screen, kept by place (a swap moves the players,
+  /// not the stops). The first screen has focus when Multiview opens.
+  final List<FocusNode> _cellFocus = List.generate(
+      _cellCount, (i) => FocusNode(debugLabel: 'desktop-multiview-cell-$i'));
+  int? _focusedCell;
+
+  /// A remote, not a mouse: Apple TV. Computers keep the click layout.
+  bool get _tv => context.read<AppPreferences?>()?.isTelevision ?? false;
 
   @override
   void initState() {
@@ -97,6 +129,29 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
         : storage.getMultiviewQuad()
             ? _MultiviewLayout.quad
             : _MultiviewLayout.dual;
+    final first = widget.initialChannel;
+    if (first != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _assign(0, first);
+      });
+    }
+  }
+
+  /// Back: the channel with the sound goes back to the player that opened
+  /// Multiview (null when no screen plays).
+  void _leave() {
+    final active = _cells[_activeCell].channel ??
+        _cells.map((c) => c.channel).whereType<Channel>().firstOrNull;
+    // Every screen lets go of its stream now, not after the closing
+    // animation (dispose): the player that opened Multiview reconnects at
+    // once, and many accounts allow one connection.
+    for (final cell in _cells) {
+      final player = cell.player;
+      if (player == null) continue;
+      DesktopLiveRecovery.of(player).stop();
+      unawaited(player.stop());
+    }
+    Navigator.of(context).pop(active);
   }
 
   bool _playing(_MultiviewCell c) => c.channel != null && c.player != null;
@@ -110,7 +165,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     if (!_playing(_cells[0])) _moveToMain(_cells.indexWhere(_playing));
     setState(() => _swapMode = true);
     _setSwapAudio();
-    _keys.requestFocus();
+    _cellFocus[0].requestFocus();
     debugPrint('DesktopMultiview: swap mode on');
   }
 
@@ -201,6 +256,9 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   @override
   void dispose() {
     _keys.dispose();
+    for (final node in _cellFocus) {
+      node.dispose();
+    }
     for (final cell in _cells) {
       cell.completedSubscription?.cancel();
       DesktopLiveRecovery.disposePlayer(cell.player);
@@ -273,21 +331,80 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       builder: (_) => _ChannelPickerDialog(channels: channels),
     );
     if (chosen != null) _assign(index, chosen);
+    if (mounted && _tv) _cellFocus[index].requestFocus();
+  }
+
+  /// Remote: OK on the screen with the sound. The mouse has these as
+  /// buttons on the screen itself.
+  Future<void> _cellMenu(int index) async {
+    final channel = _cells[index].channel;
+    if (channel == null) return;
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        title: Text(channel.name),
+        children: [
+          TvDialogOption(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop('change'),
+            child: Text(tr('Change channel')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('reload'),
+            child: Text(tr('Reload')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('remove'),
+            child: Text(tr('Remove')),
+          ),
+          if (_canSwap && !_swapMode)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('swap'),
+              child: Text(tr('Swap mode')),
+            ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'change':
+        await _openPicker(index);
+      case 'reload':
+        _reload(index);
+      case 'remove':
+        _clear(index);
+      case 'swap':
+        _enterSwapMode();
+    }
+    if (mounted && choice != 'change' && choice != 'swap') {
+      _cellFocus[index].requestFocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Back in Swap mode ends it first.
-      canPop: !_swapMode,
+      // Back in Swap mode ends it first; otherwise it leaves with the
+      // channel that has the sound ([_leave]).
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _exitSwapMode();
+        if (didPop) return;
+        if (_swapMode) {
+          _exitSwapMode();
+        } else {
+          _leave();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Focus(
           focusNode: _keys,
-          autofocus: true,
+          canRequestFocus: false,
+          skipTraversal: true,
           onKeyEvent: _onKey,
           child: SafeArea(
             child: Column(
@@ -299,7 +416,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                       IconButton(
                         tooltip: tr('Back'),
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: _leave,
                       ),
                       Text(tr('Multiview'),
                           style: const TextStyle(
@@ -472,22 +589,41 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   Widget _buildCell(int index) {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
+    // The frame shows the remote's place; a mouse needs none.
+    final focused = _tv && _focusedCell == index;
     return InkWell(
+      focusNode: _cellFocus[index],
+      autofocus: index == 0,
+      onFocusChange: (f) {
+        if (f) {
+          setState(() => _focusedCell = index);
+        } else if (_focusedCell == index) {
+          setState(() => _focusedCell = null);
+        }
+      },
       onTap: () {
         if (cell.channel == null) {
           _openPicker(index);
         } else if (_swapMode) {
           // A small screen moves up; the big one ends Swap mode.
           index == 0 ? _exitSwapMode() : _moveToMain(index);
+        } else if (_tv && active) {
+          _cellMenu(index);
         } else {
           _setActive(index);
         }
       },
       child: Container(
+        // The remote's place: white, over the gold of the screen with the
+        // sound (InkWell's own focus colour is drawn under the video).
         decoration: BoxDecoration(
           border: Border.all(
-              color: active ? Colors.amber : Colors.white24,
-              width: active ? 3 : 1),
+              color: focused
+                  ? Colors.white
+                  : active
+                      ? Colors.amber
+                      : Colors.white24,
+              width: focused || active ? 3 : 1),
           borderRadius: BorderRadius.circular(8),
         ),
         clipBehavior: Clip.antiAlias,
@@ -510,7 +646,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                         key: ObjectKey(cell.controller),
                         controller: cell.controller!,
                         controls: NoVideoControls,
-                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground),
                   ),
                 )
               : const ColoredBox(
@@ -551,58 +688,63 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                         ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        if (active) ...[
-                          const Icon(Icons.volume_up,
-                              color: Colors.amber,
-                              size: 15,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 4)
-                              ]),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: Text(
-                            cell.channel!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                    // A remote never stops on these (they show on mouse
+                    // hover): OK on the screen opens the same actions.
+                    child: ExcludeFocus(
+                      excluding: _tv,
+                      child: Row(
+                        children: [
+                          if (active) ...[
+                            const Icon(Icons.volume_up,
+                                color: Colors.amber,
+                                size: 15,
                                 shadows: [
                                   Shadow(color: Colors.black, blurRadius: 4)
                                 ]),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              cell.channel!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: [
+                                    Shadow(color: Colors.black, blurRadius: 4)
+                                  ]),
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.refresh,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Reload'),
-                          onPressed: () => _reload(index),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.swap_horiz,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Change channel'),
-                          onPressed: () => _openPicker(index),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.close,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Remove'),
-                          onPressed: () => _clear(index),
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.refresh,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Reload'),
+                            onPressed: () => _reload(index),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.swap_horiz,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Change channel'),
+                            onPressed: () => _openPicker(index),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.close,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Remove'),
+                            onPressed: () => _clear(index),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -632,6 +774,9 @@ enum _PickerFilter { all, live, sports }
 
 class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode(debugLabel: 'desktop-multiview-search');
+
+  bool get _tv => context.read<AppPreferences?>()?.isTelevision ?? false;
   String _query = '';
   _PickerFilter _filter = _PickerFilter.all;
 
@@ -662,6 +807,7 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -696,18 +842,26 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
           children: [
             Padding(
               padding: const EdgeInsets.all(12),
-              // tv-text-field-gate: exempt — Windows only (no TV keyboard).
-              child: TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: tr('Search channels...'),
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                  border: const OutlineInputBorder(),
+              // On a computer it types at once (autofocus); with a remote
+              // (Apple TV) the keyboard waits for OK and the arrows pass
+              // over it, and the first channel has focus instead: a
+              // focused field kept the arrows for its cursor.
+              child: TvTextFieldGate(
+                focusNode: _searchFocus,
+                builder: (context, readOnly) => TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocus,
+                  readOnly: readOnly,
+                  autofocus: !_tv,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: tr('Search channels...'),
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
                 ),
-                onChanged: (v) => setState(() => _query = v),
               ),
             ),
             Padding(
@@ -739,9 +893,14 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                             _filter == _PickerFilter.live && i < live.length
                                 ? live[i]
                                 : null;
+                        // Remote: the list starts focused (see the search
+                        // field above).
+                        final first = i == 0 && _tv;
                         if (row != null) {
                           final n = row.matches.length;
-                          return GlassFocusFrame(child: ListTile(
+                          return GlassFocusFrame(
+                              child: ListTile(
+                            autofocus: first,
                             leading: const Icon(Icons.sports_score,
                                 color: Colors.white54),
                             title: Text(MultiviewSports.label(row.game),
@@ -767,7 +926,9 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                             },
                           ));
                         }
-                        return GlassFocusFrame(child: ListTile(
+                        return GlassFocusFrame(
+                            child: ListTile(
+                          autofocus: first,
                           leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
                               ? Image.network(c.logoUrl!,
                                   width: 32,

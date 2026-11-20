@@ -51,6 +51,7 @@ import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
+import 'desktop_multiview_screen.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -275,6 +276,48 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _zapHud = null;
   }
 
+  /// A TV remote (Apple TV), not a mouse and keyboard: the bar hides when
+  /// nothing on it has focus, OK opens it on Play / Pause, and it hides
+  /// again by itself ([_armTvBarIdle]). A computer's bar shows from the
+  /// start and stays. Discord (Apple TV, 2026-11-20): the bar was on screen
+  /// with the picture holding the remote, so every arrow changed channel
+  /// or opened the side panel instead of moving along it.
+  bool get _tv => context.read<AppPreferences>().isTelevision;
+
+  /// OK on the picture: the bar with Play / Pause focused (the keyboard's
+  /// and the remote's way into it).
+  void _showBarFocused() {
+    _stopZapHud();
+    setState(() => _controlsVisible = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _playPauseFocus.context != null) {
+        _playPauseFocus.requestFocus();
+      }
+    });
+    _armTvBarIdle();
+  }
+
+  /// Remote: the bar hides 6 s after the last key while it has focus (not
+  /// while a menu from it is open or nothing plays), and the picture takes
+  /// the arrows again.
+  Timer? _tvBarIdle;
+  void _armTvBarIdle() {
+    if (!_tv) return;
+    _tvBarIdle?.cancel();
+    _tvBarIdle = Timer(const Duration(seconds: 6), () {
+      _tvBarIdle = null;
+      if (!mounted) return;
+      if (ModalRoute.isCurrentOf(context) == false || !_player.state.playing) {
+        _armTvBarIdle();
+        return;
+      }
+      final inBar = _rootFocus.hasFocus && !_rootFocus.hasPrimaryFocus;
+      if (!_controlsVisible || !inBar) return;
+      setState(() => _controlsVisible = false);
+      _rootFocus.requestFocus();
+    });
+  }
+
   void _openPanel() {
     if (!_isLive) return;
     setState(() {
@@ -438,6 +481,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void initState() {
     super.initState();
     _currentChannel = widget.channel;
+    if (_tv) {
+      // Remote: the bar shows the channel for 3 s, then the picture.
+      _controlsVisible = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _flashControls();
+      });
+    }
     DesktopPlayerControl.register(_control);
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
     _armWatchTimer();
@@ -966,6 +1016,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _watchTimer?.cancel();
     _watchFocus.dispose();
     _zapHud?.cancel();
+    _tvBarIdle?.cancel();
     _playPauseFocus.dispose();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
@@ -1065,6 +1116,29 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         DesktopLiveRecovery.of(_player).watch(channel);
       }
     }));
+  }
+
+  /// The bar's Multiview (Android's player has it, Apple TV didn't:
+  /// Discord, 2026-11-20): the playing channel becomes Multiview's first
+  /// screen. This player lets go of the stream first (one provider
+  /// connection per screen, CLAUDE.md), and plays the screen that has the
+  /// sound when Multiview closes.
+  Future<void> _openMultiview() async {
+    if (!_isLive || _inCatchup) return;
+    final channel = _currentChannel;
+    _stopZapHud();
+    _tvBarIdle?.cancel();
+    setState(() => _controlsVisible = false);
+    ++_openGeneration;
+    DesktopLiveRecovery.of(_player).stop();
+    await _player.stop();
+    if (!mounted) return;
+    final back = await Navigator.of(context).push<Channel>(MaterialPageRoute(
+        builder: (_) => DesktopMultiviewScreen(initialChannel: channel)));
+    if (!mounted) return;
+    _rootFocus.requestFocus();
+    await _switchTo(back ?? channel);
+    if (mounted) _flashControls();
   }
 
   /// Catch-up from [at] on the same player. Live recovery stops first:
@@ -1296,6 +1370,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Sources'),
                 onPressed: _openLiveSources,
               ),
+            if (_isLive && !_inCatchup)
+              IconButton(
+                icon: const Icon(Icons.grid_view, color: Colors.white),
+                tooltip: tr('Multiview'),
+                onPressed: _openMultiview,
+              ),
             // Back keeps a live channel playing in the guide's preview;
             // Stop ends it (Windows user, 2026-11-14).
             if (_isLive)
@@ -1348,14 +1428,38 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 key: ValueKey('audio-${_currentChannel.id}'),
                 player: _player,
                 channel: _currentChannel),
-            if (!_isLive)
-              DesktopSubtitleButton(
-                  // A new episode is a new file: fresh track list.
-                  key: ValueKey(_currentChannel.id),
-                  player: _player,
-                  channel: _currentChannel),
-            _DesktopVolume(player: _player),
+            // Live too: a channel's closed captions (CC) go on and off here
+            // (an Apple TV viewer had them on with no way to turn them off).
+            DesktopSubtitleButton(
+                // A new episode is a new file: fresh track list.
+                key: ValueKey(_currentChannel.id),
+                player: _player,
+                channel: _currentChannel),
+            // The TV's own remote sets the volume; the slider would also
+            // keep Left / Right for itself.
+            if (!_tv) _DesktopVolume(player: _player),
           ],
+        );
+        final ring = Theme.of(context).colorScheme.primary;
+        // A gold ring on the focused button: the theme's focus tint was a
+        // faint grey circle, invisible over a picture from the couch.
+        ButtonStyle focusRing(ButtonStyle? base) =>
+            (base ?? const ButtonStyle()).copyWith(
+              side: WidgetStateProperty.resolveWith((s) =>
+                  s.contains(WidgetState.focused)
+                      ? BorderSide(color: ring, width: 2)
+                      : null),
+              backgroundColor: WidgetStateProperty.resolveWith((s) =>
+                  s.contains(WidgetState.focused) ? Colors.black54 : null),
+            );
+        final ringed = IconButtonTheme(
+          data: IconButtonThemeData(
+              style: focusRing(IconButtonTheme.of(context).style)),
+          child: TextButtonTheme(
+            data: TextButtonThemeData(
+                style: focusRing(TextButtonTheme.of(context).style)),
+            child: buttons,
+          ),
         );
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -1432,7 +1536,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 ),
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: width * 0.6),
-                  child: FittedBox(fit: BoxFit.scaleDown, child: buttons),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: ringed),
                 ),
                 Expanded(
                   child: Align(
@@ -1731,11 +1835,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             key: ValueKey('audio-${_currentChannel.id}'),
             player: _player,
             channel: _currentChannel),
-        if (!_isLive)
-          DesktopSubtitleButton(
-              key: ValueKey(_currentChannel.id),
-              player: _player,
-              channel: _currentChannel),
+        // Live too: closed captions (CC) on / off.
+        DesktopSubtitleButton(
+            key: ValueKey(_currentChannel.id),
+            player: _player,
+            channel: _currentChannel),
       ];
 
   /// Touch: elapsed | seek bar | length. Dragging moves the thumb; the
@@ -1824,6 +1928,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           focusNode: _rootFocus,
           autofocus: true,
           onKeyEvent: (_, event) {
+            // Remote: any key while the bar has focus keeps it up.
+            if (_tv && event is KeyDownEvent && !_rootFocus.hasPrimaryFocus) {
+              _armTvBarIdle();
+            }
             if (event is KeyDownEvent &&
                 _rootFocus.hasPrimaryFocus &&
                 _currentChannel.mediaFileInfo != null &&
@@ -1833,7 +1941,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   LogicalKeyboardKey.numpadEnter
                 ].contains(event.logicalKey)) {
               _fileInfoRequests.value++;
-              return KeyEventResult.handled;
+              // A remote has no other way into the bar: OK opens it too
+              // (below).
+              if (!_tv) return KeyEventResult.handled;
             }
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.arrowRight &&
@@ -1886,6 +1996,30 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               }
               return KeyEventResult.handled;
             }
+            // Remote on a movie, an episode or catch-up: Left / Right on the
+            // picture go 10 s back / ahead (Right = the sources when there
+            // are some, above), Up / Down open the bar like OK.
+            if (_tv &&
+                event is! KeyUpEvent &&
+                _rootFocus.hasPrimaryFocus &&
+                !_panelOpen &&
+                !_scheduleOpen) {
+              final key = event.logicalKey;
+              if ((!_isLive || _inCatchup) &&
+                  (key == LogicalKeyboardKey.arrowLeft ||
+                      key == LogicalKeyboardKey.arrowRight)) {
+                _skip(Duration(
+                    seconds: key == LogicalKeyboardKey.arrowRight ? 10 : -10));
+                _flashControls();
+                return KeyEventResult.handled;
+              }
+              if (!_isLive &&
+                  (key == LogicalKeyboardKey.arrowUp ||
+                      key == LogicalKeyboardKey.arrowDown)) {
+                if (event is KeyDownEvent) _showBarFocused();
+                return KeyEventResult.handled;
+              }
+            }
             final zap = _zapKeys[event.logicalKey];
             if (zap != null &&
                 event is! KeyUpEvent &&
@@ -1903,7 +2037,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             }
             if (event is KeyDownEvent &&
                 !_touch &&
-                _isLive &&
+                (_isLive || _tv) &&
                 _rootFocus.hasPrimaryFocus &&
                 !_panelOpen &&
                 !_scheduleOpen &&
@@ -1912,13 +2046,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   LogicalKeyboardKey.enter,
                   LogicalKeyboardKey.numpadEnter
                 ].contains(event.logicalKey)) {
-              _stopZapHud();
-              setState(() => _controlsVisible = true);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _playPauseFocus.context != null) {
-                  _playPauseFocus.requestFocus();
-                }
-              });
+              _showBarFocused();
               return KeyEventResult.handled;
             }
             if (event is KeyDownEvent &&
@@ -2005,33 +2133,36 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 if (_controlsVisible && _touch && !_inPip && !_pipStarting)
                   ..._touchControls(playlist),
                 if (_controlsVisible && !_touch) ...[
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.6),
-                            Colors.transparent,
-                          ],
+                  // Not on a TV: the remote's Back (Menu) does it, and
+                  // Up from the bar landed on it.
+                  if (!_tv)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.6),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          tooltip: tr('Back'),
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: _handleBack,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            tooltip: tr('Back'),
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
+                            onPressed: _handleBack,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -2056,8 +2187,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       left: 0,
                       top: 0,
                       bottom: 0,
+                      // A remote opens the panel with Left on the picture;
+                      // the tab is a picture of that, not a focus stop.
                       child: Center(
-                        child: PlayerSidePanelTab(onTap: _openPanel),
+                        child: ExcludeFocus(
+                            excluding: _tv,
+                            child: PlayerSidePanelTab(onTap: _openPanel)),
                       ),
                     ),
                 ],

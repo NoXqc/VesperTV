@@ -94,6 +94,44 @@ Xcode only, so everything runs on the GitHub Mac runner
   VideoToolbox decode, 4K HDR, memory. `newDesktopPlayer(bigCache:)` keeps
   Apple TV at media_kit's 32 MiB cache like iPhone.
 
+## Remote in the player and Multiview (+915)
+
+First box report (Discord, roman, TestFlight 902, 2026-11-20): the
+full-screen bar was on screen from the start while the picture held the
+remote, so every arrow zapped (Up / Down) or opened the side panel (Left);
+OK put focus on Play / Pause but the focus tint was a faint grey circle;
+the bar had no Multiview; in Multiview the "+" did nothing (the screen-size
+key wrapper was the only focus stop: no arrow found a screen, OK did
+nothing); closed captions were on with no button to turn them off on live.
+`DesktopPlayerScreen` and `DesktopMultiviewScreen` now ask
+`AppPreferences.isTelevision` (true on Apple TV, false on computers and
+iPhone, so those keep their mouse layout):
+
+- Player: the bar shows the channel 3 s at open, then hides. OK = bar with
+  Play / Pause focused (movies too; Up / Down on a movie as well); the bar
+  hides 6 s after the last key unless paused or a menu from it is open
+  (`_armTvBarIdle`). Movies / catch-up: Left / Right on the picture = 10 s
+  back / ahead (Right = sources when there are some). Gold ring on the
+  focused button (Icon / TextButton theme around the bar, all non-touch).
+  No top-left Back (Menu does it) and the side tab isn't a focus stop on a
+  TV; no volume slider (the TV's remote; it also kept Left / Right).
+- Bar: **Multiview** (live, not catch-up, computers too) = this player
+  stops its stream (one connection per screen), Multiview opens with the
+  channel on screen 1, Back plays the screen with the sound here again
+  (`DesktopMultiviewScreen.initialChannel`, pop result). **Subtitles** on
+  live too (CC on / off), iPhone included.
+- Multiview: each screen is a focus stop (white frame on a TV), the first
+  has focus. OK: empty = picker, playing = sound, the one with the sound =
+  Change channel / Reload / Remove / Swap mode. Hover buttons excluded from
+  focus on a TV. Picker: search field behind `TvTextFieldGate`, the first
+  channel focused (computers still type at once).
+- CC: mpv's captions track is switched off also when the track list
+  arrives after the selection (`configureDesktopStreamPlayer`).
+
+`test/desktop_multiview_remote_test.dart`. The player has no widget test
+(media_kit needs libmpv); the CI tour walks bar -> Multiview button ->
+Multiview -> picker -> back (`lib/services/ci_tour.dart`).
+
 ## App icon and Top Shelf
 
 `assets/icon/gen_tvos_icons.py` (repo root) writes the layered App Icon

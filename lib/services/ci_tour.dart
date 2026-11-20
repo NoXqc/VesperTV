@@ -69,11 +69,28 @@ class CiTour {
     await _key('enter');
     await _wait(8);
     await _shot('full-screen');
+    // The bar opens on Play / Pause; Left twice = Multiview (Stop between).
     await _key('enter');
     await _wait(2);
     await _shot('full-screen-bar');
-    await _back();
+    await _key('left');
+    await _key('left');
+    await _wait(1);
+    await _shot('bar-multiview-button');
+    // Multiview with this channel on screen 1, then screen 2's picker.
+    await _key('enter');
+    await _wait(8);
+    await _shot('multiview');
+    await _key('right');
+    await _key('enter');
     await _wait(2);
+    await _shot('multiview-picker');
+    await _back();
+    await _wait(1);
+    // Leaving Multiview plays screen 1's channel in full screen again.
+    await _back();
+    await _wait(6);
+    await _shot('back-from-multiview');
     await _back();
     await _wait(3);
     await _shot('back-to-guide');
