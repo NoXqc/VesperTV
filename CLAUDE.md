@@ -457,6 +457,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-20 - guide details + phone Media Hub pill (merged into local main, not pushed, not released; +911 on the Homatics,
+  +910 on the owner's Xiaomi):** (1) Full-video Timeline guide (owner's TiviMate photo): resting **1 s** on a programme opens a card under
+  its row (title, times, progress + min left, description), over the programmes only; any move closes it. 3-row layout grows upward
+  (`_GuideDetailsGrow`), Expand pushes rows down. Both guide lists use `widgets/gap_extent_list.dart` (`GapExtentList`: fixed rows + one gap,
+  O(1) offsets; NOT `itemExtentBuilder`, whose varied list sums every row above per layout). Settings > Interface > Guide > Programme
+  details in the guide (per viewer, on). Full video is edge to edge: no SafeArea side minimum (top bar keeps 16 px), hidden columns' dividers
+  0 wide, `_SlideSteadyWidth.columnsWidth` counts the dividers. (2) Phone Media Hub (`_phoneLayout` = narrow, not TV): one top row (Back,
+  Media Hub, small search pill, Live TV, Servers, Refresh), no hero, bottom pill Movies / TV Shows / Sources / Sort (old Menu) / Discover
+  (More catalogs); shared `widgets/phone_pill_bar.dart` also draws the TV home's phone tabs. Owner: "perfect". Analyze 16, 2224 tests.
+  Next build > 911.
 - **Claude, 2026-11-19 - release 1.0.71 (beta), +905 (latest):** owner said "/cutr" after "Merge all including Tuliprox". Android + Windows
   (zip built from the same commit); the Linux asset stays `VesperTV-1.0.70-869-linux-x64.tar.gz` (not rebuilt). New version name because
   the updater compares tag vs versionName. Since 1.0.70: catch-up `.ts` fallback / instant -10 / Dispatcharr `.ts` (`services/catchup_format.dart`),
