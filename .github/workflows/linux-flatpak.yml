@@ -1,0 +1,90 @@
+# VesperTV as a Flatpak (app.vespertv.VesperTV): one .flatpak file that installs on
+# any distro with Flatpak (Discover on SteamOS, no distrobox), with its own libmpv +
+# FFmpeg (VA-API). A workflow artifact for now, not a release asset.
+# Manifest + notes: linux/flatpak/, dev-notes/linux.md (Flatpak).
+name: Linux Flatpak
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/linux-flatpak]
+
+jobs:
+  bundle:
+    name: Flutter bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.bundle.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux build tools + libmpv headers
+        run: |
+          # libmpv-dev only to compile media_kit's plugin; the Flatpak brings
+          # its own libmpv.so.2. Time out and retry on a slow mirror.
+          apt="-o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          timeout 600 sudo apt-get $apt update
+          timeout 900 sudo apt-get $apt install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libmpv-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+      - run: flutter pub get
+      - name: Flatpak application id
+        # The tarball keeps com.nox.nox_iptv (its settings folder is named after
+        # it). Inside the Flatpak the window must carry the Flatpak's id, or a
+        # Wayland desktop shows no icon / name for it.
+        run: |
+          sed -i 's/^set(APPLICATION_ID "com.nox.nox_iptv")/set(APPLICATION_ID "app.vespertv.VesperTV")/' linux/CMakeLists.txt
+          grep -n 'APPLICATION_ID "app.vespertv.VesperTV"' linux/CMakeLists.txt
+      - name: Build Linux (release)
+        run: flutter build linux --release 2>&1 | tee build-linux.log; exit ${PIPESTATUS[0]}
+        shell: bash
+      - name: Bundle
+        id: bundle
+        run: |
+          version="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          echo "version=${version/+/-}" >> "$GITHUB_OUTPUT"
+          tar -C build/linux/x64/release -czf vespertv-bundle.tar.gz bundle
+          ls -l vespertv-bundle.tar.gz
+          # What the runtime has to provide (libmpv comes from the manifest).
+          for f in build/linux/x64/release/bundle/vespertv build/linux/x64/release/bundle/lib/*.so; do
+            echo "== ${f##*/}: $(readelf -d "$f" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p' | tr '\n' ' ')"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flutter-bundle
+          path: vespertv-bundle.tar.gz
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-linux-log
+          path: build-linux.log
+
+  flatpak:
+    name: Flatpak
+    needs: bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: flutter-bundle
+          path: linux/flatpak
+      - name: Release in the metainfo
+        run: |
+          v="$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
+          sed -i "s/@VERSION@/$v/; s/@DATE@/$(date -u +%F)/" linux/flatpak/app.vespertv.VesperTV.metainfo.xml
+          grep -n '<release ' linux/flatpak/app.vespertv.VesperTV.metainfo.xml
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: VesperTV-${{ needs.bundle.outputs.version }}-x86_64.flatpak
+          manifest-path: linux/flatpak/app.vespertv.VesperTV.yml
+          cache-key: flatpak-builder-${{ hashFiles('linux/flatpak/app.vespertv.VesperTV.yml') }}

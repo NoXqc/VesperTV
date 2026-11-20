@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @VERSION@ / @DATE@ are filled in by .github/workflows/linux-flatpak.yml. -->
+<component type="desktop-application">
+  <id>app.vespertv.VesperTV</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>VesperTV</name>
+  <summary>Live TV with a guide, movies and shows from your own playlists</summary>
+  <developer id="app.vespertv">
+    <name>VesperTV</name>
+  </developer>
+  <description>
+    <p>
+      VesperTV plays your own IPTV playlists (M3U and Xtream Codes) with a TV guide,
+      and movies and shows from your Media Hub add-ons or your Jellyfin, Emby or Plex
+      server. It ships no content, has no ads and no tracking.
+    </p>
+    <ul>
+      <li>Live TV with a timeline guide</li>
+      <li>Multiview</li>
+      <li>Sports Trak: live scores matched to your channels</li>
+      <li>Trakt and Simkl watch tracking</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">app.vespertv.VesperTV.desktop</launchable>
+  <url type="homepage">https://vespertv.app</url>
+  <url type="bugtracker">https://github.com/NoXqc/VesperTV/issues</url>
+  <url type="vcs-browser">https://github.com/NoXqc/VesperTV</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

@@ -49,3 +49,37 @@ that bundles libmpv: not done.
   the Dart VM went away and mpv's wakeup callback (a Dart NativeCallable) ran into freed memory. Fixed on main
   (7599296): every player closes before the window (`AppExit.quit`, preventClose + onWindowClose). The user runs
   the app in a distrobox (Ubuntu 24.04 container on SteamOS).
+
+## Flatpak (`claude/linux-flatpak`, 2026-11-20)
+
+Discord (AMD, Steam Machine): the tarball needs `sudo apt install libmpv2`, Ubuntu 24.04+
+(glibc 2.39) and a hand-made `.desktop`; media_kit_video's plugin is linked against
+`libmpv.so.2`, so distros that only ship `libmpv.so.1` (Debian 12, Ubuntu 22.04) can't start it.
+
+- `linux/flatpak/app.vespertv.VesperTV.yml`: **GNOME 51 runtime** (Flutter's Linux embedder needs
+  GTK 3; the freedesktop runtime has none). Builds libass, libplacebo, libdisplay-info (+ hwdata),
+  FFmpeg 9.0.2 (built-in decoders, GnuTLS, libxml2 for DASH, dav1d, VA-API) and libmpv only
+  (mpv 0.42.0, `cplayer=false`), pinned to what Flathub's io.mpv.Mpv builds on freedesktop 26.08.
+  The Flutter bundle goes in `/app/vespertv` unchanged, `/app/bin/vespertv` links to it.
+- `.github/workflows/linux-flatpak.yml`: job 1 builds the bundle on Ubuntu 24.04 with
+  `APPLICATION_ID` sed'ed to `app.vespertv.VesperTV` (the tarball keeps `com.nox.nox_iptv`: its
+  settings folder is named after it; inside the Flatpak the window must carry the Flatpak id or
+  Wayland shows no icon); job 2 runs flatpak-builder in `flathub-infra/flatpak-github-actions:gnome-51`
+  and uploads `VesperTV-<version>-x86_64.flatpak` as an artifact. Not a release asset yet.
+- Permissions: network, Wayland + fallback X11, PulseAudio, `/dev/dri` (GPU, VA-API),
+  `~/Documents/VesperTV` (backups). Restore from a file = file chooser portal; keep the screen on =
+  `org.freedesktop.portal.Inhibit` (wakelock_plus), no extra permission. No in-app updater on Linux
+  anyway: Flatpak updates come from wherever it was installed.
+- Settings live in `~/.var/app/app.vespertv.VesperTV/`: a tarball user starts fresh (Backup &
+  restore or Transfer moves the setup).
+- VA-API: AMD's driver comes with the runtime's Mesa (GL extension); Intel needs the
+  `org.freedesktop.Platform.VAAPI.Intel` extension. `--socket=fallback-x11` means no X11 on a
+  Wayland desktop, so mpv's copy-back VA-API needs its DRM display (`-Ddrm` + libdisplay-info).
+  Software video stays on by default (the GPU drawing path's GLES problem above is media_kit_video's,
+  not the packaging's); decoding still asks for `hwdec=auto-copy`. Data pool's Decoder row says
+  which one ran (`hwdec-current`).
+
+Install: `flatpak install --user VesperTV-*.flatpak` (needs the Flathub remote for the runtime:
+`flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`),
+run from the menu or `flatpak run app.vespertv.VesperTV`. Flathub itself (needs a source build of the
+Flutter app and a domain check on vespertv.app) is a later step.

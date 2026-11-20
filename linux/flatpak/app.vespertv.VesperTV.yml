@@ -1,0 +1,160 @@
+# VesperTV as a Flatpak (Discord request, AMD, 2026-11-20): one file that installs
+# on any distro with Flatpak (and from Discover on SteamOS, no distrobox), with its
+# own libmpv + FFmpeg, so nothing to apt-get and no libmpv.so.1 / .so.2 mismatch.
+#
+# The Flutter bundle is built on Ubuntu 24.04 by .github/workflows/linux-flatpak.yml
+# and dropped here as vespertv-bundle.tar.gz. GNOME runtime because Flutter's Linux
+# embedder needs GTK 3 (the freedesktop runtime has none). libass, libplacebo,
+# libdisplay-info, FFmpeg and mpv are pinned to the versions Flathub's own mpv
+# (io.mpv.Mpv) builds on the same freedesktop 26.08 base. Notes: dev-notes/linux.md.
+id: app.vespertv.VesperTV
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+command: vespertv
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  # GPU drawing + VA-API decoding (AMD's driver comes with the runtime's Mesa;
+  # Intel's is the org.freedesktop.Platform.VAAPI.Intel extension).
+  - --device=dri
+  # Backups (Settings > Backup & restore): ~/Documents/VesperTV, as outside Flatpak.
+  # Restore from a file goes through the file chooser portal.
+  - --filesystem=xdg-documents/VesperTV:create
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/pkgconfig
+  - /share/man
+  - /share/doc
+  - '*.la'
+  - '*.a'
+
+modules:
+  - name: libass
+    config-opts:
+      - --disable-static
+      - --enable-asm
+      - --enable-harfbuzz
+      - --enable-fontconfig
+    sources:
+      - type: git
+        url: https://github.com/libass/libass.git
+        tag: 0.17.5
+        commit: 4a05d8127f525943ebf45fdc6497c9e665947f0d
+
+  - name: libplacebo
+    buildsystem: meson
+    config-opts:
+      - -Dvulkan=enabled
+      - -Dshaderc=enabled
+    sources:
+      - type: git
+        url: https://code.videolan.org/videolan/libplacebo.git
+        tag: v7.387.0
+        commit: 275f7dea27924cdd34ab2e6c20e448b6bc4fab65
+
+  # mpv's DRM support (needed for VA-API without X11, i.e. on a Wayland desktop
+  # where fallback-x11 gives no X socket) requires libdisplay-info.
+  - name: libdisplay-info
+    buildsystem: meson
+    sources:
+      - type: archive
+        url: https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/0.2.0/libdisplay-info-0.2.0.tar.gz
+        sha256: f7331fcaf5527251b84c8fb84238d06cd2f458422ce950c80e86c72927aa8c2b
+    modules:
+      - name: hwdata
+        buildsystem: autotools
+        sources:
+          - type: archive
+            url: https://github.com/vcrhonek/hwdata/archive/refs/tags/v0.394.tar.gz
+            sha256: b7c3fd7214a3b7c49d2661db127a712dc11cffd1799f793947aa1cb20aaf3298
+
+  # Only what a TV player needs: every built-in decoder (H.264 / HEVC / AV1 via
+  # dav1d...), HTTPS (GnuTLS), DASH (libxml2), VA-API. No encoders' libraries,
+  # no command-line tools.
+  - name: ffmpeg
+    config-opts:
+      - --disable-debug
+      - --disable-doc
+      - --disable-static
+      - --disable-programs
+      - --enable-shared
+      - --enable-gnutls
+      - --enable-libdav1d
+      - --enable-libxml2
+      - --enable-libdrm
+      - --enable-vaapi
+    sources:
+      - type: archive
+        url: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+        sha256: 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
+
+  # libmpv only (media_kit loads libmpv.so / libmpv.so.2 from /app/lib).
+  - name: mpv
+    buildsystem: meson
+    config-opts:
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dbuild-date=false
+      - -Dwerror=false
+      - -Dgl=enabled
+      - -Degl=enabled
+      - -Dx11=enabled
+      - -Dwayland=enabled
+      - -Ddrm=enabled
+      - -Dvulkan=enabled
+      - -Dvaapi=enabled
+      - -Dvaapi-drm=enabled
+      - -Dvaapi-wayland=enabled
+      - -Dvaapi-x11=enabled
+      - -Dpulse=enabled
+      - -Dpipewire=enabled
+      - -Dalsa=enabled
+      - -Dlua=disabled
+      - -Djavascript=disabled
+      - -Dmanpage-build=disabled
+      - -Dlibarchive=disabled
+      - -Dcdda=disabled
+      - -Ddvdnav=disabled
+      - -Dlibbluray=disabled
+      - -Drubberband=disabled
+      - -Dvapoursynth=disabled
+      - -Duchardet=disabled
+    sources:
+      - type: git
+        url: https://github.com/mpv-player/mpv.git
+        tag: v0.42.0
+        commit: b0841e8c4d156b8403dc1876c4cbd9011eb583f3
+
+  # The Flutter release bundle (binary + lib/ + data/), unchanged.
+  - name: vespertv
+    buildsystem: simple
+    build-options:
+      no-debuginfo: true
+      strip: false
+    build-commands:
+      - mkdir -p /app/vespertv /app/bin
+      - cp -a vespertv lib data /app/vespertv/
+      - ln -s /app/vespertv/vespertv /app/bin/vespertv
+      - install -Dm644 app.vespertv.VesperTV.desktop /app/share/applications/app.vespertv.VesperTV.desktop
+      - install -Dm644 app.vespertv.VesperTV.metainfo.xml /app/share/metainfo/app.vespertv.VesperTV.metainfo.xml
+      - for s in 128 256 512; do install -Dm644 icon-$s.png /app/share/icons/hicolor/${s}x${s}/apps/app.vespertv.VesperTV.png; done
+    sources:
+      - type: archive
+        path: vespertv-bundle.tar.gz
+      - type: file
+        path: app.vespertv.VesperTV.desktop
+      - type: file
+        path: app.vespertv.VesperTV.metainfo.xml
+      - type: file
+        path: icons/icon-128.png
+      - type: file
+        path: icons/icon-256.png
+      - type: file
+        path: icons/icon-512.png
