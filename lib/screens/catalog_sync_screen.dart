@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_preferences.dart';
+import '../services/epg_service.dart';
 import '../services/playlist_manager.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/mode_button.dart';
@@ -147,6 +148,26 @@ class CatalogSyncScreen extends StatelessWidget {
   }
 }
 
+/// The [EpgService] above [context], or null where none is provided (tests).
+EpgService? guideServiceOf(BuildContext context) {
+  try {
+    return context.read<EpgService>();
+  } on ProviderNotFoundException {
+    return null;
+  }
+}
+
+/// A manual Update Content refreshes the TV guide too (owner, 2026-11-20:
+/// one button for everything), in the background once the content update
+/// is done. After it, not alongside it: a guide refresh parses for a while
+/// on a weak box, and the content update's progress screen stays as quick
+/// as before. Skipped by [EpgService.refreshAll] when one is already running.
+void refreshGuideAfterContentUpdate(EpgService? epg) {
+  if (epg == null) return;
+  debugPrint('ContentUpdate: guide refresh after Update Content');
+  unawaited(epg.refreshAll());
+}
+
 /// Confirms, then runs [PlaylistManager.runFullCatalogSync] behind the
 /// same blocking progress screen the automatic launch-time sync uses.
 /// Shared by every *manual* trigger (the "Update Content" menu action on
@@ -190,6 +211,7 @@ Future<bool> confirmAndRunFullCatalogSync(
     ),
   );
   if (confirmed != true || !context.mounted) return false;
+  final epg = guideServiceOf(context);
   if (beforeRun != null) await beforeRun();
   if (!context.mounted) return false;
 
@@ -203,5 +225,6 @@ Future<bool> confirmAndRunFullCatalogSync(
   )));
   await syncFuture;
   if (context.mounted) navigator.pop();
+  refreshGuideAfterContentUpdate(epg);
   return true;
 }

@@ -3850,6 +3850,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    final epg = guideServiceOf(context);
     // Nothing to watch behind the progress screen: the channel's decoder,
     // network and CPU go to the update (a 1.28M-entry list is processed
     // on the box itself). The resume pill brings it back afterwards.
@@ -3873,6 +3874,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     } finally {
       if (mounted) navigator.pop();
     }
+    refreshGuideAfterContentUpdate(epg);
   }
 
   /// The sidebar's bottom row: a normal, full exit (the activity finishes,
