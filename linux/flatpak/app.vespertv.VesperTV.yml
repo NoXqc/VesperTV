@@ -36,6 +36,15 @@ cleanup:
   - '*.a'
 
 modules:
+  # mpv's X11 support needs it (not in the runtime).
+  - name: libXpresent
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://gitlab.freedesktop.org/xorg/lib/libxpresent.git
+        tag: libXpresent-1.0.2
+        commit: 4d92149372461bf575e8a09b1064a2884c38c3aa
+
   - name: libass
     config-opts:
       - --disable-static
