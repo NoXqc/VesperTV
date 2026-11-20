@@ -79,6 +79,14 @@ Discord (AMD, Steam Machine): the tarball needs `sudo apt install libmpv2`, Ubun
   not the packaging's); decoding still asks for `hwdec=auto-copy`. Data pool's Decoder row says
   which one ran (`hwdec-current`).
 
+CI (runs 44817485915 / 44819615453, 2026-11-20): mpv features vaapi, vaapi-drm, vaapi-wayland, vaapi-x11,
+drm, egl, wayland, x11, vulkan, pipewire, pulse; ~28 MB bundle. The smoke step installs it, checks `ldd` (plugins need
+`LD_LIBRARY_PATH=/app/vespertv/lib` to see libflutter_linux_gtk.so, which the binary loads first; libdartjni.so is
+package:jni's Android bridge, skipped) and runs the app 20 s under Xvfb: it started (StartupMark, DesktopWindow lines).
+Two image problems on the way: mpv's X11 needs libXpresent (built here, like io.mpv.Mpv), and a GNOME SDK update
+failed in the image's lower overlay layer ("Invalid cross-device link"): the workflow copies /var/lib/flatpak into
+the container's own layer first.
+
 Install: `flatpak install --user VesperTV-*.flatpak` (needs the Flathub remote for the runtime:
 `flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`),
 run from the menu or `flatpak run app.vespertv.VesperTV`. Flathub itself (needs a source build of the
