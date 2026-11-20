@@ -457,6 +457,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-19 - release 1.0.71 (beta), +905 (latest):** owner said "/cutr" after "Merge all including Tuliprox". Android + Windows
+  (zip built from the same commit); the Linux asset stays `VesperTV-1.0.70-869-linux-x64.tar.gz` (not rebuilt). New version name because
+  the updater compares tag vs versionName. Since 1.0.70: catch-up `.ts` fallback / instant -10 / Dispatcharr `.ts` (`services/catchup_format.dart`),
+  frame-rate fix (Match 60 Hz, FPS badge), Dispatcharr Connect adds its playlist + same format + admin switch + phone Sources tab, Tuliprox
+  Sources + Settings page (end-user API / reconnect headers: the Tuliprox developer agreed to add them, fine-tune then), Media Hub More catalogs +
+  OK popup badges + slimmer rail + mouse rows, one player-bar focus ring, fast launch + one-line guide channels, phone Sports Trak / Guide / launch
+  resume group, big-playlist editor (56k channels), stream test audio, international cricket on ESPN. Analyze 16, 2204 Flutter + 252 native
+  tests. Notes: dev-notes/releases/1.0.71.md. Next build > 905.
 - **Claude, 2026-11-19 evening - catch-up speed, frame rate, focus (see HANDOFF "STATE NOW"):** Xtream catch-up asks
   `.m3u8` first (exact start, cheap seeks; dev-notes/catchup-plan.md) but some panels build HLS on demand (12-44 s,
   Fire TV LOG-76X9CH) and Dispatcharr's `/timeshift/` serves `.ts` only (`.m3u8` = 404): `services/catchup_format.dart`
