@@ -35,7 +35,13 @@ Player newDesktopPlayer({bool bigCache = false}) {
       ? Player(
           configuration:
               const PlayerConfiguration(bufferSize: kDesktopMainCacheBytes))
-      : Player();
+      // iPhone: mpv's warnings too, for the HLS lines
+      // ([isHlsTroubleLog]); media_kit's default is errors only.
+      : Platform.isIOS
+          ? Player(
+              configuration:
+                  const PlayerConfiguration(logLevel: MPVLogLevel.warn))
+          : Player();
   if (big) {
     // media_kit gives the rewind cache the same size; nothing here rewinds
     // far, so keep it at the old 32 MiB.
@@ -169,12 +175,8 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // Software video: no GPU surfaces ([desktopSoftwareHwdec]).
   final hwdec = desktopSoftwareHwdec;
   if (hwdec != null) native.setProperty('hwdec', hwdec);
-  // See DesktopPlayerScreen.initState for the reconnect story.
-  // rw_timeout 30 s (was 15): some IPTV servers send live .ts in bursts
-  // with 3-9.5 s gaps on a healthy line; Android's 8 s timeout reconnected
-  // on them and replayed the start burst (8125351). Same 30 s here.
-  native.setProperty('demuxer-lavf-o',
-      'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=30000000');
+  native.setProperty(
+      'demuxer-lavf-o', desktopLavfOptions(apple: Platform.isIOS));
   // mpv's network-timeout (media_kit sets 5 s) becomes ffmpeg's tcp
   // `timeout`, which overrides rw_timeout above: those bursty servers timed
   // out after 5 s ("tcp: ffurl_read returned" -60 on macOS, -138 on
@@ -200,11 +202,62 @@ void configureDesktopStreamPlayer(Player player, String tag) {
     }
   });
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
+  String? lastWarning;
+  var lastWarningAt = DateTime(0);
   player.stream.log.listen((log) {
     if (log.level == 'error' || log.level == 'fatal') {
       debugPrint('DesktopPlayer[$tag] mpv ${log.prefix}: ${log.text.trim()}');
+    } else if (log.level == 'warn' && isHlsTroubleLog(log.prefix, log.text)) {
+      // The same line again within 5 s (each segment retry) once is enough.
+      final text = log.text.trim();
+      final now = DateTime.now();
+      if (text == lastWarning &&
+          now.difference(lastWarningAt) < const Duration(seconds: 5)) {
+        return;
+      }
+      lastWarning = text;
+      lastWarningAt = now;
+      debugPrint('DesktopPlayer[$tag] mpv ${log.prefix}: $text');
     }
   });
+}
+
+/// ffmpeg options for every desktop / iPhone stream (mpv's
+/// `demuxer-lavf-o`). See DesktopPlayerScreen.initState for the reconnect
+/// story. rw_timeout 30 s (was 15): some IPTV servers send live .ts in
+/// bursts with 3-9.5 s gaps on a healthy line; Android's 8 s timeout
+/// reconnected on them and replayed the start burst (8125351).
+///
+/// [apple] (iPhone): `http_multiple=0`. A provider whose live channels come
+/// as HLS over https cut out every 20-30 s on an iPhone, 3.4 s each time,
+/// Wi-Fi and cellular, while Apple's own player was fine in other apps
+/// (Discord, LOG-SKRVK2 / LOG-B2ES7H, 2026-11-20). Its server closed
+/// connections mid-handshake (`tls: mbedtls_ssl_handshake returned
+/// -0x7280`), and ffmpeg's HLS reader opens the next segment on a second
+/// connection while the current one downloads; one connection at a time is
+/// what most one-connection IPTV accounts expect. (The reconnect options
+/// above don't reach HLS segment and playlist requests: ffmpeg's HLS reader
+/// passes only headers, user agent, cookies and rw_timeout to them, and one
+/// failed playlist reload ends the stream; [DesktopLiveRecovery] reopens it.)
+String desktopLavfOptions({required bool apple}) => [
+      'reconnect=1',
+      'reconnect_at_eof=1',
+      'reconnect_streamed=1',
+      'reconnect_delay_max=5',
+      'rw_timeout=30000000',
+      if (apple) 'http_multiple=0',
+    ].join(',');
+
+/// An mpv warning worth Send log on the iPhone: the HLS reader giving up on
+/// a playlist reload or a segment, which ends or skips a live channel. The
+/// decoder's many warnings stay out.
+bool isHlsTroubleLog(String prefix, String text) {
+  if (!prefix.contains('demuxer') && !prefix.contains('lavf')) return false;
+  final t = text.toLowerCase();
+  return t.contains('playlist') ||
+      t.contains('segment') ||
+      t.contains('keepalive') ||
+      t.contains('eof');
 }
 
 /// The viewer picked the closed captions track on this player (set by the
