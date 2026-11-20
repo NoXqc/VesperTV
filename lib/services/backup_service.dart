@@ -38,8 +38,9 @@ class BackupEntry {
 /// uninstall) or Documents\VesperTV on Windows. Catalog/EPG caches aren't
 /// in it — they download again after a restore, as after a transfer.
 ///
-/// Automatic backups (off by default) run at most once a week, at startup
-/// ([maybeAutoBackup]); only the newest [keepAuto] of them are kept.
+/// Automatic backups (off by default) run at startup when the last one is
+/// older than the chosen interval ([intervalChoices], weekly by default;
+/// [maybeAutoBackup]); only the newest [keepAuto] of them are kept.
 /// Manual backups are never deleted by the app.
 class BackupService {
   BackupService(this._storage);
@@ -51,7 +52,10 @@ class BackupService {
   static const autoPrefix = 'vespertv-autobackup-';
   static const _format = 'vespertv-backup';
   static const keepAuto = 5;
-  static const autoInterval = Duration(days: 7);
+
+  /// Settings > Backup & restore > How often: days between automatic
+  /// backups (a Reddit user, 2026-11-20: weekly only was too fixed).
+  static const intervalChoices = [1, 3, 7, 14, 30];
 
   static bool get supported =>
       Platform.isAndroid || isDesktop || Platform.isIOS;
@@ -237,12 +241,16 @@ class BackupService {
   }
 
   /// Startup hook: an automatic backup when the switch is on and the last
-  /// one is a week old. Never prompts — on Android 9- without storage
+  /// one is older than the chosen interval. Never prompts — on Android 9- without storage
   /// access (granted when the switch was turned on) it just skips.
   Future<void> maybeAutoBackup() async {
     if (!supported || !_storage.getAutoBackup()) return;
     final last = _storage.getLastAutoBackup();
-    if (last != null && DateTime.now().difference(last) < autoInterval) return;
+    // An hour of slack, so "every day" still runs when the box starts a
+    // little earlier than yesterday.
+    final interval = Duration(days: _storage.getAutoBackupDays()) -
+        const Duration(hours: 1);
+    if (last != null && DateTime.now().difference(last) < interval) return;
     try {
       if (!await _hasPermission(write: true)) return;
       await create(auto: true);

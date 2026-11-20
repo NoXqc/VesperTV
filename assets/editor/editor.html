@@ -52,7 +52,7 @@ label.opt:has(input:checked){background:#d8b25a22}
 #mvModal.copy label.opt:has(input:checked){background:#6cc48a22}
 .grip{cursor:grab;color:var(--dim);font-size:18px;padding:0 4px;user-select:none;touch-action:none}.grip:hover{color:var(--gold)}
 .gdrag{opacity:.4}.gsel{border-color:#d8b25a88}
-#groupOrder .drop-before{box-shadow:0 -3px 0 var(--gold)}#groupOrder .drop-after{box-shadow:0 3px 0 var(--gold)}
+#groupOrder .drop-before,#coList .drop-before{box-shadow:0 -3px 0 var(--gold)}#groupOrder .drop-after,#coList .drop-after{box-shadow:0 3px 0 var(--gold)}
 button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
 #groupOrder h3 button{font:inherit;font-size:15px}
 @media (max-width:700px){.wide{display:none}td,th{padding:5px 3px}}
@@ -95,9 +95,9 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
       <p>Everything here changes only what <b>this TV</b> shows. Your provider's playlist is never modified, and your changes are applied again every time the playlist updates. Pick the playlist at the top, make changes, then press <b>Save to TV</b> (bottom right) or the save button of the tab.</p>
     </div>
     <div class="card"><h3 style="margin-top:0">Channels</h3>
-      <p>Search or filter (hidden, renamed, copies, no guide, dead...). Type over a name to rename it. Tick channels, then use the bottom bar: <b>Hide</b>, <b>Show</b>, <b>Reset name</b>, <b>Set logo</b>, <b>Move to group</b> (the channels leave their group and show only in the one you pick), <b>Copy to group</b> (they stay where they are and also show in the one you pick) and <b>Reset group</b> (back in their own groups, copies removed). The destination can be one of your own custom groups (new or existing) or a group of any playlist; it is applied on the TV at once, without Save. <b>Fallbacks</b> on a row: channels to play, in your order, if this one fails (from any playlist).</p></div>
+      <p>Search or filter (hidden, renamed, copies, no guide, dead...). Type over a name to rename it. Tick channels, then use the bottom bar: <b>Hide</b>, <b>Show</b>, <b>Reset name</b>, <b>Set logo</b>, <b>Link guide</b> (one guide channel, and its logo if you want, for every ticked channel: handy for many copies of the same channel), <b>Move to group</b> (the channels leave their group and show only in the one you pick), <b>Copy to group</b> (they stay where they are and also show in the one you pick) and <b>Reset group</b> (back in their own groups, copies removed). The destination can be one of your own custom groups (new or existing) or a group of any playlist; it is applied on the TV at once, without Save. <b>Fallbacks</b> on a row: channels to play, in your order, if this one fails (from any playlist).</p></div>
     <div class="card"><h3 style="margin-top:0">Groups</h3>
-      <p><b>Rename</b> a group by typing its new name. <b>Merge</b>: tick two or more groups, press <b>Merge selected</b> and give the new group a name (typing the same name on several groups does the same). <b>Move</b> groups by dragging the &#8942;&#8942; handle (ticked groups move together) or with the arrows, and <b>hide</b> them with the box. Hold <b>Shift</b> and tick a second box to tick every group in between. Press <b>Save groups</b>.</p></div>
+      <p><b>Rename</b> a group by typing its new name. <b>Merge</b>: tick two or more groups, press <b>Merge selected</b> and give the new group a name (typing the same name on several groups does the same). <b>Move</b> groups by dragging the &#8942;&#8942; handle (ticked groups move together) or with the arrows, and <b>hide</b> them with the box. Hold <b>Shift</b> and tick a second box to tick every group in between. Press <b>Save groups</b>. <b>Channels…</b> on a group (or <b>Channel order…</b>, which also lists your custom groups) puts its channels in your own order: drag them or use the arrows, then <b>Save order</b>. The guide's channel numbers follow it.</p></div>
     <div class="card"><h3 style="margin-top:0">Duplicates &amp; cleanup</h3>
       <p>In <b>Rules &amp; cleanup</b>, tick <b>Hide lower-quality copies</b>: only the best copy of each channel (4K / FHD / HD) stays listed, the others become automatic fallbacks. Add rules to rename (for example remove <code>US| </code>) or hide (for example <code>PPV</code>) many channels at once; they keep working after every update. <b>Preview</b> shows the effect before saving. The <b>Duplicates</b> tab shows which copy is kept.</p></div>
     <div class="card"><h3 style="margin-top:0">Several playlists</h3>
@@ -110,7 +110,7 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
 
   <section id="t-groups" style="display:none">
     <div class="card dim">Type in a group's name box to <b>rename</b> it (in either list); give several groups the <b>same name to merge</b> them. Drag the &#8942;&#8942; handle (or use the arrows) to move a group; tick several and drag one of them to move them together. <b>Shift</b>-click a second box to tick a whole range. The hide box hides it: hidden groups move to <b>Hidden groups</b> at the bottom (tap it to open). To hide many at once, tick them (or filter, then <b>Tick listed</b>) and press <b>Hide ticked</b>. <b>Countries</b>: tap UK, US… to list only those groups; <b>Keep only these countries</b> hides every other group. Then <b>Save groups</b>.</div>
-    <div class="row"><input id="gq" placeholder="Search groups" class="grow"><button id="mergeGroups">Merge selected…</button><button class="gold" id="saveGroups">Save groups</button></div>
+    <div class="row"><input id="gq" placeholder="Search groups" class="grow"><button id="mergeGroups">Merge selected…</button><button id="coOpen" title="Put a group's channels in your own order">Channel order…</button><button class="gold" id="saveGroups">Save groups</button></div>
     <div class="row"><select id="gView" aria-label="Which groups"><option value="">All groups</option><option value="shown">Shown only</option><option value="hidden">Hidden only</option></select>
       <button id="gTickAll" title="Tick every group listed now">Tick listed</button><button id="gUntick">Untick all</button>
       <button id="gHide" title="Hide the ticked groups (they go to Hidden groups at the bottom)">Hide ticked</button><button id="gShow">Show ticked</button></div>
@@ -203,7 +203,7 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
 </main>
 <div class="bar" id="chanBar">
   <span id="selMsg" class="dim">0 selected</span>
-  <button id="bHide">Hide</button><button id="bShow">Show</button><button id="bReset">Reset name</button><button id="bLogo">Set logo…</button>
+  <button id="bHide">Hide</button><button id="bShow">Show</button><button id="bReset">Reset name</button><button id="bLogo">Set logo…</button><button id="bGuide" title="One guide (and its logo) for every ticked channel">Link guide…</button>
   <button id="bMove" class="mv" title="They leave their group and show only in the one you pick">Move to group…</button><button id="bCopy" class="cp" title="They stay in their group and also show in the one you pick">Copy to group…</button><button id="bPut" title="Back in their own groups, copies removed">Reset group</button>
   <span class="grow"></span>
   <span id="dirty" class="dim"></span>
@@ -211,6 +211,14 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
 </div>
 </div>
 
+<div class="modal" id="coModal"><div class="card">
+  <h3 style="margin-top:0">Channel order</h3>
+  <div class="row"><label for="coGroup" class="dim">Group</label><select id="coGroup" class="grow"></select></div>
+  <p class="dim">Drag a channel by its &#8942;&#8942; handle, or use the arrows (&#10514; = to the top). The guide's channel numbers follow this order. Press <b>Save order</b> to apply it on the TV.</p>
+  <div id="coList" style="max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0"></div>
+  <p id="coMsg" class="dim"></p>
+  <div class="row"><button id="coClose">Close</button><span class="grow"></span><button id="coAz" title="Sort by name, A to Z">A–Z</button><button class="gold" id="coSave" disabled>Save order</button></div>
+</div></div>
 <div class="modal" id="mvModal"><div class="card">
   <h3 style="margin-top:0" id="mvTitle">Move channels to…</h3>
   <p id="mvExplain"></p>
@@ -469,6 +477,12 @@ function bulk(fn) { if (!sel.size) { alert('Select channels first (tick the boxe
 $('bHide').onclick = () => bulk(r => { if (!edits.hidden.includes(r)) edits.hidden.push(r); edits.shown = edits.shown.filter(x => x !== r); });
 $('bShow').onclick = () => bulk(r => { edits.hidden = edits.hidden.filter(x => x !== r); });
 $('bReset').onclick = () => bulk(r => { delete edits.names[r]; delete edits.logos[r]; });
+$('bGuide').onclick = () => {
+  if (!sel.size) { alert('Select channels first (tick the boxes).'); return; }
+  const many = data.channels.filter(c => sel.has(c.r)).map(c => c.r);
+  if (!many.length) { alert('The ticked channels are not in this list. Clear the filter or search and tick again.'); return; }
+  openGuide(many[0], many);
+};
 $('bLogo').onclick = () => { const u = prompt('Logo image address (https://…). Empty = provider logo.'); if (u === null) return; bulk(r => { if (u.trim()) edits.logos[r] = u.trim(); else delete edits.logos[r]; }); };
 // ---- Move / Copy to a group (applied on the TV at once, not part of Save) ----
 const mv = {mode: 'move', own: [], groups: [], pick: null, epoch: 0};
@@ -525,6 +539,109 @@ async function openMove(mode) {
     await loadMvGroups();
   } catch (e) { $('mvModal').style.display = 'none'; if (e.message !== 'auth' && e.message !== 'viewer') alert('Could not reach the TV: ' + e.message); }
 }
+// Channel order (clayts450, Discord 2026-11-20): one group's channels in
+// the viewer's own order, kept where the TV's hold OK > Move Up / Down
+// keeps it. Custom groups span playlists; a channel from another playlist
+// says which.
+const co = {g: '', list: [], dirty: false, drag: null, epoch: 0};
+function coRender() {
+  $('coList').innerHTML = co.list.length ? co.list.map((c, i) => `<div class="row" data-corow="${i}" style="padding:4px 8px;border-bottom:1px solid var(--line);gap:6px">
+    <span class="grip" data-cogrip="${i}" title="Drag to move" aria-hidden="true">&#8942;&#8942;</span>
+    <span class="dim" style="min-width:2.5em;text-align:right">${i + 1}</span>
+    ${c.l ? `<img class="logo" src="${esc(c.l)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span style="width:36px"></span>'}
+    <span class="grow">${esc(c.n)}${c.p ? ` <span class="tag">${esc(c.p)}</span>` : ''}</span>
+    <button data-cotop="${i}" aria-label="To the top" title="To the top">&#10514;</button><button data-coup="${i}" aria-label="Move up">&#9650;</button><button data-codn="${i}" aria-label="Move down">&#9660;</button></div>`).join('')
+    : '<p class="dim" style="padding:8px 10px">No channels in this group.</p>';
+  $('coSave').disabled = !co.dirty;
+}
+async function coLoad(g) {
+  co.g = g; co.dirty = false; co.list = []; const epoch = ++co.epoch;
+  $('coMsg').textContent = ''; $('coSave').disabled = true;
+  $('coList').innerHTML = '<p class="dim" style="padding:8px 10px">Loading…</p>';
+  try {
+    const d = await api('/api/order?pl=' + encodeURIComponent(pl) + '&g=' + encodeURIComponent(g));
+    if (epoch !== co.epoch) return;
+    co.list = d.channels || [];
+    if (d.total > co.list.length) $('coMsg').textContent = 'Only the first ' + co.list.length + ' of ' + d.total + ' channels can be ordered here; the rest follow.';
+    coRender();
+  } catch (e) { if (epoch === co.epoch) $('coList').innerHTML = '<p class="dim" style="padding:8px 10px">Could not load: ' + esc(e.message) + '</p>'; }
+}
+async function openChannelOrder(g) {
+  const shownGroups = groupData ? groupData.order.map(x => x.d) : [];
+  let own = [];
+  try { own = ((await api('/api/groupdest?pl=' + encodeURIComponent(pl))).own || []).map(x => x.t); } catch (e) { if (e.message === 'auth' || e.message === 'viewer') return; }
+  const opt = t => `<option value="${esc(t)}">${esc(t)}</option>`;
+  $('coGroup').innerHTML = (own.length ? '<optgroup label="My custom groups">' + own.map(opt).join('') + '</optgroup>' : '') +
+    '<optgroup label="This playlist">' + shownGroups.map(opt).join('') + '</optgroup>';
+  const first = g || own[0] || shownGroups[0] || '';
+  $('coGroup').value = first;
+  $('coModal').style.display = 'flex';
+  if (first) await coLoad(first); else { co.list = []; coRender(); }
+}
+function coMove(from, to) {
+  if (to < 0 || to >= co.list.length || to === from) return;
+  const [c] = co.list.splice(from, 1); co.list.splice(to, 0, c); co.dirty = true; coRender();
+}
+$('coOpen').onclick = () => openChannelOrder('');
+$('groupOrder').addEventListener('click', e => {
+  const i = e.target.dataset.gco; if (i === undefined) return;
+  openChannelOrder(groupOrder[+i]);
+});
+$('coGroup').onchange = () => {
+  if (co.dirty && !confirm('Leave this group without saving its order?')) { $('coGroup').value = co.g; return; }
+  coLoad($('coGroup').value);
+};
+$('coClose').onclick = () => {
+  if (co.dirty && !confirm('Close without saving the order?')) return;
+  $('coModal').style.display = 'none';
+};
+$('coAz').onclick = () => {
+  co.list.sort((a, b) => a.n.localeCompare(b.n, undefined, {numeric: true, sensitivity: 'base'})); co.dirty = true; coRender();
+};
+$('coList').addEventListener('click', e => {
+  const d = e.target.dataset;
+  if (d.cotop !== undefined) coMove(+d.cotop, 0);
+  else if (d.coup !== undefined) coMove(+d.coup, +d.coup - 1);
+  else if (d.codn !== undefined) coMove(+d.codn, +d.codn + 1);
+});
+const coRowOf = el => el && el.closest ? el.closest('[data-corow]') : null;
+function coClearMarks() { for (const r of $('coList').querySelectorAll('.drop-before,.drop-after')) r.classList.remove('drop-before', 'drop-after'); }
+$('coList').addEventListener('pointerdown', e => {
+  if (e.target.dataset.cogrip === undefined) return;
+  const row = coRowOf(e.target); if (row) row.draggable = true;
+});
+$('coList').addEventListener('dragstart', e => {
+  const row = coRowOf(e.target); if (!row || !row.draggable) { e.preventDefault(); return; }
+  co.drag = +row.dataset.corow; e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', co.list[co.drag].n); } catch (_) {}
+  row.classList.add('gdrag');
+});
+$('coList').addEventListener('dragover', e => {
+  if (co.drag === null) return; const row = coRowOf(e.target); if (!row) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  const box = row.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+  coClearMarks(); row.classList.add(after ? 'drop-after' : 'drop-before');
+});
+$('coList').addEventListener('drop', e => {
+  if (co.drag === null) return; const row = coRowOf(e.target); if (!row) return;
+  e.preventDefault();
+  const target = +row.dataset.corow, box = row.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+  const from = co.drag; co.drag = null;
+  let to = target + (after ? 1 : 0); if (from < to) to--;
+  if (to === from) coRender(); else coMove(from, to);
+});
+$('coList').addEventListener('dragend', () => {
+  co.drag = null; coClearMarks();
+  for (const r of $('coList').querySelectorAll('[data-corow]')) { r.draggable = false; r.classList.remove('gdrag'); }
+});
+window.addEventListener('pointerup', () => { if (co.drag === null) for (const r of $('coList').querySelectorAll('[draggable=true]')) r.draggable = false; });
+$('coSave').onclick = async () => {
+  $('coSave').disabled = true; $('coMsg').textContent = 'Saving…';
+  try {
+    await api('/api/order?pl=' + encodeURIComponent(pl), {g: co.g, ids: co.list.map(c => c.id)});
+    co.dirty = false; $('coMsg').textContent = 'Saved: the TV shows this order now.';
+  } catch (e) { $('coSave').disabled = false; if (e.message !== 'auth' && e.message !== 'viewer') $('coMsg').textContent = 'Could not save: ' + e.message; }
+};
 $('bMove').onclick = () => openMove('move');
 $('bCopy').onclick = () => openMove('copy');
 $('mvCancel').onclick = () => { $('mvModal').style.display = 'none'; };
@@ -625,15 +742,17 @@ $('fbDone').onclick = () => { $('fbModal').style.display = 'none'; renderChannel
 
 // Guide choices are source-aware. Logos join the existing draft; Link only
 // changes programme matching. Never apply an old response to another row/playlist.
-let gdFor = null, gdPl = null, gdEpoch = 0, gdSearchEpoch = 0, gdResults = [], gdTimer = null;
-function closeGuide() { gdEpoch++; gdSearchEpoch++; clearTimeout(gdTimer); gdFor = null; gdPl = null; gdResults = []; $('gdModal').style.display = 'none'; }
+let gdFor = null, gdMany = null, gdPl = null, gdEpoch = 0, gdSearchEpoch = 0, gdResults = [], gdTimer = null;
+function closeGuide() { gdEpoch++; gdSearchEpoch++; clearTimeout(gdTimer); gdFor = null; gdMany = null; gdPl = null; gdResults = []; $('gdModal').style.display = 'none'; }
 function guideCurrent(epoch, playlist, raw) { return epoch === gdEpoch && playlist === pl && playlist === gdPl && raw === gdFor; }
-function openGuide(r) {
-  closeGuide(); gdFor = r; gdPl = pl;
+function openGuide(r, many) {
+  closeGuide(); gdFor = r; gdPl = pl; gdMany = many && many.length > 1 ? many : null;
   const c = data.channels.find(x => x.r === r); if (!c) return;
-  $('gdFor').textContent = shownName(c); $('gdQ').value = shownName(c).replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
-  $('gdNow').textContent = c.eo ? 'Linked to guide channel: ' + c.eo : c.ne ? 'No guide data for this channel yet.' : epgText("Using the channel's default guide match.");
-  $('gdUnlink').style.display = c.eo ? '' : 'none'; $('gdMsg').textContent = ''; $('gdLogoMsg').textContent = ''; $('gdUrl').value = '';
+  $('gdFor').textContent = gdMany ? gdMany.length + ' channels' : shownName(c); $('gdQ').value = shownName(c).replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const linked = gdMany ? gdMany.filter(x => data.channels.find(y => y.r === x)?.eo).length : 0;
+  $('gdNow').textContent = gdMany ? 'Link and Use EPG logo apply to all ' + gdMany.length + ' ticked channels.' + (linked ? ' ' + linked + ' already linked: Link replaces it.' : '')
+    : c.eo ? 'Linked to guide channel: ' + c.eo : c.ne ? 'No guide data for this channel yet.' : epgText("Using the channel's default guide match.");
+  $('gdUnlink').style.display = (gdMany ? linked : c.eo) ? '' : 'none'; $('gdMsg').textContent = ''; $('gdLogoMsg').textContent = ''; $('gdUrl').value = '';
   $('gdSource').innerHTML = `<option value="">${esc(epgText('All guide sources'))}</option>`;
   $('gdResults').innerHTML = ''; $('gdModal').style.display = 'flex';
   renderGuideUrls().then(() => { if (gdFor === r && gdPl === pl) gdSearch(); }).catch(() => {});
@@ -669,14 +788,15 @@ function gdSearch() {
 function chooseGuideLogo(index) {
   if (gdPl !== pl || !gdFor) return;
   const logo = gdResults[index]?.l; if (!logo) return;
-  edits.logos[gdFor] = logo; setDirty(true); renderChannels();
+  for (const r of gdMany || [gdFor]) edits.logos[r] = logo;
+  setDirty(true); renderChannels();
   $('gdLogoMsg').textContent = epgText('Logo selected. Save changes to apply it.');
 }
 async function linkGuide(id) {
-  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
-  await api('/api/epg/link?pl=' + encodeURIComponent(playlist), {r: raw, id});
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor, many = gdMany;
+  await api('/api/epg/link?pl=' + encodeURIComponent(playlist), many ? {rs: many, id} : {r: raw, id});
   if (!guideCurrent(epoch, playlist, raw)) return;
-  const c = data.channels.find(x => x.r === raw); c.eo = id || undefined; if (id) c.ne = 0;
+  for (const r of many || [raw]) { const c = data.channels.find(x => x.r === r); if (!c) continue; c.eo = id || undefined; if (id) c.ne = 0; }
   closeGuide(); renderChannels();
   $('status').textContent = id ? 'Linked. The TV reloads the guide in about 20 seconds.'
     : "Unlinked: the TV goes back to the channel's own guide (the guide reloads in about 20 seconds). A logo you chose stays: Guide and logo > Use provider logo, then Save to TV.";
@@ -689,7 +809,8 @@ $('gdResults').onclick = e => {
 };
 $('gdProvider').onclick = () => {
   if (gdPl !== pl || !gdFor) return;
-  delete edits.logos[gdFor]; setDirty(true); renderChannels();
+  for (const r of gdMany || [gdFor]) delete edits.logos[r];
+  setDirty(true); renderChannels();
   $('gdLogoMsg').textContent = epgText('Provider logo selected. Save changes to apply it.');
 };
 $('gdUnlink').onclick = () => linkGuide(null);
@@ -787,7 +908,7 @@ function renderGroups() {
     <input type="checkbox" data-gsel="${i}" ${groupSel.has(d) ? 'checked' : ''} aria-label="Select for merge">
     <input class="grow" data-orename="${i}" value="${esc(shownOf(d))}" aria-label="Group name" style="min-width:120px">
     <label class="dim"><input type="checkbox" data-gh="${i}" ${groupHidden.has(d) ? 'checked' : ''}> hide</label>
-    <button data-gup="${i}" aria-label="Move up">&#9650;</button><button data-gdn="${i}" aria-label="Move down">&#9660;</button></div>`;
+    <button data-gup="${i}" aria-label="Move up">&#9650;</button><button data-gdn="${i}" aria-label="Move down">&#9660;</button><button data-gco="${i}" title="Order this group's channels">Channels…</button></div>`;
   // Shown groups first; the hidden ones fold under one header at the bottom
   // (open on Hidden only or a search).
   const shownRows = [], hiddenRows = [];

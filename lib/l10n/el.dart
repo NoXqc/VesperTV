@@ -764,8 +764,20 @@ const Map<String, String> kEl = {
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
       "Λίστες, αγαπημένα, προφίλ, πρόοδος και ρυθμίσεις, αποθηκευμένα στο {path}",
   "Automatic backup": "Αυτόματο αντίγραφο ασφαλείας",
-  "Once a week, when VesperTV starts. Keeps the last {n}.":
-      "Μία φορά την εβδομάδα, όταν ξεκινά το VesperTV. Κρατά τα τελευταία {n}.",
+  "When VesperTV starts. Keeps the last {n}.":
+      "Όταν ξεκινά το VesperTV. Κρατά τα τελευταία {n}.",
+  "How often":
+      "Πόσο συχνά",
+  "Every day":
+      "Κάθε μέρα",
+  "Every 3 days":
+      "Κάθε 3 μέρες",
+  "Every week":
+      "Κάθε εβδομάδα",
+  "Every 2 weeks":
+      "Κάθε 2 εβδομάδες",
+  "Every month":
+      "Κάθε μήνα",
   "Restore from a file": "Επαναφορά από αρχείο",
   "Pick a backup file, e.g. after reinstalling VesperTV":
       "Επιλέξτε ένα αρχείο αντιγράφου, π.χ. μετά από επανεγκατάσταση του VesperTV",
@@ -2111,6 +2123,9 @@ const Map<String, String> kEl = {
   "Expand": "Ανάπτυξη",
   "Fill the screen with the Timeline guide":
       "Γεμίστε την οθόνη με τον οδηγό προγράμματος",
+  "Channel numbers": "Αριθμοί καναλιών",
+  "Show a number before each channel in the guide.":
+      "Εμφάνιση αριθμού πριν από κάθε κανάλι στον οδηγό.",
   "Programme details in the guide": "Λεπτομέρειες προγράμματος στον οδηγό",
   "Stay on a programme for 1 second to see its description under it.":
       "Μείνετε 1 δευτερόλεπτο σε ένα πρόγραμμα για να δείτε την περιγραφή του από κάτω.",

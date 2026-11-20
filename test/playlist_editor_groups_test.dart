@@ -257,6 +257,57 @@ void main() {
     expect(manager.liveViewSignature(), isNot(before));
   });
 
+  test('channel order: a playlist group and a custom group across playlists',
+      () async {
+    List<String> listed(Map data) =>
+        [for (final c in data['channels'] as List) c['n'] as String];
+    var r = await request('/api/order?pl=q&g=UK');
+    expect(r.status, 200);
+    expect(listed(r.data), ['BBC One', 'ITV']);
+    String id(String name) => manager
+        .visibleChannels(category: 'tv')
+        .firstWhere((c) => c.name == name)
+        .id;
+    r = await request('/api/order?pl=q', body: {
+      'g': 'UK',
+      'ids': [id('ITV'), id('BBC One'), 'q::nope'],
+    });
+    expect(r.status, 200);
+    expect(names('q', 'UK'), ['ITV', 'BBC One']);
+    expect(listed((await request('/api/order?pl=q&g=UK')).data),
+        ['ITV', 'BBC One']);
+
+    await request('/api/place?pl=p', body: {
+      'ids': [raw('RDS')],
+      'mode': 'move',
+      'to': {'newOwn': 'Weekend'},
+    });
+    await request('/api/place?pl=q', body: {
+      'ids': [raw('ESPN')],
+      'mode': 'move',
+      'to': {'own': 'Weekend'},
+    });
+    r = await request('/api/order?pl=p&g=Weekend');
+    expect(r.data['own'], true);
+    expect(listed(r.data).toSet(), {'RDS', 'ESPN'});
+    final other = (r.data['channels'] as List)
+        .firstWhere((c) => c['n'] == 'ESPN') as Map;
+    expect(other['p'], 'Other');
+    r = await request('/api/order?pl=p', body: {
+      'g': 'Weekend',
+      'ids': [id('ESPN'), id('RDS')],
+    });
+    expect(r.status, 200);
+    expect([
+      for (final c
+          in manager.visibleChannels(groupTitle: 'Weekend', category: 'tv'))
+        c.name
+    ], ['ESPN', 'RDS']);
+
+    r = await request('/api/order?pl=p', body: {'g': 'Nothing', 'ids': []});
+    expect(r.status, isNot(200));
+  });
+
   test('move into a new custom group, then put it back', () async {
     final moved = await request(
       '/api/place?pl=p',

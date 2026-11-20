@@ -140,6 +140,36 @@ void main() {
         session.channels.single.logoUrl, 'https://main.example/provider.png');
     expect(session.epgIdOverrides, {'a': 'same'});
   });
+  test('one guide link for several ticked channels, picked by hand', () async {
+    session.channels = [
+      ...session.channels,
+      Channel(
+          id: 'p::b',
+          rawId: 'b',
+          playlistId: 'p',
+          name: 'Sky HD',
+          group: 'Sports',
+          url: 'https://example.com/live2'),
+    ];
+    session.autoPairedEpgOverrides.add('b');
+    var response = await request('/api/epg/link?pl=p', body: {
+      'rs': ['a', 'b'],
+      'id': 'same'
+    });
+    expect(response.status, 200);
+    expect(session.epgIdOverrides, {'a': 'same', 'b': 'same'});
+    expect(session.autoPairedEpgOverrides, isEmpty);
+    expect(session.channels.map((c) => c.epgIdOverride), ['same', 'same']);
+    response = await request('/api/epg/link?pl=p', body: {
+      'rs': ['a', 'b'],
+      'id': null
+    });
+    expect(session.epgIdOverrides, isEmpty);
+    expect(session.channels.map((c) => c.epgIdOverride), [null, null]);
+    response = await request('/api/epg/link?pl=p', body: {'rs': [], 'id': 'x'});
+    expect(response.status, isNot(200));
+    expect(session.epgIdOverrides, isEmpty);
+  });
   test(
       'invalid and overlong image URLs are rejected server-side before truncation',
       () async {

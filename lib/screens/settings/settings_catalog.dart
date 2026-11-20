@@ -627,6 +627,13 @@ class SettingsCatalog {
             ],
           ],
           SettingsToggle(
+              id: 'guide_channel_numbers',
+              icon: Icons.format_list_numbered,
+              title: tr('Channel numbers'),
+              help: tr('Show a number before each channel in the guide.'),
+              value: prefs.guideChannelNumbers,
+              onChanged: prefs.setGuideChannelNumbers),
+          SettingsToggle(
               id: 'keep_groups_open',
               icon: Icons.view_sidebar_outlined,
               title: tr('Keep groups open'),

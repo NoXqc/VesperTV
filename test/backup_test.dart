@@ -122,6 +122,21 @@ void main() {
     expect(sync.keys, isNot(contains(AppConstants.keyLaunchWithProfiles)));
   });
 
+  test('automatic backup interval: weekly by default, never synced',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    expect(storage.getAutoBackupDays(), 7);
+    await storage.setAutoBackupDays(3);
+    expect(storage.getAutoBackupDays(), 3);
+    expect(storage.exportForSync().keys,
+        isNot(contains(AppConstants.keyAutoBackupDays)));
+    await storage.setAutoBackupDays(0);
+    expect(storage.getAutoBackupDays(), 7);
+    expect(BackupService.intervalChoices, contains(7));
+  });
+
   test('decode rejects files that are not VesperTV backups', () {
     expect(() => BackupService.decode('not json'), throwsFormatException);
     expect(() => BackupService.decode('{"format":"other","data":{}}'),

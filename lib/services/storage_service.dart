@@ -1215,6 +1215,10 @@ class StorageService {
       _guideBool(AppConstants.keyGuideRowDetails) ?? true;
   Future<void> setGuideRowDetails(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideRowDetails), value);
+  bool getGuideChannelNumbers() =>
+      _guideBool(AppConstants.keyGuideChannelNumbers) ?? true;
+  Future<void> setGuideChannelNumbers(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideChannelNumbers), value);
   Future<void> setGuideExpanded(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideExpanded), value);
   bool getExpandedBrowse() =>
@@ -1975,11 +1979,19 @@ class StorageService {
     }
   }
 
-  /// Settings > Backup & restore: automatic weekly backup (off by default)
-  /// and when the last one ran (device-only, never in a backup).
+  /// Settings > Backup & restore: automatic backup (off by default), how
+  /// many days apart (weekly unless changed) and when the last one ran
+  /// (device-only, never in a backup).
   bool getAutoBackup() => _prefs.getBool(AppConstants.keyAutoBackup) ?? false;
   Future<void> setAutoBackup(bool value) =>
       _prefs.setBool(AppConstants.keyAutoBackup, value);
+  int getAutoBackupDays() {
+    final d = _prefs.getInt(AppConstants.keyAutoBackupDays);
+    return d == null || d < 1 || d > 90 ? 7 : d;
+  }
+
+  Future<void> setAutoBackupDays(int days) =>
+      _prefs.setInt(AppConstants.keyAutoBackupDays, days);
   DateTime? getLastAutoBackup() {
     final ms = _prefs.getInt(AppConstants.keyLastAutoBackup);
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
@@ -2038,6 +2050,7 @@ class StorageService {
   static const _syncSkipExact = {
     AppConstants.keyActiveViewerId,
     AppConstants.keyAutoBackup,
+    AppConstants.keyAutoBackupDays,
     AppConstants.keyLastAutoBackup,
     AppConstants.keyVideoFill,
     AppConstants.keyVideoFit,

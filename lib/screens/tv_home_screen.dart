@@ -671,6 +671,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               child: Text(tr('New group…')),
             ),
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('settings'),
+            child: Text(tr('Settings')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -716,6 +720,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _cancelPendingHide(playlistId, title);
       case 'new_group':
         await _createMyGroup();
+      case 'settings':
+        await _openSettings();
     }
   }
 
@@ -797,6 +803,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             child: Text(tr('Delete this group')),
           ),
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('settings'),
+            child: Text(tr('Settings')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -819,6 +829,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         setState(() => _focusGroupKeyOnBuild = _groupKey(_myGroupsId, title));
       case 'new_group':
         await _createMyGroup();
+      case 'settings':
+        await _openSettings();
       case 'delete_group':
         await playlist.deleteUserGroup(title);
         if (!mounted) return;
@@ -1161,6 +1173,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           if (upcoming == null)
             if (seriesOption(context) case final option?) option,
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('settings'),
+            child: Text(tr('Settings')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -1172,6 +1188,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     switch (choice) {
       case 'sortFavorites':
         await _sortFavoriteChannels(menuViewer);
+      case 'settings':
+        await _openSettings();
       case 'live':
         await playbackNow.backToLive();
         if (mounted) _timelineGuideKey.currentState?.backToNow();
@@ -6030,6 +6048,46 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// channel actually minimized (reported directly on both guide views,
   /// separately — this exact box, sitting right next to a working resume
   /// pill saying otherwise, reading as "the mini player doesn't work").
+  /// The preview box with nothing playing: the highlighted channel's logo
+  /// (clayts450, Discord 2026-11-20: with Preview on focus off it only
+  /// ever said "Nothing playing"), else the "Nothing playing" card. The
+  /// Live list's highlight (cleared when focus leaves it) wins over the
+  /// Timeline guide's.
+  Widget _idlePreview() {
+    final nothing = Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.tv_off, color: Colors.white54),
+          const SizedBox(height: 6),
+          Text(tr('Nothing playing'),
+              style: const TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+    return ListenableBuilder(
+      listenable: Listenable.merge([_guideFocus, _liveListFocused]),
+      builder: (context, _) {
+        final logo =
+            (_liveListFocused.value ?? _guideFocus.value.$1)?.logoUrl?.trim();
+        if (logo == null || logo.isEmpty) return nothing;
+        return Padding(
+          padding: const EdgeInsets.all(14),
+          child: CachedNetworkImage(
+            key: ValueKey(logo),
+            imageUrl: logo,
+            fit: BoxFit.contain,
+            // A logo: decoded small (CLAUDE.md §10 (6)).
+            memCacheWidth: 320,
+            fadeInDuration: const Duration(milliseconds: 150),
+            placeholder: (_, __) => const SizedBox.shrink(),
+            errorWidget: (_, __, ___) => nothing,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildTimelinePreviewBox(Channel? channel, {bool badges = true}) {
     // Settings > Interface > Live TV > Quality on the preview.
     final showBadges = badges && context.watch<AppPreferences>().previewBadges;
@@ -6048,17 +6106,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         valueListenable: DesktopMiniPlayer.instance.channel,
         builder: (context, minimized, _) {
           if (minimized == null) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.tv_off, color: Colors.white54),
-                  const SizedBox(height: 6),
-                  Text(tr('Nothing playing'),
-                      style: const TextStyle(color: Colors.white70)),
-                ],
-              ),
-            );
+            return _idlePreview();
           }
           final controller = DesktopMiniPlayer.instance.controller;
           return ExcludeFocus(
@@ -6159,19 +6207,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Sports Trak / Settings / Search open with the opt-in workaround on
     // (see _pushOverLiveVideo).
     if (_videoHiddenForSports) return const ColoredBox(color: Colors.black);
-    if (channel == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.tv_off, color: Colors.white54),
-            const SizedBox(height: 6),
-            Text(tr('Nothing playing'),
-                style: const TextStyle(color: Colors.white70)),
-          ],
-        ),
-      );
-    }
+    if (channel == null) return _idlePreview();
     return ExcludeFocus(
       // Excluded from focus, not just tap-only — this box sits directly
       // above the grid's top row, and default D-pad traversal reaching Up
@@ -11273,7 +11309,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                                     alignment: Alignment.topCenter,
                                     child: _ChannelLabel(
                                         channel: widget.channels[i],
-                                        number: _phoneColumn ? null : i + 1,
+                                        number: _phoneColumn || !prefs.guideChannelNumbers
+                                            ? null
+                                            : i + 1,
                                         playlistTag: _playlistTagFor(i),
                                         moving: widget.channels[i].id ==
                                             widget.movingChannelId,

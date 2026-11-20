@@ -324,6 +324,46 @@ class PlaylistEditorServer extends ChangeNotifier {
                 {'id': p.id, 'name': p.name},
           ],
         };
+      case ('GET', '/api/order'):
+        // One group's channels as the TV lists them, for the editor's
+        // Channel order window (a custom group spans playlists).
+        final s = _session(q['pl']);
+        final g = q['g'];
+        if (s == null || g == null || g.isEmpty) return null;
+        await s.ensureLiveChannelsLoaded();
+        final own = _playlists.isUserGroup(g);
+        final names = {for (final p in _playlists.profiles) p.id: p.name};
+        final list = _playlists.visibleChannels(
+            playlistId: own ? null : s.profile.id,
+            groupTitle: g,
+            category: 'tv');
+        return {
+          'own': own,
+          'total': list.length,
+          'channels': [
+            for (final c in list.take(3000))
+              {
+                'id': c.id,
+                'n': c.name,
+                if (c.logoUrl != null && c.logoUrl!.isNotEmpty) 'l': c.logoUrl,
+                if (c.playlistId != s.profile.id) 'p': names[c.playlistId],
+              },
+          ],
+        };
+      case ('POST', '/api/order'):
+        final s = _session(q['pl']);
+        if (s == null || body is! Map) return null;
+        final g = body['g'], ids = body['ids'];
+        if (g is! String || g.isEmpty || ids is! List || ids.length > 3000) {
+          return null;
+        }
+        if (!ids.every((x) => x is String)) return null;
+        final ok =
+            await _playlists.setChannelOrder(s.profile.id, g, ids.cast<String>());
+        if (!ok) return null;
+        lastChange = s.profile.name;
+        notifyListeners();
+        return {'ok': true};
       case ('POST', '/api/place'):
         return _place(_session(q['pl']), body);
       case ('POST', '/api/unplace'):
@@ -451,12 +491,23 @@ class PlaylistEditorServer extends ChangeNotifier {
         return {'ok': true};
       case ('POST', '/api/epg/link'):
         final s = _session(q['pl']);
-        if (s == null || body is! Map || body['r'] is! String) return null;
+        if (s == null || body is! Map) return null;
         final id = (body['id'] as String?)?.trim();
-        await s.setEpgIdOverride(
-          body['r'] as String,
-          id == null || id.isEmpty ? null : id,
-        );
+        final linked = id == null || id.isEmpty ? null : id;
+        final many = body['rs'];
+        if (many is List && many.every((r) => r is String)) {
+          // Several ticked channels at once (Discord, 2026-11-20: 17 copies
+          // of one channel, one guide): one write, picked by hand.
+          if (many.isEmpty || many.length > 5000) return null;
+          await s.restoreEpgIdOverrides(
+            {for (final r in many.cast<String>()) r: linked},
+            isAuto: false,
+          );
+        } else if (body['r'] is String) {
+          await s.setEpgIdOverride(body['r'] as String, linked);
+        } else {
+          return null;
+        }
         // The guide only keeps programmes for channels it knows: load the
         // newly linked ids once the user is done linking.
         _guideReload?.cancel();

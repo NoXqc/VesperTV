@@ -751,8 +751,20 @@ const Map<String, String> kUk = {
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
       "Плейлисти, улюблене, профілі, прогрес і налаштування, збережено в {path}",
   "Automatic backup": "Автоматичне резервне копіювання",
-  "Once a week, when VesperTV starts. Keeps the last {n}.":
-      "Раз на тиждень під час запуску VesperTV. Зберігає останні {n}.",
+  "When VesperTV starts. Keeps the last {n}.":
+      "Під час запуску VesperTV. Зберігає останні {n}.",
+  "How often":
+      "Як часто",
+  "Every day":
+      "Щодня",
+  "Every 3 days":
+      "Кожні 3 дні",
+  "Every week":
+      "Щотижня",
+  "Every 2 weeks":
+      "Кожні 2 тижні",
+  "Every month":
+      "Щомісяця",
   "Restore from a file": "Відновити з файлу",
   "Pick a backup file, e.g. after reinstalling VesperTV":
       "Виберіть файл резервної копії, наприклад після перевстановлення VesperTV",
@@ -2056,6 +2068,9 @@ const Map<String, String> kUk = {
   "Expand": "Розгорнути",
   "Fill the screen with the Timeline guide":
       "Заповнити екран телегідом «Шкала часу»",
+  "Channel numbers": "Номери каналів",
+  "Show a number before each channel in the guide.":
+      "Показувати номер перед кожним каналом у телегіді.",
   "Programme details in the guide": "Подробиці програми в телегіді",
   "Stay on a programme for 1 second to see its description under it.":
       "Затримайтеся на програмі 1 секунду, щоб побачити її опис під нею.",
