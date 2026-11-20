@@ -77,11 +77,12 @@ class CiTour {
     await _key('left');
     await _wait(1);
     await _shot('bar-multiview-button');
-    // Multiview with this channel on screen 1, then screen 2's picker.
+    // Multiview with this channel on screen 1, then screen 2's picker (a
+    // fresh install has the 2-screen layout: screen 2 is under screen 1).
     await _key('enter');
     await _wait(8);
     await _shot('multiview');
-    await _key('right');
+    await _key('down');
     await _key('enter');
     await _wait(2);
     await _shot('multiview-picker');
