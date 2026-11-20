@@ -1081,6 +1081,14 @@ class StorageService {
   Future<void> setArchiveAutoLargest(bool value) =>
       _prefs.setBool(_vk('vesper_archive_auto_largest'), value);
 
+  /// Settings > Player > Movies & TV Shows > IPTV copies in Sources: Media
+  /// Hub's Sources list also offers the same movie / episode from the
+  /// viewer's IPTV playlists (`HubIptvSources`; off by default, per viewer).
+  bool getHubIptvSources() =>
+      _prefs.getBool(_vk('vesper_hub_iptv_sources')) ?? false;
+  Future<void> setHubIptvSources(bool value) =>
+      _prefs.setBool(_vk('vesper_hub_iptv_sources'), value);
+
   /// Sports Trak's league rail shows the names (device-only).
   bool getSportsRailExpanded() =>
       _prefs.getBool('vesper_sports_rail_expanded') ?? false;

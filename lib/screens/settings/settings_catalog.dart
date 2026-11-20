@@ -939,6 +939,15 @@ class SettingsCatalog {
                     'Use the largest known file size when starting a title. Resume keeps your selected stream.'),
                 value: archive.autoPlayLargest,
                 onChanged: archive.setAutoPlayLargest),
+          if (archive != null)
+            SettingsToggle(
+                id: 'hub_iptv_sources',
+                icon: Icons.live_tv_outlined,
+                title: tr('IPTV copies in Sources'),
+                help: tr(
+                    'When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.'),
+                value: archive.iptvSources,
+                onChanged: archive.setIptvSources),
           SettingsLink(
               id: 'stream_badges',
               floating: true,
