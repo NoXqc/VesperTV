@@ -187,6 +187,10 @@ const Map<String, String> kPl = {
       "Automatycznie odtwarzaj największy plik",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Przy starcie tytułu używaj największego znanego rozmiaru pliku. Wznawianie zachowuje wybrany strumień.",
+  "IPTV copies in Sources":
+      "Kopie IPTV w źródłach",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Gdy uruchamiasz film lub odcinek z Media Hub, lista źródeł pokazuje też ten sam tytuł z twoich playlist IPTV (dopasowany po nazwie i roku albo po id TMDB). Domyślnie wyłączone.",
   "Prefer highest quality": "Preferuj najwyższą jakość",
   "Remind me for every game: {team}": "Przypominaj o każdym meczu: {team}",
   "Stop team reminders: {team}": "Zatrzymaj przypomnienia drużyny: {team}",

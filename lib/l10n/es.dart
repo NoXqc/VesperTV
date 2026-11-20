@@ -196,6 +196,10 @@ const Map<String, String> kEs = {
       "Reproducir automáticamente el archivo más grande",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Elige el archivo de mayor tamaño conocido al iniciar. Al reanudar se conserva el flujo seleccionado.",
+  "IPTV copies in Sources":
+      "Copias IPTV en Fuentes",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Al iniciar una película o un episodio de Media Hub, su lista de Fuentes también ofrece el mismo título de tus listas IPTV (emparejado por nombre y año, o por id de TMDB). Desactivado por defecto.",
   "Prefer highest quality": "Preferir la máxima calidad",
   "Remind me for every game: {team}": "Recordarme cada partido: {team}",
   "Stop team reminders: {team}": "Desactivar recordatorios: {team}",

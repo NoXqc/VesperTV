@@ -182,6 +182,10 @@ const Map<String, String> kDe = {
   "Automatically play the largest file": "Größte Datei automatisch abspielen",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Verwende beim Start eines Titels die größte bekannte Dateigröße. Beim Fortsetzen bleibt der gewählte Stream erhalten.",
+  "IPTV copies in Sources":
+      "IPTV-Kopien in den Quellen",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Wenn du einen Media-Hub-Film oder eine Folge startest, bietet die Quellenliste auch denselben Titel aus deinen IPTV-Playlists an (nach Name und Jahr oder TMDB-ID zugeordnet). Standardmäßig aus.",
   "Prefer highest quality": "Höchste Qualität bevorzugen",
   "Remind me for every game: {team}": "Erinnere mich an jedes Spiel: {team}",
   "Stop team reminders: {team}": "Team-Erinnerungen beenden: {team}",

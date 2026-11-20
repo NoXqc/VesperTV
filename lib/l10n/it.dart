@@ -196,6 +196,10 @@ const Map<String, String> kIt = {
       "Riproduci automaticamente il file più grande",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Scegli il file di dimensione nota maggiore all’avvio. La ripresa mantiene il flusso selezionato.",
+  "IPTV copies in Sources":
+      "Copie IPTV nelle Fonti",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Quando avvii un film o un episodio di Media Hub, l'elenco Fonti offre anche lo stesso titolo dalle tue playlist IPTV (abbinato per nome e anno, o per id TMDB). Disattivato per impostazione predefinita.",
   "Prefer highest quality": "Preferisci la qualità più alta",
   "Remind me for every game: {team}": "Ricordami ogni partita: {team}",
   "Stop team reminders: {team}": "Disattiva promemoria: {team}",

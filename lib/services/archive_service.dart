@@ -136,6 +136,27 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  /// Settings > Player > Movies & TV Shows > IPTV copies in Sources.
+  bool get iptvSources => _storage.getHubIptvSources();
+  Future<void> setIptvSources(bool value) async {
+    await _storage.setHubIptvSources(value);
+    _notify();
+  }
+
+  /// Set by the app (main.dart, `HubIptvSources.streams`): the same movie /
+  /// episode from the viewer's IPTV playlists. With [iptvSources] on,
+  /// [searchStreams] asks it as one more source, [iptvSource].
+  Future<List<ArchiveStream>> Function(
+          ArchiveMeta meta, ArchiveVideo? episode, bool Function() active)?
+      iptvStreams;
+
+  /// The Sources list's IPTV row: not a real add-on (never saved, never in
+  /// [enabledSources]); its streams are the playlists' own links.
+  static const iptvSource =
+      ArchiveSource(manifestUrl: 'vesper:iptv', name: 'IPTV');
+  static bool isIptvSource(ArchiveSource s) =>
+      s.manifestUrl == iptvSource.manifestUrl;
+
   /// Jellyfin/Emby sources ([ArchiveSource.server]) go here instead of
   /// [_api]; everything else (rows, cache, search, history, Play) is the
   /// same for both kinds of source.
@@ -2556,6 +2577,7 @@ class ArchiveService extends ChangeNotifier {
                     [catalog.id, catalog.wire]
                 ],
             ],
+        if (iptvStreams != null && iptvSources) 'iptv',
       ]);
 
   /// Bounded parallel metadata requests, scoped to the viewer and configuration.
@@ -2615,6 +2637,9 @@ class ArchiveService extends ChangeNotifier {
         }
       }
     }
+    if (iptvStreams != null && iptvSources && !isIptvSource(source)) {
+      targets[iptvSource.key] = (iptvSource, videoId);
+    }
     for (final entry in targets.entries) {
       session.addSource(entry.key, entry.value.$1.name);
     }
@@ -2623,6 +2648,17 @@ class ArchiveService extends ChangeNotifier {
       final (s, id) = targets[key]!;
       final watch = Stopwatch()..start();
       try {
+        if (isIptvSource(s)) {
+          final streams =
+              await iptvStreams!(meta, episode, () => session.active);
+          debugPrint('ArchiveStreams: source=iptv items=${streams.length} '
+              'ms=${watch.elapsedMilliseconds}');
+          session.finish(key, [
+            for (final stream in streams)
+              ArchiveStreamOption(source: s, stream: stream)
+          ]);
+          return;
+        }
         Future<List<ArchiveStream>> fetch(String id) async => s.server != null
             ? source.server == null
                 ? await _serverTitleStreams(
@@ -2660,6 +2696,10 @@ class ArchiveService extends ChangeNotifier {
     final serverIndex =
         pending.indexWhere((key) => targets[key]!.$1.server != null);
     if (serverIndex > 0) pending.insert(0, pending.removeAt(serverIndex));
+    // The IPTV copies are a local search (plus one episode list per show):
+    // asked first, so slow add-ons never hold them back.
+    final iptvIndex = pending.indexOf(iptvSource.key);
+    if (iptvIndex > 0) pending.insert(0, pending.removeAt(iptvIndex));
     var running = 0;
     Future<void> worker() async {
       running++;

@@ -197,6 +197,10 @@ const Map<String, String> kEl = {
       "Αυτόματη αναπαραγωγή του μεγαλύτερου αρχείου",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Επιλέγει το μεγαλύτερο γνωστό αρχείο στην έναρξη. Η συνέχιση διατηρεί την επιλεγμένη ροή.",
+  "IPTV copies in Sources":
+      "Αντίγραφα IPTV στις Πηγές",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Όταν ξεκινάς μια ταινία ή ένα επεισόδιο του Media Hub, η λίστα Πηγών προσφέρει και τον ίδιο τίτλο από τις λίστες IPTV σου (ταίριασμα με όνομα και έτος ή TMDB id). Απενεργοποιημένο από προεπιλογή.",
   "Prefer highest quality": "Προτίμηση υψηλότερης ποιότητας",
   "Remind me for every game: {team}": "Υπενθύμιση για κάθε αγώνα: {team}",
   "Stop team reminders: {team}": "Διακοπή υπενθυμίσεων: {team}",

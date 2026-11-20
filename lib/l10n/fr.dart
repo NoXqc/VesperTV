@@ -196,6 +196,10 @@ const Map<String, String> kFr = {
       "Lire automatiquement le plus gros fichier",
   "Use the largest known file size when starting a title. Resume keeps your selected stream.":
       "Choisir le plus gros fichier connu au démarrage. La reprise conserve le flux sélectionné.",
+  "IPTV copies in Sources":
+      "Copies IPTV dans les sources",
+  "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
+      "Quand vous lancez un film ou un épisode du Media Hub, sa liste de sources propose aussi le même titre depuis vos listes IPTV (associé par nom et année, ou par id TMDB). Désactivé par défaut.",
   "Prefer highest quality": "Préférer la meilleure qualité",
   "Remind me for every game: {team}": "Me rappeler chaque match : {team}",
   "Stop team reminders: {team}": "Désactiver les rappels : {team}",

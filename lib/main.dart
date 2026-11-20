@@ -86,6 +86,7 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 import 'l10n/l10n.dart';
 import 'services/archive_service.dart';
+import 'services/hub_iptv_sources.dart';
 import 'services/backup_service.dart';
 import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
@@ -859,7 +860,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         RecordingService.instance.prepareProgramme = _prepareProgrammeRecording;
       }
       _parentalPin = ParentalPin(_storage);
-      _archiveService = ArchiveService(_storage);
+      _archiveService = ArchiveService(_storage)
+        ..iptvStreams = HubIptvSources(_playlistManager).streams;
       // Trakt/Simkl scrobbling reads the connected accounts from here.
       WatchTracker.instance.attach(_archiveService);
       TrackerSync.instance.attach(_archiveService);
