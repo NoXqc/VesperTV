@@ -2111,6 +2111,9 @@ const Map<String, String> kEl = {
   "Expand": "Ανάπτυξη",
   "Fill the screen with the Timeline guide":
       "Γεμίστε την οθόνη με τον οδηγό προγράμματος",
+  "Programme details in the guide": "Λεπτομέρειες προγράμματος στον οδηγό",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Μείνετε 1 δευτερόλεπτο σε ένα πρόγραμμα για να δείτε την περιγραφή του από κάτω.",
   "The live channel fills the screen behind a see-through guide":
       "Το ζωντανό κανάλι γεμίζει την οθόνη πίσω από έναν ημιδιαφανή οδηγό",
   "Source: {source}": "Πηγή: {source}",

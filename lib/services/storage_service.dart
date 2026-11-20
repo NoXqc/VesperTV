@@ -1211,6 +1211,10 @@ class StorageService {
       _prefs.setBool(AppConstants.keyAutoTrailers, value);
 
   bool getGuideExpanded() => _guideBool(AppConstants.keyGuideExpanded) ?? false;
+  bool getGuideRowDetails() =>
+      _guideBool(AppConstants.keyGuideRowDetails) ?? true;
+  Future<void> setGuideRowDetails(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideRowDetails), value);
   Future<void> setGuideExpanded(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideExpanded), value);
   bool getExpandedBrowse() =>

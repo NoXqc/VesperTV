@@ -2167,6 +2167,9 @@ const Map<String, String> kFr = {
   "Expand": "Agrandir",
   "Fill the screen with the Timeline guide":
       "Afficher le guide horaire sur tout l’écran",
+  "Programme details in the guide": "Détails du programme dans le guide",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Restez 1 seconde sur un programme pour voir sa description en dessous.",
   "The live channel fills the screen behind a see-through guide":
       "La chaîne en direct remplit l’écran derrière un guide transparent",
   "Source: {source}": "Source : {source}",

@@ -10,6 +10,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
+import 'package:flutter/scheduler.dart' show SchedulerBinding, SchedulerPhase;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 import 'package:media_kit_video/media_kit_video.dart';
@@ -56,6 +57,7 @@ import '../widgets/tv_dialog_option.dart';
 import '../widgets/video_tap_layer.dart';
 import '../widgets/catalog_warmup_banner.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/gap_extent_list.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
@@ -503,6 +505,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// rebuilt the whole TV home on every D-pad step in the guide (250-420 ms
   /// frames on the Homatics, 2026-11-12).
   final _guideFocus = ValueNotifier<(Channel?, EpgProgram?)>((null, null));
+
+  /// The 3-row full-video guide grows upward by the height of a programme's
+  /// details while they're open under a row ([_TimelineGuide.detailsGrow]),
+  /// so its three rows stay on screen. Only that guide's box listens.
+  final _guideDetailsGrow = _GuideDetailsGrow();
   Channel? get _guideFocusedChannel => _guideFocus.value.$1;
   EpgProgram? get _guideFocusedProgram => _guideFocus.value.$2;
 
@@ -2936,6 +2943,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _playlistsRowFocusNode.dispose();
     _groupsScroll.dispose();
     _guideFocus.dispose();
+    _guideDetailsGrow.dispose();
     _timelineFilterButtonFocusNode.dispose();
     _guideHoldFocus.dispose();
     _timelineFilterFieldFocusNode.dispose();
@@ -4201,11 +4209,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 ),
               SafeArea(
                 // Full-video mode: the guide sits right down at the TV's
-                // bottom edge (owner's request) instead of 16px above it.
+                // bottom edge (owner's request) instead of 16px above it,
+                // and the groups and guide reach its left and right edges
+                // (owner's +909 photo, 2026-11-20); the top bar keeps its
+                // 16 px (below).
                 minimum: _shortScreen
-                    ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
+                    ? EdgeInsets.fromLTRB(
+                        _fullVideo ? 0 : 16, 4, _fullVideo ? 0 : 16, 4)
                     : _fullVideo
-                        ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
+                        ? const EdgeInsets.fromLTRB(0, 16, 0, 4)
                         : const EdgeInsets.all(16),
                 child: Column(
                   children: [
@@ -4216,17 +4228,24 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                           _focusDepth <= 1 &&
                           !(playlist.error != null &&
                               playlist.channels.isEmpty),
-                      topBar: _TvTopBar(
-                          dense: _shortScreen || _compactUi,
-                          // Wide phones/tablets (including unfolded phones) use
-                          // columns too. Full-video mode hides passed columns
-                          // completely, so touch users need a visible way back.
-                          onBack: !_compact &&
-                                  !prefs.isTelevision &&
-                                  _focusDepth > 0
-                              ? _handleBack
-                              : null,
-                          showClock: prefs.showClock),
+                      // Always a Padding (only its size changes): the top
+                      // bar keeps its place when full video drops the
+                      // screen's side margins.
+                      topBar: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: _fullVideo ? 16 : 0),
+                        child: _TvTopBar(
+                            dense: _shortScreen || _compactUi,
+                            // Wide phones/tablets (including unfolded phones) use
+                            // columns too. Full-video mode hides passed columns
+                            // completely, so touch users need a visible way back.
+                            onBack: !_compact &&
+                                    !prefs.isTelevision &&
+                                    _focusDepth > 0
+                                ? _handleBack
+                                : null,
+                            showClock: prefs.showClock),
+                      ),
                     ),
                     const CatalogWarmupBanner(),
                     Expanded(
@@ -4456,8 +4475,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                           child: _fullVideoScrim(_tabsScope(
                                               collapsed: _focusDepth > 0)),
                                         ),
+                                        // A hidden column takes its divider
+                                        // along: the guide starts at the
+                                        // screen's edge in full video.
                                         VerticalDivider(
-                                            width: 1,
+                                            width: _hidesPassedColumns &&
+                                                    _focusDepth > 0
+                                                ? 0
+                                                : 1,
                                             color: (_hidesPassedColumns ||
                                                         _fullArt) &&
                                                     _focusDepth > 0
@@ -4476,7 +4501,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                     !groupsHeld)),
                                           ),
                                           VerticalDivider(
-                                              width: 1,
+                                              width: _hidesPassedColumns &&
+                                                      _focusDepth > 1 &&
+                                                      !groupsHeld
+                                                  ? 0
+                                                  : 1,
                                               color: (_hidesPassedColumns ||
                                                           _fullArt) &&
                                                       _focusDepth > 1 &&
@@ -4486,11 +4515,23 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                           Expanded(
                                               child: _SlideSteadyWidth(
                                                   enabled: prefs.isTelevision,
+                                                  // + the two dividers (0 when
+                                                  // their column is hidden), so
+                                                  // a slide lands exactly.
                                                   columnsWidth: _columnWidth(
                                                           0, _tabsWidth) +
                                                       _columnWidth(
                                                           1, _groupsWidth,
-                                                          held: groupsHeld),
+                                                          held: groupsHeld) +
+                                                      (_hidesPassedColumns &&
+                                                              _focusDepth > 0
+                                                          ? 0
+                                                          : 1) +
+                                                      (_hidesPassedColumns &&
+                                                              _focusDepth > 1 &&
+                                                              !groupsHeld
+                                                          ? 0
+                                                          : 1),
                                                   child: _contentScope(playlist,
                                                       epg, isBrowseTab))),
                                         ],
@@ -6516,11 +6557,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   );
                 });
 
+      final prefs = context.watch<AppPreferences>();
+      // The full-video guide's 3-row layout below (not Expand, not the TV
+      // filter keyboard's): the one that grows for a programme's details.
+      final threeRowFullVideo = _fullVideo &&
+          !(prefs.guideExpanded && !_timelineFilterActive) &&
+          !(_timelineFilterActive && prefs.isTelevision);
       final guide = Focus(
         focusNode: _guideHoldFocus,
         child: _TimelineGuide(
           key: _timelineGuideKey,
           holdFocus: _guideHoldFocus,
+          rowDetails: _fullVideo && prefs.guideRowDetails,
+          detailsGrow: threeRowFullVideo ? _guideDetailsGrow : null,
           channels: _filteredLiveChannelsForGuide(playlist),
           epg: epg,
           anchor: _guideAnchor,
@@ -6601,9 +6650,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
       // Expanded Timeline replaces the preview spacer with more guide rows.
       // The existing filter layout still owns its keyboard space when open.
-      if (_fullVideo &&
-          context.watch<AppPreferences>().guideExpanded &&
-          !_timelineFilterActive) {
+      if (_fullVideo && prefs.guideExpanded && !_timelineFilterActive) {
         return _fullVideoScrim(guide);
       }
 
@@ -6663,26 +6710,46 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         // Full-video mode: a 3-row guide at the bottom,
                         // the video showing through everything above it.
                         ? [
-                            Expanded(child: previewRow),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: _TimelineGuideState._rulerHeight +
-                                  1 +
-                                  // Same height in Compact guide: shorter
-                                  // rows fit 4 channels instead of 3.
-                                  // Compact UI: 5 whole rows (4.8 left
-                                  // half a row showing).
-                                  (_compactUi
-                                      ? 5 *
-                                          _TimelineGuideState
-                                              ._compactUiRowHeight
-                                      : 3 *
-                                          (_largeUi
-                                              ? _TimelineGuideState
-                                                  ._largeUiRowHeight
-                                              : _TimelineGuideState
-                                                  ._normalRowHeight)),
-                              child: _fullVideoScrim(guide),
+                            Expanded(
+                              child: LayoutBuilder(builder: (context, box) {
+                                final height =
+                                    _TimelineGuideState._rulerHeight +
+                                        1 +
+                                        // Same height in Compact guide: shorter
+                                        // rows fit 4 channels instead of 3.
+                                        // Compact UI: 5 whole rows (4.8 left
+                                        // half a row showing).
+                                        (_compactUi
+                                            ? 5 *
+                                                _TimelineGuideState
+                                                    ._compactUiRowHeight
+                                            : 3 *
+                                                (_largeUi
+                                                    ? _TimelineGuideState
+                                                        ._largeUiRowHeight
+                                                    : _TimelineGuideState
+                                                        ._normalRowHeight));
+                                // Room to grow into: the see-through space
+                                // above, less a strip of picture.
+                                _guideDetailsGrow.limit = math.max(
+                                    0.0, box.maxHeight - 12 - height - 24);
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(child: previewRow),
+                                    const SizedBox(height: 12),
+                                    ValueListenableBuilder<double>(
+                                      valueListenable: _guideDetailsGrow,
+                                      builder: (context, grow, child) =>
+                                          SizedBox(
+                                              height: height + grow,
+                                              child: child),
+                                      child: _fullVideoScrim(guide),
+                                    ),
+                                  ],
+                                );
+                              }),
                             ),
                           ]
                         : [
@@ -9964,10 +10031,22 @@ class _TimelineGuide extends StatefulWidget {
       this.initialScrollTop,
       this.onOpenCatchup,
       this.holdFocus,
-      this.translucent = false});
+      this.translucent = false,
+      this.rowDetails = false,
+      this.detailsGrow});
 
   /// See `_TvHomeScreenState._guideHoldFocus`.
   final FocusNode? holdFocus;
+
+  /// Full-video guide (Settings > Interface > Guide > Programme details in
+  /// the guide): the highlight resting on a programme for 1 s opens its
+  /// details under the row, like TiviMate's guide (owner photo, 2026-11-20).
+  final bool rowDetails;
+
+  /// The 3-row full-video guide: grows upward by the details' height (the
+  /// parent's box listens) so its rows stay on screen. Null = the guide
+  /// keeps its height and the rows under the details move down (Expand).
+  final _GuideDetailsGrow? detailsGrow;
 
   /// Full-video mode (`_TvHomeScreenState._fullVideo`): lighter "now"
   /// blocks so the video shows through the grid.
@@ -10210,6 +10289,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         _windowEnd.difference(_windowStart).inMinutes * _pixelsPerMinute;
     _gridHScroll.addListener(_mirrorRuler);
     _gridVScroll.addListener(_mirrorLabels);
+    _gridFocusScope.addListener(_onGridFocus);
     // Guide rows load from the EPG database on demand — see
     // EpgService.getPrograms. Repaints only this guide when they arrive.
     widget.epg.guideRowsLoaded.addListener(_onGuideRowsLoaded);
@@ -10360,6 +10440,24 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   @override
   void didUpdateWidget(_TimelineGuide old) {
     super.didUpdateWidget(old);
+    // Switched off, or another layout (Expand, the filter keyboard): the
+    // details close (after this build: the old box listens to its grow).
+    if (_detailsRow != null &&
+        (!widget.rowDetails ||
+            old.detailsGrow != widget.detailsGrow ||
+            _detailsRow! >= widget.channels.length)) {
+      _detailsTimer?.cancel();
+      _detailsTimer = null;
+      _detailsRow = null;
+      _detailsProgram = null;
+      _detailsExtent = 0;
+      final grow = old.detailsGrow;
+      final now = widget.detailsGrow;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        grow?.set(0);
+        now?.set(0);
+      });
+    }
     final oldGroup = old.channels.isEmpty ? null : old.channels.first.group;
     final newGroup =
         widget.channels.isEmpty ? null : widget.channels.first.group;
@@ -10550,7 +10648,13 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   }
 
   @override
-  void didPushNext() => _nowTimer?.cancel();
+  void didPushNext() {
+    _nowTimer?.cancel();
+    // Full screen / a page over the guide: the details close.
+    _detailsTimer?.cancel();
+    _detailsTimer = null;
+    _closeDetails();
+  }
 
   @override
   void didPopNext() {
@@ -10566,6 +10670,13 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void dispose() {
     appRouteObserver.unsubscribe(this);
     _nowTimer?.cancel();
+    _detailsTimer?.cancel();
+    _gridFocusScope.removeListener(_onGridFocus);
+    if (_detailsRow != null) {
+      // Not now: the tree is locked while it unmounts.
+      final grow = widget.detailsGrow;
+      WidgetsBinding.instance.addPostFrameCallback((_) => grow?.set(0));
+    }
     widget.epg.guideRowsLoaded.removeListener(_onGuideRowsLoaded);
     _gridHScroll.removeListener(_mirrorRuler);
     _gridVScroll.removeListener(_mirrorLabels);
@@ -10590,20 +10701,138 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// down". Once this has run, that call's vertical half is a no-op and
   /// it only ever handles the horizontal axis.
   void _ensureRowVisible(int rowIndex) {
+    // Focus is moving: open details close in the next frame, so measure
+    // rows and the view as they will be then (a grown 3-row guide shrinks
+    // back by [_builtGrow]; rows under the details move back up).
+    final grown = _builtGrow;
+    _closeDetails();
     if (!_gridVScroll.hasClients) return;
     final pos = _gridVScroll.position;
     // Backing out of fullscreen can reach here with the grid attached but not laid out yet.
     if (!pos.hasViewportDimension) return;
+    final viewport = pos.viewportDimension - grown;
     final top = rowIndex * _rowHeight;
     final bottom = top + _rowHeight;
     final viewTop = pos.pixels;
-    final viewBottom = viewTop + pos.viewportDimension;
+    final viewBottom = viewTop + viewport;
     if (top < viewTop) {
       _gridVScroll.jumpTo(top);
     } else if (bottom > viewBottom) {
-      _gridVScroll.jumpTo(
-          (bottom - pos.viewportDimension).clamp(0.0, pos.maxScrollExtent));
+      _gridVScroll.jumpTo((bottom - viewport).clamp(0.0, pos.maxScrollExtent));
     }
+  }
+
+  // ---- Programme details under the row (full-video guide) ----
+
+  /// How long the highlight rests on a programme before its details open.
+  static const Duration _detailsDelay = Duration(seconds: 1);
+  Timer? _detailsTimer;
+
+  /// The row whose details are open (the gap under it), its programme and
+  /// the gap's height. Null / 0 = closed. Any focus move closes them.
+  int? _detailsRow;
+  EpgProgram? _detailsProgram;
+  double _detailsExtent = 0;
+
+  /// How much the last build grew the guide ([_TimelineGuide.detailsGrow]):
+  /// what the laid-out view is taller by right now.
+  double _builtGrow = 0;
+
+  static bool _sameProgram(EpgProgram? a, EpgProgram? b) =>
+      a != null &&
+      b != null &&
+      a.start == b.start &&
+      a.stop == b.stop &&
+      a.title == b.title;
+
+  /// A block took focus ([_trackFocus], after [_ensureRowVisible] closed any
+  /// open details): its programme's details open after [_detailsDelay]
+  /// with no other move. Placeholder / catch-up hour blocks have none.
+  void _scheduleDetails(int row, EpgProgram? program) {
+    _detailsTimer?.cancel();
+    _detailsTimer = null;
+    if (!widget.rowDetails || program == null) return;
+    _detailsTimer = Timer(_detailsDelay, () => _openDetails(row, program));
+  }
+
+  void _onGridFocus() {
+    if (_gridFocusScope.hasFocus) return;
+    // Left to the groups, Up to the filter, a block rebuilt away...
+    _detailsTimer?.cancel();
+    _detailsTimer = null;
+    _closeDetails();
+  }
+
+  void _openDetails(int row, EpgProgram program) {
+    _detailsTimer = null;
+    if (!mounted ||
+        !widget.rowDetails ||
+        !_gridFocusScope.hasFocus ||
+        _focusedRowIndex != row ||
+        !_sameProgram(_focusedProgram, program) ||
+        row >= widget.channels.length ||
+        widget.movingChannelId != null ||
+        widget.selection?.value != null ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    final extent = _detailsHeightFor(program);
+    // A short screen with no room to grow: the corner card has it.
+    if (extent < 40) return;
+    setState(() {
+      _detailsRow = row;
+      _detailsProgram = program;
+      _detailsExtent = extent;
+    });
+    widget.detailsGrow?.set(extent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _detailsRow == row) _revealDetails(row);
+    });
+  }
+
+  void _closeDetails() {
+    if (_detailsRow == null || !mounted) return;
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      // Mid-build / layout: after this frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _closeDetails());
+      return;
+    }
+    setState(() {
+      _detailsRow = null;
+      _detailsProgram = null;
+      _detailsExtent = 0;
+    });
+    widget.detailsGrow?.set(0);
+  }
+
+  /// The gap's height: title, times, and up to three lines of description
+  /// (two in Compact UI), at the guide's text size; no more than the 3-row
+  /// guide has room to grow.
+  double _detailsHeightFor(EpgProgram program) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final hasText = (program.description ?? '').trim().isNotEmpty;
+    // Margins + padding, then the text lines (see _GuideRowDetails).
+    final fixed = _compactUi ? 22.0 : 29.0;
+    final text = _compactUi ? (hasText ? 66.0 : 32.0) : (hasText ? 87.0 : 36.0);
+    var extent = (fixed + text * scale).ceilToDouble();
+    final grow = widget.detailsGrow;
+    if (grow != null && extent > grow.limit) extent = grow.limit;
+    return extent;
+  }
+
+  /// Expand (the guide doesn't grow): details opened under the view's
+  /// bottom edge scroll up into it, the row itself staying in view.
+  void _revealDetails(int row) {
+    if (!_gridVScroll.hasClients) return;
+    final pos = _gridVScroll.position;
+    if (!pos.hasViewportDimension) return;
+    final top = row * _rowHeight;
+    final bottom = top + _rowHeight + _detailsExtent;
+    if (bottom <= pos.pixels + pos.viewportDimension) return;
+    _gridVScroll.jumpTo(math
+        .min(bottom - pos.viewportDimension, top)
+        .clamp(0.0, pos.maxScrollExtent));
   }
 
   // Every currently-mounted programme block registers its own FocusNode
@@ -10641,6 +10870,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void _trackFocus(int rowIndex, EpgProgram? program) {
     _focusedRowIndex = rowIndex;
     _focusedProgram = program;
+    _scheduleDetails(rowIndex, program);
     if (_guideDrivenFocus) {
       _guideDrivenFocus = false;
       return;
@@ -11003,6 +11233,15 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // focus, so Down couldn't even reach past it) during the window
     // before EPG had loaded at all.
     final epgLoading = widget.epg.isLoading || widget.epg.lastUpdated == null;
+    // Open programme details: the gap under that row in both lists.
+    final detailsRow = _detailsRow;
+    final gapRow = detailsRow != null &&
+            detailsRow < widget.channels.length &&
+            _detailsExtent > 0
+        ? detailsRow
+        : null;
+    final gap = gapRow == null ? 0.0 : _detailsExtent;
+    _builtGrow = widget.detailsGrow == null ? 0 : gap;
     return Column(
       children: [
         SizedBox(
@@ -11052,109 +11291,176 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         ),
         const Divider(height: 1),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Always a Stack (the rows keep their place in the tree): the
+          // open details card sits over the gap.
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              SizedBox(
-                width: _channelColumnWidth,
-                // The names only follow the grid: a mouse wheel or a
-                // trackpad over them scrolls the grid (Windows user,
-                // 2026-11-14: the scrollbar showed, the list never moved).
-                child: Listener(
-                  onPointerSignal: _scrollFromLabels,
-                  onPointerPanZoomUpdate: (e) => _scrollGridBy(-e.panDelta.dy),
-                  child: ClipRect(
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context)
-                          .copyWith(scrollbars: false),
-                      child: ListView.builder(
-                        controller: _labelVScroll,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: widget.channels.length,
-                        itemExtent: _rowHeight,
-                        itemBuilder: (context, i) => _ChannelLabel(
-                            channel: widget.channels[i],
-                            number: _phoneColumn ? null : i + 1,
-                            playlistTag: _playlistTagFor(i),
-                            moving:
-                                widget.channels[i].id == widget.movingChannelId,
-                            selection: widget.selection),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: FocusScope(
-                  node: _gridFocusScope,
-                  child: NotificationListener<OverscrollNotification>(
-                    onNotification: _onGridOverscroll,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      controller: _gridHScroll,
-                      // iOS bounces by default, and a bounce sends no
-                      // OverscrollNotification: dragging past the left edge
-                      // never reached the catch-up past.
-                      physics: const ClampingScrollPhysics(),
-                      child: SizedBox(
-                        width: _totalWidth,
-                        height: widget.channels.length * _rowHeight,
-                        child: Stack(
-                          children: [
-                            ListView.builder(
-                              controller: _gridVScroll,
-                              itemCount: widget.channels.length,
-                              itemExtent: _rowHeight,
-                              itemBuilder: (context, i) => _cachedRow(
-                                  i,
-                                  epgLoading,
-                                  () => _TimelineRow(
-                                        rowIndex: i,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: _channelColumnWidth,
+                    // The names only follow the grid: a mouse wheel or a
+                    // trackpad over them scrolls the grid (Windows user,
+                    // 2026-11-14: the scrollbar showed, the list never moved).
+                    child: Listener(
+                      onPointerSignal: _scrollFromLabels,
+                      onPointerPanZoomUpdate: (e) =>
+                          _scrollGridBy(-e.panDelta.dy),
+                      child: ClipRect(
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context)
+                              .copyWith(scrollbars: false),
+                          // The grid's rows and gap, so they line up.
+                          child: CustomScrollView(
+                            controller: _labelVScroll,
+                            physics: const NeverScrollableScrollPhysics(),
+                            slivers: [
+                              GapExtentList(
+                                rowExtent: _rowHeight,
+                                gapAfter: gapRow,
+                                gapExtent: gap,
+                                delegate: SliverChildBuilderDelegate(
+                                  // Always aligned to the top, so the row with
+                                  // the gap is the same widget either way.
+                                  (context, i) => Align(
+                                    alignment: Alignment.topCenter,
+                                    child: _ChannelLabel(
                                         channel: widget.channels[i],
-                                        programs: widget.epg.getPrograms(
-                                            widget.channels[i].epgId),
-                                        windowStart: _windowStart,
-                                        windowEnd: _windowEnd,
-                                        pixelsPerMinute: _pixelsPerMinute,
-                                        onOpen: () =>
-                                            widget.onOpen(widget.channels[i]),
-                                        onOpenCatchup:
-                                            widget.onOpenCatchup == null
-                                                ? null
-                                                : (at) => widget.onOpenCatchup!(
-                                                    widget.channels[i], at),
-                                        onShowOptions: () => widget
-                                            .onShowOptions(widget.channels[i]),
-                                        ensureRowVisible: _ensureRowVisible,
-                                        onFocusChanged: widget.onFocusChanged,
-                                        onFocusTracked: _trackFocus,
-                                        onFocusedBlockGone: _onFocusedBlockGone,
-                                        onRegisterBlock: _registerBlock,
-                                        onUnregisterBlock: _unregisterBlock,
-                                        hScroll: _gridHScroll,
-                                        epgLoading: epgLoading,
-                                        translucent: widget.translucent,
-                                      )),
-                            ),
-                            Positioned(
-                              left: nowX,
-                              top: 0,
-                              bottom: 0,
-                              child: const IgnorePointer(
-                                child: SizedBox(
-                                  width: 2,
-                                  child: ColoredBox(color: Colors.redAccent),
+                                        number: _phoneColumn ? null : i + 1,
+                                        playlistTag: _playlistTagFor(i),
+                                        moving: widget.channels[i].id ==
+                                            widget.movingChannelId,
+                                        selection: widget.selection),
+                                  ),
+                                  childCount: widget.channels.length,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                  const VerticalDivider(width: 1),
+                  Expanded(
+                    child: FocusScope(
+                      node: _gridFocusScope,
+                      child: NotificationListener<OverscrollNotification>(
+                        onNotification: _onGridOverscroll,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          controller: _gridHScroll,
+                          // iOS bounces by default, and a bounce sends no
+                          // OverscrollNotification: dragging past the left edge
+                          // never reached the catch-up past.
+                          physics: const ClampingScrollPhysics(),
+                          child: SizedBox(
+                            width: _totalWidth,
+                            height: widget.channels.length * _rowHeight + gap,
+                            child: Stack(
+                              children: [
+                                CustomScrollView(
+                                  controller: _gridVScroll,
+                                  slivers: [
+                                    GapExtentList(
+                                      rowExtent: _rowHeight,
+                                      gapAfter: gapRow,
+                                      gapExtent: gap,
+                                      delegate: SliverChildBuilderDelegate(
+                                        childCount: widget.channels.length,
+                                        (context, i) => Align(
+                                          alignment: Alignment.topLeft,
+                                          child: _cachedRow(
+                                              i,
+                                              epgLoading,
+                                              () => _TimelineRow(
+                                                    rowIndex: i,
+                                                    channel: widget.channels[i],
+                                                    programs: widget.epg
+                                                        .getPrograms(widget
+                                                            .channels[i].epgId),
+                                                    windowStart: _windowStart,
+                                                    windowEnd: _windowEnd,
+                                                    pixelsPerMinute:
+                                                        _pixelsPerMinute,
+                                                    onOpen: () => widget.onOpen(
+                                                        widget.channels[i]),
+                                                    onOpenCatchup: widget
+                                                                .onOpenCatchup ==
+                                                            null
+                                                        ? null
+                                                        : (at) => widget
+                                                                .onOpenCatchup!(
+                                                            widget.channels[i],
+                                                            at),
+                                                    onShowOptions: () =>
+                                                        widget.onShowOptions(
+                                                            widget.channels[i]),
+                                                    ensureRowVisible:
+                                                        _ensureRowVisible,
+                                                    onFocusChanged:
+                                                        widget.onFocusChanged,
+                                                    onFocusTracked: _trackFocus,
+                                                    onFocusedBlockGone:
+                                                        _onFocusedBlockGone,
+                                                    onRegisterBlock:
+                                                        _registerBlock,
+                                                    onUnregisterBlock:
+                                                        _unregisterBlock,
+                                                    hScroll: _gridHScroll,
+                                                    epgLoading: epgLoading,
+                                                    translucent:
+                                                        widget.translucent,
+                                                  )),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Positioned(
+                                  left: nowX,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: const IgnorePointer(
+                                    child: SizedBox(
+                                      width: 2,
+                                      child:
+                                          ColoredBox(color: Colors.redAccent),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (gapRow != null && _detailsProgram != null)
+                // Follows the grid's vertical scroll; over the programmes
+                // only (past the channel column and its divider), stays put
+                // horizontally.
+                ListenableBuilder(
+                  listenable: _gridVScroll,
+                  builder: (context, child) => Positioned(
+                    left: _channelColumnWidth + 1 + 4,
+                    right: 4,
+                    top: (gapRow + 1) * _rowHeight -
+                        (_gridVScroll.hasClients ? _gridVScroll.offset : 0.0),
+                    height: gap,
+                    child: child!,
+                  ),
+                  child: IgnorePointer(
+                    child: _GuideRowDetails(
+                      key: ValueKey(gapRow),
+                      program: _detailsProgram!,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -11548,6 +11854,150 @@ class _SelectionCheck extends StatelessWidget {
                         : Colors.white38),
               ),
       );
+}
+
+/// [_TvHomeScreenState._guideDetailsGrow]: how much taller the 3-row
+/// full-video guide is while a programme's details are open, and how much
+/// it may grow (the see-through space above it, set by its layout).
+class _GuideDetailsGrow extends ValueNotifier<double> {
+  _GuideDetailsGrow() : super(0);
+
+  double limit = double.infinity;
+  bool _disposed = false;
+
+  void set(double extent) {
+    if (!_disposed) value = extent;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+/// A programme's details under its row in the full-video guide (TiviMate's
+/// guide, owner photo 2026-11-20): title, times, progress + minutes left
+/// while it airs, and as many description lines as the gap holds.
+/// [_TimelineGuideState._detailsHeightFor] sizes the gap for this layout.
+class _GuideRowDetails extends StatefulWidget {
+  const _GuideRowDetails({super.key, required this.program});
+
+  final EpgProgram program;
+
+  @override
+  State<_GuideRowDetails> createState() => _GuideRowDetailsState();
+}
+
+class _GuideRowDetailsState extends State<_GuideRowDetails> {
+  /// Fades in once (the rows move at once: one layout, not one per frame).
+  bool _shown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _shown = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final program = widget.program;
+    final scheme = Theme.of(context).colorScheme;
+    final small = _compactUi;
+    const shadows = [Shadow(color: Colors.black, blurRadius: 4)];
+    final now = DateTime.now();
+    final live = program.isNowPlaying(now);
+    final total = program.stop.difference(program.start).inSeconds;
+    final ratio = total <= 0
+        ? 0.0
+        : (now.difference(program.start).inSeconds / total).clamp(0.0, 1.0);
+    final left = (program.stop.difference(now).inSeconds / 60).ceil();
+    final description = (program.description ?? '').trim();
+    final lineStyle = TextStyle(
+        color: Colors.white70, fontSize: small ? 11 : 12, shadows: shadows);
+    final descStyle = lineStyle.copyWith(height: 1.3);
+    return AnimatedOpacity(
+      opacity: _shown ? 1 : 0,
+      duration: const Duration(milliseconds: 160),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(1, 2, 1, 6),
+        padding: EdgeInsets.fromLTRB(10, small ? 5 : 7, 10, small ? 5 : 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.10),
+          border: Border.all(color: scheme.primary.withValues(alpha: 0.55)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              program.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: small ? 13 : 15,
+                  fontWeight: FontWeight.w600,
+                  shadows: shadows),
+            ),
+            SizedBox(height: small ? 1 : 2),
+            Row(
+              children: [
+                Text(
+                    '${TimeFormat.hm.format(program.start.toLocal())} – '
+                    '${TimeFormat.hm.format(program.stop.toLocal())}',
+                    style: lineStyle),
+                if (live) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 72,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: ratio,
+                        minHeight: 3,
+                        color: scheme.primary,
+                        backgroundColor: Colors.white24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      tr('{minutes} min left', {'minutes': '$left'}),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: lineStyle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (description.isNotEmpty) ...[
+              SizedBox(height: small ? 3 : 4),
+              Expanded(
+                child: LayoutBuilder(builder: (context, box) {
+                  final line = descStyle.fontSize! *
+                      descStyle.height! *
+                      MediaQuery.textScalerOf(context).scale(1);
+                  final lines = (box.maxHeight / line).floor();
+                  if (lines < 1) return const SizedBox.shrink();
+                  return Text(
+                    description,
+                    maxLines: lines,
+                    overflow: TextOverflow.ellipsis,
+                    style: descStyle,
+                  );
+                }),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ChannelLabel extends StatelessWidget {

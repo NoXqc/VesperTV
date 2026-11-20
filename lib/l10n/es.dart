@@ -2154,6 +2154,9 @@ const Map<String, String> kEs = {
   "Expand": "Expandir",
   "Fill the screen with the Timeline guide":
       "Llenar la pantalla con la guía de programación",
+  "Programme details in the guide": "Detalles del programa en la guía",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Quédate 1 segundo en un programa para ver su descripción debajo.",
   "The live channel fills the screen behind a see-through guide":
       "El canal en directo ocupa toda la pantalla detrás de una guía semitransparente",
   "Source: {source}": "Fuente: {source}",

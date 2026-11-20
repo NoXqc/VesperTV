@@ -615,6 +615,14 @@ class SettingsCatalog {
                   help: tr('Fill the screen with the Timeline guide'),
                   value: prefs.guideExpanded,
                   onChanged: prefs.setGuideExpanded),
+              SettingsToggle(
+                  id: 'guide_row_details',
+                  icon: Icons.subject,
+                  title: tr('Programme details in the guide'),
+                  help: tr(
+                      'Stay on a programme for 1 second to see its description under it.'),
+                  value: prefs.guideRowDetails,
+                  onChanged: prefs.setGuideRowDetails),
             ],
           ],
           SettingsToggle(

@@ -505,6 +505,14 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.guideExpanded,
       (b, on) => b.prefs.setGuideExpanded(on)),
   _switch(
+      'guide_row_details',
+      'guide',
+      'Programme details in the guide',
+      'With guide_full_video: resting 1 s on a programme opens its '
+          'description under the row.',
+      (b) => b.prefs.guideRowDetails,
+      (b, on) => b.prefs.setGuideRowDetails(on)),
+  _switch(
       'keep_groups_open',
       'guide',
       'Keep groups open',

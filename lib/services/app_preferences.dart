@@ -47,6 +47,10 @@ class AppPreferences extends ChangeNotifier {
 
   /// Fill the full-video Timeline area instead of limiting it to three rows.
   late bool guideExpanded;
+
+  /// Full-video Timeline: a programme's details open under its row after
+  /// the remote rests on it for 1 s.
+  late bool guideRowDetails;
   late bool guideCompact;
 
   /// Interface size in the TV home (per viewer): 'compact' (smaller tabs,
@@ -485,6 +489,7 @@ class AppPreferences extends ChangeNotifier {
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
+    guideRowDetails = _storage.getGuideRowDetails();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -551,6 +556,7 @@ class AppPreferences extends ChangeNotifier {
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
+    guideRowDetails = _storage.getGuideRowDetails();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -645,6 +651,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideFocusPreview(bool value) {
     guideFocusPreview = value;
     _storage.setGuideFocusPreview(value);
+    notifyListeners();
+  }
+
+  void setGuideRowDetails(bool value) {
+    guideRowDetails = value;
+    _storage.setGuideRowDetails(value);
     notifyListeners();
   }
 

@@ -2069,6 +2069,9 @@ const Map<String, String> kPl = {
   "Expand": "Rozwiń",
   "Fill the screen with the Timeline guide":
       "Wypełnij ekran przewodnikiem Timeline",
+  "Programme details in the guide": "Szczegóły programu w przewodniku",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Zatrzymaj się na programie przez 1 sekundę, aby zobaczyć jego opis pod nim.",
   "The live channel fills the screen behind a see-through guide":
       "Kanał na żywo wypełnia ekran za przezroczystym przewodnikiem",
   "Source: {source}": "Źródło: {source}",

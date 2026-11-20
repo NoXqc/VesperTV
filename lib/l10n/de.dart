@@ -2068,6 +2068,9 @@ const Map<String, String> kDe = {
   "Expand": "Erweitern",
   "Fill the screen with the Timeline guide":
       "Den Bildschirm mit dem Timeline-Guide füllen",
+  "Programme details in the guide": "Sendungsdetails im Guide",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Bleib 1 Sekunde auf einer Sendung, um ihre Beschreibung darunter zu sehen.",
   "The live channel fills the screen behind a see-through guide":
       "Der Live-Sender füllt den Bildschirm hinter einem durchsichtigen Guide",
   "Source: {source}": "Quelle: {source}",

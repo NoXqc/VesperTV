@@ -2163,6 +2163,9 @@ const Map<String, String> kIt = {
   "Expand": "Espandi",
   "Fill the screen with the Timeline guide":
       "Riempi lo schermo con la guida dei programmi",
+  "Programme details in the guide": "Dettagli del programma nella guida",
+  "Stay on a programme for 1 second to see its description under it.":
+      "Resta 1 secondo su un programma per vederne la descrizione sotto.",
   "The live channel fills the screen behind a see-through guide":
       "Il canale in diretta riempie lo schermo dietro una guida semitrasparente",
   "Source: {source}": "Fonte: {source}",

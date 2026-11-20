@@ -620,6 +620,10 @@ class AppConstants {
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
 
+  /// Full-video Timeline: resting on a programme opens its details under
+  /// the row (per viewer, on by default).
+  static const String keyGuideRowDetails = 'vesper_guide_row_details';
+
   /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
   /// channel rows in the TV home (per viewer, like the guide layout).
   static const String keyCompactUi = 'vesper_compact_ui';
