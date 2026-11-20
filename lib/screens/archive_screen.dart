@@ -25,6 +25,7 @@ import '../widgets/desktop_row_scroller.dart';
 import '../widgets/trimmed_logo.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
+import '../widgets/phone_pill_bar.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
@@ -1190,11 +1191,22 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               ),
               SafeArea(
                 child: narrow
-                    ? Column(children: [
-                        _buildTopBar(service),
-                        _buildFloatingBar(service, rows),
-                        Expanded(child: _buildContent(service, rows, scheme)),
-                      ])
+                    ? Column(
+                        children: _phoneLayout
+                            ? [
+                                _buildPhoneTop(service),
+                                Expanded(
+                                    child:
+                                        _buildContent(service, rows, scheme)),
+                                _buildPhonePill(service, rows),
+                              ]
+                            : [
+                                _buildTopBar(service),
+                                _buildFloatingBar(service, rows),
+                                Expanded(
+                                    child:
+                                        _buildContent(service, rows, scheme)),
+                              ])
                     : Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -1450,7 +1462,110 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (picked != null && mounted) _setType(picked);
   }
 
-  /// Phone / narrow window: the rail's two choices + sources as a row.
+  /// A phone (touch, narrow): one top row (Back, the title, a small
+  /// search, Servers, Refresh) and the TV home's bottom pill (Movies / TV
+  /// Shows / Sources / Sort / Discover). Owner, 2026-11-20: the old
+  /// dropdown + icons, the search row and the empty hero under them hid
+  /// the rows.
+  bool get _phoneLayout =>
+      _narrow && !(context.read<AppPreferences?>()?.isTelevision ?? false);
+
+  Widget _buildPhoneTop(ArchiveService service) {
+    final query = service.searchQuery(_type);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 4, 4, 4),
+      // The rail's scope: Back from the rows still has somewhere to go.
+      child: FocusScope(
+        node: _railScope,
+        child: Row(children: [
+          IconButton(
+            focusNode: _firstRailNode,
+            tooltip: tr('Back'),
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          Text(tr('Media Hub'),
+              maxLines: 1,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: service.canSearch(_type)
+                ? _PhoneSearchPill(
+                    label: service.searching
+                        ? tr('Searching…')
+                        : query ?? tr('Search'),
+                    active: query != null,
+                    onTap: () => _openSearch(service),
+                    onClear: query == null ? null : () => _clearSearch(service),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          if (service.hasLiveTv)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: tr('Live TV'),
+              icon: const Icon(Icons.live_tv),
+              onPressed: _openLiveTv,
+            ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: tr('Connect Jellyfin / Emby'),
+            icon: const Icon(Icons.dns_outlined),
+            onPressed: _connectMediaServer,
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: service.refreshing ? tr('Updating…') : tr('Refresh'),
+            icon: service.refreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.refresh),
+            onPressed: service.refreshing
+                ? null
+                : () => service.refresh(force: true, manifests: true),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  /// Sort = the old Menu (genres, Newest, row jumps, Watch list,
+  /// Customize). Discover = More catalogs (an add-on's catalogs kept off
+  /// the home rows), only when there are some for this type.
+  Widget _buildPhonePill(ArchiveService service, List<ArchiveRow> rows) =>
+      PhonePillBar(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        items: [
+          PhonePillItem(
+              icon: Icons.movie,
+              label: tr('Movies'),
+              selected: _type == ArchiveType.movie,
+              onTap: () => _setType(ArchiveType.movie)),
+          PhonePillItem(
+              icon: Icons.video_library,
+              label: tr('TV Shows'),
+              selected: _type == ArchiveType.series,
+              onTap: () => _setType(ArchiveType.series)),
+          PhonePillItem(
+              icon: Icons.extension_outlined,
+              label: tr('Sources'),
+              onTap: _openSources),
+          PhonePillItem(
+              icon: Icons.sort,
+              label: tr('Sort'),
+              onTap: () => _openPhoneMenu(service, rows)),
+          if (service.browseOnlyCatalogs(_type).isNotEmpty)
+            PhonePillItem(
+                icon: Icons.explore_outlined,
+                label: tr('Discover'),
+                onTap: () => _pickMoreCatalog(service)),
+        ],
+      );
+
+  /// Narrow window (not a phone): the rail's two choices + sources as a row.
   Widget _buildTopBar(ArchiveService service) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -1720,52 +1835,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     });
   }
 
-  /// Genre first, then Newest, search controls and the category's row
-  /// jumps (Popular / New / Featured / Recently watched...), centred at
-  /// the top in a floating pill. D-pad: Left/Right along it (Left past the
-  /// first = rail), Down = the rows.
-  /// Phone (touch, narrow): the floating bar only fitted one or two of its
-  /// buttons (owner + vision-impaired user, 2026-11-02). Search stays a
-  /// button; everything else is in one Menu list.
-  Widget _buildPhoneBar(ArchiveService service, List<ArchiveRow> rows) {
-    final query = service.searchQuery(_type);
-    final movies = _type == ArchiveType.movie;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      child: Row(children: [
-        if (service.canSearch(_type))
-          Expanded(
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.search),
-              label: Text(
-                service.searching
-                    ? tr('Searching…')
-                    : query ??
-                        (movies ? tr('Search movies') : tr('Search TV shows')),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onPressed: () => _openSearch(service),
-            ),
-          )
-        else
-          const Spacer(),
-        if (query != null)
-          IconButton(
-            tooltip: tr('Clear search'),
-            icon: const Icon(Icons.close),
-            onPressed: () => _clearSearch(service),
-          ),
-        const SizedBox(width: 8),
-        FilledButton.tonalIcon(
-          icon: const Icon(Icons.arrow_drop_down),
-          label: Text(tr('Menu')),
-          onPressed: () => _openPhoneMenu(service, rows),
-        ),
-      ]),
-    );
-  }
-
+  /// The phone pill's Sort: genres, Newest, row jumps, Watch list and
+  /// Customize in one list.
   Future<void> _openPhoneMenu(
       ArchiveService service, List<ArchiveRow> rows) async {
     final movies = _type == ArchiveType.movie;
@@ -1786,13 +1857,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               : _genreName(genre),
           genre != null,
           () => _pickGenre(service)
-        ),
-      if (_showMoreCatalogs(service))
-        (
-          Icons.grid_view_rounded,
-          tr('More catalogs'),
-          false,
-          () => _pickMoreCatalog(service)
         ),
       if (_showNewest(service))
         (
@@ -1860,10 +1924,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (picked != null && mounted) await items[picked].$4();
   }
 
+  /// Genre first, then Newest, search controls and the category's row
+  /// jumps (Popular / New / Featured / Recently watched...), centred at
+  /// the top in a floating pill. D-pad: Left/Right along it (Left past the
+  /// first = rail), Down = the rows. Not on a phone: search is on its top
+  /// row and the rest in the pill's Sort list.
   Widget _buildFloatingBar(ArchiveService service, List<ArchiveRow> rows) {
-    if (_narrow && !(context.read<AppPreferences?>()?.isTelevision ?? false)) {
-      return _buildPhoneBar(service, rows);
-    }
     final nodes = _barNodes(service, rows);
     if (nodes.isEmpty) return const SizedBox.shrink();
     final narrow = MediaQuery.sizeOf(context).width < 700;
@@ -2099,6 +2165,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     // A phone on its side: wide enough for the TV layout, too short for its
     // hero (rows were pushed to the bottom edge, owner 2026-11-02).
     final short = MediaQuery.sizeOf(context).height < 520;
+    // A phone in portrait: a tap opens the title, nothing ever takes focus,
+    // so the hero was 150 px of black above the rows (owner, 2026-11-20).
+    final phone = _phoneLayout;
     return FocusScope(
       node: _contentScope,
       child: Focus(
@@ -2110,78 +2179,79 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             // title logo, one info line with the IMDb rating, 4 lines of
             // description. Sized so a TV shows one row plus the next one's
             // top, which tells the user there is more below.
-            SizedBox(
-              height: narrow ? 150 : (short ? 96 : 200),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                child: ValueListenableBuilder<int>(
-                  valueListenable: _focusTick,
-                  builder: (context, _, __) {
-                    final focused = _focused;
-                    return focused == null
-                        ? const SizedBox.shrink()
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (_focusedFolder?.logoUrl case final logo?)
-                                SizedBox(
-                                  height: narrow || short ? 36 : 64,
-                                  child: Align(
-                                    alignment: Alignment.bottomLeft,
-                                    child: TrimmedLogo(
-                                      key: ValueKey(logo),
-                                      url: logo,
-                                      height: narrow || short ? 36 : 64,
-                                      maxWidth: 360,
-                                      tint:
-                                          TrimmedLogo.brandColor(focused.name),
-                                      fallback: Text(focused.name,
+            if (!phone)
+              SizedBox(
+                height: narrow ? 150 : (short ? 96 : 200),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _focusTick,
+                    builder: (context, _, __) {
+                      final focused = _focused;
+                      return focused == null
+                          ? const SizedBox.shrink()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_focusedFolder?.logoUrl case final logo?)
+                                  SizedBox(
+                                    height: narrow || short ? 36 : 64,
+                                    child: Align(
+                                      alignment: Alignment.bottomLeft,
+                                      child: TrimmedLogo(
+                                        key: ValueKey(logo),
+                                        url: logo,
+                                        height: narrow || short ? 36 : 64,
+                                        maxWidth: 360,
+                                        tint: TrimmedLogo.brandColor(
+                                            focused.name),
+                                        fallback: Text(focused.name,
+                                            style: const TextStyle(
+                                                fontSize: 30,
+                                                fontWeight: FontWeight.w700)),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  _HeroTitle(
+                                      key: ValueKey(focused.id),
+                                      meta: focused,
+                                      height: narrow || short ? 36 : 64),
+                                const SizedBox(height: 8),
+                                if (_focusedFolder case final folder?)
+                                  Text(
+                                      '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
+                                            'n': folder.sources.length
+                                          })}',
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white))
+                                else
+                                  _HeroInfoLine(
+                                      meta: focused,
+                                      sourceLabel: _focusedLabel,
+                                      imdbRating: !_focusedFromServer),
+                                const SizedBox(height: 8),
+                                if (focused.description != null && !short)
+                                  Flexible(
+                                    child: SizedBox(
+                                      width: 520,
+                                      child: Text(focused.description!,
+                                          maxLines: narrow ? 2 : 4,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                              fontSize: 30,
-                                              fontWeight: FontWeight.w700)),
+                                              fontSize: 13,
+                                              height: 1.35,
+                                              color: Colors.white70)),
                                     ),
                                   ),
-                                )
-                              else
-                                _HeroTitle(
-                                    key: ValueKey(focused.id),
-                                    meta: focused,
-                                    height: narrow || short ? 36 : 64),
-                              const SizedBox(height: 8),
-                              if (_focusedFolder case final folder?)
-                                Text(
-                                    '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
-                                          'n': folder.sources.length
-                                        })}',
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white))
-                              else
-                                _HeroInfoLine(
-                                    meta: focused,
-                                    sourceLabel: _focusedLabel,
-                                    imdbRating: !_focusedFromServer),
-                              const SizedBox(height: 8),
-                              if (focused.description != null && !short)
-                                Flexible(
-                                  child: SizedBox(
-                                    width: 520,
-                                    child: Text(focused.description!,
-                                        maxLines: narrow ? 2 : 4,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            height: 1.35,
-                                            color: Colors.white70)),
-                                  ),
-                                ),
-                            ],
-                          );
-                  },
+                              ],
+                            );
+                    },
+                  ),
                 ),
               ),
-            ),
             Expanded(
               child: ListView.builder(
                 controller: _scroll,
@@ -2857,6 +2927,73 @@ class _SearchPanelState extends State<_SearchPanel> {
 }
 
 /// A rail row: same focus look as the detail pages' pills.
+/// The phone top row's search: a small outlined pill (the query and a
+/// clear cross while searching).
+class _PhoneSearchPill extends StatelessWidget {
+  const _PhoneSearchPill({
+    required this.label,
+    required this.onTap,
+    this.active = false,
+    this.onClear,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: tr('Search'),
+      child: Material(
+        color: Colors.transparent,
+        shape: StadiumBorder(
+            side: BorderSide(color: active ? scheme.primary : Colors.white54)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 36,
+            // A very narrow phone: the magnifier alone.
+            child: LayoutBuilder(
+              builder: (context, box) => box.maxWidth < 80
+                  ? const Center(child: Icon(Icons.search, size: 18))
+                  : Row(children: [
+                      const SizedBox(width: 10),
+                      const Icon(Icons.search, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: active ? Colors.white : Colors.white70)),
+                      ),
+                      if (onClear case final clear?)
+                        InkResponse(
+                          onTap: clear,
+                          radius: 18,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(Icons.close,
+                                size: 18, semanticLabel: tr('Clear search')),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 10),
+                    ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RailTile extends StatefulWidget {
   const _RailTile({
     required this.icon,

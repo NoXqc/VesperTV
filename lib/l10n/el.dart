@@ -3507,6 +3507,7 @@ const Map<String, String> kEl = {
       "Σύνδεσμος, Stremio, διακομιστής ή Trakt / Simkl",
   "Catalogs":
       "Κατάλογοι",
+  'Discover': 'Ανακάλυψη',
   "More catalogs": "Περισσότεροι κατάλογοι",
   "Lists":
       "Λίστες",

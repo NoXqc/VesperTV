@@ -3553,6 +3553,7 @@ const Map<String, String> kIt = {
       "Un link, Stremio, un server o Trakt / Simkl",
   "Catalogs":
       "Cataloghi",
+  'Discover': 'Scopri',
   "More catalogs": "Altri cataloghi",
   "Lists":
       "Liste",

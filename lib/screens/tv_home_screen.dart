@@ -63,6 +63,7 @@ import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/move_to_group_dialog.dart';
+import '../widgets/phone_pill_bar.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/real_4k_tag.dart';
@@ -4916,103 +4917,45 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// column's row. The old "More" slot (the tabs page) became the ☰ button
   /// at the top right ([_phoneGear]); page 0 is no longer reachable.
   Widget _buildPhoneTabBar() {
-    final scheme = Theme.of(context).colorScheme;
-    Widget item(
-        IconData icon, String label, bool selected, VoidCallback onTap) {
-      return Expanded(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.all(5),
-            padding: const EdgeInsets.symmetric(vertical: 7),
-            decoration: BoxDecoration(
-              color: selected
-                  ? Colors.white.withValues(alpha: 0.14)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                  color: selected ? Colors.white24 : Colors.transparent),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon,
-                    size: 24,
-                    color: selected ? scheme.primary : Colors.white70),
-                const SizedBox(height: 3),
-                // Shrinks a long label to fit its slot ("Sports Trak" was
-                // cut to "Sports T…" on a narrow phone) instead of an ellipsis.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(label,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: TextStyle(
-                            color: selected ? Colors.white : Colors.white70,
-                            fontSize: 11.5,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
+    final prefs = context.watch<AppPreferences>();
     final onTabs = _phonePage != 0;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              Colors.white.withValues(alpha: 0.10),
-              Colors.white.withValues(alpha: 0.04),
-            ]),
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(34),
-            border: Border.all(color: Colors.white24),
-            boxShadow: const [
-              BoxShadow(color: Colors.black54, blurRadius: 12),
-            ],
-          ),
-          child: Row(
-            children: [
-              if (!context.watch<AppPreferences>().homeHidden)
-                item(
-                    Icons.home_outlined, tr('Home'), _tab == 'Home', _openHome),
-              for (final tab in _visibleTabs)
-                item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
-                  if (_tab == tab) {
-                    setState(() => _phonePage = 1);
-                  } else {
-                    _onTabChanged(tab);
-                  }
-                }),
-              // Extras always has its slot (owner, 2026-10-18); Settings >
-              // General > Tabs > Hide Extras removes it.
-              if (!context.watch<AppPreferences>().hideArchive)
-                item(Icons.local_movies_outlined, tr('Media Hub'), false, () {
-                  _returnToTv = true;
-                  _parkLiveChannel(resumeOnReturn: true);
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ArchiveScreen()));
-                }),
-              if (!context.watch<AppPreferences>().hideSportsTrak)
-                item(Icons.sports_hockey, AppConstants.sportsTabName, false,
-                    _openSports),
-            ],
-          ),
-        ),
-      ),
-    );
+    return PhonePillBar(items: [
+      if (!prefs.homeHidden)
+        PhonePillItem(
+            icon: Icons.home_outlined,
+            label: tr('Home'),
+            selected: _tab == 'Home',
+            onTap: _openHome),
+      for (final tab in _visibleTabs)
+        PhonePillItem(
+            icon: _tabIcons[tab]!,
+            label: tr(tab),
+            selected: onTabs && _tab == tab,
+            onTap: () {
+              if (_tab == tab) {
+                setState(() => _phonePage = 1);
+              } else {
+                _onTabChanged(tab);
+              }
+            }),
+      // Extras always has its slot (owner, 2026-10-18); Settings >
+      // General > Tabs > Hide Extras removes it.
+      if (!prefs.hideArchive)
+        PhonePillItem(
+            icon: Icons.local_movies_outlined,
+            label: tr('Media Hub'),
+            onTap: () {
+              _returnToTv = true;
+              _parkLiveChannel(resumeOnReturn: true);
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ArchiveScreen()));
+            }),
+      if (!prefs.hideSportsTrak)
+        PhonePillItem(
+            icon: Icons.sports_hockey,
+            label: AppConstants.sportsTabName,
+            onTap: _openSports),
+    ]);
   }
 
   /// A passed column hides completely instead of leaving the icon strip:
