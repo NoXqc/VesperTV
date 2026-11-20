@@ -78,6 +78,19 @@ jobs:
         with:
           name: flutter-bundle
           path: linux/flatpak
+      - name: Writable Flatpak installation
+        # The image's runtimes sit in a lower overlayfs layer: updating one
+        # renames directories across layers and fails ("Failed to update
+        # org.gnome.Sdk: Invalid cross-device link", run 44816465001, after a
+        # GNOME 51 SDK update). A copy lives in the container's own layer.
+        run: |
+          df -h /var/lib | tail -1
+          for d in /var/lib/flatpak /root/.local/share/flatpak; do
+            [ -d "$d" ] || continue
+            cp -a "$d" "$d.rw" && rm -rf "$d" && mv "$d.rw" "$d"
+          done
+          df -h /var/lib | tail -1
+          flatpak list --columns=application,branch
       - name: Release in the metainfo
         run: |
           v="$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
