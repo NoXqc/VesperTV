@@ -111,7 +111,8 @@ iPhone, so those keep their mouse layout):
   Play / Pause focused (movies too; Up / Down on a movie as well); the bar
   hides 6 s after the last key unless paused or a menu from it is open
   (`_armTvBarIdle`). Movies / catch-up: Left / Right on the picture = 10 s
-  back / ahead (Right = sources when there are some). Gold ring on the
+  back / ahead (Right = sources when there are some). A ring in the
+  theme's colour on the
   focused button (Icon / TextButton theme around the bar, all non-touch).
   No top-left Back (Menu does it) and the side tab isn't a focus stop on a
   TV; no volume slider (the TV's remote; it also kept Left / Right).
@@ -125,6 +126,10 @@ iPhone, so those keep their mouse layout):
   Change channel / Reload / Remove / Swap mode. Hover buttons excluded from
   focus on a TV. Picker: search field behind `TvTextFieldGate`, the first
   channel focused (computers still type at once).
+- The player's screen-size key node (`_rootFocus`) is `skipTraversal`:
+  as a traversal stop its centre was nearer than the next button, so Left
+  from Stop landed on it instead of Multiview (CI tour of +915, fixed in
+  +919; 915 on TestFlight has it).
 - CC: mpv's captions track is switched off also when the track list
   arrives after the selection (`configureDesktopStreamPlayer`).
 

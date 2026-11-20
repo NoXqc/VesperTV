@@ -204,7 +204,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// When the live channel was paused: Play after more than 90 s resumes
   /// from there as catch-up (timeshift, like Android).
   DateTime? _livePausedAt;
-  final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
+
+  /// Holds the keys while the picture has them; never an arrow's target
+  /// (requestFocus still works). Screen-sized, its centre was nearer than
+  /// the next button: Left from Stop landed here instead of on Multiview
+  /// (Apple TV tour, +915), the bar stayed up with nothing focused.
+  final FocusNode _rootFocus =
+      FocusNode(debugLabel: 'desktop-player-root', skipTraversal: true);
 
   /// Enter on a live channel focuses Play / Pause: the keyboard's way into
   /// the bar, since Up / Down on the picture change channel.
@@ -1441,8 +1447,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           ],
         );
         final ring = Theme.of(context).colorScheme.primary;
-        // A gold ring on the focused button: the theme's focus tint was a
-        // faint grey circle, invisible over a picture from the couch.
+        // A ring in the theme's colour on the focused button: the default
+        // focus tint was a faint grey circle, invisible over a picture
+        // from the couch.
         ButtonStyle focusRing(ButtonStyle? base) =>
             (base ?? const ButtonStyle()).copyWith(
               side: WidgetStateProperty.resolveWith((s) =>
