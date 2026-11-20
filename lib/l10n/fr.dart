@@ -3556,6 +3556,7 @@ const Map<String, String> kFr = {
       "Un lien, Stremio, un serveur multimédia ou Trakt / Simkl",
   "Catalogs":
       "Catalogues",
+  'Discover': 'Découvrir',
   "More catalogs": "Autres catalogues",
   "Lists":
       "Listes",

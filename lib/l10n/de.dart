@@ -3445,6 +3445,7 @@ const Map<String, String> kDe = {
       "Ein Link, Stremio, ein Medienserver oder Trakt / Simkl",
   "Catalogs":
       "Kataloge",
+  'Discover': 'Entdecken',
   "More catalogs": "Weitere Kataloge",
   "Lists":
       "Listen",

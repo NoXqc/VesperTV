@@ -3200,6 +3200,7 @@ const Map<String, String> kPl = {
   "A link, Stremio, a media server or Trakt / Simkl":
       "Link, Stremio, serwer multimediów lub Trakt / Simkl",
   "Catalogs": "Katalogi",
+  'Discover': 'Odkrywaj',
   "More catalogs": "Więcej katalogów",
   "Lists": "Listy",
   "Built in": "Wbudowane",

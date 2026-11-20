@@ -3543,6 +3543,7 @@ const Map<String, String> kEs = {
       "Un enlace, Stremio, un servidor o Trakt / Simkl",
   "Catalogs":
       "Catálogos",
+  'Discover': 'Descubrir',
   "More catalogs": "Más catálogos",
   "Lists":
       "Listas",
