@@ -78,10 +78,12 @@ class DisplayMatch {
         'resolution': !rateOnly && storage.getMatchResolution(),
       });
       if (mode != null && mode != 'same') _requested = true;
+      final gaps = sample['ptsGaps'];
       debugPrint('DisplayMatch: video ${width}x$height '
           '${fps > 0 ? fps.toStringAsFixed(2) : '?'} fps after '
           '${DateTime.now().difference(started).inMilliseconds} ms -> '
-          '${mode ?? 'no matching mode'}');
+          '${mode ?? 'no matching mode'}'
+          '${gaps is String && gaps.isNotEmpty ? ' · frame gaps ms $gaps' : ''}');
     } catch (e) {
       debugPrint('DisplayMatch: $e');
     }
@@ -111,6 +113,17 @@ class DisplayMatch {
       final pts = (s['ptsFps'] as num?)?.toDouble() ?? -1;
       final fps = declared > 0 ? declared : pts;
       return fps > 0 ? fps : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The native player's stats for [c] (Android; null elsewhere).
+  static Future<Map<Object?, Object?>?> statsOf(
+      VideoPlayerHdrController c) async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await _sample(SubtitleTracks.playerIdOf(c));
     } catch (_) {
       return null;
     }

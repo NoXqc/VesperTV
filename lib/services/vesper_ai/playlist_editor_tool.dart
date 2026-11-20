@@ -352,11 +352,19 @@ Map<String, Object?> _editorFind(
       if (!keep) continue;
       total++;
       if (out.length >= 30) continue;
+      // The group the TV lists it in (renamed, merged or moved to), as the
+      // editor page's Group column shows it (2026-11-19).
+      final group = box.playlist.liveGroupOf(c);
+      final placed = box.playlist.placementOf(c);
       out.add({
         'id': c.id,
         'name': c.name,
         if (c.name != c.sourceName) 'provider_name': c.sourceName,
-        if (c.group.isNotEmpty) 'group': s.edits.groupTitle(c.group),
+        if (group.isNotEmpty) 'group': group,
+        if (group != c.group && c.group.isNotEmpty) 'provider_group': c.group,
+        if (placed?.moved != null) 'moved': true,
+        if (placed != null && placed.copies.isNotEmpty)
+          'also_in': placed.copies,
         if (box._manyPlaylists) 'playlist': s.profile.name,
         if (hidden)
           'hidden_by': s.hiddenChannels.contains(c.rawId)
@@ -586,17 +594,24 @@ Future<Map<String, Object?>> _runPlaylistEditor(
         for (final s in sessions) {
           final titles = {for (final c in s.allLiveChannels) c.group};
           final folded = TitleSearch.fold(group);
-          String? provider;
-          for (final t in titles) {
-            if (TitleSearch.fold(t) == folded ||
-                TitleSearch.fold(s.edits.groupTitle(t)) == folded) {
-              provider = t;
-              break;
-            }
+          // The name the TV shows first: a merged group is several
+          // provider groups, all renamed together (renaming only the first
+          // split the merge). Else one provider group by its own name.
+          var providers = [
+            for (final t in titles)
+              if (TitleSearch.fold(s.edits.groupTitle(t)) == folded) t
+          ];
+          if (providers.isEmpty) {
+            providers = [
+              for (final t in titles)
+                if (TitleSearch.fold(t) == folded) t
+            ].take(1).toList();
           }
-          if (provider == null) continue;
+          if (providers.isEmpty) continue;
           found = true;
-          (bySession[s] ??= {})[provider] = name;
+          for (final t in providers) {
+            (bySession[s] ??= {})[t] = name;
+          }
         }
         if (!found) unknown.add(group);
       }
@@ -813,7 +828,9 @@ const _playlistEditorTool = VesperTool(
       'new_name': {'type': 'string'},
       'group': {
         'type': 'string',
-        'description': 'rename_group: the group\'s name.',
+        'description': 'rename_group: the group\'s name as the TV shows it '
+            '(a merged group renames as one), or a provider group\'s own '
+            'name.',
       },
       'renames': {
         'type': 'array',

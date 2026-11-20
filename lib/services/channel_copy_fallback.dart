@@ -31,20 +31,30 @@ class ChannelCopyFallback {
 
   static int failuresOf(String url) => _failures[url] ?? 0;
 
+  // A quality word on its own (letters, digits, _ and + glue words
+  // together, as the old upper-case/split/set version read them). One scan,
+  // nothing allocated per word: the editor ranks every channel of a
+  // playlist when it opens (~110 ms per 47k names before, on a PC).
+  static final _qualityWord = RegExp(
+      r'(?<![\w+])(8K|4K|UHD|FHD|1080P|HD|720P|SD)(?![\w+])',
+      caseSensitive: false);
+
   /// Higher = better. Unlabelled sits between SD and HD: most providers'
   /// plain name is their HD feed.
   static int qualityRank(String name) {
-    final words = name
-        .toUpperCase()
-        .replaceAll(RegExp(r'[^\w+]'), ' ')
-        .split(RegExp(r'\s+'))
-        .toSet();
-    if (words.contains('8K')) return 6;
-    if (words.contains('4K') || words.contains('UHD')) return 5;
-    if (words.contains('FHD') || words.contains('1080P')) return 4;
-    if (words.contains('HD') || words.contains('720P')) return 3;
-    if (words.contains('SD')) return 1;
-    return 2;
+    var rank = -1;
+    for (final m in _qualityWord.allMatches(name)) {
+      final r = switch (m[1]!.toUpperCase()) {
+        '8K' => 6,
+        '4K' || 'UHD' => 5,
+        'FHD' || '1080P' => 4,
+        'HD' || '720P' => 3,
+        _ => 1,
+      };
+      if (r > rank) rank = r;
+      if (rank == 6) break;
+    }
+    return rank < 0 ? 2 : rank;
   }
 
   /// Copies of [channel] in [pool], best first, [channel] itself excluded.

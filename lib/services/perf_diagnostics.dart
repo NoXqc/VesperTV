@@ -211,6 +211,11 @@ class PerfDiagnostics {
   static void mark(String label) {
     if (!_launch.isRunning || !_marked.add(label)) return;
     _marks.add('$label=+${_launch.elapsedMilliseconds}ms');
+    // Also as it happens: the 30 s summary never came when the app left the
+    // screen before it (Homatics logcat, 2026-11-19).
+    if (_startupReport != null) {
+      debugPrint('StartupMark: $label +${_launch.elapsedMilliseconds}ms');
+    }
   }
 
   /// Runs [body] with [label] listed as active, so a `StartupStall:` line

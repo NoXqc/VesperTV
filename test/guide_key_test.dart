@@ -20,6 +20,14 @@ class _HomeState extends State<_Home> implements GuideTarget {
   @override
   void openGuide() => setState(() => opened++);
 
+  @override
+  void guideLayoutBehindPlayer() {}
+
+  int groupShown = 0;
+
+  @override
+  void showPlayingGroup() => groupShown++;
+
   String? section;
 
   @override
@@ -60,6 +68,22 @@ void main() {
     expect(handler(_guideDown), isTrue);
     await tester.pump();
   }
+
+  testWidgets('launch resume shows the playing group, even before the home',
+      (tester) async {
+    // Owner's iPhone (2026-11-19): resume with the guide opened Favourites
+    // ("No channels found") for a channel that isn't a favourite.
+    GuideKey.showPlayingGroupOnHome(); // no home yet: waits for one
+    await tester
+        .pumpWidget(MaterialApp(navigatorKey: navKey, home: const _Home()));
+    final home = tester.state<_HomeState>(find.byType(_Home));
+    expect(home.groupShown, 1);
+    GuideKey.focusPlayingOnHome(); // Android's resume with the guide
+    await tester.pump();
+    expect(home.groupShown, 2);
+    expect(find.text('home 1'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
 
   testWidgets('Guide closes the pages above the TV home and opens its guide',
       (tester) async {

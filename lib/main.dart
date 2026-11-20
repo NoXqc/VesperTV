@@ -38,6 +38,7 @@ import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/dispatcharr.dart';
+import 'services/tuliprox.dart';
 import 'services/stream_badges.dart';
 import 'services/catalog_database.dart';
 import 'services/cloud_sync_service.dart';
@@ -275,6 +276,55 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   AppLifecycleListener? _vesperLifecycle;
   AppLifecycleListener? _launcherLifecycle;
   bool _ready = false;
+
+  /// Black over the app while the launch / a warm return opens the last
+  /// channel full screen: the TV home showed for a moment first, TiviMate
+  /// goes straight to the channel (owner, 2026-11-19). Dropped once the
+  /// player is pushed ([_dropResumeCover]), or after 8 s whatever happens.
+  final _resumeCover = ValueNotifier<bool>(false);
+
+  /// The Startup choice will open the last channel full screen (Android).
+  bool get _fullscreenResumePlanned =>
+      Platform.isAndroid &&
+      !usesMediaKit &&
+      !_preferences.launchWithProfiles &&
+      !_preferences.sportsMode &&
+      !_preferences.hideLiveTv &&
+      _preferences.effectiveStartSection == 'tv' &&
+      _storage.getResumeLastChannelAtStartup() &&
+      _storage.getLastChannelId() != null;
+
+  /// Read at launch for the early resume (then not again after the UI).
+  bool _historyReadEarly = false;
+
+  /// The launch's last channel, started before the TV home's first build.
+  ({Channel channel, Future<void> started})? _earlyResume;
+
+  /// A notification or a launcher card opened the app: it opens that, not
+  /// the last channel.
+  Future<bool> _openedFromOutside() async =>
+      Platform.isAndroid &&
+      (await _episodeBackground?.pendingTap == true ||
+          await _sportsNotifications?.pendingTap == true ||
+          _episodeNotificationOpened ||
+          await LauncherChannels.instance.hasPendingLink ||
+          LauncherChannels.instance.openedRecently);
+
+  void _coverForResume() {
+    if (!_fullscreenResumePlanned) return;
+    _resumeCover.value = true;
+    Future<void>.delayed(const Duration(seconds: 8), _dropResumeCover);
+  }
+
+  /// After the frame that builds the player, so the home never shows.
+  void _dropResumeCover() {
+    if (!_resumeCover.value) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resumeCover.value = false;
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   Completer<void>? _profileSelection;
 
   /// A warm return landed on Who's watching (with the startup selector on,
@@ -704,11 +754,6 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// animation playing out fully even though the actual boot is quick.
   static const _minSplashDuration = Duration(milliseconds: 2600);
 
-  /// Fast startup's splash: loads for this long at most (owner: 3-4 s is
-  /// fine if it buys stability), then the UI opens and the rest of the
-  /// catalog fills in behind it.
-  static const _fastSplashDuration = Duration(milliseconds: 3500);
-
   Future<void> _bootstrap() async {
     setState(() => _bootstrapError = null);
     final started = DateTime.now();
@@ -726,11 +771,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // cloud-sync.md). Never holds the splash more than a few seconds and
       // never fails the launch.
       _cloudSync = CloudSyncService(_storage);
-      try {
-        await _cloudSync.init();
-        await _cloudSync.syncBeforeLoad();
-      } catch (e) {
-        debugPrint('Sync: startup failed: $e');
+      // Fast startup: the pull runs once the services are up (below,
+      // initAndPullAfterLaunch), not before them.
+      final syncBehindLaunch = _storage.getFastStartup();
+      if (!syncBehindLaunch) {
+        try {
+          await _cloudSync.init();
+          await _cloudSync.syncBeforeLoad();
+        } catch (e) {
+          debugPrint('Sync: startup failed: $e');
+        }
       }
       PerfDiagnostics.mark('sync');
       _gameReminders = GameReminders(_storage);
@@ -743,6 +793,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Loads its pack the first time a source list needs it.
       StreamBadges.instance.attach(_storage);
       Dispatcharr.instance.attach(_storage);
+      Tuliprox.instance.attach(_storage);
 
       Real4kChannels.init(_storage);
       ArchiveReadyWatch.instance.init(_storage);
@@ -891,6 +942,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         if (keys.any(isHistoryKey)) _archiveService.historyChanged();
       };
       _cloudSync.startAutomatic();
+      if (syncBehindLaunch) {
+        unawaited(_cloudSync
+            .initAndPullAfterLaunch()
+            .catchError((Object e) => debugPrint('Sync: startup failed: $e')));
+      }
       // The cold sync above only pulled: this device's own changes go up
       // after the launch quiet period (StartupQuiet).
       unawaited(StartupQuiet.after(const Duration(seconds: 8))
@@ -912,6 +968,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         // until a cold start (owner, 2026-11-08).
         _episodeNotificationOpened = false;
         await _playbackService.stop();
+        // The frame Android shows when the app comes back is the last one
+        // drawn: black, not the TV home, when the channel reopens full
+        // screen.
+        _coverForResume();
+        if (_resumeCover.value) await WidgetsBinding.instance.endOfFrame;
       };
       // A computer: every media_kit player closes before the window does
       // (libmpv crashed on close with players still open, Linux).
@@ -920,8 +981,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       AppExit.hint = (message) => _scaffoldMessengerKey.currentState
           ?.showSnackBar(SnackBar(content: Text(message)));
       AppExit.afterWarm = () {
-        if (!mounted || !_ready) return;
+        if (!mounted || !_ready) return _dropResumeCover();
         if (_profileSelection != null) {
+          _dropResumeCover();
           _resumeAfterSelection = true;
           debugPrint("Resume: after Who's watching");
           return;
@@ -1124,19 +1186,20 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // spend; a half-populated UI that then falls over is not.
       // Not for a sync running behind the app: its categories load for
       // minutes, and the point was not to wait for them.
-      if (!syncBehind) {
-        await _waitForCategoriesToSettle(
-            fast ? started.add(_fastSplashDuration) : null);
-      }
+      // Fast startup opens the UI as soon as the work above is done, like
+      // TiviMate (owner, 2026-11-19): no category wait, no splash floor.
+      // Both came from before the SQLite guide (the ~25 s guide decode was
+      // what crashed weak boxes); the catalog already loads behind the UI
+      // (StartupQuiet + gentle pre-load), and a cold launch after the box
+      // killed the app cost ~3-6 s of splash for nothing.
+      if (!syncBehind && !fast) await _waitForCategoriesToSettle();
 
       // A fixed floor on top of the real work above — on a very small
       // catalog (or M3U mode, which skips the pre-load entirely) that
       // work alone might finish in well under a second, too fast for the
-      // splash's pulse animation to actually register at all. Fast startup
-      // used 3.5 s here because the pre-load filled it; that runs after the
-      // launch now, so it takes the plain floor (owner, 2026-11-05: a
-      // ~3 s splash is fine).
-      const floor = _minSplashDuration;
+      // splash's pulse animation to actually register at all. Not with
+      // Fast startup (above).
+      final floor = fast ? Duration.zero : _minSplashDuration;
       final elapsed = DateTime.now().difference(started);
       if (elapsed < floor) {
         await Future.delayed(floor - elapsed);
@@ -1150,6 +1213,24 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           enabled: () => _preferences.launchWithProfiles,
           show: _returnToProfiles);
       final selection = _profileSelection;
+      _coverForResume();
+      // The last channel starts connecting now, from the history's copy,
+      // while the TV home builds under the cover (it was pushed only after
+      // that first build: ~0.8 s + the stream's own ~2 s, owner's
+      // stopwatch 2026-11-19). The resume below opens the player on it.
+      if (_resumeCover.value && !await _openedFromOutside()) {
+        await _playbackService.init();
+        _historyReadEarly = true;
+        final lastId = _storage.getLastChannelId();
+        final early = _playbackService.recentlyPlayed
+            .where((c) => c.id == lastId && c.isLive)
+            .firstOrNull;
+        if (early != null) {
+          PerfDiagnostics.mark('earlyPlay');
+          _earlyResume =
+              (channel: early, started: _playbackService.play(early));
+        }
+      }
       setState(() => _ready = true);
       // Never mount a previous viewer's home, consume startup routes, or resume
       // playback until the selected viewer and their appearance are applied.
@@ -1218,7 +1299,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         }));
       }
       unawaited(() async {
-        await _playbackService.init();
+        if (!_historyReadEarly) await _playbackService.init();
         PerfDiagnostics.mark('playbackInit');
         // The launcher's rows as of now (the last session may have ended
         // before it could send them), after the launch's busy seconds.
@@ -1352,16 +1433,82 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// PlaylistManager.init() (see that method's doc comment), so without
   /// this, resume-last-channel would silently find an empty list and do
   /// nothing on every Xtream launch.
+  /// The launch's / a warm return's full-screen resume: already full
+  /// screen (no page animation), and Back shrinks it into the guide's
+  /// preview like a channel opened from the guide (the plain page's
+  /// zoom-out read as a flash, owner 2026-11-19). The glide needs the
+  /// native surface; otherwise the plain page, still without animation.
+  Route<void> _resumeRoute(NavigatorState navigator, Channel channel) {
+    Widget player(BuildContext _) => PlayerScreen(channel: channel);
+    final size = MediaQuery.maybeSizeOf(navigator.context);
+    if (NativeVideoSurface.active &&
+        !PlaybackService.textureVideo &&
+        size != null) {
+      return PlayerGlideRoute(
+          builder: player, from: Offset.zero & size, instant: true);
+    }
+    return PlayerPageRoute(instant: true, builder: player);
+  }
+
+  /// After a resume from the history's copy: once the live lists are in,
+  /// a channel this viewer can no longer see (its group hidden since)
+  /// stops.
+  Future<void> _checkResumedStillVisible(String id) async {
+    await PerfDiagnostics.task(
+        'liveList', _playlistManager.ensureLiveChannelsLoaded);
+    PerfDiagnostics.mark('liveList');
+    final visible =
+        _playlistManager.visibleChannels(category: 'tv').any((c) => c.id == id);
+    if (!visible && mounted) {
+      debugPrint('Resume: stopped (no longer in the live list)');
+      await _playbackService.stop();
+      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    }
+  }
+
   Future<void> _autoResumeLastChannel() async {
+    try {
+      await _resumeLastChannel();
+    } finally {
+      _dropResumeCover();
+    }
+  }
+
+  Future<void> _resumeLastChannel() async {
     // Send log: why a launch or warm return did or didn't resume.
     void skipped(String why) => debugPrint('Resume: skipped ($why)');
-    if (Platform.isAndroid &&
-        (await _episodeBackground?.pendingTap == true ||
-            await _sportsNotifications?.pendingTap == true ||
-            _episodeNotificationOpened ||
-            // Started from a card on the TV launcher: it opens that title.
-            await LauncherChannels.instance.hasPendingLink ||
-            LauncherChannels.instance.openedRecently)) {
+    // Started before the UI (_bootstrap): open the player on it.
+    final early = _earlyResume;
+    _earlyResume = null;
+    if (early != null) {
+      try {
+        await early.started;
+      } catch (e) {
+        debugPrint('Resume: early start failed: $e');
+      }
+      var navigator = _navigatorKey.currentState;
+      // The app's first frame (its navigator) can still be ahead: the
+      // early play can return before it, and the player was silently never
+      // opened (owner's phone +893: the home on Favourites instead).
+      for (var i = 0; navigator == null && mounted && i < 30; i++) {
+        await WidgetsBinding.instance.endOfFrame;
+        navigator = _navigatorKey.currentState;
+      }
+      if (navigator == null || !mounted) {
+        debugPrint('Resume: early play, no navigator to open the player');
+      }
+      if (navigator != null && mounted) {
+        debugPrint('Resume: full screen (started before the UI)');
+        PerfDiagnostics.mark('playerPushed');
+        GuideKey.guideLayoutBehindPlayer();
+        unawaited(navigator.push(_resumeRoute(navigator, early.channel)));
+        _dropResumeCover();
+        await _checkResumedStillVisible(early.channel.id);
+      }
+      return;
+    }
+    // Started from a card on the TV launcher: it opens that title.
+    if (await _openedFromOutside()) {
       return skipped('a notification or launcher card opened the app');
     }
     // The sports home starts with its dashboard, never an unrelated stream.
@@ -1373,13 +1520,6 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     }
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return skipped('no last channel');
-    await PerfDiagnostics.task(
-        'liveList', _playlistManager.ensureLiveChannelsLoaded);
-    PerfDiagnostics.mark('liveList');
-    if (_episodeNotificationOpened ||
-        LauncherChannels.instance.openedRecently) {
-      return skipped('a notification or launcher card opened the app');
-    }
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
     // Another start section (Startup > Open on) wins over full screen: the
@@ -1389,6 +1529,33 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     final inGuide = !fullscreen &&
         (_storage.getResumeLastChannelInGuide() ||
             (elsewhere && _storage.getResumeLastChannelAtStartup()));
+    // Full screen at once from the history's copy of the channel, like
+    // TiviMate (owner, 2026-11-19): waiting for every live list (tens of
+    // thousands of channels) put the TV home on screen for 3-4 s first.
+    // The list still loads behind the player; a channel the viewer can no
+    // longer see (its group hidden since) is stopped once it's known.
+    if (fullscreen && !usesMediaKit && !_playbackService.isPlayingSomething) {
+      final early = _playbackService.recentlyPlayed
+          .where((c) => c.id == lastId && c.isLive)
+          .firstOrNull;
+      final navigator = _navigatorKey.currentState;
+      if (early != null && navigator != null) {
+        debugPrint('Resume: full screen (from history)');
+        PerfDiagnostics.mark('playerPushed');
+        GuideKey.guideLayoutBehindPlayer();
+        unawaited(navigator.push(_resumeRoute(navigator, early)));
+        _dropResumeCover();
+        await _checkResumedStillVisible(lastId);
+        return;
+      }
+    }
+    await PerfDiagnostics.task(
+        'liveList', _playlistManager.ensureLiveChannelsLoaded);
+    PerfDiagnostics.mark('liveList');
+    if (_episodeNotificationOpened ||
+        LauncherChannels.instance.openedRecently) {
+      return skipped('a notification or launcher card opened the app');
+    }
     // visibleChannels, not the raw `channels` getter — a restricted
     // viewer's last-played channel may have had its group hidden since
     // they last watched (by whoever set up their profile), and silently
@@ -1400,15 +1567,21 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             'Resume: ${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'}');
         if (usesMediaKit) {
           if (fullscreen) {
+            // No forced landscape on a phone: nobody asked for this one
+            // (owner's iPhone, 2026-11-19: it turned sideways by itself).
             _navigatorKey.currentState?.push(MaterialPageRoute(
-                builder: (_) => DesktopPlayerScreen(channel: channel)));
+                builder: (_) =>
+                    DesktopPlayerScreen(channel: channel, turnSideways: false)));
+            GuideKey.showPlayingGroupOnHome();
           } else if (inGuide &&
               DesktopMiniPlayer.instance.channel.value == null) {
             DesktopMiniPlayer.instance.play(channel);
+            if (!elsewhere) GuideKey.showPlayingGroupOnHome();
           }
         } else if (inGuide) {
           if (_playbackService.isPlayingSomething) return;
           await _playbackService.play(channel);
+          if (!elsewhere) GuideKey.focusPlayingOnHome();
         } else if (fullscreen) {
           // Back on by default since 1.0.x: the heavy part of the old
           // cold-start load (decoding the whole EPG, ~25 s) is gone — the
@@ -1418,8 +1591,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           // does; PlayerScreen.initState starts playback.
           if (_playbackService.isPlayingSomething) return;
           PerfDiagnostics.mark('playerPushed');
-          _navigatorKey.currentState?.push(
-              PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+          GuideKey.guideLayoutBehindPlayer();
+          final navigator = _navigatorKey.currentState;
+          if (navigator != null) {
+            unawaited(navigator.push(_resumeRoute(navigator, channel)));
+          }
         } else {
           _playbackService.setPendingResumeChannel(channel);
         }
@@ -1722,6 +1898,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           builder: (context, child) => Stack(
             children: [
               if (child != null) child,
+              Positioned.fill(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _resumeCover,
+                  builder: (_, cover, __) => IgnorePointer(
+                    ignoring: !cover,
+                    child: cover
+                        ? const ColoredBox(color: Colors.black)
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ),
               LiveResumeHint(navigatorKey: _navigatorKey),
               // Windows-only equivalent — see DesktopPlayerScreen's own
               // doc comment for why it's a separate widget/holder rather

@@ -936,37 +936,59 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
 /// Touch and mouse: the floating tab on the left edge of a fullscreen
 /// player that opens [PlayerSidePanel] (a remote uses Left), shown with
 /// the player bars. Phone (PlayerScreen) and Windows (DesktopPlayerScreen).
+/// [rightEdge]: the same tab mirrored on the right edge (the phone's live
+/// Sources drawer).
 class PlayerSidePanelTab extends StatelessWidget {
-  const PlayerSidePanelTab({super.key, required this.onTap});
+  const PlayerSidePanelTab({
+    super.key,
+    required this.onTap,
+    this.rightEdge = false,
+    this.icon = Icons.view_list_rounded,
+    this.label,
+  });
 
   final VoidCallback onTap;
+  final bool rightEdge;
+  final IconData icon;
+
+  /// Read by screen readers.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(8, 18, 10, 18),
-          decoration: RefinedFinish.decorate(
-              context,
-              BoxDecoration(
-                color: RefinedFinish.surface(
-                    context, Colors.black.withValues(alpha: 0.62)),
-                borderRadius:
-                    const BorderRadius.horizontal(right: Radius.circular(24)),
-                border: Border.all(color: Colors.white24),
-              )),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.view_list_rounded, color: scheme.primary, size: 24),
-              const SizedBox(height: 4),
-              const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
-            ],
+    return Semantics(
+      button: true,
+      label: label,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: rightEdge
+                ? const EdgeInsets.fromLTRB(10, 18, 8, 18)
+                : const EdgeInsets.fromLTRB(8, 18, 10, 18),
+            decoration: RefinedFinish.decorate(
+                context,
+                BoxDecoration(
+                  color: RefinedFinish.surface(
+                      context, Colors.black.withValues(alpha: 0.62)),
+                  borderRadius: rightEdge
+                      ? const BorderRadius.horizontal(left: Radius.circular(24))
+                      : const BorderRadius.horizontal(
+                          right: Radius.circular(24)),
+                  border: Border.all(color: Colors.white24),
+                )),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: scheme.primary, size: 24),
+                const SizedBox(height: 4),
+                Icon(rightEdge ? Icons.chevron_left : Icons.chevron_right,
+                    color: Colors.white70, size: 22),
+              ],
+            ),
           ),
         ),
       ),

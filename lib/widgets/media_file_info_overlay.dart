@@ -1,4 +1,5 @@
 import '../utils/refined_finish.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -7,11 +8,16 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../models/media_file_info.dart';
+import 'stream_badge_row.dart';
 
 /// A brief, non-focusable cue triggered by OK or a video tap, not by playback.
 class MediaFileInfoOverlay extends StatefulWidget {
-  const MediaFileInfoOverlay(
-      {super.key, required this.info, required this.requests, this.top = 16});
+  const MediaFileInfoOverlay({
+    super.key,
+    required this.info,
+    required this.requests,
+    this.top = 16,
+  });
   final double top;
   final MediaFileInfo info;
   final ValueListenable<int> requests;
@@ -73,43 +79,60 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
                 duration: const Duration(milliseconds: 180),
                 child: Container(
                   constraints: BoxConstraints(
-                      maxWidth:
-                          math.min(240, MediaQuery.sizeOf(context).width - 48)),
+                    maxWidth: math.min(
+                      widget.info.option == null ? 240 : 300,
+                      MediaQuery.sizeOf(context).width - 48,
+                    ),
+                  ),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: RefinedFinish.decorate(
-                      context,
-                      BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.78),
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18)),
+                    context,
+                    BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.78),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
                       ),
-                      focused: false),
+                    ),
+                    focused: false,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          tr('Source: {source}',
-                              {'source': widget.info.source}),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              height: 1.2,
-                              fontWeight: FontWeight.w600)),
+                        tr('Source: {source}', {'source': widget.info.source}),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      // The quality badges of the source list (resolution,
+                      // release, HDR, codec): the pack's pictures, else the
+                      // gold format tags.
+                      if (widget.info.option case final option?) ...[
+                        const SizedBox(height: 5),
+                        StreamBadgeRow(
+                            option: option, height: 18, qualityOnly: true),
+                      ],
                       const SizedBox(height: 3),
                       Text(
-                          widget.info.formattedSize == null
-                              ? tr('File size unavailable')
-                              : tr('File size: {size}',
-                                  {'size': widget.info.formattedSize!}),
-                          style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              height: 1.2)),
+                        widget.info.formattedSize == null
+                            ? tr('File size unavailable')
+                            : tr('File size: {size}', {
+                                'size': widget.info.formattedSize!,
+                              }),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          height: 1.2,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -125,36 +148,44 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
 class MediaTitleCue extends StatefulWidget {
   /// Show name over the episode name (its "S01E02 - " stays in the bottom
   /// bar), or the movie title alone.
-  static MediaTitleCue forChannel(
-      {Key? key,
-      required String? seriesName,
-      required String name,
-      required ValueListenable<int> requests,
-      double top = 16}) {
+  static MediaTitleCue forChannel({
+    Key? key,
+    required String? seriesName,
+    required String name,
+    required ValueListenable<int> requests,
+    double top = 16,
+  }) {
     final series = seriesName?.trim();
     if (series == null || series.isEmpty) {
       return MediaTitleCue(
-          key: key, title: name.trim(), requests: requests, top: top);
+        key: key,
+        title: name.trim(),
+        requests: requests,
+        top: top,
+      );
     }
     final episode = name
         .replaceFirst(
-            RegExp(r'^\s*S\d+\s*E\d+\s*(?:[-:–—.]\s*)?', caseSensitive: false),
-            '')
+          RegExp(r'^\s*S\d+\s*E\d+\s*(?:[-:–—.]\s*)?', caseSensitive: false),
+          '',
+        )
         .trim();
     return MediaTitleCue(
-        key: key,
-        title: series,
-        subtitle: episode.isEmpty || episode == series ? null : episode,
-        requests: requests,
-        top: top);
+      key: key,
+      title: series,
+      subtitle: episode.isEmpty || episode == series ? null : episode,
+      requests: requests,
+      top: top,
+    );
   }
 
-  const MediaTitleCue(
-      {super.key,
-      required this.title,
-      this.subtitle,
-      required this.requests,
-      this.top = 16});
+  const MediaTitleCue({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.requests,
+    this.top = 16,
+  });
   final String title;
   final String? subtitle;
   final double top;
@@ -213,31 +244,38 @@ class _MediaTitleCueState extends State<MediaTitleCue> {
               duration: const Duration(milliseconds: 180),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                    maxWidth: MediaQuery.sizeOf(context).width * 0.55),
+                  maxWidth: MediaQuery.sizeOf(context).width * 0.55,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.title,
+                    Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        height: 1.15,
+                        fontWeight: FontWeight.w700,
+                        shadows: _shadows,
+                      ),
+                    ),
+                    if (subtitle != null && subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            height: 1.15,
-                            fontWeight: FontWeight.w700,
-                            shadows: _shadows)),
-                    if (subtitle != null && subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 17,
-                              height: 1.2,
-                              fontWeight: FontWeight.w500,
-                              shadows: _shadows)),
+                          color: Colors.white70,
+                          fontSize: 17,
+                          height: 1.2,
+                          fontWeight: FontWeight.w500,
+                          shadows: _shadows,
+                        ),
+                      ),
                     ],
                   ],
                 ),

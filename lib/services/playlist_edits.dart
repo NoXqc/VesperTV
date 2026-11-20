@@ -91,6 +91,9 @@ class ProbeResult {
     this.fps,
     this.codec,
     this.error,
+    this.audioLayout,
+    this.audioCodec,
+    this.audioChannels,
   });
 
   final bool ok;
@@ -101,18 +104,50 @@ class ProbeResult {
   final String? codec;
   final String? error;
 
+  /// The richest audio track the stream test found (Discord, 2026-11-19:
+  /// "sort results with 5.1 preferred over 2.0"): `5.1`, `2.0`...,
+  /// `AC-3` / `E-AC-3` / `AAC` / `MP2`..., and the speaker count with the
+  /// LFE (6 for 5.1). Null when not measured (the players record only the
+  /// picture size).
+  final String? audioLayout;
+  final String? audioCodec;
+  final int? audioChannels;
+
+  /// This result with what it didn't measure taken from [older] (the
+  /// full-screen player records only the picture size, which used to wipe
+  /// a stream test's frame rate, codec and audio).
+  ProbeResult fillFrom(ProbeResult older) => !ok || !older.ok
+      ? this
+      : ProbeResult(
+          ok: true,
+          at: at,
+          height: height ?? older.height,
+          width: width ?? older.width,
+          fps: fps ?? older.fps,
+          codec: codec ?? older.codec,
+          audioLayout: audioLayout ?? older.audioLayout,
+          audioCodec: audioCodec ?? older.audioCodec,
+          audioChannels: audioChannels ?? older.audioChannels,
+        );
+
   static const staleAfter = Duration(days: 30);
   bool get isStale => DateTime.now().difference(at) > staleAfter;
 
-  /// "1080p 50fps H.264", "dead (HTTP 404)".
+  /// "1080p 50fps H.264 · 5.1 AC-3", "dead (HTTP 404)".
   String get label {
     if (!ok) return error == null ? 'dead' : 'dead ($error)';
-    final parts = <String>[
+    final video = [
       if (height != null) height! >= 2000 ? '4K' : '${height}p',
       if (fps != null) '${fps!.round()}fps',
       if (codec != null) codec!,
-    ];
-    return parts.isEmpty ? 'works' : parts.join(' ');
+    ].join(' ');
+    final audio = [
+      if (audioLayout != null) audioLayout!,
+      if (audioCodec != null) audioCodec!,
+    ].join(' ');
+    if (video.isEmpty && audio.isEmpty) return 'works';
+    return [if (video.isNotEmpty) video, if (audio.isNotEmpty) audio]
+        .join(' · ');
   }
 
   Map<String, dynamic> toJson() => {
@@ -123,6 +158,9 @@ class ProbeResult {
         if (fps != null) 'fps': fps,
         if (codec != null) 'codec': codec,
         if (error != null) 'err': error,
+        if (audioLayout != null) 'al': audioLayout,
+        if (audioCodec != null) 'acd': audioCodec,
+        if (audioChannels != null) 'ach': audioChannels,
       };
 
   static ProbeResult? fromJson(Object? json) {
@@ -135,6 +173,9 @@ class ProbeResult {
       fps: (json['fps'] as num?)?.toDouble(),
       codec: json['codec'] as String?,
       error: json['err'] as String?,
+      audioLayout: json['al'] as String?,
+      audioCodec: json['acd'] as String?,
+      audioChannels: (json['ach'] as num?)?.toInt(),
     );
   }
 }
@@ -214,6 +255,8 @@ class PlaylistEdits {
 
   static bool isSeparator(Channel c) => _separator.hasMatch(c.sourceName);
 
+  static final _spaces = RegExp(r'\s{2,}');
+
   /// The name after the replace rules (manual names win in [apply]).
   String ruleName(Channel c) {
     var name = c.sourceName;
@@ -225,7 +268,7 @@ class PlaylistEdits {
         name = name.replaceAll(p, r.replace);
       } catch (_) {}
     }
-    name = name.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+    name = name.replaceAll(_spaces, ' ').trim();
     return name.isEmpty ? c.sourceName : name;
   }
 
@@ -244,6 +287,15 @@ class PlaylistEdits {
       }
     }
     return ChannelCopyFallback.qualityRank(c.sourceName);
+  }
+
+  /// Within one [copyRank]: 2 = 5.1 or more measured, 1 = fewer or not
+  /// measured. Orders copies (5.1 above 2.0, Discord 2026-11-19); never
+  /// hides one ([apply] keeps using [copyRank]).
+  int audioRank(Channel c) {
+    final probe = probes[c.rawId];
+    if (probe == null || probe.isStale || !probe.ok) return 1;
+    return (probe.audioChannels ?? 0) >= 6 ? 2 : 1;
   }
 
   /// Stamps [Channel.nameOverride]/[Channel.logoOverride] on [live] and
@@ -278,13 +330,13 @@ class PlaylistEdits {
     }
     for (final copies in byCopy.values) {
       if (copies.length < 2) continue;
+      final ranks = [for (final c in copies) copyRank(c)];
       var best = -100;
-      for (final c in copies) {
-        final r = copyRank(c);
+      for (final r in ranks) {
         if (r > best) best = r;
       }
-      for (final c in copies) {
-        if (copyRank(c) < best) out.add(c.rawId);
+      for (var i = 0; i < copies.length; i++) {
+        if (ranks[i] < best) out.add(copies[i].rawId);
       }
     }
     return out;

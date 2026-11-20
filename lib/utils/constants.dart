@@ -57,6 +57,7 @@ class AppConstants {
   /// Settings > Playlists & sources > Dispatcharr (`DispatcharrLogin`).
   static const String keyDispatcharr = 'vesper_dispatcharr';
   static const String keyDispatcharrSources = 'vesper_dispatcharr_sources';
+  static const String keyTuliprox = 'vesper_tuliprox';
   static const String keyProviderExpiryNoticeDay =
       'vesper_provider_expiry_notice_day';
   static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
@@ -482,6 +483,9 @@ class AppConstants {
   // Settings > Playback > Catch-up: carry on past the programme (off =
   // stop at its end).
   static const String keyCatchupKeepPlaying = 'vesper_catchup_keep_playing';
+  // Playlists whose Xtream catch-up asks `.ts` instead of `.m3u8`
+  // (services/catchup_format.dart).
+  static const String keyCatchupTsPlaylists = 'vesper_catchup_ts_playlists';
   // Settings > Playback > Skip intro: the IntroDB skip button on episodes
   // (on by default; services/skip_segments.dart).
   static const String keySkipSegments = 'vesper_skip_segments';

@@ -11,13 +11,19 @@ int archiveStreamBytes(ArchiveStreamOption option) {
 /// Kept separately for diagnostics when structured and displayed sizes disagree.
 int archiveStreamLabelBytes(ArchiveStreamOption option) {
   final stream = option.stream;
-  final match = RegExp(r'(\d+(?:[.,]\d+)?)\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB)\b',
-          caseSensitive: false)
-      .firstMatch('${stream.title ?? ''} ${stream.name ?? ''}');
+  final match = RegExp(
+    r'(\d+(?:[.,]\d+)?)\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB)\b',
+    caseSensitive: false,
+  ).firstMatch('${stream.title ?? ''} ${stream.name ?? ''}');
   if (match == null) return 0;
   final number = double.tryParse(match[1]!.replaceAll(',', '.')) ?? 0;
   final unit = match[2]!.toUpperCase();
-  final power = switch (unit[0]) { 'T' => 4, 'G' => 3, 'M' => 2, _ => 1 };
+  final power = switch (unit[0]) {
+    'T' => 4,
+    'G' => 3,
+    'M' => 2,
+    _ => 1,
+  };
   final base = unit.contains('I') ? 1024 : 1000;
   var bytes = number;
   for (var n = 0; n < power; n++) {
@@ -37,9 +43,12 @@ MediaFileInfo archiveMediaFileInfo(ArchiveStreamOption option) {
   final fallback = label(option.source.name);
   final bytes = archiveStreamBytes(option);
   return MediaFileInfo(
-      source:
-          name.isNotEmpty ? name : (fallback.isEmpty ? 'Media Hub' : fallback),
-      sizeBytes: bytes > 0 ? bytes : null);
+    source: name.isNotEmpty
+        ? name
+        : (fallback.isEmpty ? 'Media Hub' : fallback),
+    sizeBytes: bytes > 0 ? bytes : null,
+    option: option,
+  );
 }
 
 /// One link for a whole season (or several episodes), sized as all of it:
@@ -56,18 +65,21 @@ bool archiveStreamIsSeasonPack(ArchiveStreamOption option) {
 
 // S02E07 (not S02E07-E09), 2x07, EP-7, Episode 7, Spanish Cap.207.
 final _singleEpisode = RegExp(
-    r's\d{1,2}[ ._-]?e\d{1,3}(?!\d)'
-    r'(?![ ._-]*(?:-|~|to)[ ._-]*(?:s\d{1,2}[ ._-]?)?e?\d)'
-    r'|(?<![a-z0-9])\d{1,2}x\d{2,3}(?!\d)'
-    r'|(?<![a-z])ep(?:isode)?[ ._-]?\d{1,3}(?!\d)'
-    r'|cap\.?\s?\d{3,4}',
-    caseSensitive: false);
+  r's\d{1,2}[ ._-]?e\d{1,3}(?!\d)'
+  r'(?![ ._-]*(?:-|~|to)[ ._-]*(?:s\d{1,2}[ ._-]?)?e?\d)'
+  r'|(?<![a-z0-9])\d{1,2}x\d{2,3}(?!\d)'
+  r'|(?<![a-z])ep(?:isode)?[ ._-]?\d{1,3}(?!\d)'
+  r'|cap\.?\s?\d{3,4}',
+  caseSensitive: false,
+);
 final _episodeRange = RegExp(
-    r'e\d{1,3}[ ._-]*(?:-|~|to)[ ._-]*(?:s\d{1,2}[ ._-]?)?e?\d{1,3}(?!\d)',
-    caseSensitive: false);
+  r'e\d{1,3}[ ._-]*(?:-|~|to)[ ._-]*(?:s\d{1,2}[ ._-]?)?e?\d{1,3}(?!\d)',
+  caseSensitive: false,
+);
 final _seasonOnly = RegExp(
-    r'(?<![a-z0-9])s\d{1,2}(?![0-9]|[ ._-]?e\d)|season[ ._-]?\d|complete',
-    caseSensitive: false);
+  r'(?<![a-z0-9])s\d{1,2}(?![0-9]|[ ._-]?e\d)|season[ ._-]?\d|complete',
+  caseSensitive: false,
+);
 
 /// Unknown sizes retain the picker. Equal sizes preserve provider order.
 /// Season packs only when nothing else has a size: theirs is the season's.
@@ -99,12 +111,16 @@ ArchiveStreamOption? largestArchiveStream(List<ArchiveStreamOption> options) {
 /// or less. An uncached `[TB download]` link's "being downloaded" clip is
 /// the Ready watch's business (`ArchiveReadyWatch`), never this.
 bool archiveProviderFailed(
-    ArchiveStreamOption option, String finalUrl, int? servedBytes) {
+  ArchiveStreamOption option,
+  String finalUrl,
+  int? servedBytes,
+) {
   if (servedBytes == null || servedBytes > 5 * 1000 * 1000) return false;
   if (archiveStreamBytes(option) < 500 * 1000 * 1000) return false;
   final label = '${option.stream.name ?? ''} ${option.stream.title ?? ''}';
   final cached = label.contains('⚡') || label.contains('+]');
-  final uncached = label.toLowerCase().contains('download') ||
+  final uncached =
+      label.toLowerCase().contains('download') ||
       label.contains('⏳') ||
       finalUrl.toLowerCase().contains('download');
   return cached && !uncached;

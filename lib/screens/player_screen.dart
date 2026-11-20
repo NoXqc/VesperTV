@@ -50,7 +50,16 @@ import '../widgets/player_touch_lock.dart';
 /// The route every full-screen player opens with, except from the guide's
 /// preview with the native surface on ([PlayerGlideRoute]).
 class PlayerPageRoute<T> extends MaterialPageRoute<T> {
-  PlayerPageRoute({required super.builder, super.settings});
+  PlayerPageRoute(
+      {required super.builder, super.settings, this.instant = false});
+
+  /// No page transition: the launch's full-screen resume, which should
+  /// look like the app opened on the channel (TiviMate, owner 2026-11-19).
+  final bool instant;
+
+  @override
+  Duration get transitionDuration =>
+      instant ? Duration.zero : super.transitionDuration;
 }
 
 /// Full screen from the Live list / Timeline guide preview while the native
@@ -66,7 +75,13 @@ class PlayerPageRoute<T> extends MaterialPageRoute<T> {
 /// ([NativeVideoSurface.gliding]). `PlayerGlide:` lines in Send log give
 /// each glide's frame count and worst frame.
 class PlayerGlideRoute<T> extends PageRoute<T> {
-  PlayerGlideRoute({required this.builder, required this.from});
+  PlayerGlideRoute(
+      {required this.builder, required this.from, this.instant = false});
+
+  /// The launch's full-screen resume: already full screen ([from] is the
+  /// screen), no glide in; Back still shrinks it into the guide's preview
+  /// (the plain page's zoom-out read as a flash, owner 2026-11-19).
+  final bool instant;
 
   final WidgetBuilder builder;
 
@@ -121,7 +136,8 @@ class PlayerGlideRoute<T> extends PageRoute<T> {
 
   // The page's first frame plus the glide (which starts after it).
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 700);
+  Duration get transitionDuration =>
+      instant ? Duration.zero : const Duration(milliseconds: 700);
 
   @override
   Duration get reverseTransitionDuration => glide;
@@ -260,8 +276,13 @@ class _PlayerGlideState extends State<_PlayerGlide>
   @override
   void initState() {
     super.initState();
-    NativeVideoSurface.gliding = widget.route;
     _page.addStatusListener(_onPageStatus);
+    if (widget.route.instant) {
+      _t.value = 1;
+      widget.route.glided.complete();
+      return;
+    }
+    NativeVideoSurface.gliding = widget.route;
     // After the page's first frame and the one after it: that build is the
     // heavy part, and the glide's clock must not count it.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -808,6 +829,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  /// A Tuliprox source switch reaches the screen after the buffer: the
+  /// player watches for it (and unsticks it), then says it changed.
+  void _watchServerSwitch(String name) {
+    unawaited(_playback.watchSourceSwitch().then((landed) {
+      if (!landed || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('Source changed to {stream}.', {'stream': name}))));
+    }));
+  }
+
   /// Live: the playing channel's other sources (quality copies, editor
   /// fallbacks, the same channel in other playlists), picked by hand; the
   /// last row adds one (a playlist editor fallback) and reopens the list.
@@ -839,7 +870,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
-              playing, sources[picked], _playback.playLiveSource);
+              playing, sources[picked], _playback.playLiveSource,
+              onServerSwitch: _watchServerSwitch);
           if (note != null && mounted) {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text(note)));
@@ -2066,11 +2098,24 @@ class _PlayerScreenState extends State<PlayerScreen>
                                               // Media Hub: other files of
                                               // this title (a remote uses
                                               // Right; touch has no key).
+                                              // Live: the tab on the right
+                                              // edge (see below).
                                               if (widget.sources != null)
                                                 _TopBarIconButton(
                                                   icon: Icons.swap_horiz,
                                                   tooltip: tr('Sources'),
                                                   onPressed: _openSources,
+                                                )
+                                              // Live: the channel's other
+                                              // sources (a remote finds them
+                                              // in the Down options row;
+                                              // phones had no way in).
+                                              else if (channel.isLive &&
+                                                  playback.catchup == null)
+                                                _TopBarIconButton(
+                                                  icon: Icons.swap_horiz,
+                                                  tooltip: tr('Sources'),
+                                                  onPressed: _openLiveSources,
                                                 ),
                                               _TopBarIconButton(
                                                 icon: Icons.search,
@@ -2487,6 +2532,38 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     child: Center(
                                       child:
                                           PlayerSidePanelTab(onTap: _openPanel),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Touch, live: the same tab on the right edge opens
+                          // the channel's Sources drawer (a remote has Sources
+                          // in the options row).
+                          if (_touch &&
+                              channel.isLive &&
+                              playback.catchup == null)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                ignoring: !_topVisible ||
+                                    _panelOpen ||
+                                    _sourceDrawerOpen,
+                                child: AnimatedOpacity(
+                                  opacity: _topVisible && !_panelOpen ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: SafeArea(
+                                    left: false,
+                                    child: Center(
+                                      child: PlayerSidePanelTab(
+                                        onTap: _openLiveSources,
+                                        rightEdge: true,
+                                        icon: Icons.swap_horiz,
+                                        label: tr('Sources'),
+                                      ),
                                     ),
                                   ),
                                 ),

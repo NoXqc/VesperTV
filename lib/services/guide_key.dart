@@ -9,6 +9,16 @@ abstract interface class GuideTarget {
   /// TV tab, focus on the playing channel in the guide.
   void openGuide();
 
+  /// The launch's resume: the live guide shows the playing channel's group
+  /// (Favourites when it's a favourite, else its own group) instead of the
+  /// Favourites the home opens on.
+  void showPlayingGroup();
+
+  /// The launch's full-screen resume covers the home: lay it out as after
+  /// opening a channel from the guide (columns folded), so Back doesn't
+  /// show the tabs and groups first.
+  void guideLayoutBehindPlayer();
+
   /// Vesper AI's "open": 'tv', 'guide', 'movies', 'series', 'home', 'hub',
   /// 'sports', 'search' (with [query]) or 'settings', through the home's own
   /// openers. False when that section is hidden.
@@ -39,9 +49,62 @@ class GuideKey {
       _pending = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => target.openGuide());
     }
+    if (_layoutPending) {
+      _layoutPending = false;
+      target.guideLayoutBehindPlayer();
+    }
+    if (_groupPending) {
+      _groupPending = false;
+      // After the frame: the home sets its tab and start group (Favourites)
+      // after registering.
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => target.showPlayingGroup());
+    }
+  }
+
+  static bool _groupPending = false;
+
+  /// See [GuideTarget.showPlayingGroup] (owner, 2026-11-19: the launch's
+  /// resume opened Favourites, "No channels found", for a channel that
+  /// isn't one). The TV home can still be mounting.
+  static void showPlayingGroupOnHome() {
+    if (_targets.isEmpty) {
+      _groupPending = true;
+      return;
+    }
+    _targets.last.showPlayingGroup();
+  }
+
+  static bool _layoutPending = false;
+
+  /// See [GuideTarget.guideLayoutBehindPlayer]; the TV home can still be
+  /// mounting (the player opens right after the launch's first frame).
+  static void guideLayoutBehindPlayer() {
+    // Back from it shows the channel's group, not the Favourites the home
+    // starts on (owner's phone, +891: "No channels found").
+    showPlayingGroupOnHome();
+    if (_targets.isEmpty) {
+      _layoutPending = true;
+      return;
+    }
+    _targets.last.guideLayoutBehindPlayer();
   }
 
   static void unregister(GuideTarget target) => _targets.remove(target);
+
+  /// The launch's "Resume last channel with the guide open": the TV home on
+  /// screen puts focus on the playing channel's guide row, like Back from
+  /// full screen (it stayed on the groups column, owner 2026-11-19).
+  /// Nothing when another page covers the home.
+  static void focusPlayingOnHome() {
+    for (final target in _targets.reversed) {
+      final route = target.guideRoute;
+      if (route == null || !route.isCurrent) continue;
+      target.showPlayingGroup();
+      target.openGuide();
+      return;
+    }
+  }
 
   /// Opens a TV home when none is open (the Sports Mode root registers its
   /// own "Live TV" page opener).

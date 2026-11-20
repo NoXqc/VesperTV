@@ -55,7 +55,11 @@ enum PairingKind {
 
   /// [mediaServer] with the phone page worded for Dispatcharr (Settings >
   /// Playlists & sources > Dispatcharr); same 'server' payload.
-  dispatcharr;
+  dispatcharr,
+
+  /// [mediaServer] worded for a Tuliprox Web UI login (Settings >
+  /// Playlists & sources > Tuliprox); same 'server' payload.
+  tuliprox;
 
   bool get isWifiOnly => this != playlist;
 
@@ -67,7 +71,7 @@ enum PairingKind {
   String? get mode => switch (this) {
         playlist => null,
         link || apiKey || poster || badges => 'link',
-        mediaServer || dispatcharr => 'server',
+        mediaServer || dispatcharr || tuliprox => 'server',
         photo || wallpaper => 'photo',
         networkFolder => 'smb',
       };
@@ -204,6 +208,7 @@ class PhonePairingSession {
         PairingKind.badges => 'badges',
         PairingKind.networkFolder => 'smb',
         PairingKind.dispatcharr => 'dispatcharr',
+        PairingKind.tuliprox => 'tuliprox',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null

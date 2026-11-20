@@ -5,6 +5,7 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
+import 'package:nox_iptv/services/playlist_edits.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/user_groups.dart';
@@ -417,6 +418,34 @@ void main() {
       expect(names('q', 'SPORTS'), ['ESPN', 'CNN']);
       expect(names('q', 'UK'), ['BBC One', 'CNN', 'RDS']);
       expect(own('Picks'), ['CP24']);
+    });
+
+    test('groups merged or renamed in the editor count their channels',
+        () async {
+      // Discord, 2026-11-19: ten provider groups merged into "SPORT - UK"
+      // listed all their channels, but the groups column said 0.
+      final s = manager.editorSession('p')!;
+      final next = PlaylistEdits.fromJson(s.edits.toJson());
+      next.groupNames['SPORTS'] = 'Everything';
+      next.groupNames['NEWS'] = 'Everything';
+      await s.saveEdits(next);
+      expect(names('p', 'Everything'), ['TSN 1', 'RDS', 'CNN', 'CP24']);
+      expect(manager.liveGroupCount('p', 'Everything'), 4);
+      expect(manager.liveGroupCount('p', 'SPORTS'), 0);
+      expect(manager.liveGroupCount('q', 'SPORTS'), 1,
+          reason: "the other playlist's same-named group is not renamed");
+
+      // A rename only.
+      next.groupNames
+        ..clear()
+        ..['NEWS'] = 'News';
+      await s.saveEdits(PlaylistEdits.fromJson(next.toJson()));
+      expect(manager.liveGroupCount('p', 'News'), 2);
+      expect(manager.liveGroupCount('p', 'SPORTS'), 2);
+      // The TV picks groups by that title: Move Up / Down and the playing
+      // channel's group follow it.
+      expect(manager.liveGroupOf(channel('CNN')), 'News');
+      expect(manager.liveGroupOf(channel('RDS')), 'SPORTS');
     });
 
     test('an unavailable destination is refused', () async {

@@ -215,7 +215,8 @@ final _myGroupsTool = VesperTool(
         await playlist.unplaceChannels(back);
         return {
           'back_to_their_groups': [
-            for (final c in back) '${c.name} (${c.group})'
+            // The group's name on the TV (renamed in the editor or not).
+            for (final c in back) '${c.name} (${playlist.liveGroupOf(c)})'
           ],
           if (unknown.isNotEmpty) 'not_live_channels': unknown,
         };

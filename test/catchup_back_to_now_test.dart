@@ -7,6 +7,7 @@ import 'package:nox_iptv/models/catchup.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
+import 'package:nox_iptv/services/catchup_format.dart';
 import 'package:nox_iptv/services/catchup_session.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -80,6 +81,19 @@ class FakePlayer extends VideoPlayerHdrController {
 
   void failWith(String description) =>
       value = value.copyWith(errorDescription: description, isPlaying: false);
+}
+
+/// A `.m3u8` link that doesn't answer (a panel building its HLS archive on
+/// demand, LOG-76X9CH): initialize waits forever; `.ts` opens at once.
+class SlowHlsPlayer extends FakePlayer {
+  SlowHlsPlayer(super.url, super.log);
+
+  @override
+  Future<void> initialize(
+      {VideoViewType viewType = VideoViewType.textureView}) async {
+    if (url.endsWith('.m3u8')) await Completer<void>().future;
+    await super.initialize(viewType: viewType);
+  }
 }
 
 void main() {
@@ -286,6 +300,46 @@ void main() {
         .failWith('Source error [ERROR_CODE_IO_NETWORK_CONNECTION_FAILED]');
     await settle(tester);
     expect(playback.error, contains('NETWORK_CONNECTION_FAILED'));
+  });
+
+  cuTest('no picture from .m3u8 after 4 s: the same request as .ts, saved',
+      (tester) async {
+    playback.createController =
+        (url, {closedCaptionFile, httpHeaders = const {}}) {
+      log.add('open $url');
+      final p = SlowHlsPlayer(url, log);
+      players.add(p);
+      return p;
+    };
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
+    await settle(tester);
+    expect(players.single.url, endsWith('/11.m3u8'));
+    expect(players.single.value.isInitialized, isFalse);
+    // Still within the 4 s: nothing else asked yet.
+    await tester.pump(const Duration(seconds: 2));
+    expect(players, hasLength(1));
+    await tester.pump(const Duration(seconds: 3));
+    await settle(tester);
+    expect(players.last.url,
+        'http://host/timeshift/u/pw/91/2026-10-27:18-30/11.ts');
+    expect(players.last.value.isInitialized, isTrue);
+    expect(players.first.disposed, isTrue);
+    expect(playback.catchup!.requestStart, DateTime.utc(2026, 10, 27, 18, 30));
+    // Kept for this playlist, across app runs.
+    expect(storageRef.getCatchupTsPlaylists(), {'p'});
+    expect(CatchupFormat(storageRef).extFor(live), 'ts');
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 19, 0));
+    await settle(tester);
+    expect(players.last.url, endsWith('/11.ts'));
+  });
+
+  cuTest('a .m3u8 that answers in time stays HLS', (tester) async {
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 6));
+    expect(players, hasLength(1));
+    expect(players.single.url, endsWith('/11.m3u8'));
+    expect(storageRef.getCatchupTsPlaylists(), isEmpty);
   });
 
   cuTest('a panel that refuses .m3u8 timeshift is asked for .ts, then always',

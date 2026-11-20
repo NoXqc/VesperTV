@@ -18,6 +18,7 @@ class StreamBadgeRow extends StatelessWidget {
     this.height = 20,
     this.wrap = true,
     this.compact = false,
+    this.qualityOnly = false,
   });
 
   final ArchiveStreamOption option;
@@ -26,6 +27,10 @@ class StreamBadgeRow extends StatelessWidget {
 
   /// Smaller gold tags (the source drawer's narrow rows).
   final bool compact;
+
+  /// Only the pack's quality groups ([streamBadgeQualityGroup]); the gold
+  /// tags when none of them match (the player's OK popup).
+  final bool qualityOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -52,16 +57,26 @@ class StreamBadgeRow extends StatelessWidget {
   /// Null = the pack is still matching this source (keep the row's height).
   List<Widget>? _children(StreamBadges badges) {
     List<Widget> builtIn() => [
-      for (final f in archiveStreamFormats(option))
-        GoldTag(label: f, compact: compact),
-    ];
+          for (final f in archiveStreamFormats(option))
+            GoldTag(label: f, compact: compact),
+        ];
     if (!badges.enabled) return builtIn();
     if (badges.pack.value == null) return null;
     final s = option.stream;
-    final hits = badges.badgesFor(
+    var hits = badges.badgesFor(
       streamBadgeText(name: s.name, title: s.title, fileName: s.fileName),
     );
     if (hits == null) return null;
+    if (qualityOnly) {
+      final quality = {
+        for (final g in badges.pack.value!.groups)
+          if (streamBadgeQualityGroup(g.name)) g.id,
+      };
+      hits = [
+        for (final b in hits)
+          if (quality.contains(b.groupId)) b,
+      ];
+    }
     if (hits.isEmpty) return builtIn();
     return [for (final b in hits) StreamBadgeChip(badge: b, height: height)];
   }
@@ -94,9 +109,9 @@ class StreamBadgeChip extends StatelessWidget {
       ),
     );
     Widget textTag() => Padding(
-      padding: EdgeInsets.symmetric(horizontal: height * 0.35),
-      child: Center(widthFactor: 1, child: text),
-    );
+          padding: EdgeInsets.symmetric(horizontal: height * 0.35),
+          child: Center(widthFactor: 1, child: text),
+        );
     final bytes = badge.imageBytes;
     final network = badge.networkImage;
     final Widget face;

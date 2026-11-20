@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
+import 'catchup_format.dart';
 import 'catchup_session.dart';
 import 'desktop_stream_setup.dart';
 
@@ -23,8 +24,13 @@ class DesktopCatchup {
       required this.guide,
       required this.keepPlaying,
       required this.onLive,
+      this.format,
       DateTime Function()? clock})
       : clock = clock ?? DateTime.now;
+
+  /// Which Xtream catch-up link each playlist gets (`.m3u8` / `.ts`),
+  /// shared with Android ([CatchupFormat]). Null = always `.m3u8`.
+  final CatchupFormat? format;
 
   final Player player;
   final PlaylistProfile? Function(String playlistId) profileFor;
@@ -39,6 +45,7 @@ class DesktopCatchup {
   CatchupSession? session;
   StreamSubscription<bool>? _completed;
   StreamSubscription<Duration>? _position;
+  StreamSubscription<String>? _error;
   int _gen = 0;
 
   bool get active => session != null;
@@ -61,7 +68,8 @@ class DesktopCatchup {
       {required DateTime now,
       required PlaylistProfile? profile,
       required List<EpgProgram> programmes,
-      required bool stopAtProgrammeEnd}) {
+      required bool stopAtProgrammeEnd,
+      String ext = 'm3u8'}) {
     if (!live.hasCatchup || now.difference(at) < CatchupSession.liveEdge) {
       return null;
     }
@@ -70,7 +78,7 @@ class DesktopCatchup {
     final start = CatchupSession.floorToMinute(from);
     final span = CatchupSession.spanFrom(start, now);
     final url = CatchupSession.linkFor(live, profile,
-        start: start, span: span, now: now);
+        start: start, span: span, now: now, ext: ext);
     if (url == null) {
       debugPrint('DesktopCatchup: no link for ${live.name} '
           '(${live.catchupKind})');
@@ -95,7 +103,8 @@ class DesktopCatchup {
         now: clock(),
         profile: profileFor(live.playlistId),
         programmes: guide(live),
-        stopAtProgrammeEnd: toProgrammeEnd && !keepPlaying());
+        stopAtProgrammeEnd: toProgrammeEnd && !keepPlaying(),
+        ext: format?.extFor(live) ?? 'm3u8');
     if (s == null) {
       await _goLive(live);
       return false;
@@ -114,7 +123,21 @@ class DesktopCatchup {
   void _watch(CatchupSession s, int gen) {
     _completed?.cancel();
     _position?.cancel();
+    _error?.cancel();
     final opened = clock();
+    // A `.m3u8` link the panel won't open (Dispatcharr's `/timeshift/` is
+    // `.ts` only: 404): the same request as `.ts`, kept for this playlist.
+    final f = format;
+    if (f != null && CatchupFormat.isHls(s)) {
+      _error = player.stream.error.listen((e) {
+        if (gen != _gen || session != s) return;
+        _error?.cancel();
+        f.learnTs(s.live.playlistId, '.m3u8 failed to open');
+        debugPrint('DesktopCatchup: .m3u8 failed ($e), asking again as .ts');
+        unawaited(play(s.live, s.playhead(s.startOffset),
+            toProgrammeEnd: s.until != null));
+      });
+    }
     _completed = player.stream.completed.listen((done) {
       if (!done || gen != _gen || session != s) return;
       // An empty answer (ended right away) counts as caught up: no
@@ -187,6 +210,7 @@ class DesktopCatchup {
     _gen++;
     _completed?.cancel();
     _position?.cancel();
+    _error?.cancel();
     session = null;
     debugPrint('DesktopCatchup: back to live ${live.name}');
     await onLive(live);
@@ -197,6 +221,7 @@ class DesktopCatchup {
     _gen++;
     _completed?.cancel();
     _position?.cancel();
+    _error?.cancel();
     session = null;
   }
 }

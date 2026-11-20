@@ -47,7 +47,21 @@ class PosterCard extends StatefulWidget {
     this.backdropUrl,
     this.artKey,
     this.loadBackdrop,
+    this.onHover,
+    this.onSelect,
   });
+
+  /// Computers (Media Hub): the mouse came onto (true) or left (false) the
+  /// card. The card lifts a little while hovered; the caller may preview
+  /// the title (hero + backdrop) after a short rest.
+  final ValueChanged<bool>? onHover;
+
+  /// Computers (Media Hub): a click on a card that isn't selected calls
+  /// this, then focuses the card; a click on the selected card opens it,
+  /// so a double click still opens at once. Without it a computer keeps
+  /// click = focus, double click = open (which waits out the double-click
+  /// window before the first click registers).
+  final VoidCallback? onSelect;
 
   /// Settings > Interface > Tabs > Wide cards: every card is 16:9 (the
   /// caller passes a 16:9 [cardWidth]) and shows [backdropUrl]. Without
@@ -167,6 +181,25 @@ class PosterCard extends StatefulWidget {
 
 class _PosterCardState extends State<PosterCard> {
   bool _focused = false;
+  bool _hovered = false;
+
+  void _setHovered(bool hovered) {
+    if (widget.onHover == null || hovered == _hovered) return;
+    setState(() => _hovered = hovered);
+    widget.onHover!(hovered);
+  }
+
+  void _desktopClick() {
+    final select = widget.onSelect;
+    if (select == null) {
+      _effectiveFocusNode.requestFocus();
+    } else if (_focused) {
+      widget.onTap();
+    } else {
+      select();
+      _effectiveFocusNode.requestFocus();
+    }
+  }
 
   /// Only [widget.focusNode] (the first-card-of-a-row case) gives this an
   /// externally-owned node — every other instance needs its own stable
@@ -289,13 +322,20 @@ class _PosterCardState extends State<PosterCard> {
         // touch (HoldToActivate below, and every other platform) is
         // untouched — same scoping as the Timeline guide fix.
         onTap: isDesktop
-            ? _effectiveFocusNode.requestFocus
+            ? _desktopClick
             : widget.tapToPreview
                 ? () => _focused
                     ? widget.onTap()
                     : _effectiveFocusNode.requestFocus()
                 : widget.onTap,
-        onDoubleTap: isDesktop || widget.tapToPreview ? widget.onTap : null,
+        onDoubleTap:
+            (isDesktop && widget.onSelect == null) || widget.tapToPreview
+                ? widget.onTap
+                : null,
+        // The lift below is the hover look; InkWell's grey hover box sat
+        // around the unscaled card like the focus one did.
+        hoverColor: widget.onHover == null ? null : Colors.transparent,
+        onHover: widget.onHover == null ? null : _setHovered,
         onFocusChange: (f) {
           setState(() => _focused = f);
           if (f) widget.onFocusGained();
@@ -306,7 +346,9 @@ class _PosterCardState extends State<PosterCard> {
           // as noticeably weaker; this restores a similarly visible glow.
           // A wide card zooms less: 10 % of its width ran over both
           // neighbours.
-          scale: _focused ? (wide || widget.wideStyle ? 1.04 : 1.10) : 1.0,
+          scale: _focused
+              ? (wide || widget.wideStyle ? 1.04 : 1.10)
+              : (_hovered ? 1.05 : 1.0),
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           child: SizedBox(
@@ -328,7 +370,9 @@ class _PosterCardState extends State<PosterCard> {
                         borderRadius: BorderRadius.circular(10),
                         border: _focused
                             ? Border.all(color: scheme.primary, width: 3)
-                            : null,
+                            : _hovered
+                                ? Border.all(color: Colors.white70, width: 1.5)
+                                : null,
                         // Was two layered shadows (primary + secondary at
                         // different blur/spread) for a duo-tone glow — on this
                         // hardware (Impeller already disabled elsewhere for GPU

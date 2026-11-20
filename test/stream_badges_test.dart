@@ -232,6 +232,37 @@ void main() {
     });
   });
 
+  test('the OK popup keeps only the quality groups', () {
+    // The eclipsia pack's groups, plus names other packs use.
+    final kept = [
+      for (final g in [
+        'Resolution',
+        'Release',
+        'Visual',
+        'Encoder',
+        'Audio',
+        'Channels',
+        'Streaming',
+        'Special Tags',
+        'Language',
+        'Cached',
+        'Video Codec',
+        'Source',
+        'HDR',
+      ])
+        if (streamBadgeQualityGroup(g)) g,
+    ];
+    expect(kept, [
+      'Resolution',
+      'Release',
+      'Visual',
+      'Encoder',
+      'Video Codec',
+      'Source',
+      'HDR'
+    ]);
+  });
+
   testWidgets('without a pack the row shows the built-in gold tags', (
     tester,
   ) async {

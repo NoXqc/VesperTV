@@ -255,6 +255,18 @@ class CloudSyncService extends ChangeNotifier {
     await syncNow(pushLocal: false).timeout(coldBudget, onTimeout: () => 0);
   }
 
+  /// Fast startup: the launch doesn't wait for the server (the state file
+  /// + the round trip cost ~1.8 s of every cold launch on the Homatics,
+  /// owner 2026-11-19). Called once the services are loaded and [onApplied]
+  /// is set: like the 5-minute sync, live-safe keys (favourites, hidden
+  /// groups, positions, palette) apply now, the rest at the next launch.
+  Future<void> initAndPullAfterLaunch() async {
+    await init();
+    if (_status != SyncStatus.on) return;
+    _appLoaded = true;
+    await syncNow(pushLocal: false);
+  }
+
   /// After the launch (main.dart, past StartupQuiet): sends what
   /// [syncBeforeLoad] left pending, if anything.
   Future<void> pushPending() async {

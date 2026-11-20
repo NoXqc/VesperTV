@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../models/catchup.dart';
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
@@ -23,6 +22,7 @@ import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'audio_track_preferences.dart';
+import 'catchup_format.dart';
 import 'catchup_session.dart';
 import 'archive_ready_watch.dart';
 import 'device_memory_service.dart';
@@ -33,6 +33,7 @@ import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
 import 'live_reconnect_log.dart';
+import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
@@ -141,14 +142,20 @@ class PlaybackService extends ChangeNotifier {
   int _playGen = 0;
   final _catchupErrors = <DateTime>[];
 
-  /// Playlists whose Xtream panel only serves `.ts` timeshift links (the
-  /// `.m3u8` form answered 404 — user report, 2026-10-27). Learned once per
-  /// launch; every later request on that playlist asks for `.ts` at once.
-  final _catchupTsOnly = <String>{};
+  /// Which Xtream catch-up link each playlist gets (`.m3u8` or `.ts`),
+  /// saved per playlist ([CatchupFormat]).
+  late final catchupFormat = CatchupFormat(_storage);
+
+  /// A `.m3u8` catch-up still without a picture after
+  /// [CatchupFormat.hlsPatience] is asked again as `.ts` ([_watchCatchupStart]).
+  Timer? _catchupSlowStart;
+
+  /// When the catch-up now opening was asked for (Send log's start time).
+  DateTime? _catchupAskedAt;
 
   @visibleForTesting
   void debugLearnCatchupTsOnly(String playlistId) =>
-      _catchupTsOnly.add(playlistId);
+      catchupFormat.learnTs(playlistId, 'test');
 
   /// The live channel behind what's playing — the catch-up's live channel
   /// while catch-up plays.
@@ -625,6 +632,7 @@ class PlaybackService extends ChangeNotifier {
     catchup =
         pending != null && pending.channel.id == channel.id ? pending : null;
     final session = catchup;
+    _watchCatchupStart(session);
     currentChannel = channel;
     error = null;
     reconnectStatus = null;
@@ -672,6 +680,7 @@ class PlaybackService extends ChangeNotifier {
         .then((_) async {
       PerfDiagnostics.mark('videoInit');
       if (controller != newController) return;
+      if (session != null) _catchupStarted(session, newController);
       await VodBuffering.configure(newController, channel);
       if (controller != newController) return;
       if (savedPositionMs > 0) {
@@ -696,7 +705,11 @@ class PlaybackService extends ChangeNotifier {
       if (controller == newController) {
         notifyListeners();
         await SchedulerBinding.instance.endOfFrame;
-        await Future<void>.delayed(const Duration(milliseconds: 250));
+        // The native surface had the player before it prepared (no view
+        // to wait for): ~0.3 s sooner on every start (owner, 2026-11-19).
+        if (!NativeVideoSurface.active || textureVideo) {
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
       }
       // Switched channel meanwhile: this controller is already disposed.
       if (controller != newController) return;
@@ -860,10 +873,7 @@ class PlaybackService extends ChangeNotifier {
     final start = CatchupSession.floorToMinute(from);
     final span = CatchupSession.spanFrom(start, now);
     final url = CatchupSession.linkFor(live, _profileFor(live.playlistId),
-        start: start,
-        span: span,
-        now: now,
-        ext: _catchupTsOnly.contains(live.playlistId) ? 'ts' : 'm3u8');
+        start: start, span: span, now: now, ext: catchupFormat.extFor(live));
     if (url == null) {
       debugPrint('Catchup: no link for ${live.name} (${live.catchupKind})');
       error = tr('Catch-up is not available for this channel.');
@@ -894,6 +904,7 @@ class PlaybackService extends ChangeNotifier {
         'archive ${live.catchupDays} d');
     // Recall / Last channels return to the live channel.
     unawaited(_recordRecentlyPlayed(live));
+    _catchupAskedAt = now;
     await play(ch);
   }
 
@@ -921,6 +932,95 @@ class PlaybackService extends ChangeNotifier {
     await play(live);
   }
 
+  /// When the viewer last paused (Play/Pause), so [watchSourceSwitch]
+  /// never undoes their own pause.
+  DateTime? _viewerPausedAt;
+
+  static const _statsChannel = MethodChannel('vespertv/stats');
+
+  /// After a server switched the open live stream to another source
+  /// (Tuliprox, [Tuliprox.switchTo]): the new source only reaches the screen
+  /// once the buffered video has played (often ~25 s), and its timestamps
+  /// jump there. ExoPlayer was then left paused, or with the picture stuck
+  /// while the sound went on, until Pause/Play (owner, 2026-11-19, Homatics).
+  /// From the expected arrival on, this gives a stuck picture one Pause/Play
+  /// and a pause the viewer didn't ask for a Play (no reconnect: the old
+  /// automatic reload fought the provider's connection limit). Returns true
+  /// once the picture moves after the arrival, false when the channel or
+  /// player changed or nothing settled in time. Android only.
+  Future<bool> watchSourceSwitch() async {
+    final c = controller;
+    final ch = currentChannel;
+    if (c == null || ch == null || kIsWeb || !Platform.isAndroid) return false;
+    final start = clock();
+    final id = SubtitleTracks.playerIdOf(c);
+    Future<Map<Object?, Object?>?> stats() async {
+      try {
+        return await _statsChannel
+            .invokeMapMethod<Object?, Object?>('getStats', {'playerId': id});
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final first = await stats();
+    final bufferedMs = (first?['bufferedMs'] as num?)?.toInt() ?? 0;
+    final arrival = start.add(Duration(milliseconds: bufferedMs));
+    final deadline = arrival.add(const Duration(seconds: 25));
+    debugPrint(
+        'SourceSwitch: lands in ~${(bufferedMs / 1000).toStringAsFixed(1)} s');
+    int? lastFrames;
+    var stuckPolls = 0;
+    var movingPolls = 0;
+    var nudges = 0;
+    while (clock().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (controller != c || currentChannel?.id != ch.id) return false;
+      final now = clock();
+      final m = await stats();
+      final frames = (m?['rendered'] as num?)?.toInt();
+      final moved = frames != null && lastFrames != null && frames > lastFrames;
+      lastFrames = frames ?? lastFrames;
+      // Before the switch reaches the screen the old source plays on.
+      if (now.isBefore(arrival.subtract(const Duration(seconds: 1)))) continue;
+      final viewerPaused =
+          _viewerPausedAt != null && _viewerPausedAt!.isAfter(start);
+      if (viewerPaused) return false;
+      if (!c.value.isPlaying) {
+        if (nudges >= 3) return false;
+        nudges++;
+        debugPrint('SourceSwitch: paused on its own, Play');
+        await c.play();
+        stuckPolls = 0;
+        continue;
+      }
+      if (moved) {
+        stuckPolls = 0;
+        // Two seconds of moving picture after the arrival: landed.
+        if (++movingPolls >= 4 && now.isAfter(arrival)) {
+          debugPrint('SourceSwitch: landed after '
+              '${now.difference(start).inMilliseconds} ms, $nudges nudge(s)');
+          notifyListeners();
+          return true;
+        }
+        continue;
+      }
+      movingPolls = 0;
+      if (++stuckPolls >= 3 && nudges < 3) {
+        nudges++;
+        stuckPolls = 0;
+        debugPrint('SourceSwitch: picture stuck, Pause/Play');
+        await c.pause();
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        if (controller != c) return false;
+        await c.play();
+      }
+    }
+    debugPrint(
+        'SourceSwitch: no steady picture by the deadline, $nudges nudge(s)');
+    return false;
+  }
+
   /// Play/Pause from the remote or the bar. Pausing a live channel with
   /// catch-up remembers when; Play after [timeshiftAfter] resumes from
   /// that moment through catch-up (owner, 2026-10-27: pause = timeshift),
@@ -930,6 +1030,7 @@ class PlaybackService extends ChangeNotifier {
     final ch = currentChannel;
     if (c == null) return;
     if (c.value.isPlaying) {
+      _viewerPausedAt = clock();
       if (ch != null && ch.hasCatchup) _livePausedAt = clock();
       await c.pause();
       notifyListeners();
@@ -953,6 +1054,47 @@ class PlaybackService extends ChangeNotifier {
       if (p.id == playlistId) return p;
     }
     return null;
+  }
+
+  /// Arms the slow-start switch for [s] (null = not catch-up: disarms).
+  /// LOG-76X9CH (Fire TV, 2026-11-19): a panel that builds its HLS archive
+  /// on demand answered the `.m3u8` link after 12-44 s, where TiviMate's
+  /// `.ts` link starts at once. No picture after [CatchupFormat.hlsPatience]:
+  /// the same request as `.ts`, and the playlist keeps `.ts`.
+  void _watchCatchupStart(CatchupSession? s) {
+    _catchupSlowStart?.cancel();
+    _catchupSlowStart = null;
+    if (s == null || !CatchupFormat.isHls(s)) return;
+    _catchupSlowStart = Timer(CatchupFormat.hlsPatience, () {
+      final c = controller;
+      if (catchup != s || c == null || c.value.isInitialized) return;
+      catchupFormat.learnTs(s.live.playlistId,
+          '.m3u8 gave no picture in ${CatchupFormat.hlsPatience.inSeconds} s');
+      debugPrint('Catchup: .m3u8 still loading after '
+          '${CatchupFormat.hlsPatience.inSeconds} s, asking again as .ts');
+      unawaited(playCatchup(s.live, s.playhead(s.startOffset),
+          retry: true, toProgrammeEnd: s.until != null));
+    });
+  }
+
+  /// [s]'s stream answered: the slow-start switch stands down, and Send log
+  /// gets how long it took ("why is catch-up slow" reports).
+  void _catchupStarted(CatchupSession s, VideoPlayerHdrController c) {
+    _catchupSlowStart?.cancel();
+    _catchupSlowStart = null;
+    final asked = _catchupAskedAt;
+    if (asked == null) return;
+    final ms = clock().difference(asked).inMilliseconds;
+    debugPrint('Catchup: ready after ${(ms / 1000).toStringAsFixed(1)} s '
+        '(${CatchupFormat.extOf(s)})');
+    // Each server request of the start (a `.ts` reads its end for the
+    // length, then comes back): which one a slow panel spends time on.
+    unawaited(() async {
+      final opens = (await DisplayMatch.statsOf(c))?['opens'];
+      if (opens is String && opens.isNotEmpty) {
+        debugPrint('Catchup: server requests $opens');
+      }
+    }());
   }
 
   /// A request's stream ended (the provider sends a span, or only what has
@@ -1020,10 +1162,10 @@ class PlaybackService extends ChangeNotifier {
       // Some panels route only `.ts` timeshift links: ask once more that way
       // (dev-notes/catchup-plan.md), and keep using it on this playlist.
       final live = s.live;
-      if (live.catchupKind == CatchupKind.xc &&
-          !_catchupTsOnly.contains(live.playlistId) &&
-          Uri.tryParse(s.channel.url)?.path.endsWith('.m3u8') == true) {
-        _catchupTsOnly.add(live.playlistId);
+      if (CatchupFormat.isHls(s) && !catchupFormat.usesTs(live)) {
+        _catchupSlowStart?.cancel();
+        catchupFormat.learnTs(live.playlistId,
+            notPlaylist ? '.m3u8 not a playlist' : '.m3u8 HTTP $status');
         debugPrint('Catchup: .m3u8 refused '
             '(${notPlaylist ? 'not a playlist' : 'HTTP $status'}), '
             'retrying as .ts');
@@ -1613,6 +1755,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> _teardown() async {
+    _catchupSlowStart?.cancel();
     _positionSaveTimer?.cancel();
     _positionSaveTimer = null;
     // A final exact-position save before disposing — the periodic timer
@@ -1825,6 +1968,19 @@ VideoPlayerHdrController streamController(
   if (videoPlayerOptions == null && Platform.isAndroid) {
     videoPlayerOptions =
         VideoPlayerOptions(mixWithOthers: DeviceTypeService.television);
+  }
+  // Catch-up keeps its last [CatchupFormat.backBuffer] so −10 replays
+  // from memory instead of asking the panel again.
+  if (CatchupFormat.isArchiveLink(url)) {
+    final o = videoPlayerOptions;
+    videoPlayerOptions = VideoPlayerOptions(
+      mixWithOthers: o?.mixWithOthers ?? false,
+      allowBackgroundPlayback: o?.allowBackgroundPlayback ?? false,
+      preventsDisplaySleepDuringVideoPlayback:
+          o?.preventsDisplaySleepDuringVideoPlayback ?? true,
+      webOptions: o?.webOptions,
+      backBufferDurationMs: CatchupFormat.backBuffer.inMilliseconds,
+    );
   }
   // A recording (RecordingService.channelFor): a local .ts file.
   if (url.startsWith('/')) {

@@ -37,9 +37,6 @@ EpgProgram _toProgram(EpgRow r) => EpgProgram(
       stop: DateTime.fromMillisecondsSinceEpoch(r.stopMs),
     );
 
-Map<String, List<EpgProgram>> _toPrograms(Map<String, List<EpgRow>> rows) =>
-    rows.map((id, list) => MapEntry(id, _untangle(list)));
-
 /// One channel's rows as a clean timeline. Some providers' XMLTV lists two
 /// programmes for the same time slot (owner, 2026-10-16: RDS showed two
 /// titles drawn on top of each other in the Timeline guide). By start
@@ -76,11 +73,11 @@ List<EpgProgram> _untangle(List<EpgRow> rows) {
 /// and the step that ran Fire Sticks out of memory).
 ///
 /// The getters stay synchronous so no caller had to change:
-/// - [getCurrentProgram]/[getNextProgram] read [_soon] — every channel's
+/// - [getCurrentProgram]/[getNextProgram] read [_soonRows] — every channel's
 ///   programmes for the next few hours, preloaded at startup in one query.
 /// - [getPrograms] (the Timeline guide) returns a cached full window for a
 ///   channel, or queues a batched load for the channels being built and
-///   returns the [_soon] slice meanwhile; [guideRowsLoaded] ticks when the
+///   returns the [_soonRows] slice meanwhile; [guideRowsLoaded] ticks when the
 ///   rows arrive.
 /// - [hasPrograms] reads [_withData].
 class EpgService extends ChangeNotifier {
@@ -93,7 +90,7 @@ class EpgService extends ChangeNotifier {
   /// The guide database's queue wait ([PerfDiagnostics]).
   Future<void> pingDatabase() => _db.ping();
 
-  /// How far ahead [_soon] reaches — comfortably past "next" for any
+  /// How far ahead [_soonRows] reaches — comfortably past "next" for any
   /// channel, and reloaded every [_soonReloadEvery] so it never runs dry.
   static const _soonAhead = Duration(hours: 4);
   static const _soonReloadEvery = Duration(minutes: 15);
@@ -222,7 +219,23 @@ class EpgService extends ChangeNotifier {
         .millisecondsSinceEpoch;
   }
 
-  Map<String, List<EpgProgram>> _soon = {};
+  /// The preloaded next-hours slice, as read: each channel's rows become
+  /// programmes when first asked for ([_soonOf]). Converting all ~8000 at
+  /// once held the main thread ~1 s at launch (Homatics, 2026-11-19).
+  Map<String, List<EpgRow>> _soonRows = {};
+  final Map<String, List<EpgProgram>> _soonDone = {};
+
+  /// The launch's slice is in ([getPrograms] trusts [_withData] then).
+  bool _sliceReady = false;
+
+  List<EpgProgram>? _soonOf(String id) {
+    final done = _soonDone[id];
+    if (done != null) return done;
+    final rows = _soonRows[id];
+    if (rows == null) return null;
+    return _soonDone[id] = _untangle(rows);
+  }
+
   final Map<String, List<EpgProgram>> _full = {};
   Set<String> _withData = {};
 
@@ -316,7 +329,7 @@ class EpgService extends ChangeNotifier {
         .catchError((_) {}));
     try {
       await _db.open();
-      await _reloadCaches();
+      await _reloadCaches(launch: true);
       unawaited(
           Future<void>.delayed(const Duration(seconds: 25), _db.logStats));
     } catch (e) {
@@ -329,21 +342,47 @@ class EpgService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reloads [_soon]/[_withData] from the database and drops [_full], so
-  /// every guide row re-queries on its next build.
-  Future<void> _reloadCaches() async {
+  /// Reloads [_soonRows]/[_withData] from the database and drops [_full],
+  /// so every guide row re-queries on its next build.
+  ///
+  /// [launch]: the guide rows wait for [_withData] before loading, and the
+  /// exact set is a scan of every future programme; until it's in (15 s
+  /// after, off the launch's busy seconds), the channels in the slice
+  /// count as having guide data (they do). Every row stayed empty for
+  /// 13+ s after a cold launch (owner, 2026-11-19).
+  Future<void> _reloadCaches({bool launch = false}) async {
     _readCatchupDays();
     final now = DateTime.now();
     final soon = await PerfDiagnostics.timed(
         'epg soon',
         () => _db.programmesBetween(now.millisecondsSinceEpoch,
             now.add(_soonAhead).millisecondsSinceEpoch));
-    final withData = await _db.channelIdsWithData(now.millisecondsSinceEpoch);
-    _soon = PerfDiagnostics.timedSync(
-        'epg soon n=${soon.length}', () => _toPrograms(soon));
-    _withData = withData;
-    _full.clear();
-    _cacheEpoch++;
+    _soonRows = soon;
+    _soonDone.clear();
+    // The launch's rows loaded meanwhile are as fresh as the slice: kept
+    // (dropping them emptied the guide again for a moment).
+    if (!launch) {
+      _full.clear();
+      _cacheEpoch++;
+    }
+    _sliceReady = true;
+    if (launch) {
+      debugPrint('EpgService: ${soon.length} channels on in the next hours '
+          '(${DateTime.now().difference(now).inMilliseconds} ms)');
+      _withData = {..._withData, ...soon.keys};
+      unawaited(Future<void>.delayed(const Duration(seconds: 15), () async {
+        final epoch = _cacheEpoch;
+        final withData = await PerfDiagnostics.timed(
+            'epg withData',
+            () =>
+                _db.channelIdsWithData(DateTime.now().millisecondsSinceEpoch));
+        if (epoch != _cacheEpoch) return;
+        _withData = withData;
+        notifyListeners();
+      }).catchError((Object e) => debugPrint('EpgService: withData: $e')));
+      return;
+    }
+    _withData = await _db.channelIdsWithData(now.millisecondsSinceEpoch);
   }
 
   /// (Re)starts auto-refresh every [minutes], refreshing every source
@@ -495,7 +534,8 @@ class EpgService extends ChangeNotifier {
     _sourceChannels.clear();
     await _db.clearAll();
     lastUpdated = null;
-    _soon = {};
+    _soonRows = {};
+    _soonDone.clear();
     _withData = {};
     _full.clear();
     _cacheEpoch++;
@@ -889,7 +929,7 @@ class EpgService extends ChangeNotifier {
   }
 
   List<EpgProgram> _cached(String id) =>
-      _withNameEvent(id, _full[id] ?? _soon[id] ?? const []);
+      _withNameEvent(id, _full[id] ?? _soonOf(id) ?? const []);
 
   EpgProgram? getCurrentProgram(String channelId) {
     final list = _cached(normalizeEpgId(channelId));
@@ -1005,8 +1045,12 @@ class EpgService extends ChangeNotifier {
     final id = normalizeEpgId(channelId);
     final full = _full[id];
     if (full != null) return _withNameEvent(id, full);
-    if (!_withData.contains(id) && !_catchupDays.containsKey(id)) {
-      return _withNameEvent(id, _soon[id] ?? const []);
+    // Before the launch slice is in, [_withData] knows nothing: every row
+    // asks (its own query is quick; the slice took 13+ s on the Homatics).
+    if (_sliceReady &&
+        !_withData.contains(id) &&
+        !_catchupDays.containsKey(id)) {
+      return _withNameEvent(id, _soonOf(id) ?? const []);
     }
     if (!_inFlightLoads.contains(id)) {
       _pendingLoads.add(id);
@@ -1015,7 +1059,7 @@ class EpgService extends ChangeNotifier {
         Timer.run(_loadPending);
       }
     }
-    return _withNameEvent(id, _soon[id] ?? const []);
+    return _withNameEvent(id, _soonOf(id) ?? const []);
   }
 
   Future<void> _loadPending() async {
