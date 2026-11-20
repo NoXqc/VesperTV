@@ -32,6 +32,7 @@ class _BackupScreenState extends State<BackupScreen> {
   late final StorageService _storage = context.read<StorageService>();
   late final BackupService _backups = BackupService(_storage);
   late bool _auto = _storage.getAutoBackup();
+  late int _autoDays = _storage.getAutoBackupDays();
   List<BackupEntry>? _entries;
   bool _busy = false;
 
@@ -98,6 +99,34 @@ class _BackupScreenState extends State<BackupScreen> {
     }
     await _storage.setAutoBackup(value);
     if (mounted) setState(() => _auto = value);
+  }
+
+  static String _daysLabel(int days) => switch (days) {
+        1 => tr('Every day'),
+        3 => tr('Every 3 days'),
+        14 => tr('Every 2 weeks'),
+        30 => tr('Every month'),
+        _ => tr('Every week'),
+      };
+
+  Future<void> _pickAutoDays() async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr('How often')),
+        children: [
+          for (final d in BackupService.intervalChoices)
+            TvDialogOption(
+              autofocus: d == _autoDays,
+              onPressed: () => Navigator.of(context).pop(d),
+              child: Text(_daysLabel(d)),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    await _storage.setAutoBackupDays(picked);
+    if (mounted) setState(() => _autoDays = picked);
   }
 
   String _label(BackupEntry e) => TimeFormat.dateTime(e.modified);
@@ -198,12 +227,18 @@ class _BackupScreenState extends State<BackupScreen> {
             ),
             TvSwitchListTile(
               title: Text(tr('Automatic backup')),
-              subtitle: Text(tr(
-                  'Once a week, when VesperTV starts. Keeps the last {n}.',
+              subtitle: Text(tr('When VesperTV starts. Keeps the last {n}.',
                   {'n': '${BackupService.keepAuto}'})),
               value: _auto,
               onChanged: _setAuto,
             ),
+            if (_auto)
+              TvMenuTile(
+                icon: Icons.schedule,
+                title: tr('How often'),
+                subtitle: _daysLabel(_autoDays),
+                onTap: _pickAutoDays,
+              ),
             if (Platform.isMacOS)
               TvMenuTile(
                 icon: Icons.ios_share,

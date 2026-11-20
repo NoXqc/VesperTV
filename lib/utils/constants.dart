@@ -345,6 +345,10 @@ class AppConstants {
   /// default) and the last one's time (ms since epoch; never backed up).
   static const String keyAutoBackup = 'vesper_auto_backup';
 
+  /// Days between automatic backups (7 when unset); device-only like the
+  /// switch.
+  static const String keyAutoBackupDays = 'vesper_auto_backup_days';
+
   /// Settings > General > Background video: hide the live picture (not
   /// the stream) while Sports Trak, Settings or Search is open — opt-in
   /// workaround for Fire TV sticks that keep drawing it on top.
@@ -623,6 +627,8 @@ class AppConstants {
   /// Full-video Timeline: resting on a programme opens its details under
   /// the row (per viewer, on by default).
   static const String keyGuideRowDetails = 'vesper_guide_row_details';
+  static const String keyGuideChannelNumbers =
+      'vesper_guide_channel_numbers';
 
   /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
   /// channel rows in the TV home (per viewer, like the guide layout).

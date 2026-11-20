@@ -514,6 +514,13 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.guideRowDetails,
       (b, on) => b.prefs.setGuideRowDetails(on)),
   _switch(
+      'guide_channel_numbers',
+      'guide',
+      'Channel numbers',
+      'A number before each channel in the guide channel list.',
+      (b) => b.prefs.guideChannelNumbers,
+      (b, on) => b.prefs.setGuideChannelNumbers(on)),
+  _switch(
       'keep_groups_open',
       'guide',
       'Keep groups open',

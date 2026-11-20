@@ -2171,6 +2171,29 @@ class PlaylistSession {
     return to;
   }
 
+  /// The playlist editor's channel order for [groupTitle]: [rawIds] first,
+  /// the group's other channels (hidden ones too) after them in their
+  /// current order.
+  Future<void> setChannelOrder(String groupTitle, List<String> rawIds) async {
+    final source = isXtream ? liveChannels : channels;
+    final current = _orderedChannels(
+            groupTitle, source.where((c) => liveGroupOf(c) == groupTitle))
+        .map((c) => c.rawId)
+        .toList();
+    final inGroup = current.toSet();
+    final first = <String>[
+      for (final id in rawIds.toSet())
+        if (inGroup.contains(id)) id,
+    ];
+    final firstSet = first.toSet();
+    channelOrder[groupTitle] = [
+      ...first,
+      ...current.where((id) => !firstSet.contains(id)),
+    ];
+    await storage.setChannelOrder(profile.id, channelOrder);
+    onNotify();
+  }
+
   /// A live channel's group as shown: the viewer's own group it was moved
   /// into, else the provider's.
   String liveGroupOf(Channel c) =>
@@ -2283,8 +2306,10 @@ class PlaylistSession {
 
   /// Sets (a value, marked automatic like [setEpgIdOverridesBulk]) or clears
   /// (null) many guide links with one write: the AI's EPG matching unlink
-  /// and undo.
-  Future<void> restoreEpgIdOverrides(Map<String, String?> values) async {
+  /// and undo. [isAuto] false = picked by hand (the editor's Link guide for
+  /// several ticked channels): Unpair Channels leaves them alone.
+  Future<void> restoreEpgIdOverrides(Map<String, String?> values,
+      {bool isAuto = true}) async {
     if (values.isEmpty) return;
     for (final e in values.entries) {
       final id = e.value;
@@ -2293,7 +2318,11 @@ class PlaylistSession {
         autoPairedEpgOverrides.remove(e.key);
       } else {
         epgIdOverrides[e.key] = id;
-        autoPairedEpgOverrides.add(e.key);
+        if (isAuto) {
+          autoPairedEpgOverrides.add(e.key);
+        } else {
+          autoPairedEpgOverrides.remove(e.key);
+        }
       }
     }
     await storage.setEpgIdOverrides(profile.id, epgIdOverrides);

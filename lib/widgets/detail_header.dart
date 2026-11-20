@@ -114,6 +114,24 @@ class DetailPillButton extends StatefulWidget {
 class _DetailPillButtonState extends State<DetailPillButton> {
   bool _focused = false;
 
+  /// The label's width in bold (focused): the label always takes at least
+  /// this, so focusing never widens the pill.
+  double _boldWidth(BuildContext context, String label, double s) {
+    final painter = TextPainter(
+      text: TextSpan(
+          text: label,
+          style: DefaultTextStyle.of(context).style.merge(TextStyle(
+              fontSize: (widget.compact ? 13 : 14.5) * s,
+              fontWeight: FontWeight.bold))),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final w = painter.width.ceilToDouble();
+    painter.dispose();
+    return w;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -140,9 +158,12 @@ class _DetailPillButtonState extends State<DetailPillButton> {
           if (f) widget.onFocused?.call();
         },
         child: Container(
+          // + the border's growth (1.2 -> 2.5) when not focused, so focus
+          // never changes the pill's size (see the label's Stack below).
           padding: EdgeInsets.symmetric(
-            horizontal: (label == null ? 9 : (widget.compact ? 14 : 18)) * s,
-            vertical: (widget.compact ? 7 : 9) * s,
+            horizontal: (label == null ? 9 : (widget.compact ? 14 : 18)) * s +
+                (_focused ? 0 : 1.3),
+            vertical: (widget.compact ? 7 : 9) * s + (_focused ? 0 : 1.3),
           ),
           decoration: detailFocusDecoration(scheme,
               focused: _focused,
@@ -156,16 +177,25 @@ class _DetailPillButtonState extends State<DetailPillButton> {
                 Icon(widget.icon, size: 20 * s, color: iconColor),
               if (widget.icon != null && label != null) SizedBox(width: 6 * s),
               if (label != null)
+                // Always as wide as the bold (focused) label: a focused
+                // pill that grew pushed its neighbour to the next row of
+                // the Wrap (uzumaki, Fire TV, German: Trailer focused sent
+                // Merkliste down, so Right / Down never reached it).
                 Flexible(
-                    child: Text(
-                  label,
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: (widget.compact ? 13 : 14.5) * s,
-                    fontWeight:
-                        (_focused || widget.selected || widget.emphasized)
-                            ? FontWeight.bold
-                            : FontWeight.w500,
+                    child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minWidth: _boldWidth(context, label, s)),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: (widget.compact ? 13 : 14.5) * s,
+                      fontWeight:
+                          (_focused || widget.selected || widget.emphasized)
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                    ),
                   ),
                 )),
             ],

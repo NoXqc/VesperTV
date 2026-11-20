@@ -51,6 +51,10 @@ class AppPreferences extends ChangeNotifier {
   /// Full-video Timeline: a programme's details open under its row after
   /// the remote rests on it for 1 s.
   late bool guideRowDetails;
+
+  /// The number before each channel in the TV guide's channel list
+  /// (Discord, 2026-11-20: some viewers never use numbers).
+  late bool guideChannelNumbers;
   late bool guideCompact;
 
   /// Interface size in the TV home (per viewer): 'compact' (smaller tabs,
@@ -490,6 +494,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideRowDetails = _storage.getGuideRowDetails();
+    guideChannelNumbers = _storage.getGuideChannelNumbers();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -557,6 +562,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideRowDetails = _storage.getGuideRowDetails();
+    guideChannelNumbers = _storage.getGuideChannelNumbers();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -651,6 +657,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideFocusPreview(bool value) {
     guideFocusPreview = value;
     _storage.setGuideFocusPreview(value);
+    notifyListeners();
+  }
+
+  void setGuideChannelNumbers(bool value) {
+    guideChannelNumbers = value;
+    _storage.setGuideChannelNumbers(value);
     notifyListeners();
   }
 

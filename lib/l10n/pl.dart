@@ -753,8 +753,20 @@ const Map<String, String> kPl = {
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
       "Playlisty, ulubione, profile, postępy i ustawienia, zapisane w {path}",
   "Automatic backup": "Automatyczna kopia zapasowa",
-  "Once a week, when VesperTV starts. Keeps the last {n}.":
-      "Raz w tygodniu, przy uruchomieniu VesperTV. Zachowuje ostatnie: {n}.",
+  "When VesperTV starts. Keeps the last {n}.":
+      "Przy uruchomieniu VesperTV. Zachowuje ostatnie: {n}.",
+  "How often":
+      "Jak często",
+  "Every day":
+      "Codziennie",
+  "Every 3 days":
+      "Co 3 dni",
+  "Every week":
+      "Co tydzień",
+  "Every 2 weeks":
+      "Co 2 tygodnie",
+  "Every month":
+      "Co miesiąc",
   "Restore from a file": "Przywróć z pliku",
   "Pick a backup file, e.g. after reinstalling VesperTV":
       "Wybierz plik kopii zapasowej, np. po ponownej instalacji VesperTV",
@@ -2069,6 +2081,9 @@ const Map<String, String> kPl = {
   "Expand": "Rozwiń",
   "Fill the screen with the Timeline guide":
       "Wypełnij ekran przewodnikiem Timeline",
+  "Channel numbers": "Numery kanałów",
+  "Show a number before each channel in the guide.":
+      "Pokazuj numer przed każdym kanałem w przewodniku.",
   "Programme details in the guide": "Szczegóły programu w przewodniku",
   "Stay on a programme for 1 second to see its description under it.":
       "Zatrzymaj się na programie przez 1 sekundę, aby zobaczyć jego opis pod nim.",

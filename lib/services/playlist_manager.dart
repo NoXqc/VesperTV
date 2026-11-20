@@ -2509,6 +2509,56 @@ class PlaylistManager extends ChangeNotifier {
         ?.moveChannel(group, channel.rawId, delta);
   }
 
+  /// The playlist editor's channel order for [group] (clayts450, Discord
+  /// 2026-11-20): [ids] (Channel.id, as the TV lists the group) become its
+  /// order, kept where [moveChannel] keeps it: the viewer's own group, a
+  /// provider group with channels placed into it, else [playlistId]'s own
+  /// per-group order. Listed channels missing from [ids] follow in their
+  /// current order. False when [group] lists nothing here.
+  Future<bool> setChannelOrder(
+      String playlistId, String group, List<String> ids) async {
+    List<String> full(List<Channel> shown) {
+      final listed = {for (final c in shown) c.id};
+      final first = [
+        for (final id in ids.toSet())
+          if (listed.contains(id)) id,
+      ];
+      final firstSet = first.toSet();
+      return [
+        ...first,
+        for (final c in shown)
+          if (!firstSet.contains(c.id)) c.id,
+      ];
+    }
+
+    if (_myGroups.contains(group)) {
+      final shown = visibleChannels(groupTitle: group, category: 'tv');
+      if (shown.isEmpty) return false;
+      _myGroups.order[group] = full(shown);
+      await _saveMyGroups();
+      return true;
+    }
+    final shown =
+        visibleChannels(playlistId: playlistId, groupTitle: group, category: 'tv');
+    if (shown.isEmpty) return false;
+    for (final c in shown) {
+      final ref = _placedGroupOf(c, group);
+      if (ref != null && ref.playlistId == playlistId) {
+        _myGroups.porder[ref.encode()] = full(shown);
+        await _saveMyGroups();
+        return true;
+      }
+    }
+    final session = _sessionFor(playlistId);
+    if (session == null) return false;
+    await session.setChannelOrder(group, [
+      for (final id in full(shown))
+        for (final c in shown)
+          if (c.id == id && c.playlistId == playlistId) c.rawId,
+    ]);
+    return true;
+  }
+
   /// The provider group titled [title] that lists [c], when it keeps its
   /// order in [UserGroups] (see [UserGroups.ordersHere]): the one [c] was
   /// moved or copied into, else its own playlist's.

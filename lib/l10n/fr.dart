@@ -776,8 +776,20 @@ const Map<String, String> kFr = {
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
       "Playlists, favoris, profils, progression et réglages, enregistrés dans {path}",
   "Automatic backup": "Sauvegarde automatique",
-  "Once a week, when VesperTV starts. Keeps the last {n}.":
-      "Une fois par semaine, au démarrage de VesperTV. Garde les {n} dernières.",
+  "When VesperTV starts. Keeps the last {n}.":
+      "Au démarrage de VesperTV. Garde les {n} dernières.",
+  "How often":
+      "Fréquence",
+  "Every day":
+      "Tous les jours",
+  "Every 3 days":
+      "Tous les 3 jours",
+  "Every week":
+      "Toutes les semaines",
+  "Every 2 weeks":
+      "Toutes les 2 semaines",
+  "Every month":
+      "Tous les mois",
   "Restore from a file": "Restaurer depuis un fichier",
   "Pick a backup file, e.g. after reinstalling VesperTV":
       "Choisissez un fichier de sauvegarde, par exemple après avoir réinstallé VesperTV",
@@ -2167,6 +2179,9 @@ const Map<String, String> kFr = {
   "Expand": "Agrandir",
   "Fill the screen with the Timeline guide":
       "Afficher le guide horaire sur tout l’écran",
+  "Channel numbers": "Numéros de chaîne",
+  "Show a number before each channel in the guide.":
+      "Afficher un numéro devant chaque chaîne dans le guide.",
   "Programme details in the guide": "Détails du programme dans le guide",
   "Stay on a programme for 1 second to see its description under it.":
       "Restez 1 seconde sur un programme pour voir sa description en dessous.",

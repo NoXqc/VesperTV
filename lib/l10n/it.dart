@@ -772,8 +772,20 @@ const Map<String, String> kIt = {
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
       "Playlist, preferiti, profili, avanzamento e impostazioni, salvati in {path}",
   "Automatic backup": "Backup automatico",
-  "Once a week, when VesperTV starts. Keeps the last {n}.":
-      "Una volta alla settimana, all'avvio di VesperTV. Conserva gli ultimi {n}.",
+  "When VesperTV starts. Keeps the last {n}.":
+      "All'avvio di VesperTV. Conserva gli ultimi {n}.",
+  "How often":
+      "Frequenza",
+  "Every day":
+      "Ogni giorno",
+  "Every 3 days":
+      "Ogni 3 giorni",
+  "Every week":
+      "Ogni settimana",
+  "Every 2 weeks":
+      "Ogni 2 settimane",
+  "Every month":
+      "Ogni mese",
   "Restore from a file": "Ripristina da un file",
   "Pick a backup file, e.g. after reinstalling VesperTV":
       "Scegli un file di backup, ad esempio dopo aver reinstallato VesperTV",
@@ -2163,6 +2175,9 @@ const Map<String, String> kIt = {
   "Expand": "Espandi",
   "Fill the screen with the Timeline guide":
       "Riempi lo schermo con la guida dei programmi",
+  "Channel numbers": "Numeri dei canali",
+  "Show a number before each channel in the guide.":
+      "Mostra un numero davanti a ogni canale nella guida.",
   "Programme details in the guide": "Dettagli del programma nella guida",
   "Stay on a programme for 1 second to see its description under it.":
       "Resta 1 secondo su un programma per vederne la descrizione sotto.",
