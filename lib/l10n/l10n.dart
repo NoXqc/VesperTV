@@ -10,10 +10,11 @@ import 'es.dart';
 import 'fr.dart';
 import 'it.dart';
 import 'pl.dart';
+import 'uk.dart';
 
 /// App-wide UI language. English strings in the code are the keys
 /// (`tr('Settings')`); [_dictionaries] maps them to each other language
-/// ([kFr], [kEs], [kIt], [kEl], [kDe], [kPl]). A missing entry falls back to the English text, so
+/// ([kFr], [kEs], [kIt], [kEl], [kDe], [kPl], [kUk]). A missing entry falls back to the English text, so
 /// a forgotten string shows in English, never blank.
 ///
 /// Deliberately not Flutter's gen-l10n: many strings live in services and
@@ -30,8 +31,8 @@ class L10n {
   /// The setting: 'auto' (follow the device) or a language code.
   static String setting = 'auto';
 
-  /// The resolved language actually in use: 'en', 'fr', 'es', 'it', 'el', 'de'
-  /// or 'pl'.
+  /// The resolved language actually in use: 'en', 'fr', 'es', 'it', 'el', 'de',
+  /// 'pl' or 'uk'.
   static String code = 'en';
 
   static Locale get locale => Locale(code);
@@ -44,6 +45,7 @@ class L10n {
     Locale('el'),
     Locale('de'),
     Locale('pl'),
+    Locale('uk'),
   ];
 
   static bool _supported(String c) => c == 'en' || _dictionaries.containsKey(c);
@@ -66,6 +68,7 @@ const Map<String, Map<String, String>> _dictionaries = {
   'el': kEl,
   'de': kDe,
   'pl': kPl,
+  'uk': kUk,
 };
 
 /// Translate [en] into the current language. `{name}` placeholders are filled
@@ -102,6 +105,7 @@ String _itOrdinal(String n) => '$nº';
 String _elOrdinal(String n) => '$nο';
 String _deOrdinal(String n) => '$n.';
 String _plOrdinal(String n) => '$n.';
+String _ukOrdinal(String n) => '$n-й';
 
 const Map<String, _SportsLanguage> _sportsLanguages = {
   'fr': _SportsLanguage(
@@ -362,6 +366,49 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Lap': 'Okrążenie',
     },
   ),
+  'uk': _SportsLanguage(
+    ordinal: _ukOrdinal,
+    overtime: 'ОТ',
+    shootout: 'бул.',
+    words: {
+      'Final': 'Завершено',
+      'Halftime': 'Перерва',
+      'Half': 'тайм',
+      'Delayed': 'Затримано',
+      'Rain Delay': 'Затримка (дощ)',
+      'Postponed': 'Перенесено',
+      'Canceled': 'Скасовано',
+      'Cancelled': 'Скасовано',
+      'Suspended': 'Призупинено',
+      'Forfeit': 'Технічна поразка',
+      'End of': 'Кінець',
+      'End': 'Кінець',
+      'Top': 'Верх',
+      'Bot': 'Низ',
+      'Bottom': 'Низ',
+      'Mid': 'Середина',
+      'Middle': 'Середина',
+      'OT': 'ОТ',
+      'SO': 'Бул.',
+      'FT': 'Завершено',
+      'HT': 'Перерва',
+      'AET': 'Після ОТ',
+      'Pens': 'Пен.',
+      'Intermission': 'Перерва',
+      'Quarter': 'чверть',
+      'Period': 'період',
+      'Inning': 'іннінг',
+      // Golf / racing.
+      'Round': 'Раунд',
+      'Race': 'Гонка',
+      'Qualifying': 'Кваліфікація',
+      'Complete': 'Завершено',
+      'In Progress': 'Триває',
+      'Play Complete': 'Раунд завершено',
+      'Scheduled': 'Заплановано',
+      'Lap': 'Коло',
+    },
+  ),
 };
 
 /// ESPN's English game statuses and standing lines ("Final/OT", "End of 2nd",
@@ -393,14 +440,26 @@ String trSports(String s) {
 /// Picks the singular or plural English form by [n] (French treats 0 as
 /// singular; Spanish and Italian, like English, only 1), then translates it.
 /// `{n}` is filled with [n]. Polish has a third form for 2-4 (also 22-24 ...,
-/// not 12-14): a Polish dictionary may hold it under `"$other#few"`.
+/// not 12-14): a Polish or Ukrainian dictionary may hold it under
+/// `"$other#few"`. Ukrainian also says 21, 31, ... (not 11) like 1: its
+/// dictionary may hold that form under `"$other#one"`.
 String trPlural(int n, String one, String other,
     [Map<String, Object?> args = const {}]) {
   final singular = L10n.code == 'fr' ? n.abs() < 2 : n == 1;
   var key = singular ? one : other;
-  if (!singular && L10n.code == 'pl' && _isPolishFew(n)) {
+  final code = L10n.code;
+  if (!singular && (code == 'pl' || code == 'uk')) {
+    final dictionary = _dictionaries[code];
     final few = '$other#few';
-    if (_dictionaries['pl']?.containsKey(few) ?? false) key = few;
+    final oneLike = '$other#one';
+    if (_isPolishFew(n) && (dictionary?.containsKey(few) ?? false)) {
+      key = few;
+    } else if (code == 'uk' &&
+        n.abs() % 10 == 1 &&
+        n.abs() % 100 != 11 &&
+        (dictionary?.containsKey(oneLike) ?? false)) {
+      key = oneLike;
+    }
   }
   return tr(key, {'n': n, ...args});
 }

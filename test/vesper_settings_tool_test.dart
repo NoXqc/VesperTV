@@ -7,6 +7,7 @@ import 'package:nox_iptv/l10n/es.dart';
 import 'package:nox_iptv/l10n/fr.dart';
 import 'package:nox_iptv/l10n/it.dart';
 import 'package:nox_iptv/l10n/pl.dart';
+import 'package:nox_iptv/l10n/uk.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
@@ -216,10 +217,12 @@ void main() {
     expect(host.questions.single, contains('NFL RedZone button: turn off'));
 
     // Minimalist turns its settings off, and back as they were.
-    await box.call('settings', {'action': 'set', 'key': 'minimalist', 'value': 'on'});
+    await box.call(
+        'settings', {'action': 'set', 'key': 'minimalist', 'value': 'on'});
     expect(prefs.minimalist, isTrue);
     expect(prefs.keepGroupsOpen, isFalse);
-    await box.call('settings', {'action': 'set', 'key': 'minimalist', 'value': 'off'});
+    await box.call(
+        'settings', {'action': 'set', 'key': 'minimalist', 'value': 'off'});
     expect(prefs.minimalist, isFalse);
     expect(prefs.keepGroupsOpen, isTrue);
     expect(prefs.hideHome, isTrue);
@@ -326,6 +329,7 @@ void main() {
       ('it', kIt),
       ('el', kEl),
       ('pl', kPl),
+      ('uk', kUk),
     ]) {
       final missing = [
         for (final text in vesperSettingTexts)
