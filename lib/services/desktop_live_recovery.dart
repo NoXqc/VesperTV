@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
@@ -75,6 +76,21 @@ class DesktopLiveRecovery {
   static const _waits = [2, 4, 8, 15, 30];
   static const _giveUpAfter = 8;
 
+  /// iPhone: the first reopen after a live channel ended goes at once. An
+  /// HLS channel there ends on one failed playlist reload (see
+  /// desktopLavfOptions); with the 2 s wait each cut was 3.4 s of black,
+  /// every 20-30 s (LOG-SKRVK2, 2026-11-20). The wait is for Windows: a
+  /// provider still closing the old .ts connection refused the new one
+  /// (LOG-FZXE2W). Later tries keep the waits.
+  static bool quickFirstReopenAfterEnd = Platform.isIOS;
+
+  /// Seconds before reconnect [attempt] (1 = first) for [reason].
+  @visibleForTesting
+  static int waitFor(String reason, int attempt, {required bool quick}) {
+    if (quick && attempt == 1 && reason == 'ended') return 0;
+    return _waits[(attempt - 1).clamp(0, _waits.length - 1)];
+  }
+
   /// Call after opening [channel] (live) on [player]; null for a movie,
   /// an episode or nothing.
   void watch(Channel? channel) {
@@ -140,8 +156,15 @@ class DesktopLiveRecovery {
     if (channel == null || (_retry?.isActive ?? false)) return;
     _attempt++;
     _recovering = true;
-    final wait = _waits[(_attempt - 1).clamp(0, _waits.length - 1)];
-    debugPrint('DesktopLive: $reason, reconnect $_attempt in $wait s');
+    final wait = waitFor(reason, _attempt, quick: quickFirstReopenAfterEnd);
+    // How long it played and what mpv thought its length was: a live HLS
+    // list the server ends (#EXT-X-ENDLIST) has a length and ends right at
+    // it, a failed playlist reload ends anywhere (HLS warning lines before).
+    final played = reason == 'ended'
+        ? ' after ${_seconds(player.state.position)} s'
+            ' (length ${_seconds(player.state.duration)} s)'
+        : '';
+    debugPrint('DesktopLive: $reason$played, reconnect $_attempt in $wait s');
     status.value = _attempt > _giveUpAfter
         ? tr('The channel stopped. Still trying to reconnect...')
         : tr('Reconnecting...');
@@ -173,6 +196,9 @@ class DesktopLiveRecovery {
       if (_recovering && _channel?.id == channel.id) _trouble('no video');
     });
   }
+
+  static String _seconds(Duration d) =>
+      (d.inMilliseconds / 1000).toStringAsFixed(1);
 
   void dispose() {
     _retry?.cancel();
