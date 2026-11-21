@@ -1277,6 +1277,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ? _playback.liveHandover
             : null;
     final movable = candidate != null &&
+        await PlaybackService.canHandOverToMultiview(candidate) &&
         (!PlaybackService.drawsNativeSurface(candidate) ||
             await NativeMultiviewTiles.adopt(
                 SubtitleTracks.playerIdOf(candidate)));

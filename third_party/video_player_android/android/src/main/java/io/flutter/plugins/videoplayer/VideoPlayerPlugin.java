@@ -188,8 +188,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     // picture in the top-left 2/3 and the rest solid green. SurfaceTexture applies the crop through
     // its transform matrix. The flag is read only at creation, so it's set just for this call.
     // Safe here: the app runs the Skia/OpenGL renderer (Impeller is off in AndroidManifest), which
-    // is what SurfaceTexture is native to. Texture players are Multiview-only (the main player is
-    // a platform view).
+    // is what SurfaceTexture is native to. Compatibility video also uses this texture path.
     io.flutter.embedding.engine.renderer.FlutterRenderer.debugForceSurfaceProducerGlTextures = true;
     TextureRegistry.SurfaceProducer handle;
     try {
@@ -204,6 +203,9 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     // prepare); the texture above stays registered but receives no frames.
     playerOptions.nativeSurfaceHolder =
         multiviewTiles == null ? null : multiviewTiles.claimTile(id);
+    playerOptions.allowEncodedAudio =
+        Boolean.TRUE.equals(options.getAllowEncodedAudio())
+            && playerOptions.nativeSurfaceHolder == null;
 
     VideoPlayer videoPlayer =
         TextureVideoPlayer.create(
@@ -291,6 +293,11 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
   @Override
   public void setMixWithOthers(boolean mixWithOthers) {
     sharedOptions.mixWithOthers = mixWithOthers;
+  }
+
+  @Override
+  public boolean isAudioPassthroughEnabled(long playerId) {
+    return getPlayer(playerId).isAudioPassthroughEnabled();
   }
 
   @Override

@@ -235,4 +235,48 @@ public final class TextureVideoPlayerTest {
       player.dispose();
     }
   }
+
+    @Test
+    @org.robolectric.annotation.Config(sdk = 25)
+    public void compatibilityPassthroughRequiresBothSettingAndPermission() throws Exception {
+      for (boolean requested : new boolean[] {false, true}) {
+        for (boolean allowed : new boolean[] {false, true}) {
+          android.content.Context appContext = mock(android.content.Context.class);
+          VideoPlayerOptions options = new VideoPlayerOptions();
+          options.allowEncodedAudio = allowed;
+          try (org.mockito.MockedStatic<AudioPassthrough> setting = mockStatic(AudioPassthrough.class);
+              MockedConstruction<ExoPlayer.Builder> builders = mockConstruction(
+                  ExoPlayer.Builder.class, (builder, construction) -> {
+                    when(builder.setTrackSelector(any())).thenReturn(builder);
+                    when(builder.setMediaSourceFactory(any())).thenReturn(builder);
+                    when(builder.build()).thenReturn(mockExoPlayer);
+                  });
+              MockedConstruction<androidx.media3.exoplayer.audio.DefaultAudioSink.Builder> sinks =
+                  mockConstruction(androidx.media3.exoplayer.audio.DefaultAudioSink.Builder.class,
+                      (sink, construction) -> {
+                        assertEquals(requested && allowed ? java.util.List.of(appContext)
+                            : java.util.List.of(), construction.arguments());
+                        when(sink.setEnableFloatOutput(anyBoolean())).thenReturn(sink);
+                        when(sink.setEnableAudioOutputPlaybackParameters(anyBoolean())).thenReturn(sink);
+                        when(sink.build()).thenReturn(
+                            mock(androidx.media3.exoplayer.audio.DefaultAudioSink.class));
+                      })) {
+            setting.when(AudioPassthrough::isEnabled).thenReturn(requested);
+            TextureVideoPlayer player = TextureVideoPlayer.create(
+                appContext, mockEvents, mockProducer, fakeVideoAsset, options);
+            ArgumentCaptor<androidx.media3.exoplayer.RenderersFactory> factory =
+                ArgumentCaptor.forClass(androidx.media3.exoplayer.RenderersFactory.class);
+            verify(builders.constructed().get(0)).setRenderersFactory(factory.capture());
+            java.lang.reflect.Method buildSink = factory.getValue().getClass().getDeclaredMethod(
+                "buildAudioSink", android.content.Context.class, boolean.class, boolean.class);
+            buildSink.setAccessible(true);
+            buildSink.invoke(factory.getValue(), appContext, false, false);
+            assertEquals(1, sinks.constructed().size());
+            assertEquals(requested && allowed, options.effectivePassthrough);
+            assertEquals(requested && allowed, player.isAudioPassthroughEnabled());
+            player.dispose();
+          }
+      }
+    }
+  }
 }
