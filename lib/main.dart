@@ -28,6 +28,8 @@ import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
+import 'services/apple_tv_menu.dart';
+import 'services/apple_tv_storage.dart';
 import 'services/app_exit.dart';
 import 'services/remote_buttons.dart';
 import 'services/startup_quiet.dart';
@@ -61,6 +63,8 @@ import 'services/sports_channel_matcher.dart';
 import 'services/sports_service.dart';
 import 'models/channel.dart';
 import 'widgets/recording_conflict_dialog.dart';
+import 'widgets/tv_canvas.dart';
+import 'services/ci_tour.dart';
 import 'services/playlist_manager.dart';
 import 'services/playlist_session.dart';
 import 'services/storage_service.dart';
@@ -115,7 +119,15 @@ void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
 
 // AppLog keeps print/errors for Settings > Send log; the binding must be
 // initialized inside its zone (same zone as runApp).
-Future<void> main() => AppLog.capture(_main);
+Future<void> main() =>
+    AppLog.capture(_main, setup: isAppleTv ? _appleTvSetup : null);
+
+/// Apple TV: writable folders and settings storage before anything opens a
+/// file (`services/apple_tv_storage.dart`).
+Future<void> _appleTvSetup() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppleTvStorage.install();
+}
 
 Future<void> _main() async {
   PerfDiagnostics.markLaunch();
@@ -146,7 +158,18 @@ Future<void> _main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  if (usesMediaKit) {
+  if (isAppleTv) {
+    // media_kit picks libmpv's file by Platform.operatingSystem and has no
+    // 'tvos' entry: give it the iOS framework path. If libmpv is missing,
+    // Apple TV keeps Apple's player (usesMediaKit stays false).
+    try {
+      MediaKit.ensureInitialized(libmpv: 'Mpv.framework/Mpv');
+      appleTvMediaKitReady = true;
+      debugPrint('MediaKit: libmpv loaded on Apple TV');
+    } catch (e) {
+      debugPrint('MediaKit: no libmpv on Apple TV, Apple player instead: $e');
+    }
+  } else if (usesMediaKit) {
     // Only ever used by DesktopPlayerScreen — see its own doc comment and
     // pubspec.yaml's media_kit comment. Every other platform keeps using
     // video_player_hdr exclusively and never touches this at all. macOS
@@ -178,7 +201,10 @@ Future<void> _main() async {
   // real box, confirmed do) drift out of sync: every poster re-fetches
   // from scratch on a cold start, not just the first one ever.
   CachedNetworkImageProvider.defaultCacheManager = persistentImageCacheManager;
-  runApp(const NoxIptvApp());
+  // Apple TV: drawn on an Android TV box's 960x540 canvas (TvCanvas).
+  runApp(isAppleTv ? const TvCanvas(child: NoxIptvApp()) : const NoxIptvApp());
+  // tvOS workflow only (a build constant): walks the app for screenshots.
+  if (CiTour.enabled) unawaited(CiTour.run());
 }
 
 /// Flutter's default ImageCache holds up to 1000 decoded images / ~100MB —
@@ -738,6 +764,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      if (CiTour.enabled) await CiTour.seed(_storage);
       // An update that ran with the app closed stops once the app is on
       // screen; it shares the databases and saves sync times (Settings >
       // Startup > Update while VesperTV is closed).
@@ -963,6 +990,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // (libmpv crashed on close with players still open, Linux).
       AppExit.beforeQuit = disposeAllDesktopPlayers;
       AppExit.askFirst = () => _preferences.askBeforeExit;
+      AppExit.hint = (message) => _scaffoldMessengerKey.currentState
+          ?.showSnackBar(SnackBar(content: Text(message)));
       AppExit.afterWarm = () {
         if (!mounted || !_ready) return _dropResumeCover();
         if (_profileSelection != null) {
@@ -1867,7 +1896,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           debugShowCheckedModeBanner: false,
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
-          navigatorObservers: [appRouteObserver],
+          navigatorObservers: [appRouteObserver, AppleTvMenu.observer],
           // macOS: Esc (Flutter's DismissIntent) is Back when nothing
           // closer handles it. Dialogs, menus and screens with their own
           // Esc key handling still win; maybePop honours every PopScope.

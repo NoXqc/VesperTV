@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
+import '../l10n/l10n.dart';
 import '../utils/desktop_platform.dart';
+import 'apple_tv_menu.dart';
 
 /// Leaving the app (owner, 2026-11-05).
 ///
@@ -50,7 +52,18 @@ class AppExit {
     if (await confirm()) await (isWindows ? full() : warm());
   }
 
+  /// Set by the app root: a short message at the bottom of the screen.
+  static void Function(String message)? hint;
+
   static Future<void> warm() async {
+    if (isAppleTv) {
+      // Only the system can leave on Apple TV: the next Menu press goes to
+      // it (AppleTvMenu). Nothing stops here, in case the viewer stays.
+      if (await AppleTvMenu.armExit()) {
+        hint?.call(tr('Press Menu again to go to the Apple TV Home screen.'));
+      }
+      return;
+    }
     if (isWindows) return full();
     try {
       await beforeWarm?.call();

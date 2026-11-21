@@ -90,6 +90,25 @@ dependencies:
   # See lib/services/phone_pairing_service.dart.
   qr_flutter: ^4.1.0
   cryptography: ^2.9.0
+  # Apple TV (flutter-tvos engine, dev-notes/apple-tv.md): the tvOS halves
+  # of the plugins above. Each declares only a `tvos:` platform, so Android,
+  # iPhone and the computers never load them.
+  shared_preferences_tvos: ^0.0.2
+  path_provider_tvos: ^0.0.3
+  sqflite_tvos: ^0.0.2
+  wakelock_plus_tvos: ^0.0.1
+  package_info_plus_tvos: ^0.0.2
+  url_launcher_tvos: ^0.0.1
+  video_player_tvos: ^0.0.1
+  # media_kit's video output on Apple TV + libmpv built on CI
+  # (third_party/media_kit_video_tvos/README.md).
+  media_kit_video_tvos:
+    path: third_party/media_kit_video_tvos
+  # Apple TV storage (services/apple_tv_storage.dart) replaces the path and
+  # settings stores; already in the tree through path_provider and
+  # shared_preferences.
+  path_provider_platform_interface: ^2.1.0
+  shared_preferences_platform_interface: ^2.4.0
   flutter_localizations:
     sdk: flutter
 
@@ -146,6 +165,13 @@ flutter_launcher_icons:
 # matching what video_player_hdr: ^1.2.0 resolves to above) — needs manual
 # re-sync if that version ever changes.
 dependency_overrides:
+  # sqflite_tvos 0.0.2 + sqflite's privacy manifest (third_party/sqflite_tvos/VESPERTV.md).
+  sqflite_tvos:
+    path: third_party/sqflite_tvos
+  # media_kit 1.2.6 + an Apple TV ('tvos') libmpv entry, nothing else
+  # (third_party/media_kit/VESPERTV.md).
+  media_kit:
+    path: third_party/media_kit
   video_player_android:
     path: third_party/video_player_android
   # Patched copy of 1.1.3: its build.gradle used proguard-android.txt, which

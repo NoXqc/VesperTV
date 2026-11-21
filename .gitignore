@@ -81,3 +81,6 @@ AGENTS.md
 # Build output and generated lockfile of the vendored player
 /android/build/
 /third_party/video_player_android/pubspec.lock
+
+# Apple TV libmpv, built on CI (tools/tvos/build_mpv_framework.sh)
+third_party/media_kit_video_tvos/tvos/Frameworks/

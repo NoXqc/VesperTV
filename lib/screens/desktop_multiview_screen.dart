@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../utils/desktop_platform.dart';
 import '../models/channel.dart';
+import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
@@ -16,9 +18,22 @@ import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
 import '../l10n/l10n.dart';
 import '../services/desktop_stream_setup.dart';
-import '../services/desktop_live_recovery.dart';
+import '../services/desktop_live_recovery.dart';
 import '../widgets/glass_menu.dart';
-import 'multiview_screen.dart' show swapRotation;
+import '../widgets/tv_dialog_option.dart';
+import '../widgets/tv_text_field_gate.dart';
+import '../widgets/hold_to_activate.dart';
+import '../widgets/roll_down_menu.dart';
+import '../widgets/sports_mode_live_panel.dart';
+import 'multiview_screen.dart'
+    show
+        swapRotation,
+        multiviewSlotRects,
+        multiviewHeaderButtonStyle,
+        showMultiviewTips,
+        MultiviewCellTile,
+        MultiviewSwapModeBadge,
+        MultiviewSwapModePill;
 
 /// Windows-only: a grid of simultaneously-playing live channels —
 /// requested directly, citing TiviMate's own multiview (proven to run
@@ -38,8 +53,20 @@ import 'multiview_screen.dart' show swapRotation;
 /// tapping a filled cell makes it the audio-focused one, mirroring
 /// TiviMate's own "tap to swap audio" multiview behavior rather than
 /// trying to invent a different convention.
+///
+/// With a TV remote (Apple TV) the screens are the focus stops: the first
+/// one has focus on open (a gold-white frame), OK on an empty one opens the
+/// channel picker, on a playing one gives it the sound, and on the one with
+/// the sound opens Change channel / Reload / Remove (the hover buttons on
+/// each screen are for a mouse only).
 class DesktopMultiviewScreen extends StatefulWidget {
-  const DesktopMultiviewScreen({super.key});
+  const DesktopMultiviewScreen({super.key, this.initialChannel});
+
+  /// Plays on the first screen when Multiview opens: the player bar's
+  /// Multiview button brings the channel it was playing. Back returns the
+  /// channel with the sound ([Navigator.pop] result) so the player can go
+  /// on with it.
+  final Channel? initialChannel;
 
   @override
   State<DesktopMultiviewScreen> createState() => _DesktopMultiviewScreenState();
@@ -86,7 +113,46 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   /// Bumped on every swap: the big screen flashes gold once.
   int _swapCount = 0;
 
-  final _keys = FocusNode(debugLabel: 'desktop-multiview');
+  /// Swap mode's arrows. Not a focus stop itself: a focusable wrapper the
+  /// size of the screen left a remote nowhere to go (every screen lies
+  /// inside it, so no arrow found a neighbour) and OK on it did nothing:
+  /// "clicking on the + does nothing" on Apple TV (Discord, 2026-11-20).
+  /// Its key handler sees the keys of whatever has focus inside.
+  final _keys = FocusNode(
+      debugLabel: 'desktop-multiview',
+      canRequestFocus: false,
+      skipTraversal: true);
+
+  /// One focus stop per screen, kept by place (a swap moves the players,
+  /// not the stops). The first screen has focus when Multiview opens.
+  final List<FocusNode> _cellFocus = List.generate(
+      _cellCount, (i) => FocusNode(debugLabel: 'desktop-multiview-cell-$i'));
+  int? _focusedCell;
+
+  /// A remote, not a mouse: Apple TV. Computers keep the click layout.
+  bool get _tv => context.read<AppPreferences?>()?.isTelevision ?? false;
+
+  // ---- A remote (Apple TV): Android's Multiview, its look and its keys
+  // (owner, 2026-11-20: both TV apps must look the same). Same model as
+  // MultiviewScreen: [_slots] screens on show (Add screen / Remove screen),
+  // equal screens or 1 + 3 ([_layout] main), Hold OK enlarges, OK = the
+  // screen's menu, the sound follows the focused screen, the header slides
+  // down on Up from the top row, the live guide picks channels.
+  static const _anim = Duration(milliseconds: 280);
+  int _slots = 1;
+  int? _enlarged;
+  int? _fullscreen;
+  List<Rect?> _rects = List.filled(4, null);
+  bool _headerShown = true;
+  Timer? _headerTimer;
+  final _headerScope = FocusScopeNode(debugLabel: 'desktop-multiview-header');
+  final _headerFirst = FocusNode(debugLabel: 'desktop-multiview-header-first');
+  int? _panelFor;
+  Completer<Channel?>? _panelPick;
+  final _panelKey = GlobalKey<SportsModeLivePanelState>();
+  bool _menuOpen = false;
+
+  bool get _main => _layout == _MultiviewLayout.main;
 
   @override
   void initState() {
@@ -97,6 +163,334 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
         : storage.getMultiviewQuad()
             ? _MultiviewLayout.quad
             : _MultiviewLayout.dual;
+    final first = widget.initialChannel;
+    if (_tv) {
+      // From the player: equal screens first (Android's); else the 1 + 3
+      // layout when it was chosen last.
+      if (first != null || !_main) {
+        _layout = _MultiviewLayout.quad;
+        _slots = 1;
+      } else {
+        _slots = _cellCount;
+      }
+      _headerScope.addListener(_onHeaderFocus);
+      _hideHeaderSoon(const Duration(seconds: 4));
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        _cellFocus[0].requestFocus();
+        await showMultiviewTips(context);
+        if (mounted) _cellFocus[0].requestFocus();
+      });
+    }
+    if (first != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _assign(0, first);
+      });
+    }
+  }
+
+  void _revealHeader({bool focus = false}) {
+    _headerTimer?.cancel();
+    if (!_headerShown) setState(() => _headerShown = true);
+    if (focus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _headerFirst.requestFocus();
+      });
+    } else {
+      _hideHeaderSoon(const Duration(seconds: 4));
+    }
+  }
+
+  void _hideHeaderSoon([Duration after = const Duration(milliseconds: 1500)]) {
+    _headerTimer?.cancel();
+    _headerTimer = Timer(after, () {
+      if (mounted && !_headerScope.hasFocus && _headerShown) {
+        setState(() => _headerShown = false);
+      }
+    });
+  }
+
+  void _onHeaderFocus() {
+    if (_headerScope.hasFocus) {
+      _headerTimer?.cancel();
+    } else {
+      _hideHeaderSoon();
+    }
+  }
+
+  /// Equal screens <-> 1 + 3 (remembered). Back to equal screens, the
+  /// playing screens move to the front (nothing reconnects).
+  void _tvToggleMain() {
+    final main = !_main;
+    setState(() {
+      _swapMode = false;
+      _enlarged = null;
+      if (main) {
+        _layout = _MultiviewLayout.main;
+        _slots = _cellCount;
+      } else {
+        _layout = _MultiviewLayout.quad;
+        final active = _cells[_activeCell];
+        final order = [
+          for (final c in _cells)
+            if (c.channel != null) c,
+          for (final c in _cells)
+            if (c.channel == null) c,
+        ];
+        for (var i = 0; i < _cellCount; i++) {
+          _cells[i] = order[i];
+        }
+        _slots = math.max(1, _cells.where((c) => c.channel != null).length);
+        final a = _cells.indexOf(active);
+        _activeCell = a < 0 ? 0 : a;
+      }
+    });
+    final storage = context.read<StorageService>();
+    unawaited(storage.setMultiviewMain(main));
+    unawaited(storage.setMultiviewQuad(false));
+  }
+
+  /// Add screen: a new empty screen, focused, with the live guide open.
+  /// Backing out of the guide takes the empty screen away again.
+  Future<void> _tvAddScreen() async {
+    if (_slots >= _cellCount) return;
+    final index = _slots;
+    setState(() => _slots++);
+    _cellFocus[index].requestFocus();
+    await _tvOpenPicker(index);
+    if (!mounted || _cells[index].channel != null) return;
+    if (_slots == index + 1) setState(() => _slots--);
+    _cellFocus[math.max(0, index - 1)].requestFocus();
+  }
+
+  /// Remove screen: closes it, the later screens move up one place (their
+  /// streams keep playing).
+  void _tvRemoveScreen(int index) {
+    final removed = _cells[index];
+    removed.completedSubscription?.cancel();
+    DesktopLiveRecovery.disposePlayer(removed.player);
+    if (_main) {
+      setState(() {
+        _cells[index] = _MultiviewCell();
+        _swapMode = false;
+        if (_fullscreen == index) _fullscreen = null;
+      });
+      return;
+    }
+    final wasActive = index == _activeCell;
+    setState(() {
+      for (var j = index; j < _slots - 1; j++) {
+        _cells[j] = _cells[j + 1];
+      }
+      _cells[_slots - 1] = _MultiviewCell();
+      if (_slots > 1) _slots--;
+      if (_activeCell > index) _activeCell--;
+      if (_activeCell >= _slots) _activeCell = _slots - 1;
+      final e = _enlarged;
+      _enlarged = e == null || e == index
+          ? null
+          : e > index
+              ? e - 1
+              : e;
+      if (_fullscreen == index) _fullscreen = null;
+      if (_slots < 2) _enlarged = null;
+    });
+    final focus = math.min(index, _slots - 1);
+    _cellFocus[focus].requestFocus();
+    if (wasActive) _setActive(focus);
+  }
+
+  void _tvToggleEnlarge(int index) {
+    if (_slots < 2 || _fullscreen != null || _main) return;
+    setState(() => _enlarged = _enlarged == index ? null : index);
+  }
+
+  void _tvEnterFullscreen(int index) {
+    if (_cells[index].channel == null) return;
+    _setActive(index);
+    setState(() => _fullscreen = index);
+    _hideHeaderSoon(Duration.zero);
+  }
+
+  void _tvExitFullscreen() {
+    final index = _fullscreen;
+    if (index == null) return;
+    setState(() => _fullscreen = null);
+    _cellFocus[index].requestFocus();
+  }
+
+  void _togglePause(int index) {
+    final player = _cells[index].player;
+    if (player == null) return;
+    unawaited(player.state.playing ? player.pause() : player.play());
+  }
+
+  /// OK on an empty screen, Change channel, Add screen: the live guide over
+  /// the left of the screens (they keep playing), Android's picker.
+  Future<void> _tvOpenPicker(int index) async {
+    if (_panelFor != null) return;
+    final chosen = await _pickFromGuide(index);
+    if (chosen == null || !mounted) return;
+    _assign(index, chosen);
+    // The sound follows the selected screen.
+    if (_cellFocus[index].hasFocus) _setActive(index);
+  }
+
+  Future<Channel?> _pickFromGuide(int index) {
+    _panelPick?.complete(null);
+    final done = Completer<Channel?>();
+    _panelPick = done;
+    // The header goes with it (Add screen / Change channel from it): its
+    // focus listener never heard the guide take the focus, and it stayed
+    // over the guide's titles (Apple TV tour, +921).
+    _headerTimer?.cancel();
+    setState(() {
+      _panelFor = index;
+      _headerShown = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final panel = _panelKey.currentState;
+      if (!mounted || panel == null) return;
+      panel.focusGroups();
+      panel.openGuide();
+    });
+    return done.future;
+  }
+
+  void _closePanel([Channel? picked]) {
+    final index = _panelFor;
+    final done = _panelPick;
+    _panelPick = null;
+    setState(() => _panelFor = null);
+    if (done != null && !done.isCompleted) done.complete(picked);
+    if (index != null) _cellFocus[index].requestFocus();
+  }
+
+  /// The live guide's game groups: Sports Trak's live games with a channel.
+  Future<List<LivePanelGame>> _panelLiveGames() async {
+    final games = await MultiviewSports.liveGames(
+      storage: context.read<StorageService>(),
+      playlist: context.read<PlaylistManager>(),
+      epg: context.read<EpgService>(),
+    );
+    return [
+      for (final g in games)
+        (
+          id: g.game.id,
+          title: g.game.title,
+          note: trSports(g.game.statusText),
+          channels: [for (final m in g.matches) m.channel],
+        ),
+    ];
+  }
+
+  /// OK on a playing screen: Android's menu in the screen's top right.
+  Future<void> _tvCellMenu(int index) async {
+    final cell = _cells[index];
+    if (cell.channel == null || _menuOpen) return;
+    _menuOpen = true;
+    try {
+      final rect = rollDownAnchorOf(_cellFocus[index].context);
+      const width = 280.0;
+      final anchor = rect == null
+          ? null
+          : Rect.fromLTWH(math.max(rect.left + 8, rect.right - width - 8),
+              rect.top, width, 0);
+      final playing = cell.player?.state.playing ?? false;
+      final full = _fullscreen == index;
+      final action = await showRollDownMenu<String>(
+        context,
+        anchor: anchor,
+        centered: false,
+        width: width,
+        title: cell.channel!.name,
+        items: [
+          if (_slots < _cellCount && !full)
+            RollDownMenuItem(
+                value: 'add',
+                icon: Icons.add_box_outlined,
+                label: tr('Add screen')),
+          RollDownMenuItem(
+              value: 'search', icon: Icons.search, label: tr('Search and add')),
+          RollDownMenuItem(
+              value: 'change',
+              icon: Icons.swap_horiz,
+              label: tr('Change channel')),
+          RollDownMenuItem(
+              value: 'pause',
+              icon: playing ? Icons.pause : Icons.play_arrow,
+              label: playing ? tr('Pause') : tr('Play')),
+          if (_main && index != 0 && !full)
+            RollDownMenuItem(
+                value: 'main',
+                icon: Icons.open_in_full,
+                label: tr('Move to the big screen')),
+          if (_canSwap && !_swapMode && !full)
+            RollDownMenuItem(
+                value: 'swapMode',
+                icon: Icons.swap_vert,
+                label: tr('Swap mode')),
+          if (_slots >= 2 && !full && !_main)
+            RollDownMenuItem(
+                value: 'enlarge',
+                icon: _enlarged == index ? Icons.grid_view : Icons.open_in_full,
+                label: _enlarged == index
+                    ? tr('Equal screens')
+                    : tr('Enlarge screen')),
+          RollDownMenuItem(
+              value: 'full',
+              icon: full ? Icons.fullscreen_exit : Icons.fullscreen,
+              label: full ? tr('Exit full screen') : tr('Full screen')),
+          RollDownMenuItem(
+              value: 'reload', icon: Icons.refresh, label: tr('Reload')),
+          RollDownMenuItem(
+              value: 'remove', icon: Icons.close, label: tr('Remove screen')),
+        ],
+      );
+      if (!mounted) return;
+      switch (action) {
+        case 'add':
+          await _tvAddScreen();
+        case 'search':
+          await _openPicker(index);
+        case 'change':
+          await _tvOpenPicker(index);
+        case 'pause':
+          _togglePause(index);
+        case 'main':
+          _moveToMain(index);
+          _cellFocus[0].requestFocus();
+        case 'swapMode':
+          _enterSwapMode();
+        case 'enlarge':
+          _tvToggleEnlarge(index);
+        case 'full':
+          full ? _tvExitFullscreen() : _tvEnterFullscreen(index);
+        case 'reload':
+          _reload(index);
+        case 'remove':
+          _tvRemoveScreen(index);
+      }
+    } finally {
+      _menuOpen = false;
+    }
+  }
+
+  /// Back: the channel with the sound goes back to the player that opened
+  /// Multiview (null when no screen plays).
+  void _leave() {
+    final active = _cells[_activeCell].channel ??
+        _cells.map((c) => c.channel).whereType<Channel>().firstOrNull;
+    // Every screen lets go of its stream now, not after the closing
+    // animation (dispose): the player that opened Multiview reconnects at
+    // once, and many accounts allow one connection.
+    for (final cell in _cells) {
+      final player = cell.player;
+      if (player == null) continue;
+      DesktopLiveRecovery.of(player).stop();
+      unawaited(player.stop());
+    }
+    Navigator.of(context).pop(active);
   }
 
   bool _playing(_MultiviewCell c) => c.channel != null && c.player != null;
@@ -110,7 +504,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     if (!_playing(_cells[0])) _moveToMain(_cells.indexWhere(_playing));
     setState(() => _swapMode = true);
     _setSwapAudio();
-    _keys.requestFocus();
+    _cellFocus[0].requestFocus();
     debugPrint('DesktopMultiview: swap mode on');
   }
 
@@ -153,6 +547,19 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (_tv &&
+        !_swapMode &&
+        e is KeyDownEvent &&
+        e.logicalKey == LogicalKeyboardKey.arrowUp &&
+        _fullscreen == null &&
+        _panelFor == null) {
+      final i = _cellFocus.indexWhere((n) => n.hasFocus);
+      if (i < 0 || _rects[i] == null) return KeyEventResult.ignored;
+      final top = _rects.whereType<Rect>().map((r) => r.top).reduce(math.min);
+      if (_rects[i]!.top > top + 1) return KeyEventResult.ignored;
+      _revealHeader(focus: true);
+      return KeyEventResult.handled;
+    }
     if (!_swapMode || e is KeyUpEvent) return KeyEventResult.ignored;
     final key = e.logicalKey;
     if (key == LogicalKeyboardKey.arrowDown ||
@@ -200,7 +607,14 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
 
   @override
   void dispose() {
+    _headerTimer?.cancel();
+    _headerScope.dispose();
+    _headerFirst.dispose();
+    _panelPick?.complete(null);
     _keys.dispose();
+    for (final node in _cellFocus) {
+      node.dispose();
+    }
     for (final cell in _cells) {
       cell.completedSubscription?.cancel();
       DesktopLiveRecovery.disposePlayer(cell.player);
@@ -273,198 +687,530 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       builder: (_) => _ChannelPickerDialog(channels: channels),
     );
     if (chosen != null) _assign(index, chosen);
+    if (mounted && _tv) _cellFocus[index].requestFocus();
+  }
+
+  /// Remote: OK on the screen with the sound. The mouse has these as
+  /// buttons on the screen itself.
+  Future<void> _cellMenu(int index) async {
+    final channel = _cells[index].channel;
+    if (channel == null) return;
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        title: Text(channel.name),
+        children: [
+          TvDialogOption(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop('change'),
+            child: Text(tr('Change channel')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('reload'),
+            child: Text(tr('Reload')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('remove'),
+            child: Text(tr('Remove')),
+          ),
+          if (_canSwap && !_swapMode)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('swap'),
+              child: Text(tr('Swap mode')),
+            ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'change':
+        await _openPicker(index);
+      case 'reload':
+        _reload(index);
+      case 'remove':
+        _clear(index);
+      case 'swap':
+        _enterSwapMode();
+    }
+    if (mounted && choice != 'change' && choice != 'swap') {
+      _cellFocus[index].requestFocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Back in Swap mode ends it first.
-      canPop: !_swapMode,
+      // Back in Swap mode ends it first; otherwise it leaves with the
+      // channel that has the sound ([_leave]).
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _exitSwapMode();
+        if (didPop) return;
+        if (_swapMode) {
+          _exitSwapMode();
+        } else if (_tv && _panelFor != null) {
+          if (!(_panelKey.currentState?.back() ?? false)) _closePanel();
+        } else if (_tv && _fullscreen != null) {
+          _tvExitFullscreen();
+        } else {
+          _leave();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Focus(
           focusNode: _keys,
-          autofocus: true,
+          canRequestFocus: false,
+          skipTraversal: true,
           onKeyEvent: _onKey,
-          child: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                  child: Row(
+          child: _tv
+              ? SafeArea(child: _buildTv())
+              : SafeArea(
+                  child: Column(
                     children: [
-                      IconButton(
-                        tooltip: tr('Back'),
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Text(tr('Multiview'),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 8),
-                      PopupMenuButton<_MultiviewLayout>(
-                        tooltip: tr('Layout'),
-                        icon: const Icon(Icons.grid_view, color: Colors.white),
-                        onSelected: _setLayout,
-                        itemBuilder: (context) => [
-                          CheckedPopupMenuItem(
-                            value: _MultiviewLayout.dual,
-                            checked: _layout == _MultiviewLayout.dual,
-                            child: Text(tr('2 channels')),
-                          ),
-                          CheckedPopupMenuItem(
-                            value: _MultiviewLayout.quad,
-                            checked: _layout == _MultiviewLayout.quad,
-                            child: Text(tr('4 channels')),
-                          ),
-                          CheckedPopupMenuItem(
-                            value: _MultiviewLayout.main,
-                            checked: _layout == _MultiviewLayout.main,
-                            child: Text(tr('1 + 3 screens')),
-                          ),
-                        ],
-                      ),
-                      if (_layout == _MultiviewLayout.main)
-                        TextButton.icon(
-                          icon: Icon(Icons.swap_vert,
-                              color: _swapMode ? Colors.amber : Colors.white),
-                          label: Text(tr('Swap mode'),
-                              style: TextStyle(
-                                  color:
-                                      _swapMode ? Colors.amber : Colors.white)),
-                          onPressed: _swapMode
-                              ? _exitSwapMode
-                              : _canSwap
-                                  ? _enterSwapMode
-                                  : null,
-                        ),
-                      const Spacer(),
-                      if (_swapMode)
-                        const _DesktopSwapPill()
-                      else ...[
-                        const Icon(Icons.volume_up,
-                            color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(tr('= audio — click a channel to switch'),
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12)),
-                      ],
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    // Stacked (Column), not side-by-side — requested
-                    // directly: splitting a landscape screen into left/
-                    // right halves squeezes each cell into a tall, narrow
-                    // near-square, badly distorting a widescreen video's
-                    // actual shape. Splitting top/bottom instead lets each
-                    // cell span the full screen width, keeping something
-                    // much closer to its real aspect ratio even though it's
-                    // shorter.
-                    // The cell *frame* (border/header/buttons) fills the
-                    // whole row, same as a quad cell fills its quarter —
-                    // constraining the whole frame to 16:9 (an earlier
-                    // version of this fix) made dual cells look noticeably
-                    // smaller than quad's. Only the video itself is aspect-
-                    // constrained now (inside `_buildCell`), letterboxing
-                    // within the full-size frame instead of shrinking the
-                    // frame around it.
-                    // Flex 13:7 instead of a flat 50/50 split when only one
-                    // of the two cells actually has a channel in it — a
-                    // plain even split made a single active stream look
-                    // small (letterboxed within an exactly-half-height row),
-                    // reported directly as needing to be "bigger by 30%".
-                    // 13:7 gives the occupied row exactly 65% of the
-                    // available height, i.e. 1.3x the even-split baseline —
-                    // once both cells are filled they're back to equal flex
-                    // (13:13) and split evenly like a normal multiview grid.
-                    child: _layout == _MultiviewLayout.main
-                        ? Row(
-                            children: [
-                              Expanded(
-                                  flex: 3,
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(3),
-                                      child: _DesktopSwapFlash(
-                                          swaps: _swapCount,
-                                          child: _buildCell(0)))),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    for (var i = 1; i < _cellCount; i++)
-                                      Expanded(
-                                          child: Padding(
-                                              padding: const EdgeInsets.all(3),
-                                              child: _buildCell(i))),
-                                  ],
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              tooltip: tr('Back'),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
+                              onPressed: _leave,
+                            ),
+                            Text(tr('Multiview'),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            PopupMenuButton<_MultiviewLayout>(
+                              tooltip: tr('Layout'),
+                              icon: const Icon(Icons.grid_view,
+                                  color: Colors.white),
+                              onSelected: _setLayout,
+                              itemBuilder: (context) => [
+                                CheckedPopupMenuItem(
+                                  value: _MultiviewLayout.dual,
+                                  checked: _layout == _MultiviewLayout.dual,
+                                  child: Text(tr('2 channels')),
                                 ),
+                                CheckedPopupMenuItem(
+                                  value: _MultiviewLayout.quad,
+                                  checked: _layout == _MultiviewLayout.quad,
+                                  child: Text(tr('4 channels')),
+                                ),
+                                CheckedPopupMenuItem(
+                                  value: _MultiviewLayout.main,
+                                  checked: _layout == _MultiviewLayout.main,
+                                  child: Text(tr('1 + 3 screens')),
+                                ),
+                              ],
+                            ),
+                            if (_layout == _MultiviewLayout.main)
+                              TextButton.icon(
+                                icon: Icon(Icons.swap_vert,
+                                    color: _swapMode
+                                        ? Colors.amber
+                                        : Colors.white),
+                                label: Text(tr('Swap mode'),
+                                    style: TextStyle(
+                                        color: _swapMode
+                                            ? Colors.amber
+                                            : Colors.white)),
+                                onPressed: _swapMode
+                                    ? _exitSwapMode
+                                    : _canSwap
+                                        ? _enterSwapMode
+                                        : null,
                               ),
+                            const Spacer(),
+                            if (_swapMode)
+                              const _DesktopSwapPill()
+                            else ...[
+                              const Icon(Icons.volume_up,
+                                  color: Colors.amber, size: 16),
+                              const SizedBox(width: 4),
+                              Text(tr('= audio — click a channel to switch'),
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 12)),
                             ],
-                          )
-                        : _layout == _MultiviewLayout.dual
-                            ? Column(
-                                children: [
-                                  Expanded(
-                                      flex: _cells[0].channel != null ? 13 : 7,
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(3),
-                                          child: _buildCell(0))),
-                                  Expanded(
-                                      flex: _cells[1].channel != null ? 13 : 7,
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(3),
-                                          child: _buildCell(1))),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  Expanded(
-                                    child: Row(
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          // Stacked (Column), not side-by-side — requested
+                          // directly: splitting a landscape screen into left/
+                          // right halves squeezes each cell into a tall, narrow
+                          // near-square, badly distorting a widescreen video's
+                          // actual shape. Splitting top/bottom instead lets each
+                          // cell span the full screen width, keeping something
+                          // much closer to its real aspect ratio even though it's
+                          // shorter.
+                          // The cell *frame* (border/header/buttons) fills the
+                          // whole row, same as a quad cell fills its quarter —
+                          // constraining the whole frame to 16:9 (an earlier
+                          // version of this fix) made dual cells look noticeably
+                          // smaller than quad's. Only the video itself is aspect-
+                          // constrained now (inside `_buildCell`), letterboxing
+                          // within the full-size frame instead of shrinking the
+                          // frame around it.
+                          // Flex 13:7 instead of a flat 50/50 split when only one
+                          // of the two cells actually has a channel in it — a
+                          // plain even split made a single active stream look
+                          // small (letterboxed within an exactly-half-height row),
+                          // reported directly as needing to be "bigger by 30%".
+                          // 13:7 gives the occupied row exactly 65% of the
+                          // available height, i.e. 1.3x the even-split baseline —
+                          // once both cells are filled they're back to equal flex
+                          // (13:13) and split evenly like a normal multiview grid.
+                          child: _layout == _MultiviewLayout.main
+                              ? Row(
+                                  children: [
+                                    Expanded(
+                                        flex: 3,
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(3),
+                                            child: _DesktopSwapFlash(
+                                                swaps: _swapCount,
+                                                child: _buildCell(0)))),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          for (var i = 1; i < _cellCount; i++)
+                                            Expanded(
+                                                child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(3),
+                                                    child: _buildCell(i))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : _layout == _MultiviewLayout.dual
+                                  ? Column(
                                       children: [
                                         Expanded(
+                                            flex: _cells[0].channel != null
+                                                ? 13
+                                                : 7,
                                             child: Padding(
                                                 padding:
                                                     const EdgeInsets.all(3),
                                                 child: _buildCell(0))),
                                         Expanded(
+                                            flex: _cells[1].channel != null
+                                                ? 13
+                                                : 7,
                                             child: Padding(
                                                 padding:
                                                     const EdgeInsets.all(3),
                                                 child: _buildCell(1))),
                                       ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Row(
+                                    )
+                                  : Column(
                                       children: [
                                         Expanded(
-                                            child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(3),
-                                                child: _buildCell(2))),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                  child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              3),
+                                                      child: _buildCell(0))),
+                                              Expanded(
+                                                  child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              3),
+                                                      child: _buildCell(1))),
+                                            ],
+                                          ),
+                                        ),
                                         Expanded(
-                                            child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(3),
-                                                child: _buildCell(3))),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                  child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              3),
+                                                      child: _buildCell(2))),
+                                              Expanded(
+                                                  child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              3),
+                                                      child: _buildCell(3))),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                  ),
-                                ],
-                              ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+
+  /// A remote: Android's Multiview (see [_slots]).
+  Widget _buildTv() {
+    final size = MediaQuery.sizeOf(context);
+    final buttonStyle =
+        multiviewHeaderButtonStyle(Theme.of(context).colorScheme.primary);
+    final header = Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.92),
+            Colors.black.withValues(alpha: 0.75),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.7, 1.0],
+        ),
+      ),
+      child: Focus(
+        // Listen-only: Down from the header goes back to the first screen.
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (_, e) {
+          if (e is KeyDownEvent &&
+              e.logicalKey == LogicalKeyboardKey.arrowDown) {
+            _cellFocus[0].requestFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: tr('Back'),
+              style: buttonStyle,
+              focusNode: _headerFirst,
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: _leave,
+            ),
+            Text(tr('Multiview'),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(width: 12),
+            if (_fullscreen == null)
+              TextButton.icon(
+                style: buttonStyle,
+                onPressed: _tvToggleMain,
+                icon: Icon(_main ? Icons.view_quilt : Icons.grid_view,
+                    color: Colors.white, size: 18),
+                label: Text(_main ? tr('1 + 3 screens') : tr('Equal screens'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            if (_main && _canSwap && _fullscreen == null)
+              TextButton.icon(
+                style: buttonStyle,
+                onPressed: _enterSwapMode,
+                icon:
+                    const Icon(Icons.swap_vert, color: Colors.white, size: 18),
+                label: Text(tr('Swap mode'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            if (_slots < _cellCount && _fullscreen == null && !_main)
+              TextButton.icon(
+                style: buttonStyle,
+                onPressed: _tvAddScreen,
+                icon: const Icon(Icons.add_box_outlined,
+                    color: Colors.white, size: 18),
+                label: Text(tr('Add screen'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            const Spacer(),
+            const Icon(Icons.volume_up, color: Colors.amber, size: 16),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                  tr('= audio follows the selected screen · OK for options · hold OK to enlarge'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: LayoutBuilder(builder: (context, box) {
+            _rects = multiviewSlotRects(box.biggest, _slots,
+                enlarged: _enlarged, fullscreen: _fullscreen, main: _main);
+            // The big / full-screen screen last, so it's painted on top.
+            final top = _fullscreen ?? _enlarged;
+            final order = [
+              for (var i = 0; i < _cellCount; i++)
+                if (i != top) i,
+              if (top != null) top,
+            ];
+            return Stack(
+              children: [
+                for (final i in order)
+                  if (_rects[i] != null)
+                    AnimatedPositioned.fromRect(
+                      key: ValueKey(i),
+                      rect: _rects[i]!,
+                      duration: _anim,
+                      curve: Curves.easeInOutCubic,
+                      child: _buildTvCell(i, full: i == _fullscreen),
+                    ),
               ],
+            );
+          }),
+        ),
+        if (_swapMode && _rects[0] != null)
+          Positioned(
+            left: _rects[0]!.left,
+            width: _rects[0]!.width,
+            top: math.min(_rects[0]!.bottom + 8, size.height - 48),
+            child: const Center(child: MultiviewSwapModePill()),
+          ),
+        if (_panelFor != null)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: FocusScope(
+              child: SportsModeLivePanel(
+                key: _panelKey,
+                current: _cells[_panelFor!].channel,
+                onPlay: (channel, _) async => _closePanel(channel),
+                onRight: () => _panelKey.currentState?.focusGroups(),
+                liveGames: _panelLiveGames,
+              ),
+            ),
+          ),
+        // The header is hidden on purpose: a small Up arrow says it's there.
+        if (!_headerShown && _fullscreen == null)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius:
+                        BorderRadius.vertical(bottom: Radius.circular(12)),
+                  ),
+                  child: const Icon(Icons.keyboard_arrow_up,
+                      color: Colors.white70, size: 20),
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: !_headerShown,
+            child: AnimatedSlide(
+              offset: _headerShown ? Offset.zero : const Offset(0, -1),
+              duration: const Duration(milliseconds: 220),
+              child: ExcludeFocus(
+                excluding: !_headerShown,
+                child: FocusScope(node: _headerScope, child: header),
+              ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  /// A remote: Android's screen tile ([MultiviewCellTile]). OK: an empty
+  /// screen opens the live guide, a playing one takes the sound and opens
+  /// its menu. Hold OK: enlarge (1 + 3: to the big screen; the big one or a
+  /// single screen: full screen).
+  Widget _buildTvCell(int index, {bool full = false}) {
+    final cell = _cells[index];
+    void onTap() {
+      if (_swapMode) {
+        if (index == 0) {
+          _exitSwapMode();
+        } else if (_playing(cell)) {
+          _moveToMain(index);
+        }
+        return;
+      }
+      if (cell.channel == null) {
+        unawaited(_tvOpenPicker(index));
+        return;
+      }
+      _setActive(index);
+      unawaited(_tvCellMenu(index));
+    }
+
+    void onHold() {
+      if (cell.channel == null || _swapMode) return;
+      if (_main) {
+        if (index == 0) {
+          full ? _tvExitFullscreen() : _tvEnterFullscreen(index);
+        } else {
+          _moveToMain(index);
+          _cellFocus[0].requestFocus();
+        }
+        return;
+      }
+      if (_slots < 2) {
+        full ? _tvExitFullscreen() : _tvEnterFullscreen(index);
+      } else {
+        _tvToggleEnlarge(index);
+      }
+    }
+
+    final controller = cell.controller;
+    return HoldToActivate(
+      onTap: onTap,
+      onHold: cell.channel == null ? null : onHold,
+      child: MultiviewCellTile(
+        focusNode: _cellFocus[index],
+        channel: cell.channel,
+        video: controller == null
+            ? null
+            : Video(
+                // A swap moves the controller to another screen.
+                key: ObjectKey(controller),
+                controller: controller,
+                controls: NoVideoControls,
+                pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
+        active: index == _activeCell && cell.channel != null,
+        onTap: onTap,
+        onLongPress: cell.channel == null ? null : onHold,
+        // The sound follows the selected screen (TiviMate-style).
+        onFocused: () => _setActive(index),
+        widthBoost: 1,
+        fill: true,
+        bare: full,
+        alignment: Alignment.center,
+        badge: _swapMode && index == 0
+            ? MultiviewSwapModeBadge(swaps: _swapCount)
+            : null,
       ),
     );
   }
@@ -472,22 +1218,41 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   Widget _buildCell(int index) {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
+    // The frame shows the remote's place; a mouse needs none.
+    final focused = _tv && _focusedCell == index;
     return InkWell(
+      focusNode: _cellFocus[index],
+      autofocus: index == 0,
+      onFocusChange: (f) {
+        if (f) {
+          setState(() => _focusedCell = index);
+        } else if (_focusedCell == index) {
+          setState(() => _focusedCell = null);
+        }
+      },
       onTap: () {
         if (cell.channel == null) {
           _openPicker(index);
         } else if (_swapMode) {
           // A small screen moves up; the big one ends Swap mode.
           index == 0 ? _exitSwapMode() : _moveToMain(index);
+        } else if (_tv && active) {
+          _cellMenu(index);
         } else {
           _setActive(index);
         }
       },
       child: Container(
+        // The remote's place: white, over the gold of the screen with the
+        // sound (InkWell's own focus colour is drawn under the video).
         decoration: BoxDecoration(
           border: Border.all(
-              color: active ? Colors.amber : Colors.white24,
-              width: active ? 3 : 1),
+              color: focused
+                  ? Colors.white
+                  : active
+                      ? Colors.amber
+                      : Colors.white24,
+              width: focused || active ? 3 : 1),
           borderRadius: BorderRadius.circular(8),
         ),
         clipBehavior: Clip.antiAlias,
@@ -510,7 +1275,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                         key: ObjectKey(cell.controller),
                         controller: cell.controller!,
                         controls: NoVideoControls,
-                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
+                        pauseUponEnteringBackgroundMode:
+                            mediaKitPausesInBackground),
                   ),
                 )
               : const ColoredBox(
@@ -551,58 +1317,63 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                         ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        if (active) ...[
-                          const Icon(Icons.volume_up,
-                              color: Colors.amber,
-                              size: 15,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 4)
-                              ]),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: Text(
-                            cell.channel!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                    // A remote never stops on these (they show on mouse
+                    // hover): OK on the screen opens the same actions.
+                    child: ExcludeFocus(
+                      excluding: _tv,
+                      child: Row(
+                        children: [
+                          if (active) ...[
+                            const Icon(Icons.volume_up,
+                                color: Colors.amber,
+                                size: 15,
                                 shadows: [
                                   Shadow(color: Colors.black, blurRadius: 4)
                                 ]),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              cell.channel!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: [
+                                    Shadow(color: Colors.black, blurRadius: 4)
+                                  ]),
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.refresh,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Reload'),
-                          onPressed: () => _reload(index),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.swap_horiz,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Change channel'),
-                          onPressed: () => _openPicker(index),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.close,
-                              color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: tr('Remove'),
-                          onPressed: () => _clear(index),
-                        ),
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.refresh,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Reload'),
+                            onPressed: () => _reload(index),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.swap_horiz,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Change channel'),
+                            onPressed: () => _openPicker(index),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.close,
+                                color: Colors.white70, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: tr('Remove'),
+                            onPressed: () => _clear(index),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -632,6 +1403,9 @@ enum _PickerFilter { all, live, sports }
 
 class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode(debugLabel: 'desktop-multiview-search');
+
+  bool get _tv => context.read<AppPreferences?>()?.isTelevision ?? false;
   String _query = '';
   _PickerFilter _filter = _PickerFilter.all;
 
@@ -662,6 +1436,7 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -696,18 +1471,26 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
           children: [
             Padding(
               padding: const EdgeInsets.all(12),
-              // tv-text-field-gate: exempt — Windows only (no TV keyboard).
-              child: TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: tr('Search channels...'),
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                  border: const OutlineInputBorder(),
+              // On a computer it types at once (autofocus); with a remote
+              // (Apple TV) the keyboard waits for OK and the arrows pass
+              // over it, and the first channel has focus instead: a
+              // focused field kept the arrows for its cursor.
+              child: TvTextFieldGate(
+                focusNode: _searchFocus,
+                builder: (context, readOnly) => TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocus,
+                  readOnly: readOnly,
+                  autofocus: !_tv,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: tr('Search channels...'),
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
                 ),
-                onChanged: (v) => setState(() => _query = v),
               ),
             ),
             Padding(
@@ -739,9 +1522,14 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                             _filter == _PickerFilter.live && i < live.length
                                 ? live[i]
                                 : null;
+                        // Remote: the list starts focused (see the search
+                        // field above).
+                        final first = i == 0 && _tv;
                         if (row != null) {
                           final n = row.matches.length;
-                          return GlassFocusFrame(child: ListTile(
+                          return GlassFocusFrame(
+                              child: ListTile(
+                            autofocus: first,
                             leading: const Icon(Icons.sports_score,
                                 color: Colors.white54),
                             title: Text(MultiviewSports.label(row.game),
@@ -767,7 +1555,9 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                             },
                           ));
                         }
-                        return GlassFocusFrame(child: ListTile(
+                        return GlassFocusFrame(
+                            child: ListTile(
+                          autofocus: first,
                           leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
                               ? Image.network(c.logoUrl!,
                                   width: 32,

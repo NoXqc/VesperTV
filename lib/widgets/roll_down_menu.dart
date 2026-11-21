@@ -6,6 +6,7 @@ import 'hold_to_activate.dart';
 import 'glass_menu.dart';
 import 'ink_layer.dart';
 import '../utils/refined_finish.dart';
+import 'tv_canvas.dart';
 
 /// One choice in a [showRollDownMenu].
 class RollDownMenuItem<T> {
@@ -50,7 +51,7 @@ class RollDownMenuAction<T> {
 Rect? rollDownAnchorOf(BuildContext? context) {
   final box = context?.findRenderObject();
   if (box is! RenderBox || !box.hasSize) return null;
-  return box.localToGlobal(Offset.zero) & box.size;
+  return overlayRectOf(context!, box);
 }
 
 /// A small menu in the floating bar's black-and-gold look that unrolls from

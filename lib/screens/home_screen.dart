@@ -57,6 +57,7 @@ import 'sports_screen.dart';
 import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
 import '../widgets/ink_layer.dart';
+import '../widgets/desktop_video_status.dart';
 
 /// The Home page (top of the tabs column, or Settings > Startup > Open on:
 /// Home): the viewer's profiles strip, a hero for the focused card, then
@@ -2401,10 +2402,13 @@ class _MiniPlayer extends StatelessWidget {
             name: channel.name,
             live: true,
             showName: channel.id != focusedChannelId,
-            video: Video(
-                controller: controller,
-                controls: NoVideoControls,
-                pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
+            video: DesktopVideoWithSpinner(
+                player: controller.player,
+                video: Video(
+                    controller: controller,
+                    controls: NoVideoControls,
+                    pauseUponEnteringBackgroundMode:
+                        mediaKitPausesInBackground)),
             onTap: () => _HomeScreenState._playChannel(context, channel),
           );
         },

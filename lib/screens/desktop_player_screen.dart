@@ -31,13 +31,23 @@ import '../widgets/player_clock_pill.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_audio_button.dart';
 import '../services/desktop_catchup.dart';
-import '../services/catchup_format.dart';
 import '../utils/time_format.dart';
 import '../widgets/desktop_data_pool_card.dart';
 import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_subtitles.dart';
 import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
+import '../utils/channel_name_matching.dart';
+import '../widgets/player_controls.dart';
+import '../widgets/player_overlays.dart';
+import '../widgets/desktop_video_status.dart';
+import '../utils/scrub_steps.dart';
+import '../widgets/live_channel_info_card.dart';
+import '../widgets/audio_delay_adjuster.dart';
+import '../widgets/data_pool_card.dart';
+import '../services/catchup_session.dart';
+import '../services/subtitle_tracks.dart' show languageName;
+import 'search_screen.dart';
 import '../widgets/gold_tag.dart';
 import '../services/desktop_stream_setup.dart';
 import '../services/desktop_live_recovery.dart';
@@ -51,6 +61,8 @@ import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
+import 'desktop_multiview_screen.dart';
+import '../services/ci_tour.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -180,21 +192,71 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// pool button or the I key).
   bool _dataPoolOpen = false;
 
+  /// Apple TV remote: the Android TV player's flow and look (owner,
+  /// 2026-11-20: "I don't know how we would make two TV apps that don't
+  /// look the same" - he guides Apple TV users from his Android box). A zap
+  /// shows the live info bar alone ([_tvZapInfo], nothing focused); OK
+  /// shows the bar with its buttons ([_controlsVisible]: [LiveInfoBar] on a
+  /// live channel, the transport bar on a movie / episode / catch-up); Down
+  /// from it, the options row ([_tvOptions], [PlayerOptionsPill]). Up or
+  /// Back there = the bar again; Back on the bar = the picture.
+  bool _tvOptions = false;
+  bool _tvZapInfo = false;
+  final FocusScopeNode _tvBarScope =
+      FocusScopeNode(debugLabel: 'desktop-player-bar');
+  final FocusScopeNode _tvOptionsScope =
+      FocusScopeNode(debugLabel: 'desktop-player-options');
+
+  /// The bar button that had focus when the options row opened.
+  FocusNode? _tvFocusBeforeOptions;
+
+  /// Catch-up on a remote: the channel card's Channel schedule above the
+  /// bar (Up from the bar), like Android's.
+  final FocusNode _scheduleChipFocus =
+      FocusNode(debugLabel: 'desktop-player-schedule-chip');
+
+  /// Stream info from the options row: the Data pool card for 10 s.
+  Timer? _dataPoolTimer;
+
+  /// Remote Fast forward / Rewind (and Left on a movie), Android's: each
+  /// press moves a target ([SkipCue] in the middle; a held key's steps
+  /// grow), one seek 700 ms after the last press. Live with catch-up:
+  /// Rewind = minutes back ([_skipLive]).
+  Duration? _skipTarget;
+  bool _skipLive = false;
+  int _skipSteps = 0;
+  final _scrubSteps = ScrubSteps();
+  Timer? _skipCommit;
+
+  /// Remote, movie / episode: Android's error screen when the stream fails
+  /// before it plays (the friendly text + the technical details, links
+  /// left out). Live has DesktopLiveRecovery's reconnects instead.
+  String? _tvError;
+  StreamSubscription<String>? _errorSubscription;
+  Timer? _errorCheck;
+
+  /// Remote: Android's Up Next (Settings > Playback > Up Next): the card
+  /// in the last 45 s ([UpNextBubble]) and, on "early", the next episode
+  /// 30 s before the end. [_upNextDismissed] = the episode whose card was
+  /// closed; [_upNextFrom] = the one that already started its next.
+  String? _upNextDismissed;
+  String? _upNextFrom;
+  StreamSubscription<Duration>? _upNextSubscription;
+
   /// When the current stream was opened (the card's "Playing for").
   DateTime _openedAt = DateTime.now();
 
   /// Catch-up of the live channel ([DesktopCatchup]); made on first use.
   DesktopCatchup? _catchupPlayer;
-  DesktopCatchup get _catchupCtl => _catchupPlayer ??= DesktopCatchup(_player,
-      profileFor: (id) => context
-          .read<PlaylistManager>()
-          .profiles
-          .where((p) => p.id == id)
-          .firstOrNull,
-      guide: (live) => context.read<EpgService>().getPrograms(live.epgId),
-      keepPlaying: () => context.read<StorageService>().getCatchupKeepPlaying(),
-      format: CatchupFormat(context.read<StorageService>()),
-      onLive: _playLiveAgain);
+
+  /// On the app's services, not this screen's context: Back hands it to
+  /// the guide's preview ([DesktopMiniPlayer]) with the player.
+  DesktopCatchup get _catchupCtl =>
+      _catchupPlayer ??= DesktopCatchup.forApp(_player,
+          playlists: context.read<PlaylistManager>(),
+          epg: context.read<EpgService>(),
+          storage: context.read<StorageService>(),
+          onLive: _playLiveAgain);
 
   /// Playing a catch-up programme of [_currentChannel] (still the live
   /// channel, so history / favourites / rows stay on it).
@@ -203,7 +265,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// When the live channel was paused: Play after more than 90 s resumes
   /// from there as catch-up (timeshift, like Android).
   DateTime? _livePausedAt;
-  final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
+
+  /// Holds the keys while the picture has them; never an arrow's target
+  /// (requestFocus still works). Screen-sized, its centre was nearer than
+  /// the next button: Left from Stop landed here instead of on Multiview
+  /// (Apple TV tour, +915), the bar stayed up with nothing focused.
+  final FocusNode _rootFocus =
+      FocusNode(debugLabel: 'desktop-player-root', skipTraversal: true);
 
   /// Enter on a live channel focuses Play / Pause: the keyboard's way into
   /// the bar, since Up / Down on the picture change channel.
@@ -260,6 +328,19 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   Timer? _zapHud;
   void _flashControls() {
     if (_touch) return;
+    // Remote, live: the info bar alone, nothing in it focused (Android's
+    // zap); a bar or options row the viewer opened stays as it is.
+    if (_tvRemote && _isLive && !_inCatchup) {
+      if (_controlsVisible || _tvOptions) return;
+      _zapHud?.cancel();
+      setState(() => _tvZapInfo = true);
+      // The CI tour's screenshot comes a few seconds after the key.
+      _zapHud = Timer(const Duration(seconds: CiTour.enabled ? 12 : 3), () {
+        _zapHud = null;
+        if (mounted) setState(() => _tvZapInfo = false);
+      });
+      return;
+    }
     final flashing = _zapHud != null;
     if (_controlsVisible && !flashing) return;
     _zapHud?.cancel();
@@ -273,13 +354,75 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void _stopZapHud() {
     _zapHud?.cancel();
     _zapHud = null;
+    _tvZapInfo = false;
+  }
+
+  /// A TV remote (Apple TV), not a mouse and keyboard: the bar hides when
+  /// nothing on it has focus, OK opens it on Play / Pause, and it hides
+  /// again by itself ([_armTvBarIdle]). A computer's bar shows from the
+  /// start and stays. Discord (Apple TV, 2026-11-20): the bar was on screen
+  /// with the picture holding the remote, so every arrow changed channel
+  /// or opened the side panel instead of moving along it.
+  bool get _tv => context.read<AppPreferences>().isTelevision;
+
+  /// A TV remote's layout (Apple TV): Android TV's bars, see [_tvOptions].
+  bool get _tvRemote => _tv && !_touch;
+
+  /// Remote, live: the info bar shows (a zap, or OK).
+  bool get _tvInfoBarShown =>
+      _tvRemote && _isLive && !_inCatchup && (_controlsVisible || _tvZapInfo);
+
+  /// Remote: something sits at the bottom (the bar, the info bar, the
+  /// options row).
+  bool get _tvChromeShown => _controlsVisible || _tvZapInfo || _tvOptions;
+
+  /// OK on the picture: the bar with Play / Pause focused (the keyboard's
+  /// and the remote's way into it).
+  void _showBarFocused() {
+    _stopZapHud();
+    setState(() {
+      _controlsVisible = true;
+      _tvOptions = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _playPauseFocus.context != null) {
+        _playPauseFocus.requestFocus();
+      }
+    });
+    _armTvBarIdle();
+  }
+
+  /// Remote: the bar hides 6 s after the last key while it has focus (not
+  /// while a menu from it is open or nothing plays), and the picture takes
+  /// the arrows again.
+  Timer? _tvBarIdle;
+  void _armTvBarIdle() {
+    if (!_tv) return;
+    _tvBarIdle?.cancel();
+    _tvBarIdle = Timer(const Duration(seconds: 6), () {
+      _tvBarIdle = null;
+      if (!mounted) return;
+      if (ModalRoute.isCurrentOf(context) == false || !_player.state.playing) {
+        _armTvBarIdle();
+        return;
+      }
+      final inBar = _rootFocus.hasFocus && !_rootFocus.hasPrimaryFocus;
+      if (!(_controlsVisible || _tvOptions) || !inBar) return;
+      setState(() {
+        _controlsVisible = false;
+        _tvOptions = false;
+      });
+      _rootFocus.requestFocus();
+    });
   }
 
   void _openPanel() {
     if (!_isLive) return;
+    _stopZapHud();
     setState(() {
       _panelOpen = true;
       _controlsVisible = false;
+      _tvOptions = false;
     });
   }
 
@@ -289,6 +432,146 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _rootFocus.requestFocus();
   }
 
+  /// Remote: Down from the bar = the options row, on its first tile.
+  void _openTvOptions() {
+    _tvFocusBeforeOptions = FocusManager.instance.primaryFocus;
+    _stopZapHud();
+    _dataPoolTimer?.cancel();
+    setState(() {
+      _tvOptions = true;
+      _controlsVisible = false;
+      // It would sit over the row; Stream info reopens it.
+      _dataPoolOpen = false;
+    });
+    _armTvBarIdle();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_tvOptions) return;
+      _tvOptionsScope.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_tvOptions) return;
+        if (FocusManager.instance.primaryFocus == _tvOptionsScope) {
+          _tvOptionsScope.nextFocus();
+        }
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    });
+  }
+
+  /// Remote: Up / Back in the options row = the bar, on the button it left.
+  void _closeTvOptions() {
+    if (!_tvOptions) return;
+    setState(() {
+      _tvOptions = false;
+      _controlsVisible = true;
+    });
+    _armTvBarIdle();
+    final previous = _tvFocusBeforeOptions;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (previous != null && previous.context != null) {
+        previous.requestFocus();
+      } else if (_playPauseFocus.context != null) {
+        _playPauseFocus.requestFocus();
+      }
+    });
+  }
+
+  /// An Up / Down that stays inside the bar (a move that left it is undone).
+  bool _tryTvBarMove(TraversalDirection direction) {
+    final previous = FocusManager.instance.primaryFocus;
+    final moved = previous?.focusInDirection(direction) ?? false;
+    if (moved && _tvBarScope.hasFocus) return true;
+    if (moved) previous?.requestFocus();
+    return false;
+  }
+
+  /// Remote Right on a live channel: the channel watched before it.
+  void _lastChannel() {
+    final previous = _DesktopLiveHistory.recentExcluding(_currentChannel.id);
+    if (previous.isEmpty) return;
+    _flashControls();
+    unawaited(_switchTo(previous.first));
+  }
+
+  /// Options row > Stream info: the Data pool card for 10 s (Android's).
+  void _showTvDataPool() {
+    _dataPoolTimer?.cancel();
+    setState(() {
+      _tvOptions = false;
+      _controlsVisible = false;
+      _dataPoolOpen = true;
+    });
+    _rootFocus.requestFocus();
+    _dataPoolTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _dataPoolOpen = false);
+    });
+  }
+
+  /// Options row > Search: Back first (a live channel goes on playing in
+  /// the guide's preview), then Search over the guide. Over this player, a
+  /// channel picked in Search would open a second player and a second
+  /// stream on top of this one.
+  void _openTvSearch() {
+    final navigator = Navigator.of(context);
+    final id = _currentChannel.id;
+    final scope = id.startsWith('xt_vod_')
+        ? 'Movies'
+        : id.startsWith('xt_ep_')
+            ? 'TV Shows'
+            : 'TV';
+    _handleBack();
+    unawaited(navigator.push(
+        MaterialPageRoute(builder: (_) => SearchScreen(initialScope: scope))));
+  }
+
+  /// Options row > Start over: the programme on now, from its start.
+  void _startOver() {
+    final now =
+        context.read<EpgService>().getCurrentProgram(_currentChannel.epgId);
+    if (now != null) unawaited(_startCatchup(now.start));
+  }
+
+  /// Catch-up's previous (-1) programme, the one playing from its start
+  /// (0), the next one (1); no later programme known = live.
+  void _catchupJump(int step) {
+    _armTvBarIdle();
+    final at = _catchupCtl.playhead;
+    if (at == null) return;
+    final list = context.read<EpgService>().getPrograms(_currentChannel.epgId);
+    final target = step < 0
+        ? CatchupSession.programmeBefore(list, at)
+        : step == 0
+            ? CatchupSession.programmeAt(list, at)
+            : CatchupSession.programmeAfter(list, at);
+    if (target == null) {
+      if (step > 0) unawaited(_catchupCtl.backToLive());
+      return;
+    }
+    unawaited(_startCatchup(target.start));
+  }
+
+  /// The catch-up card's Channel schedule (remote): OK opens the schedule,
+  /// Down / Back go back to the bar.
+  KeyEventResult _onScheduleChipKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      if (event is KeyDownEvent) _openSchedule();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (event is KeyDownEvent) _playPauseFocus.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   /// iPhone: the live channel's schedule over the video (Android's info
   /// card "Channel schedule"): past programmes replay through catch-up,
   /// the one on now goes back to live, a later one opens its actions.
@@ -296,10 +579,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   void _openSchedule() {
     if (!_isLive) return;
+    _stopZapHud();
     setState(() {
       _scheduleOpen = true;
       _panelOpen = false;
       _controlsVisible = false;
+      _tvOptions = false;
     });
   }
 
@@ -319,7 +604,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (sources == null || _sourceDrawerOpen) return;
     final channelId = _currentChannel.id;
     _sourceBackGuard.opened();
-    setState(() => _controlsVisible = false);
+    setState(() {
+      _controlsVisible = false;
+      _tvOptions = false;
+    });
     try {
       final selection = await showArchiveSourceDrawer(context,
           sources: sources, channelId: channelId);
@@ -349,29 +637,56 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// a Dispatcharr channel), as Android's player lists them
   /// ([liveSourceRows]). This player (iPhone / iPad, Windows, macOS, Linux)
   /// had none (owner, 2026-11-18: iOS needs the Dispatcharr Sources too).
-  /// No "Add another source" row here: the playlist editor adds them.
+  /// The last row adds another source, like Android's (owner, 2026-11-20:
+  /// the Apple TV drawers must have everything Android TV's have).
   Future<void> _openLiveSources() async {
     if (!_isLive || _inCatchup || _sourceDrawerOpen) return;
     final manager = context.read<PlaylistManager>();
-    final playing = _currentChannel;
+    final id = _currentChannel.id;
     _sourceBackGuard.opened();
-    setState(() => _controlsVisible = false);
+    setState(() {
+      _controlsVisible = false;
+      _tvOptions = false;
+    });
     try {
-      final (:rows, canAdd: _) = await liveSourceRows(manager, playing);
-      if (!mounted || _currentChannel.id != playing.id) return;
-      final picked = await showLiveSourceDrawer(context,
-          entries: [for (final r in rows) r.$2]);
-      if (!mounted ||
-          picked == null ||
-          picked < 0 ||
-          _currentChannel.id != playing.id) {
-        return;
-      }
-      final note =
-          await playPickedLiveSource(playing, rows[picked].$1, _playLiveSource);
-      if (note != null && mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(note)));
+      // Android's drawer: the last row adds a source (a playlist editor
+      // fallback found by search), then the list opens again with it.
+      while (mounted && _currentChannel.id == id) {
+        final playing = _currentChannel;
+        final (:rows, :canAdd) = await liveSourceRows(manager, playing);
+        if (!mounted || _currentChannel.id != id) return;
+        final sources = [for (final r in rows) r.$1];
+        final picked = await showLiveSourceDrawer(context,
+            canAdd: canAdd, entries: [for (final r in rows) r.$2]);
+        if (!mounted || picked == null || _currentChannel.id != id) return;
+        if (picked != liveSourceAdd) {
+          final note = await playPickedLiveSource(
+              playing, sources[picked], _playLiveSource);
+          if (note != null && mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(note)));
+          }
+          return;
+        }
+        await manager.ensureLiveChannelsLoaded();
+        if (!mounted) return;
+        final fallback = await showLiveSourceSearch(context,
+            title: tr('Another source for {channel}',
+                {'channel': sources.first.name}),
+            channels: manager.visibleChannels(category: 'tv'),
+            suggest: channelCopyProbe(channelCopyKey(sources.first.name)),
+            skipUrls: {for (final s in sources) s.url},
+            describe: (c) => [
+                  manager.playlistNameFor(c.playlistId).trim(),
+                  c.group,
+                ].where((s) => s.isNotEmpty).join(' · '));
+        if (!mounted || fallback == null) continue;
+        final added = await manager.addLiveFallback(sources.first, fallback);
+        if (!mounted) return;
+        if (!added) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('That source is already on the list.'))));
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -438,6 +753,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void initState() {
     super.initState();
     _currentChannel = widget.channel;
+    if (_tv) {
+      // Remote: the bar shows the channel for 3 s, then the picture.
+      _controlsVisible = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _flashControls();
+      });
+    }
     DesktopPlayerControl.register(_control);
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
     _armWatchTimer();
@@ -450,7 +772,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       // tears it down unless Back hands it back. (It was skipped for a
       // taken player: Stop left the stream playing as sound only, one more
       // per channel picked after it. Windows user, +798, 2026-11-14.)
-      DesktopLiveRecovery.of(_player).watch(widget.channel);
+      // A catch-up from the guide's preview comes with its session.
+      final catchup = DesktopMiniPlayer.instance.claimCatchup(_player);
+      if (catchup != null) {
+        catchup.onLive = _playLiveAgain;
+        _catchupPlayer = catchup;
+        DesktopLiveRecovery.of(_player).stop();
+      } else {
+        DesktopLiveRecovery.of(_player).watch(widget.channel);
+      }
     } else {
       _player = newDesktopPlayer(bigCache: true);
       // Best-effort mpv/ffmpeg-level reconnect tuning for a live,
@@ -507,6 +837,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _progressTimer =
         Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
     _heightSubscription = _player.stream.height.listen((height) {
+      // A picture: whatever failed before it is over.
+      if (height != null && _tvError != null && mounted) {
+        setState(() => _tvError = null);
+      }
       if (!_isLive || height == null) return;
       Real4kChannels.record(
           _currentChannel.id, _player.state.width ?? 0, height);
@@ -517,6 +851,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       // mpv is stopped on purpose while Apple's player has the stream.
       if (completed && mounted && !_isLive && !_inPip) _resumeAfterCut();
     });
+    _errorSubscription = _player.stream.error.listen(_onPlayerError);
+    _upNextSubscription = _player.stream.position.listen(_checkUpNext);
     if (_touch) {
       IosPip.onStopped = _onPipStopped;
       // Full screen: no status bar. A phone turns sideways, also with its
@@ -847,6 +1183,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     final next = _nextEpisode;
     if (next == null) return;
     if (context.read<StorageService>().getUpNextMode() == 'off') return;
+    // Remote: its Up Next card was closed (Android: no next episode then).
+    if (_tvRemote && _upNextDismissed == _currentChannel.id) return;
+    if (_upNextFrom == _currentChannel.id) return;
     debugPrint('DesktopPlayer: episode ended, Up next');
     unawaited(_switchTo(next));
   }
@@ -883,6 +1222,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         generation == _openGeneration &&
         _currentChannel.id == channel.id;
     _openedAt = DateTime.now();
+    _errorCheck?.cancel();
+    if (_tvError != null) setState(() => _tvError = null);
     try {
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
@@ -966,7 +1307,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _watchTimer?.cancel();
     _watchFocus.dispose();
     _zapHud?.cancel();
+    _tvBarIdle?.cancel();
     _playPauseFocus.dispose();
+    _skipCommit?.cancel();
+    _errorCheck?.cancel();
+    unawaited(_errorSubscription?.cancel());
+    unawaited(_upNextSubscription?.cancel());
+    _tvBarScope.dispose();
+    _tvOptionsScope.dispose();
+    _scheduleChipFocus.dispose();
+    _dataPoolTimer?.cancel();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.disposePlayer(_player);
@@ -984,9 +1334,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       Navigator.of(context).pop();
       return;
     }
-    // A catch-up stream isn't the live channel: never minimized as it.
+    // Catch-up goes on in the guide's preview, like Android's (the
+    // preview's OK takes it back full screen).
     if (_inCatchup) {
-      _catchupPlayer?.dispose();
+      DesktopMiniPlayer.instance.minimize(
+          _currentChannel, _player, _videoController,
+          catchup: _catchupPlayer);
+      _catchupPlayer = null;
+      _handedOffToMiniPlayer = true;
       Navigator.of(context).pop();
       return;
     }
@@ -1067,12 +1422,39 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }));
   }
 
+  /// The bar's Multiview (Android's player has it, Apple TV didn't:
+  /// Discord, 2026-11-20): the playing channel becomes Multiview's first
+  /// screen. This player lets go of the stream first (one provider
+  /// connection per screen, CLAUDE.md), and plays the screen that has the
+  /// sound when Multiview closes.
+  Future<void> _openMultiview() async {
+    if (!_isLive || _inCatchup) return;
+    final channel = _currentChannel;
+    _stopZapHud();
+    _tvBarIdle?.cancel();
+    setState(() {
+      _controlsVisible = false;
+      _tvOptions = false;
+    });
+    ++_openGeneration;
+    DesktopLiveRecovery.of(_player).stop();
+    await _player.stop();
+    if (!mounted) return;
+    final back = await Navigator.of(context).push<Channel>(MaterialPageRoute(
+        builder: (_) => DesktopMultiviewScreen(initialChannel: channel)));
+    if (!mounted) return;
+    _rootFocus.requestFocus();
+    await _switchTo(back ?? channel);
+    if (mounted) _flashControls();
+  }
+
   /// Catch-up from [at] on the same player. Live recovery stops first:
   /// it would take the finite archive stream for a dead live one.
-  Future<void> _startCatchup(DateTime at) async {
+  Future<void> _startCatchup(DateTime at, {bool toProgrammeEnd = true}) async {
     DesktopLiveRecovery.of(_player).stop();
     _livePausedAt = null;
-    final started = await _catchupCtl.play(_currentChannel, at);
+    final started = await _catchupCtl.play(_currentChannel, at,
+        toProgrammeEnd: toProgrammeEnd);
     if (mounted) setState(() {});
     if (started) {
       debugPrint('DesktopPlayer: catch-up of ${_currentChannel.name}');
@@ -1296,6 +1678,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Sources'),
                 onPressed: _openLiveSources,
               ),
+            if (_isLive && !_inCatchup)
+              IconButton(
+                icon: const Icon(Icons.grid_view, color: Colors.white),
+                tooltip: tr('Multiview'),
+                onPressed: _openMultiview,
+              ),
             // Back keeps a live channel playing in the guide's preview;
             // Stop ends it (Windows user, 2026-11-14).
             if (_isLive)
@@ -1348,14 +1736,39 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 key: ValueKey('audio-${_currentChannel.id}'),
                 player: _player,
                 channel: _currentChannel),
-            if (!_isLive)
-              DesktopSubtitleButton(
-                  // A new episode is a new file: fresh track list.
-                  key: ValueKey(_currentChannel.id),
-                  player: _player,
-                  channel: _currentChannel),
-            _DesktopVolume(player: _player),
+            // Live too: a channel's closed captions (CC) go on and off here
+            // (an Apple TV viewer had them on with no way to turn them off).
+            DesktopSubtitleButton(
+                // A new episode is a new file: fresh track list.
+                key: ValueKey(_currentChannel.id),
+                player: _player,
+                channel: _currentChannel),
+            // The TV's own remote sets the volume; the slider would also
+            // keep Left / Right for itself.
+            if (!_tv) _DesktopVolume(player: _player),
           ],
+        );
+        final ring = Theme.of(context).colorScheme.primary;
+        // A ring in the theme's colour on the focused button: the default
+        // focus tint was a faint grey circle, invisible over a picture
+        // from the couch.
+        ButtonStyle focusRing(ButtonStyle? base) =>
+            (base ?? const ButtonStyle()).copyWith(
+              side: WidgetStateProperty.resolveWith((s) =>
+                  s.contains(WidgetState.focused)
+                      ? BorderSide(color: ring, width: 2)
+                      : null),
+              backgroundColor: WidgetStateProperty.resolveWith((s) =>
+                  s.contains(WidgetState.focused) ? Colors.black54 : null),
+            );
+        final ringed = IconButtonTheme(
+          data: IconButtonThemeData(
+              style: focusRing(IconButtonTheme.of(context).style)),
+          child: TextButtonTheme(
+            data: TextButtonThemeData(
+                style: focusRing(TextButtonTheme.of(context).style)),
+            child: buttons,
+          ),
         );
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -1432,7 +1845,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 ),
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: width * 0.6),
-                  child: FittedBox(fit: BoxFit.scaleDown, child: buttons),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: ringed),
                 ),
                 Expanded(
                   child: Align(
@@ -1469,6 +1882,542 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           ],
         );
       },
+    );
+  }
+
+  /// Remote (Apple TV): Android TV's bottom bars, see [_tvOptions].
+  List<Widget> _tvChrome(PlaylistManager playlist) {
+    final liveBar = _isLive && !_inCatchup;
+    final barShown = _controlsVisible || (liveBar && _tvZapInfo);
+    return [
+      // Catch-up: the channel card above the bar (Channel schedule), like
+      // Android's.
+      if (_inCatchup && _controlsVisible)
+        Positioned(
+          top: MediaQuery.paddingOf(context).top + 48,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: LiveChannelInfoCard(
+              channel: _currentChannel,
+              at: _catchupCtl.playhead,
+              scheduleFocus: _scheduleChipFocus,
+              onScheduleKey: _onScheduleChipKey,
+              onSchedule: _openSchedule,
+            ),
+          ),
+        ),
+      if (barShown && !_tvOptions)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          // A zap: display only, Up / Down keep changing channel.
+          child: ExcludeFocus(
+            excluding: !_controlsVisible,
+            child: FocusTraversalGroup(
+              child: FocusScope(
+                node: _tvBarScope,
+                child:
+                    liveBar ? _tvInfoBar(playlist) : _tvTransportBar(playlist),
+              ),
+            ),
+          ),
+        ),
+      if (_tvOptions)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: FocusTraversalGroup(
+            child: FocusScope(
+              node: _tvOptionsScope,
+              child: _tvOptionsRow(playlist),
+            ),
+          ),
+        ),
+    ];
+  }
+
+  /// Remote, live: Android's one bottom bar ([LiveInfoBar]).
+  Widget _tvInfoBar(PlaylistManager playlist) => LiveInfoBar(
+        title: _currentChannel.name,
+        epgId: _currentChannel.epgId,
+        channel: _currentChannel,
+        buttons: _controlsVisible,
+        isFavorite: _currentChannel.isFavorite,
+        onToggleFavorite: () {
+          playlist.toggleFavorite(_currentChannel);
+          setState(() {});
+        },
+        onSchedule: _openSchedule,
+        onActivity: _armTvBarIdle,
+        badges: [
+          DesktopQualityBadges(
+              key: ValueKey('tv-badges-${_currentChannel.id}'),
+              player: _player,
+              gold: true),
+        ],
+        timeline: _TvLiveProgress(epgId: _currentChannel.epgId),
+        playPause: StreamBuilder<bool>(
+          stream: _player.stream.playing,
+          initialData: _player.state.playing,
+          builder: (context, snapshot) {
+            final playing = snapshot.data ?? false;
+            return LiveInfoBar.playPauseButton(
+              playing: playing,
+              focusNode: _playPauseFocus,
+              onPressed: () {
+                _armTvBarIdle();
+                _togglePlay(playing);
+              },
+            );
+          },
+        ),
+      );
+
+  /// Remote, movie / episode / catch-up: Android's TV bar (title left,
+  /// transport centred, badges and time right; the progress line above).
+  Widget _tvTransportBar(PlaylistManager playlist) {
+    return StreamBuilder<bool>(
+      stream: _player.stream.playing,
+      initialData: _player.state.playing,
+      builder: (context, playingSnapshot) {
+        final playing = playingSnapshot.data ?? false;
+        final width = MediaQuery.sizeOf(context).width;
+        final seekable = !_isLive || _inCatchup;
+        var title = _currentChannel.name;
+        if (_inCatchup) {
+          final at = _catchupCtl.playhead;
+          final on = at == null
+              ? null
+              : CatchupSession.programmeAt(
+                  context.read<EpgService>().getPrograms(_currentChannel.epgId),
+                  at);
+          if (on != null) title = '${on.title} · $title';
+        }
+        final favourite = _currentChannel.isFavorite;
+        final buttons = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RingIconButton(
+              icon: favourite ? Icons.star : Icons.star_border,
+              color: favourite ? Colors.amber : Colors.white,
+              tooltip: favourite
+                  ? tr('Remove from favorites')
+                  : tr('Add to favorites'),
+              onPressed: () {
+                playlist.toggleFavorite(_currentChannel);
+                setState(() {});
+              },
+            ),
+            if (_previousEpisode != null)
+              RingIconButton(
+                icon: Icons.skip_previous,
+                tooltip: tr('Previous episode'),
+                onPressed: () => _switchTo(_previousEpisode!),
+              ),
+            if (_inCatchup) ...[
+              RingIconButton(
+                icon: Icons.skip_previous,
+                tooltip: tr('Previous programme'),
+                onPressed: () => _catchupJump(-1),
+              ),
+              RingIconButton(
+                icon: Icons.restart_alt,
+                tooltip: tr('Watch from the start'),
+                onPressed: () => _catchupJump(0),
+              ),
+            ],
+            if (seekable)
+              SkipHoldButton(
+                icon: Icons.replay_10,
+                onSeek: (amount) {
+                  _armTvBarIdle();
+                  _skip(-amount);
+                },
+              ),
+            RingIconButton(
+              focusNode: _playPauseFocus,
+              icon: playing ? Icons.pause : Icons.play_arrow,
+              tooltip: playing ? tr('Pause') : tr('Play'),
+              onPressed: () => _togglePlay(playing),
+            ),
+            if (seekable)
+              SkipHoldButton(
+                icon: Icons.forward_10,
+                onSeek: (amount) {
+                  _armTvBarIdle();
+                  _skip(amount);
+                },
+              ),
+            if (_nextEpisode != null)
+              RingIconButton(
+                icon: Icons.skip_next,
+                tooltip: tr('Next episode'),
+                onPressed: () => _switchTo(_nextEpisode!),
+              ),
+            if (_inCatchup) ...[
+              RingIconButton(
+                icon: Icons.skip_next,
+                tooltip: tr('Next programme'),
+                onPressed: () => _catchupJump(1),
+              ),
+              BackToLiveButton(
+                  onPressed: () => unawaited(_catchupCtl.backToLive())),
+            ],
+          ],
+        );
+        final titleCell = Expanded(
+          child: _inCatchup
+              ? Row(children: [
+                  GoldTag(
+                      label: tr('Catch-up').toUpperCase(),
+                      margin: const EdgeInsets.only(right: 6)),
+                  Expanded(child: PlayerBarTitle(title: title)),
+                ])
+              : PlayerBarTitle(title: title),
+        );
+        const timeStyle = TextStyle(color: Colors.white70, fontSize: 12);
+        final side = Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              DesktopQualityBadges(
+                  key: ValueKey('tv-badges-${_currentChannel.id}'),
+                  player: _player),
+              const SizedBox(width: 8),
+              Flexible(
+                child: StreamBuilder<Duration>(
+                  stream: _player.stream.position,
+                  initialData: _player.state.position,
+                  builder: (context, snapshot) {
+                    final String text;
+                    if (_inCatchup) {
+                      final at = _catchupCtl.playhead;
+                      if (at == null) return const SizedBox.shrink();
+                      final behind = DateTime.now().difference(at);
+                      final h = behind.inHours;
+                      final m = behind.inMinutes % 60;
+                      final lag = h > 0
+                          ? '$h:${m.toString().padLeft(2, '0')}'
+                          : '$m min';
+                      text = '${TimeFormat.hm.format(at.toLocal())} · '
+                          '${tr('{time} behind live', {'time': lag})}';
+                    } else {
+                      text =
+                          '${_formatDuration(snapshot.data ?? Duration.zero)}'
+                          ' / ${_formatDuration(_player.state.duration)}';
+                    }
+                    return Text(text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: timeStyle);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+        return Container(
+          color: RefinedFinish.surface(context, Colors.black54),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Android's scrub bar: Up from the buttons, Left / Right move
+              // a target, one seek.
+              if (!_isLive || _inCatchup) _tvScrubBar(),
+              Row(children: [
+                titleCell,
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: width * 0.6),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Theme(
+                      data: Theme.of(context)
+                          .copyWith(visualDensity: VisualDensity.compact),
+                      child: buttons,
+                    ),
+                  ),
+                ),
+                side,
+              ]),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// What the remote seeks in: a movie / episode's own length, or the
+  /// catch-up programme at the playhead ([start] = its clock time).
+  ({Duration position, Duration duration, DateTime? start})? get _seekRange {
+    if (_inCatchup) {
+      final ctl = _catchupCtl;
+      final s = ctl.session, at = ctl.playhead;
+      if (s == null || at == null) return null;
+      final programme = ctl.programme;
+      final start = programme?.start ?? s.requestStart;
+      final end = programme?.stop ??
+          s.requestStart.add(_player.state.duration > Duration.zero
+              ? _player.state.duration
+              : const Duration(hours: 1));
+      return (
+        position: at.difference(start),
+        duration: end.difference(start),
+        start: start
+      );
+    }
+    if (_isLive) return null;
+    final duration = _player.state.duration;
+    if (duration <= Duration.zero) return null;
+    return (position: _player.state.position, duration: duration, start: null);
+  }
+
+  /// A seek inside [_seekRange]: catch-up asks the programme's time.
+  void _seekTo(Duration to) {
+    final range = _seekRange;
+    if (range == null) return;
+    if (range.start case final start?) {
+      unawaited(_catchupCtl.seekTo(start.add(to)));
+    } else {
+      unawaited(_player.seek(to));
+    }
+  }
+
+  /// Remote, movie / episode / catch-up: Android's scrub bar ([ScrubBar]).
+  Widget _tvScrubBar() => StreamBuilder<Duration>(
+        stream: _player.stream.position,
+        initialData: _player.state.position,
+        builder: (context, _) {
+          final range = _seekRange;
+          if (range == null) return const SizedBox(height: 24);
+          return ScrubBar(
+            onSeek: _seekTo,
+            position: range.position,
+            duration: range.duration,
+            onActivity: _armTvBarIdle,
+          );
+        },
+      );
+
+  /// Live rewind: past catch-up's 90 s live edge from the first press.
+  static int _liveStepMinutes(int steps) => steps == 0
+      ? 2
+      : steps < 4
+          ? 1
+          : steps < 8
+              ? 5
+              : 15;
+
+  /// See [_skipTarget].
+  void _tvSkipKey(int sign, {bool repeat = false}) {
+    if (_panelOpen || _scheduleOpen) return;
+    final range = _seekRange;
+    if (range != null) {
+      if (_skipLive) _skipTarget = null;
+      _skipLive = false;
+      final step = _scrubSteps.next(repeat: repeat);
+      if (step == null) return;
+      final next = (_skipTarget ?? range.position) + step * sign;
+      _skipTarget = next < Duration.zero
+          ? Duration.zero
+          : next > range.duration
+              ? range.duration
+              : next;
+    } else {
+      final live = _currentChannel;
+      if (sign > 0 || !live.isLive || !live.hasCatchup) return;
+      if (!_skipLive) _skipTarget = null;
+      _skipLive = true;
+      final back = (_skipTarget ?? Duration.zero) +
+          Duration(minutes: _liveStepMinutes(_skipSteps++));
+      final most = Duration(days: live.catchupDays);
+      _skipTarget = back > most ? most : back;
+    }
+    setState(() {});
+    _skipCommit?.cancel();
+    _skipCommit = Timer(const Duration(milliseconds: 700), _commitTvSkip);
+  }
+
+  void _commitTvSkip() {
+    _skipCommit?.cancel();
+    final target = _skipTarget;
+    final live = _skipLive;
+    _skipTarget = null;
+    _skipSteps = 0;
+    _scrubSteps.reset();
+    if (mounted) setState(() {});
+    if (target == null || !mounted) return;
+    if (live) {
+      unawaited(_startCatchup(DateTime.now().subtract(target),
+          toProgrammeEnd: false));
+      return;
+    }
+    _seekTo(target);
+  }
+
+  /// See [_tvError]. mpv reports errors it gets past by itself too: only
+  /// one that leaves the movie without a picture 4 s later counts.
+  void _onPlayerError(String message) {
+    if (!_tvRemote || _isLive || !mounted) return;
+    final at = _player.state.position;
+    _errorCheck?.cancel();
+    _errorCheck = Timer(const Duration(seconds: 4), () {
+      if (!mounted || _isLive) return;
+      final state = _player.state;
+      if (state.width != null || state.position > at) return;
+      setState(() => _tvError = _withoutLinks(message));
+    });
+  }
+
+  /// Error text without the stream's links (they can hold the viewer's
+  /// user name and password, and users post photos of the screen).
+  static String _withoutLinks(String raw) => raw.replaceAllMapped(
+          RegExp(r'[a-z][a-z0-9+.-]*://\S+', caseSensitive: false), (m) {
+        final host = Uri.tryParse(m[0]!)?.host ?? '';
+        return host.isEmpty ? '<link>' : '<$host>';
+      });
+
+  /// Android's error screen (VideoPlayerPane): what went wrong, then the
+  /// technical details for a photo.
+  Widget _tvErrorView(String error) => Positioned.fill(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(friendlyPlaybackError(error),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white)),
+                const SizedBox(height: 12),
+                Text(tr('Technical details'),
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(height: 4),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  /// Remote, "early" Up Next: the next episode 30 s before the end, like
+  /// Android's PlaybackService.
+  void _checkUpNext(Duration position) {
+    if (!mounted || !_tvRemote || _isLive) return;
+    final next = _nextEpisode;
+    final id = _currentChannel.id;
+    if (next == null || _upNextDismissed == id || _upNextFrom == id) return;
+    if (context.read<StorageService>().getUpNextMode() != 'early') return;
+    final duration = _player.state.duration;
+    if (duration <= Duration.zero) return;
+    final remaining = duration - position;
+    if (remaining > const Duration(seconds: 30) || remaining.isNegative) {
+      return;
+    }
+    _upNextFrom = id;
+    debugPrint('DesktopPlayer: Up next, 30 s before the end');
+    unawaited(_switchTo(next));
+  }
+
+  /// Remote: Android's options row ([PlayerOptionsPill]), same tiles in the
+  /// same order where this player has them (no Buffer: Android's player
+  /// only).
+  Widget _tvOptionsRow(PlaylistManager playlist) {
+    final prefs = context.watch<AppPreferences>();
+    final epg = context.watch<EpgService>();
+    final live = _isLive && !_inCatchup;
+    String? programme;
+    if (_inCatchup) {
+      final at = _catchupCtl.playhead;
+      programme = at == null
+          ? null
+          : CatchupSession.programmeAt(
+                  epg.getPrograms(_currentChannel.epgId), at)
+              ?.title;
+    } else if (_isLive) {
+      programme = epg.getCurrentProgram(_currentChannel.epgId)?.title;
+    }
+    Widget tile(IconData icon, String label, VoidCallback onPressed,
+            {String? shortLabel, String? detail}) =>
+        LabeledIconButton(
+          icon: icon,
+          label: label,
+          shortLabel: shortLabel,
+          detail: detail,
+          onPressed: () {
+            _armTvBarIdle();
+            onPressed();
+          },
+        );
+    final delay = prefs.audioDelayMs;
+    final link = playlist.channelLinkFor(_currentChannel);
+    final linked = link == null ? null : playlist.resolveChannelLink(link);
+    return PlayerOptionsPill(
+      live: live,
+      catchup: _inCatchup,
+      title: OptionsTitleText(name: _currentChannel.name, programme: programme),
+      sound: _TvSoundSummary(
+          key: ValueKey('tv-sound-${_currentChannel.id}'), player: _player),
+      tiles: [
+        if (_isLive) tile(Icons.list, tr('Channels'), _openPanel),
+        if (live) tile(Icons.swap_horiz, tr('Sources'), _openLiveSources),
+        if (prefs.dataPool)
+          tile(Icons.analytics_outlined, tr('Stream info'), _showTvDataPool),
+        if (live)
+          tile(Icons.history, tr('Recall — go back to a recent channel'),
+              _openRecallPicker,
+              shortLabel: tr('Recent')),
+        if (live && _currentChannel.hasCatchup)
+          tile(Icons.restart_alt, tr('Watch from the start'), _startOver,
+              shortLabel: tr('Start over')),
+        if (live)
+          tile(Icons.refresh, tr('Reload channel'), _reload,
+              shortLabel: tr('Reload')),
+        DesktopAudioButton(
+            key: ValueKey('tv-audio-${_currentChannel.id}'),
+            player: _player,
+            channel: _currentChannel,
+            tile: (open) => tile(
+                Icons.multitrack_audio, tr('Audio track'), open,
+                shortLabel: tr('Audio'))),
+        DesktopSubtitleButton(
+            key: ValueKey('tv-subs-${_currentChannel.id}'),
+            player: _player,
+            channel: _currentChannel,
+            tile: (open) => tile(Icons.subtitles, tr('Subtitles'), open)),
+        tile(Icons.av_timer, tr('Audio sync'),
+            () => showAudioDelayAdjuster(context),
+            detail: delay == 0
+                ? null
+                : '${delay > 0 ? '+' : '-'}${delay.abs()} ms'),
+        if (linked != null)
+          tile(
+              Icons.swap_horiz,
+              tr('Switch to {playlistName}: {name}', {
+                'playlistName': playlist.playlistNameFor(linked.playlistId),
+                'name': linked.name
+              }),
+              () => _switchTo(linked),
+              shortLabel: playlist.playlistNameFor(linked.playlistId)),
+        if (live && !prefs.hideMultiview)
+          tile(Icons.grid_view, tr('Open in Multiview'), _openMultiview,
+              shortLabel: tr('Multiview')),
+        if (widget.sources != null)
+          tile(Icons.swap_horiz, tr('Sources'), _openSources),
+        tile(prefs.videoFit.icon, tr(prefs.videoFit.label), _cycleFit),
+        tile(Icons.search, tr('Search'), _openTvSearch),
+      ],
     );
   }
 
@@ -1731,11 +2680,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             key: ValueKey('audio-${_currentChannel.id}'),
             player: _player,
             channel: _currentChannel),
-        if (!_isLive)
-          DesktopSubtitleButton(
-              key: ValueKey(_currentChannel.id),
-              player: _player,
-              channel: _currentChannel),
+        // Live too: closed captions (CC) on / off.
+        DesktopSubtitleButton(
+            key: ValueKey(_currentChannel.id),
+            player: _player,
+            channel: _currentChannel),
       ];
 
   /// Touch: elapsed | seek bar | length. Dragging moves the thumb; the
@@ -1806,6 +2755,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           _closeSchedule();
         } else if (_panelOpen) {
           _closePanel();
+        } else if (_tvRemote && _tvOptions) {
+          _closeTvOptions();
+        } else if (_tvRemote && _scheduleChipFocus.hasFocus) {
+          _playPauseFocus.requestFocus();
         } else if (!_touch &&
             _rootFocus.hasFocus &&
             !_rootFocus.hasPrimaryFocus) {
@@ -1824,6 +2777,37 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           focusNode: _rootFocus,
           autofocus: true,
           onKeyEvent: (_, event) {
+            // Remote: any key while the bar has focus keeps it up.
+            if (_tv && event is KeyDownEvent && !_rootFocus.hasPrimaryFocus) {
+              _armTvBarIdle();
+            }
+            // Remote, Up / Down in the bar or the options row (Android's
+            // flow): Down from the bar = the options row, Up there = the
+            // bar; catch-up: Up from the bar = the card's Channel schedule.
+            if (_tvRemote &&
+                event is! KeyUpEvent &&
+                !_rootFocus.hasPrimaryFocus &&
+                (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+                    event.logicalKey == LogicalKeyboardKey.arrowDown)) {
+              final up = event.logicalKey == LogicalKeyboardKey.arrowUp;
+              final press = event is KeyDownEvent;
+              if (_tvOptionsScope.hasFocus) {
+                if (press && up) _closeTvOptions();
+                return KeyEventResult.handled;
+              }
+              if (_tvBarScope.hasFocus) {
+                if (press &&
+                    !_tryTvBarMove(
+                        up ? TraversalDirection.up : TraversalDirection.down)) {
+                  if (!up) {
+                    _openTvOptions();
+                  } else if (_inCatchup && _scheduleChipFocus.context != null) {
+                    _scheduleChipFocus.requestFocus();
+                  }
+                }
+                return KeyEventResult.handled;
+              }
+            }
             if (event is KeyDownEvent &&
                 _rootFocus.hasPrimaryFocus &&
                 _currentChannel.mediaFileInfo != null &&
@@ -1833,13 +2817,28 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   LogicalKeyboardKey.numpadEnter
                 ].contains(event.logicalKey)) {
               _fileInfoRequests.value++;
-              return KeyEventResult.handled;
+              // A remote has no other way into the bar: OK opens it too
+              // (below).
+              if (!_tv) return KeyEventResult.handled;
             }
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.arrowRight &&
                 _rootFocus.hasPrimaryFocus &&
                 widget.sources != null) {
               _openSources();
+              return KeyEventResult.handled;
+            }
+            // Remote, live: Right = the channel watched before (Android's
+            // default for Right).
+            if (_tvRemote &&
+                event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                _rootFocus.hasPrimaryFocus &&
+                _isLive &&
+                !_inCatchup &&
+                !_panelOpen &&
+                !_scheduleOpen) {
+              _lastChannel();
               return KeyEventResult.handled;
             }
             // I = Data pool (when it's on in Settings > Playback).
@@ -1871,20 +2870,57 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               }
               return KeyEventResult.handled;
             }
-            // The keyboard's Fast forward / Rewind keys: 10 s, like the
-            // bar's buttons (movies, episodes, catch-up).
+            // Fast forward / Rewind. A remote (Apple TV): Android's, a target
+            // in the middle and one seek ([_tvSkipKey]). A keyboard: 10 s,
+            // like the bar's buttons (movies, episodes, catch-up).
             if (event is! KeyUpEvent &&
                 (event.logicalKey == LogicalKeyboardKey.mediaFastForward ||
                     event.logicalKey == LogicalKeyboardKey.mediaRewind)) {
-              if (!_isLive || _inCatchup) {
-                _skip(Duration(
-                    seconds:
-                        event.logicalKey == LogicalKeyboardKey.mediaFastForward
-                            ? 10
-                            : -10));
+              final sign =
+                  event.logicalKey == LogicalKeyboardKey.mediaFastForward
+                      ? 1
+                      : -1;
+              if (_tvRemote) {
+                _tvSkipKey(sign, repeat: event is KeyRepeatEvent);
+              } else if (!_isLive || _inCatchup) {
+                _skip(Duration(seconds: 10 * sign));
                 _flashControls();
               }
               return KeyEventResult.handled;
+            }
+            // Remote, on the picture (Android's arrows): a movie / episode
+            // = Left goes back like Rewind (the Siri Remote has none; owner,
+            // 2026-11-20), Right = its sources (above) or nothing; catch-up
+            // = Left the side panel, Right the last channel; Up / Down on a
+            // movie open the bar like OK.
+            if (_tv &&
+                event is! KeyUpEvent &&
+                _rootFocus.hasPrimaryFocus &&
+                !_panelOpen &&
+                !_scheduleOpen) {
+              final key = event.logicalKey;
+              final press = event is KeyDownEvent;
+              if (!_isLive && key == LogicalKeyboardKey.arrowLeft) {
+                _tvSkipKey(-1, repeat: event is KeyRepeatEvent);
+                return KeyEventResult.handled;
+              }
+              if (!_isLive && key == LogicalKeyboardKey.arrowRight) {
+                return KeyEventResult.handled;
+              }
+              if (_inCatchup && key == LogicalKeyboardKey.arrowLeft) {
+                if (press) _openPanel();
+                return KeyEventResult.handled;
+              }
+              if (_inCatchup && key == LogicalKeyboardKey.arrowRight) {
+                if (press) _lastChannel();
+                return KeyEventResult.handled;
+              }
+              if (!_isLive &&
+                  (key == LogicalKeyboardKey.arrowUp ||
+                      key == LogicalKeyboardKey.arrowDown)) {
+                if (event is KeyDownEvent) _showBarFocused();
+                return KeyEventResult.handled;
+              }
             }
             final zap = _zapKeys[event.logicalKey];
             if (zap != null &&
@@ -1903,7 +2939,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             }
             if (event is KeyDownEvent &&
                 !_touch &&
-                _isLive &&
+                (_isLive || _tv) &&
                 _rootFocus.hasPrimaryFocus &&
                 !_panelOpen &&
                 !_scheduleOpen &&
@@ -1912,13 +2948,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   LogicalKeyboardKey.enter,
                   LogicalKeyboardKey.numpadEnter
                 ].contains(event.logicalKey)) {
-              _stopZapHud();
-              setState(() => _controlsVisible = true);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _playPauseFocus.context != null) {
-                  _playPauseFocus.requestFocus();
-                }
-              });
+              _showBarFocused();
               return KeyEventResult.handled;
             }
             if (event is KeyDownEvent &&
@@ -1995,7 +3025,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     offer: _watchOffer,
                     // Above the player bar while it shows (the touch
                     // layout's bottom bar is taller).
-                    bottom: _controlsVisible ? (_touch ? 150 : 120) : 28,
+                    bottom: _tvRemote
+                        ? (_tvChromeShown
+                            ? PlayerControls.liveInfoBarHeight + 8
+                            : 28)
+                        : _controlsVisible
+                            ? (_touch ? 150 : 120)
+                            : 28,
                     showUpHint: false,
                     onWatch: _watchGame,
                     focusNode: _watchFocus,
@@ -2004,34 +3040,37 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 // would do nothing ([_pipNotice] has Back and Watch here).
                 if (_controlsVisible && _touch && !_inPip && !_pipStarting)
                   ..._touchControls(playlist),
-                if (_controlsVisible && !_touch) ...[
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.6),
-                            Colors.transparent,
-                          ],
+                if (_controlsVisible && !_touch && !_tvRemote) ...[
+                  // Not on a TV: the remote's Back (Menu) does it, and
+                  // Up from the bar landed on it.
+                  if (!_tv)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.6),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          tooltip: tr('Back'),
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: _handleBack,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            tooltip: tr('Back'),
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
+                            onPressed: _handleBack,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -2056,17 +3095,66 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       left: 0,
                       top: 0,
                       bottom: 0,
+                      // A remote opens the panel with Left on the picture;
+                      // the tab is a picture of that, not a focus stop.
                       child: Center(
-                        child: PlayerSidePanelTab(onTap: _openPanel),
+                        child: ExcludeFocus(
+                            excluding: _tv,
+                            child: PlayerSidePanelTab(onTap: _openPanel)),
                       ),
                     ),
                 ],
+                if (_tvRemote && !_inPip) ...[
+                  if (_tvError case final error?)
+                    _tvErrorView(error)
+                  else
+                    DesktopBufferingSpinner(player: _player),
+                  if (!_isLive)
+                    UpNextBubble(
+                      mode: context.read<StorageService>().getUpNextMode(),
+                      progress: () => (
+                        position: _player.state.position,
+                        duration: _player.state.duration
+                      ),
+                      nextChannel: _upNextDismissed == _currentChannel.id
+                          ? null
+                          : _nextEpisode,
+                      onPlayNow: () {
+                        final next = _nextEpisode;
+                        if (next == null) return;
+                        _upNextFrom = _currentChannel.id;
+                        unawaited(_switchTo(next));
+                      },
+                      onDismiss: () =>
+                          setState(() => _upNextDismissed = _currentChannel.id),
+                    ),
+                ],
+                if (_tvRemote) ..._tvChrome(playlist),
+                if (_tvRemote && _skipTarget != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: SkipCue(
+                          target: _skipTarget!,
+                          live: _skipLive,
+                          position: _seekRange?.position ?? Duration.zero,
+                          duration: _seekRange?.duration ?? Duration.zero,
+                        ),
+                      ),
+                    ),
+                  ),
                 if (_dataPoolOpen && context.watch<AppPreferences>().dataPool)
                   Positioned(
                     left: 16,
                     right: 16,
                     // Above the player bar while it shows.
-                    bottom: _controlsVisible ? (_touch ? 170 : 120) : 16,
+                    bottom: _tvRemote
+                        ? (_tvChromeShown
+                            ? PlayerControls.liveInfoBarHeight + 8
+                            : 16)
+                        : _controlsVisible
+                            ? (_touch ? 170 : 120)
+                            : 16,
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 980),
@@ -2085,7 +3173,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 // Touch: hidden under the top bar's Sources / Rotate.
                 if (playerClock && !_inPip && !_pipStarting)
                   PlayerClockPill(
-                      top: 6, visible: !(_touch && _controlsVisible)),
+                      top: 6,
+                      // The info bar starts with its own clock.
+                      visible:
+                          !(_touch && _controlsVisible) && !_tvInfoBarShown),
                 if (_currentChannel.mediaFileInfo case final info?)
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),
@@ -2372,5 +3463,134 @@ class _ScreenControl extends DesktopPlayerControl {
   Future<void> replaceStream(Channel replacement) {
     final state = s._player.state;
     return s._switchTo(replacement, start: state.position, play: state.playing);
+  }
+}
+
+/// Line 2 of the Apple TV live info bar: the programme's start, how far
+/// it is, its end (Android's live timeline at rest; going back into
+/// catch-up from it is Android's only for now: Start over and Channel
+/// schedule do it here).
+class _TvLiveProgress extends StatefulWidget {
+  const _TvLiveProgress({required this.epgId});
+
+  final String epgId;
+
+  @override
+  State<_TvLiveProgress> createState() => _TvLiveProgressState();
+}
+
+class _TvLiveProgressState extends State<_TvLiveProgress> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final programme =
+        context.watch<EpgService>().getCurrentProgram(widget.epgId);
+    if (programme == null) return const SizedBox.shrink();
+    final span = programme.stop.difference(programme.start).inSeconds;
+    if (span <= 0) return const SizedBox.shrink();
+    final at = (DateTime.now().difference(programme.start).inSeconds / span)
+        .clamp(0.0, 1.0);
+    final accent = Theme.of(context).colorScheme.primary;
+    const style = LiveInfoBar.timeStyle;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(children: [
+        Text(TimeFormat.hm.format(programme.start), style: style),
+        const SizedBox(width: 10),
+        Expanded(
+          child: SizedBox(
+            height: 18,
+            child: LayoutBuilder(
+              builder: (context, box) => Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(3))),
+                  Container(
+                      width: box.maxWidth * at,
+                      height: 3,
+                      decoration: BoxDecoration(
+                          color: accent,
+                          borderRadius: BorderRadius.circular(3))),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(TimeFormat.hm.format(programme.stop), style: style),
+      ]),
+    );
+  }
+}
+
+/// The Apple TV options row's sound ("English • 5.1"), Android's status
+/// line: the playing track's language (placeholders left out) and its
+/// channel layout.
+class _TvSoundSummary extends StatefulWidget {
+  const _TvSoundSummary({super.key, required this.player});
+
+  final Player player;
+
+  @override
+  State<_TvSoundSummary> createState() => _TvSoundSummaryState();
+}
+
+class _TvSoundSummaryState extends State<_TvSoundSummary> {
+  static const _noLanguage = {'mis', 'mul', 'und', 'zxx', 'qaa'};
+  StreamSubscription<AudioParams>? _params;
+  StreamSubscription<Track>? _track;
+
+  @override
+  void initState() {
+    super.initState();
+    _params = widget.player.stream.audioParams.listen((_) => _changed());
+    _track = widget.player.stream.track.listen((_) => _changed());
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _params?.cancel();
+    _track?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tracks = DesktopAudio.tracksOf(widget.player);
+    final selected = widget.player.state.track.audio;
+    final track = tracks.where((t) => t.id == selected.id).firstOrNull ??
+        (tracks.length == 1 ? tracks.first : null);
+    final language = (track?.language ?? '').toLowerCase();
+    final text = [
+      if (language.isNotEmpty && !_noLanguage.contains(language))
+        languageName(language),
+      DataPoolCard.channelsName(widget.player.state.audioParams.channelCount),
+    ].whereType<String>().where((s) => s.isNotEmpty).join(' • ');
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Text(text,
+        style: const TextStyle(color: Colors.white, fontSize: 12));
   }
 }

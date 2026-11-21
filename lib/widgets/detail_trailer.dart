@@ -165,6 +165,8 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
       }
       if (uri == null) return;
+      // Apple TV has no web view for a YouTube one (direct trailers play).
+      if (isAppleTv && TrailerLinks.videoId(uri.toString()) != null) return;
       // Send log: a Fire TV Stick was closed for low memory right after a
       // show page's automatic trailer (4K episode just before, 2026-11-16).
       final kind = TrailerLinks.videoId(uri.toString()) != null

@@ -145,7 +145,7 @@ class VideoPlayerPane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_friendlyPlaybackError(playback.error!),
+              Text(friendlyPlaybackError(playback.error!),
                   textAlign: TextAlign.center),
               if (linkedChannel != null) ...[
                 const SizedBox(height: 16),
@@ -370,7 +370,7 @@ class _SwitchToLinkedChannelButtonState
 /// something `video_player`/Flutter can route around — no amount of app
 /// code makes an incapable decoder chip decode 10-bit HDR. This just
 /// stops surfacing that as a raw stack-trace-shaped string.
-String _friendlyPlaybackError(String raw) {
+String friendlyPlaybackError(String raw) {
   // No decoder for the video at all (ExoPlayerEventListener's
   // [UNSUPPORTED_VIDEO: mime codecs size] tag). Dolby Vision profile 5/7 is
   // the usual one: profile 8 already plays as HDR10 on a plain HEVC decoder.
@@ -635,7 +635,7 @@ class PlayerControls extends StatelessWidget {
     }
     return [
       if (isLive && channel != null)
-        _LabeledIconButton(
+        LabeledIconButton(
           icon: Icons.history,
           label: tr('Recall — go back to a recent channel'),
           shortLabel: tr('Recent'),
@@ -647,7 +647,7 @@ class PlayerControls extends StatelessWidget {
       // Start over: the programme on now, from
       // its start (catch-up channels only).
       if (isLive && channel != null && channel!.hasCatchup)
-        _LabeledIconButton(
+        LabeledIconButton(
           icon: Icons.restart_alt,
           label: tr('Watch from the start'),
           shortLabel: tr('Start over'),
@@ -667,7 +667,7 @@ class PlayerControls extends StatelessWidget {
       // automatic watchdog. Live only, same gating as Recall
       // above.
       if (isLive && channel != null)
-        _LabeledIconButton(
+        LabeledIconButton(
           icon: Icons.refresh,
           label: tr('Reload channel'),
           shortLabel: tr('Reload'),
@@ -693,7 +693,7 @@ class PlayerControls extends StatelessWidget {
       // Every stream, not only multi-track ones: the
       // sound can be off on any channel (Shield +
       // soundbar user, 2026-11-05).
-      _LabeledIconButton(
+      LabeledIconButton(
         icon: Icons.av_timer,
         label: tr('Audio sync'),
         detail: audioDelay == null || audioDelay == 0
@@ -717,7 +717,7 @@ class PlayerControls extends StatelessWidget {
       if (linkedChannel != null)
         _LinkedChannelButton(linkedChannel: linkedChannel!),
       if (onOpenMultiview != null)
-        _LabeledIconButton(
+        LabeledIconButton(
           icon: Icons.grid_view,
           label: tr('Open in Multiview'),
           shortLabel: tr('Multiview'),
@@ -730,7 +730,8 @@ class PlayerControls extends StatelessWidget {
   }
 
   /// The TV options row (Down from the player bar): the caller's own
-  /// items around the bar's actions, as big icon + label tiles.
+  /// items around the bar's actions, as big icon + label tiles
+  /// ([PlayerOptionsPill], shared with the Apple TV player).
   Widget _buildOptionsRow(BuildContext context) {
     PlaybackService? playback;
     try {
@@ -741,7 +742,7 @@ class PlayerControls extends StatelessWidget {
     final inset = insetForSystemBars
         ? MediaQuery.viewPaddingOf(context)
         : EdgeInsets.zero;
-    Widget option(PlayerOption o) => _LabeledIconButton(
+    Widget option(PlayerOption o) => LabeledIconButton(
         icon: o.icon,
         label: o.label,
         detail: o.detail,
@@ -749,121 +750,23 @@ class PlayerControls extends StatelessWidget {
           onActivity?.call();
           o.onPressed();
         });
-    final accent = Theme.of(context).colorScheme.primary;
-    final catchup = playback?.catchup != null;
-    // Owner design (2026-11-06): the Media Hub top menu's glass pill with
-    // round icon buttons and short labels under them, a status line above
-    // it (what is playing on the left, the sound on the right). A soft
-    // scrim behind keeps both readable over a bright picture.
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          stops: [0, 0.65, 1],
-          colors: [Color(0xCC000000), Color(0x66000000), Color(0x00000000)],
-        ),
-      ),
-      // 40 at the sides clears TV overscan (the first tile was cut off on
-      // the Formuler's TV).
-      padding: EdgeInsets.fromLTRB(
-          40 + inset.left, 14, 40 + inset.right, 4 + inset.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Hugs its buttons, centred (owner photo, 2026-11-06); a long
-          // row still scrolls inside the screen width.
-          Align(
-            // The title line sits on the pill, as wide as it (owner photo,
-            // 2026-11-06): the Stack takes the pill's size, the line floats
-            // in the space reserved above it.
-            child: Padding(
-              padding: const EdgeInsets.only(top: 24),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        Colors.white.withValues(alpha: 0.10),
-                        Colors.white.withValues(alpha: 0.04),
-                      ]),
-                      color: const Color(0xE6000000),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white24),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black54, blurRadius: 8),
-                      ],
-                    ),
-                    child: _OptionTiles(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          // Top-aligned: a tile with a value line (Buffer
-                          // "Off") is taller and, centred, sat higher than
-                          // the rest (owner photo, 2026-11-12).
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final o in leadingOptions) option(o),
-                            ..._actionButtons(context, playback),
-                            for (final o in trailingOptions) option(o),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    top: -24,
-                    height: 20,
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: _OptionsTitle(
-                              controller: controller,
-                              channel: channel,
-                              title: title,
-                              isLive: isLive),
-                        ),
-                        if (isLive || catchup) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                                color: catchup ? Colors.transparent : accent,
-                                border: Border.all(color: accent),
-                                borderRadius: BorderRadius.circular(12)),
-                            child: Text(
-                                catchup
-                                    ? tr('Catch-up').toUpperCase()
-                                    : tr('LIVE'),
-                                style: TextStyle(
-                                    color: catchup ? accent : Colors.black,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.6)),
-                          ),
-                        ],
-                        const Spacer(),
-                        _AudioSummary(
-                            key: ValueKey(
-                                Object.hash('sound', controller, channel?.id)),
-                            controller: controller),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    return PlayerOptionsPill(
+      inset: inset,
+      live: isLive,
+      catchup: playback?.catchup != null,
+      title: _OptionsTitle(
+          controller: controller,
+          channel: channel,
+          title: title,
+          isLive: isLive),
+      sound: _AudioSummary(
+          key: ValueKey(Object.hash('sound', controller, channel?.id)),
+          controller: controller),
+      tiles: [
+        for (final o in leadingOptions) option(o),
+        ..._actionButtons(context, playback),
+        for (final o in trailingOptions) option(o),
+      ],
     );
   }
 
@@ -883,12 +786,6 @@ class PlayerControls extends StatelessWidget {
   ///   and nothing here takes focus, so Up/Down keep zapping. OK: it
   ///   shortens and ☆ / Play-Pause / Channel schedule appear at its right.
   Widget _buildLiveInfoBar(BuildContext context) {
-    EpgService? epg;
-    try {
-      epg = context.watch<EpgService>();
-    } on ProviderNotFoundException {
-      epg = null;
-    }
     PlaybackService? playback;
     try {
       playback = context.watch<PlaybackService>();
@@ -896,195 +793,51 @@ class PlayerControls extends StatelessWidget {
       playback = null;
     }
     final live = channel;
-    var playlist = '';
-    if (live != null) {
-      try {
-        // select: the catalog warm-up notifies up to every 400 ms
-        // (CLAUDE.md §10 (14)).
-        playlist = context.select<PlaylistManager, String>(
-            (m) => m.playlistNameFor(live.playlistId).trim());
-      } on ProviderNotFoundException {
-        playlist = '';
-      }
-    }
-    final program = epg?.getCurrentProgram(channelId);
     final accent = Theme.of(context).colorScheme.primary;
-    final inset = insetForSystemBars
-        ? MediaQuery.viewPaddingOf(context)
-        : EdgeInsets.zero;
-    const strong = TextStyle(
-        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700);
-    const dim = TextStyle(color: Colors.white70, fontSize: 13);
-    final logo = live?.logoUrl;
-    Widget divider() => Container(
-        width: 1,
-        height: 22,
-        margin: const EdgeInsets.symmetric(horizontal: 14),
-        color: Colors.white24);
-
-    final line1 = LayoutBuilder(
-      builder: (context, box) => Row(children: [
-        const PlayerBarClock(
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700)),
-        divider(),
-        if (logo != null && logo.isNotEmpty) ...[
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 64, maxHeight: 22),
-            child: CachedNetworkImage(
-                imageUrl: logo,
-                fit: BoxFit.contain,
-                // Decoded small (CLAUDE.md §10 (6)).
-                memCacheWidth: 160,
-                errorWidget: (_, __, ___) => const SizedBox.shrink()),
-          ),
-          const SizedBox(width: 10),
-        ],
-        ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: box.maxWidth * 0.26),
-          child: Text(title,
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: strong),
-        ),
-        if (playlist.isNotEmpty)
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 130),
-            child: GoldTag(
-                label: playlist,
-                fontSize: 12,
-                margin: const EdgeInsets.only(left: 10)),
-          ),
-        divider(),
-        Expanded(
-          child: Text(program?.title ?? tr('No program data available'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: program == null ? dim : strong),
-        ),
-        const SizedBox(width: 12),
-        _LiveRemainingLabel(channelId: channelId, style: dim),
-        if (live != null) RecPill(channel: live),
+    return LiveInfoBar(
+      title: title,
+      epgId: channelId,
+      channel: live,
+      inset: insetForSystemBars
+          ? MediaQuery.viewPaddingOf(context)
+          : EdgeInsets.zero,
+      buttons: infoBarButtons,
+      isFavorite: isFavorite,
+      onToggleFavorite: onToggleFavorite,
+      onSchedule: onSchedule,
+      onActivity: onActivity,
+      badges: [
         _QualityBadge(controller: controller, gold: true),
         _AudioChannelBadge(controller: controller, gold: true),
-      ]),
-    );
-
-    const timeStyle = TextStyle(color: Colors.white70, fontSize: 13);
-    final line2 =
-        playback != null && live != null && playback.controller == controller
-            ? _LiveTimeline(
-                channel: live,
-                epgId: channelId,
-                playback: playback,
-                onActivity: onActivity,
-                fill: accent,
-                timeStyle: timeStyle)
-            : const SizedBox.shrink();
-
-    // Invisible start / end times: the description lines up with the
-    // progress bar above it.
-    Widget ghostTime(DateTime t) => Visibility(
-        visible: false,
-        maintainSize: true,
-        maintainAnimation: true,
-        maintainState: true,
-        child: Text(TimeFormat.hm.format(t), style: timeStyle));
-    final description =
-        (program?.description ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
-    final line3 = Row(children: [
-      if (program != null) ...[
-        ghostTime(program.start),
-        const SizedBox(width: 10),
       ],
-      Expanded(
-        // Two lines (owner photo, +824: one left room beside the buttons);
-        // 2 x 15.6 fits the 38 px line, the bar keeps its height.
-        child: Text(description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: dim.copyWith(height: 1.2)),
-      ),
-      if (!infoBarButtons && program != null) ...[
-        const SizedBox(width: 10),
-        ghostTime(program.stop),
-      ],
-      if (infoBarButtons) ...[
-        const SizedBox(width: 16),
-        if (onToggleFavorite != null) ...[
-          _InfoBarButton(
-            round: true,
-            label: isFavorite == true
-                ? tr('Remove from favorites')
-                : tr('Add to favorites'),
-            onPressed: () {
-              onActivity?.call();
-              onToggleFavorite!();
-            },
-            child: Icon(isFavorite == true ? Icons.star : Icons.star_border,
-                size: 24,
-                color: isFavorite == true ? Colors.amber : Colors.white),
-          ),
-          const SizedBox(width: 8),
-        ],
-        ValueListenableBuilder<VideoPlayerHdrValue>(
-          valueListenable: _value,
-          builder: (context, value, _) => _InfoBarButton(
-            round: true,
-            focusNode: playFocusNode,
-            label: value.isPlaying ? tr('Pause') : tr('Play'),
-            // The service's toggle: pausing a live channel with catch-up
-            // is a timeshift.
-            onPressed: () {
-              onActivity?.call();
-              if (playback != null && playback.controller == controller) {
-                playback.togglePlayPause();
-              } else if (value.isPlaying) {
-                controller.pause();
-              } else {
-                controller.play();
-              }
-            },
-            child: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow,
-                size: 24, color: Colors.white),
-          ),
+      timeline:
+          playback != null && live != null && playback.controller == controller
+              ? _LiveTimeline(
+                  channel: live,
+                  epgId: channelId,
+                  playback: playback,
+                  onActivity: onActivity,
+                  fill: accent,
+                  timeStyle: LiveInfoBar.timeStyle)
+              : const SizedBox.shrink(),
+      playPause: ValueListenableBuilder<VideoPlayerHdrValue>(
+        valueListenable: _value,
+        builder: (context, value, _) => LiveInfoBar.playPauseButton(
+          playing: value.isPlaying,
+          focusNode: playFocusNode,
+          // The service's toggle: pausing a live channel with catch-up
+          // is a timeshift.
+          onPressed: () {
+            onActivity?.call();
+            if (playback != null && playback.controller == controller) {
+              playback.togglePlayPause();
+            } else if (value.isPlaying) {
+              controller.pause();
+            } else {
+              controller.play();
+            }
+          },
         ),
-        if (onSchedule != null) ...[
-          const SizedBox(width: 12),
-          _InfoBarButton(
-            label: tr('Channel schedule'),
-            onPressed: onSchedule!,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.event_note, size: 17, color: Colors.white),
-              const SizedBox(width: 7),
-              Text(tr('Channel schedule'),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700)),
-            ]),
-          ),
-        ],
-      ],
-    ]);
-
-    return Container(
-      key: const ValueKey('live-info-bar'),
-      height: liveInfoBarHeight + inset.bottom,
-      // 7 + the 1 px top border.
-      padding: EdgeInsets.fromLTRB(
-          20 + inset.left, 7, 20 + inset.right, 8 + inset.bottom),
-      decoration: BoxDecoration(
-        color: RefinedFinish.surface(context, const Color(0xD90D1014)),
-        border: const Border(top: BorderSide(color: Colors.white12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: 34, child: line1),
-          SizedBox(height: 24, child: Center(child: line2)),
-          SizedBox(height: 38, child: line3),
-        ],
       ),
     );
   }
@@ -1134,7 +887,7 @@ class PlayerControls extends StatelessWidget {
               // navigation (e.g. PlayerScreen's "Left always goes back").
               // Touch/mouse dragging is unaffected — this only removes it
               // from keyboard/remote focus traversal.
-              // The Slider itself stays out of focus; [_ScrubBar] is the
+              // The Slider itself stays out of focus; [ScrubBar] is the
               // remote's way onto it (Up from the buttons).
               // Live: the programme on now, how far in, and (catch-up
               // channels) Left/Right back into catch-up (owner, 2026-11-05).
@@ -1146,8 +899,8 @@ class PlayerControls extends StatelessWidget {
                   onActivity: onActivity,
                 ),
               if (showSeek)
-                _ScrubBar(
-                  controller: controller,
+                ScrubBar(
+                  onSeek: controller.seekTo,
                   position: position,
                   duration: duration,
                   onActivity: onActivity,
@@ -1195,7 +948,7 @@ class PlayerControls extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (onToggleFavorite != null)
-                            _RingIconButton(
+                            RingIconButton(
                               icon: isFavorite == true
                                   ? Icons.star
                                   : Icons.star_border,
@@ -1212,7 +965,7 @@ class PlayerControls extends StatelessWidget {
                           // within this episode" the way the buttons either side
                           // of play/pause already do.
                           if (onPrevious != null)
-                            _RingIconButton(
+                            RingIconButton(
                               icon: Icons.skip_previous,
                               tooltip: tr('Previous episode'),
                               onPressed: onPrevious,
@@ -1221,7 +974,7 @@ class PlayerControls extends StatelessWidget {
                             ..._catchupLeading(context, playback!, catchup),
                           // Skip/fast-seek only makes sense for VOD.
                           if (showSeek)
-                            _SkipButton(
+                            SkipHoldButton(
                               icon: Icons.replay_10,
                               onSeek: (amount) {
                                 onActivity?.call();
@@ -1231,7 +984,7 @@ class PlayerControls extends StatelessWidget {
                                     : target);
                               },
                             ),
-                          _RingIconButton(
+                          RingIconButton(
                             tooltip: value.isPlaying ? tr('Pause') : tr('Play'),
                             focusNode: playFocusNode,
                             icon: value.isPlaying
@@ -1246,7 +999,7 @@ class PlayerControls extends StatelessWidget {
                                     : controller.play(),
                           ),
                           if (showSeek)
-                            _SkipButton(
+                            SkipHoldButton(
                               icon: Icons.forward_10,
                               onSeek: (amount) {
                                 onActivity?.call();
@@ -1256,7 +1009,7 @@ class PlayerControls extends StatelessWidget {
                               },
                             ),
                           if (onNext != null)
-                            _RingIconButton(
+                            RingIconButton(
                               icon: Icons.skip_next,
                               tooltip: tr('Next episode'),
                               onPressed: onNext,
@@ -1429,8 +1182,8 @@ class PlayerControls extends StatelessWidget {
                   Text(_formatDuration(position), style: time),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ScrubBar(
-                      controller: controller,
+                    child: ScrubBar(
+                      onSeek: controller.seekTo,
                       position: position,
                       duration: duration,
                       onActivity: onActivity,
@@ -1483,7 +1236,7 @@ class PlayerControls extends StatelessWidget {
   List<Widget> _catchupLeading(
           BuildContext context, PlaybackService playback, CatchupSession s) =>
       [
-        _RingIconButton(
+        RingIconButton(
           icon: Icons.skip_previous,
           tooltip: tr('Previous programme'),
           onPressed: () {
@@ -1493,7 +1246,7 @@ class PlayerControls extends StatelessWidget {
             if (before != null) playback.playCatchup(s.live, before.start);
           },
         ),
-        _RingIconButton(
+        RingIconButton(
           icon: Icons.restart_alt,
           tooltip: tr('Watch from the start'),
           onPressed: () {
@@ -1508,7 +1261,7 @@ class PlayerControls extends StatelessWidget {
   List<Widget> _catchupTrailing(
           BuildContext context, PlaybackService playback, CatchupSession s) =>
       [
-        _RingIconButton(
+        RingIconButton(
           icon: Icons.skip_next,
           tooltip: tr('Next programme'),
           onPressed: () {
@@ -1523,7 +1276,7 @@ class PlayerControls extends StatelessWidget {
             }
           },
         ),
-        _BackToLiveButton(onPressed: () {
+        BackToLiveButton(onPressed: () {
           onActivity?.call();
           playback.backToLive();
         }),
@@ -1573,7 +1326,7 @@ class PlayerTouchTransport extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showSeek) ...[
-              _disc(_SkipButton(
+              _disc(SkipHoldButton(
                 icon: Icons.replay_10,
                 iconSize: 34,
                 onSeek: (amount) {
@@ -1606,7 +1359,7 @@ class PlayerTouchTransport extends StatelessWidget {
             )),
             if (showSeek) ...[
               const SizedBox(width: 40),
-              _disc(_SkipButton(
+              _disc(SkipHoldButton(
                 icon: Icons.forward_10,
                 iconSize: 34,
                 onSeek: (amount) {
@@ -1707,8 +1460,8 @@ class _InfoBarButtonState extends State<_InfoBarButton> {
   }
 }
 
-class _BackToLiveButton extends StatelessWidget {
-  const _BackToLiveButton({required this.onPressed});
+class BackToLiveButton extends StatelessWidget {
+  const BackToLiveButton({super.key, required this.onPressed});
 
   final VoidCallback onPressed;
 
@@ -2284,7 +2037,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
   Widget build(BuildContext context) {
     final tracks = _tracks;
     if (tracks == null || tracks.length < 2) return const SizedBox.shrink();
-    return _LabeledIconButton(
+    return LabeledIconButton(
       icon: Icons.multitrack_audio,
       label: tr('Audio track'),
       shortLabel: tr('Audio'),
@@ -2667,7 +2420,7 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
   @override
   Widget build(BuildContext context) {
     if (_tracks.isEmpty && !_canSearchOnline) return const SizedBox.shrink();
-    return _LabeledIconButton(
+    return LabeledIconButton(
       icon: Icons.subtitles,
       label: tr('Subtitles'),
       onPressed: _openPicker,
@@ -2682,7 +2435,7 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
 /// buttons either side of it. The bare swap icon means nothing on its
 /// own — there's no established icon convention for "cross-playlist
 /// failover" the way there is for play/pause or skip — so this was the
-/// first button to get [_LabeledIconButton]'s on-focus label treatment;
+/// first button to get [LabeledIconButton]'s on-focus label treatment;
 /// every other situational button in the secondary row has it now too.
 /// Options row: the live buffer (Settings > Playback > Live buffer). The
 /// native player takes a new reserve at once, so a channel that keeps
@@ -2717,7 +2470,7 @@ class _LiveBufferButtonState extends State<_LiveBufferButton> {
     } on ProviderNotFoundException {
       ms = 0;
     }
-    return _LabeledIconButton(
+    return LabeledIconButton(
       icon: Icons.hourglass_bottom,
       label: tr('Buffer'),
       detail: liveBufferShortName(ms),
@@ -2745,7 +2498,7 @@ class _LinkedChannelButton extends StatelessWidget {
     final playlistName = context
         .watch<PlaylistManager>()
         .playlistNameFor(linkedChannel.playlistId);
-    return _LabeledIconButton(
+    return LabeledIconButton(
       icon: Icons.swap_horiz,
       label: tr('Switch to {playlistName}: {name}',
           {'playlistName': playlistName, 'name': linkedChannel.name}),
@@ -2805,30 +2558,7 @@ class _OptionsTitle extends StatelessWidget {
     } else if (isLive && live != null) {
       programme = epg?.getCurrentProgram(live.epgId)?.title;
     }
-    const style = TextStyle(color: Colors.white, fontSize: 12);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style.copyWith(fontWeight: FontWeight.w700)),
-        ),
-        if (programme != null && programme.isNotEmpty) ...[
-          Container(
-              width: 1,
-              height: 12,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              color: Colors.white38),
-          Flexible(
-            flex: 2,
-            child: Text(programme,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-          ),
-        ],
-      ],
-    );
+    return OptionsTitleText(name: name, programme: programme);
   }
 }
 
@@ -2897,6 +2627,422 @@ class _AudioSummaryState extends State<_AudioSummary> {
   }
 }
 
+/// The live player's one bottom bar on a TV remote (owner's Discord poll,
+/// 2026-11-17: ~90 % for the bottom). The info card at the top and the bar
+/// under it showed the name, the times and the progress twice and took
+/// ~370 px of a 1080p picture. Mockups: dev-notes/player-info-bar.md.
+/// - Line 1: clock | logo, channel, playlist | programme ... time left,
+///   REC, [badges] (quality / FPS / sound).
+/// - Line 2: [timeline] (start - progress - end; on Android, a catch-up
+///   channel's Up reaches it and Left/Right go back in time).
+/// - Line 3: the description. A zap ([buttons] off): full width and nothing
+///   here takes focus, so Up/Down keep zapping. OK: it shortens and
+///   star / [playPause] / Channel schedule appear at its right.
+///
+/// Android's player ([PlayerControls.liveInfoBar]) and the Apple TV player
+/// (`DesktopPlayerScreen` on a remote) both draw it, with their own
+/// player's badges, timeline and Play / Pause: the two TV players look the
+/// same (owner, 2026-11-20: he guides Apple TV users from his Android box).
+class LiveInfoBar extends StatelessWidget {
+  const LiveInfoBar({
+    super.key,
+    required this.title,
+    required this.epgId,
+    required this.channel,
+    required this.badges,
+    required this.timeline,
+    required this.playPause,
+    this.buttons = false,
+    this.isFavorite,
+    this.onToggleFavorite,
+    this.onSchedule,
+    this.onActivity,
+    this.inset = EdgeInsets.zero,
+  });
+
+  final String title;
+
+  /// The guide id of [channel] (rawId or a manual override).
+  final String epgId;
+  final Channel? channel;
+
+  /// Line 1's end: the player's quality / FPS / sound badges.
+  final List<Widget> badges;
+
+  /// Line 2.
+  final Widget timeline;
+
+  /// Line 3's Play / Pause ([playPauseButton]), shown with [buttons].
+  final Widget playPause;
+
+  /// OK: star / Play-Pause / Channel schedule at the end of line 3.
+  final bool buttons;
+  final bool? isFavorite;
+  final VoidCallback? onToggleFavorite;
+  final VoidCallback? onSchedule;
+  final VoidCallback? onActivity;
+
+  /// Kept clear of the system bars (phones; zero on a TV).
+  final EdgeInsets inset;
+
+  /// The start / end times of line 2 (line 3 lines up with them).
+  static const timeStyle = TextStyle(color: Colors.white70, fontSize: 13);
+
+  /// Line 3's round Play / Pause.
+  static Widget playPauseButton(
+          {required bool playing,
+          required VoidCallback onPressed,
+          FocusNode? focusNode}) =>
+      _InfoBarButton(
+        round: true,
+        focusNode: focusNode,
+        label: playing ? tr('Pause') : tr('Play'),
+        onPressed: onPressed,
+        child: Icon(playing ? Icons.pause : Icons.play_arrow,
+            size: 24, color: Colors.white),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    EpgService? epg;
+    try {
+      epg = context.watch<EpgService>();
+    } on ProviderNotFoundException {
+      epg = null;
+    }
+    final live = channel;
+    var playlist = '';
+    if (live != null) {
+      try {
+        // select: the catalog warm-up notifies up to every 400 ms
+        // (CLAUDE.md §10 (14)).
+        playlist = context.select<PlaylistManager, String>(
+            (m) => m.playlistNameFor(live.playlistId).trim());
+      } on ProviderNotFoundException {
+        playlist = '';
+      }
+    }
+    final program = epg?.getCurrentProgram(epgId);
+    const strong = TextStyle(
+        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700);
+    const dim = TextStyle(color: Colors.white70, fontSize: 13);
+    final logo = live?.logoUrl;
+    Widget divider() => Container(
+        width: 1,
+        height: 22,
+        margin: const EdgeInsets.symmetric(horizontal: 14),
+        color: Colors.white24);
+
+    final line1 = LayoutBuilder(
+      builder: (context, box) => Row(children: [
+        const PlayerBarClock(
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700)),
+        divider(),
+        if (logo != null && logo.isNotEmpty) ...[
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 64, maxHeight: 22),
+            child: CachedNetworkImage(
+                imageUrl: logo,
+                fit: BoxFit.contain,
+                // Decoded small (CLAUDE.md §10 (6)).
+                memCacheWidth: 160,
+                errorWidget: (_, __, ___) => const SizedBox.shrink()),
+          ),
+          const SizedBox(width: 10),
+        ],
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: box.maxWidth * 0.26),
+          child: Text(title,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: strong),
+        ),
+        if (playlist.isNotEmpty)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 130),
+            child: GoldTag(
+                label: playlist,
+                fontSize: 12,
+                margin: const EdgeInsets.only(left: 10)),
+          ),
+        divider(),
+        Expanded(
+          child: Text(program?.title ?? tr('No program data available'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: program == null ? dim : strong),
+        ),
+        const SizedBox(width: 12),
+        _LiveRemainingLabel(channelId: epgId, style: dim),
+        if (live != null) RecPill(channel: live),
+        ...badges,
+      ]),
+    );
+
+    const timeStyle = LiveInfoBar.timeStyle;
+    final line2 = timeline;
+
+    // Invisible start / end times: the description lines up with the
+    // progress bar above it.
+    Widget ghostTime(DateTime t) => Visibility(
+        visible: false,
+        maintainSize: true,
+        maintainAnimation: true,
+        maintainState: true,
+        child: Text(TimeFormat.hm.format(t), style: timeStyle));
+    final description =
+        (program?.description ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+    final line3 = Row(children: [
+      if (program != null) ...[
+        ghostTime(program.start),
+        const SizedBox(width: 10),
+      ],
+      Expanded(
+        // Two lines (owner photo, +824: one left room beside the buttons);
+        // 2 x 15.6 fits the 38 px line, the bar keeps its height.
+        child: Text(description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: dim.copyWith(height: 1.2)),
+      ),
+      if (!buttons && program != null) ...[
+        const SizedBox(width: 10),
+        ghostTime(program.stop),
+      ],
+      if (buttons) ...[
+        const SizedBox(width: 16),
+        if (onToggleFavorite != null) ...[
+          _InfoBarButton(
+            round: true,
+            label: isFavorite == true
+                ? tr('Remove from favorites')
+                : tr('Add to favorites'),
+            onPressed: () {
+              onActivity?.call();
+              onToggleFavorite!();
+            },
+            child: Icon(isFavorite == true ? Icons.star : Icons.star_border,
+                size: 24,
+                color: isFavorite == true ? Colors.amber : Colors.white),
+          ),
+          const SizedBox(width: 8),
+        ],
+        playPause,
+        if (onSchedule != null) ...[
+          const SizedBox(width: 12),
+          _InfoBarButton(
+            label: tr('Channel schedule'),
+            onPressed: onSchedule!,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.event_note, size: 17, color: Colors.white),
+              const SizedBox(width: 7),
+              Text(tr('Channel schedule'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ],
+      ],
+    ]);
+
+    return Container(
+      key: const ValueKey('live-info-bar'),
+      height: PlayerControls.liveInfoBarHeight + inset.bottom,
+      // 7 + the 1 px top border.
+      padding: EdgeInsets.fromLTRB(
+          20 + inset.left, 7, 20 + inset.right, 8 + inset.bottom),
+      decoration: BoxDecoration(
+        color: RefinedFinish.surface(context, const Color(0xD90D1014)),
+        border: const Border(top: BorderSide(color: Colors.white12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 34, child: line1),
+          SizedBox(height: 24, child: Center(child: line2)),
+          SizedBox(height: 38, child: line3),
+        ],
+      ),
+    );
+  }
+}
+
+/// The TV options row's look (Down from the player bar): the Media Hub top
+/// menu's glass pill with round icon tiles ([LabeledIconButton] draws as a
+/// tile inside it) and short labels under them, a status line above it
+/// (what is playing on the left, the sound on the right). Android's player
+/// ([PlayerControls.optionsRow]) and the Apple TV player draw it.
+class PlayerOptionsPill extends StatelessWidget {
+  const PlayerOptionsPill({
+    super.key,
+    required this.tiles,
+    required this.title,
+    required this.live,
+    required this.catchup,
+    this.sound,
+    this.inset = EdgeInsets.zero,
+  });
+
+  final List<Widget> tiles;
+
+  /// The status line's left side ([OptionsTitleText]).
+  final Widget title;
+
+  /// The LIVE / CATCH-UP pill after [title].
+  final bool live;
+  final bool catchup;
+
+  /// The status line's right side: the playing sound.
+  final Widget? sound;
+  final EdgeInsets inset;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          stops: [0, 0.65, 1],
+          colors: [Color(0xCC000000), Color(0x66000000), Color(0x00000000)],
+        ),
+      ),
+      // 40 at the sides clears TV overscan (the first tile was cut off on
+      // the Formuler's TV).
+      padding: EdgeInsets.fromLTRB(
+          40 + inset.left, 14, 40 + inset.right, 4 + inset.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Hugs its buttons, centred (owner photo, 2026-11-06); a long
+          // row still scrolls inside the screen width.
+          Align(
+            // The title line sits on the pill, as wide as it (owner photo,
+            // 2026-11-06): the Stack takes the pill's size, the line floats
+            // in the space reserved above it.
+            child: Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.white.withValues(alpha: 0.10),
+                        Colors.white.withValues(alpha: 0.04),
+                      ]),
+                      color: const Color(0xE6000000),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white24),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black54, blurRadius: 8),
+                      ],
+                    ),
+                    child: _OptionTiles(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          // Top-aligned: a tile with a value line (Buffer
+                          // "Off") is taller and, centred, sat higher than
+                          // the rest (owner photo, 2026-11-12).
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...tiles,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: -24,
+                    height: 20,
+                    child: Row(
+                      children: [
+                        Flexible(child: title),
+                        if (live || catchup) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                                color: catchup ? Colors.transparent : accent,
+                                border: Border.all(color: accent),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Text(
+                                catchup
+                                    ? tr('Catch-up').toUpperCase()
+                                    : tr('LIVE'),
+                                style: TextStyle(
+                                    color: catchup ? accent : Colors.black,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.6)),
+                          ),
+                        ],
+                        const Spacer(),
+                        if (sound case final sound?) sound,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The options row's status line, left side: "TSN 1 | NHL Hockey" (the
+/// channel and the programme on now or at the replay position), or a
+/// movie / episode's own title alone.
+class OptionsTitleText extends StatelessWidget {
+  const OptionsTitleText({super.key, required this.name, this.programme});
+
+  final String name;
+  final String? programme;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(color: Colors.white, fontSize: 12);
+    final programme = this.programme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style.copyWith(fontWeight: FontWeight.w700)),
+        ),
+        if (programme != null && programme.isNotEmpty) ...[
+          Container(
+              width: 1,
+              height: 12,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: Colors.white38),
+          Flexible(
+            flex: 2,
+            child: Text(programme,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 /// One tile of the TV options row that the player screen adds itself
 /// (Channels list, Channel schedule, Sources, Fill, Data pool, Search).
 class PlayerOption {
@@ -2912,7 +3058,7 @@ class PlayerOption {
   final VoidCallback onPressed;
 }
 
-/// Under the options row, [_LabeledIconButton]s draw as big tiles (icon
+/// Under the options row, [LabeledIconButton]s draw as big tiles (icon
 /// over a label, TiviMate-style) instead of the bar's icon + hover label.
 class _OptionTiles extends InheritedWidget {
   const _OptionTiles({required super.child});
@@ -2924,9 +3070,10 @@ class _OptionTiles extends InheritedWidget {
   bool updateShouldNotify(_OptionTiles oldWidget) => false;
 }
 
-class _LabeledIconButton extends StatefulWidget {
-  const _LabeledIconButton(
-      {required this.icon,
+class LabeledIconButton extends StatefulWidget {
+  const LabeledIconButton(
+      {super.key,
+      required this.icon,
       required this.label,
       required this.onPressed,
       this.detail,
@@ -2944,10 +3091,10 @@ class _LabeledIconButton extends StatefulWidget {
   final String? detail;
 
   @override
-  State<_LabeledIconButton> createState() => _LabeledIconButtonState();
+  State<LabeledIconButton> createState() => _LabeledIconButtonState();
 }
 
-class _LabeledIconButtonState extends State<_LabeledIconButton> {
+class _LabeledIconButtonState extends State<LabeledIconButton> {
   // IconButton has no onFocusChange of its own to hook — an explicit
   // FocusNode passed to it, listened to directly, is the reliable way to
   // track its real D-pad focus state regardless of that (a second, outer
@@ -3100,24 +3247,27 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
 /// 10 s, jumps grow while the key is held ([ScrubSteps]) — then one seek
 /// lands 700 ms after the last press (or at once on OK). One seek instead
 /// of one per step: each seek re-buffers, and IPTV servers are slow to.
-class _ScrubBar extends StatefulWidget {
-  const _ScrubBar({
-    required this.controller,
+class ScrubBar extends StatefulWidget {
+  const ScrubBar({
+    super.key,
+    required this.onSeek,
     required this.position,
     required this.duration,
     this.onActivity,
   });
 
-  final VideoPlayerHdrController controller;
+  /// The player's seek (Android's controller, the Apple TV player's mpv):
+  /// both TV players share this bar.
+  final void Function(Duration to) onSeek;
   final Duration position;
   final Duration duration;
   final VoidCallback? onActivity;
 
   @override
-  State<_ScrubBar> createState() => _ScrubBarState();
+  State<ScrubBar> createState() => _ScrubBarState();
 }
 
-class _ScrubBarState extends State<_ScrubBar> {
+class _ScrubBarState extends State<ScrubBar> {
   final _focus = FocusNode(debugLabel: 'scrub-bar');
   Duration? _target;
   final _steps = ScrubSteps();
@@ -3158,7 +3308,7 @@ class _ScrubBarState extends State<_ScrubBar> {
     _commit?.cancel();
     final target = _target;
     if (target != null) {
-      widget.controller.seekTo(target);
+      widget.onSeek(target);
       _landing = target;
       _landingSince = DateTime.now();
     }
@@ -3237,7 +3387,7 @@ class _ScrubBarState extends State<_ScrubBar> {
                 value: value,
                 max: max.toDouble(),
                 onChanged: (v) =>
-                    widget.controller.seekTo(Duration(milliseconds: v.toInt())),
+                    widget.onSeek(Duration(milliseconds: v.toInt())),
               ),
             ),
           ),
@@ -3302,7 +3452,7 @@ class _FloatingNote extends StatelessWidget {
 /// The live programme's timeline in the player bar: start and end times,
 /// a bar up to now. On a catch-up channel it's a remote target (Up from
 /// the buttons): Left/Right move a time back (growing steps, like
-/// [_ScrubBar]), and 700 ms after the last press (or OK) catch-up plays
+/// [ScrubBar]), and 700 ms after the last press (or OK) catch-up plays
 /// from there; back to now = live. Without a guide listing it's hidden.
 class _LiveTimeline extends StatefulWidget {
   const _LiveTimeline({
@@ -3447,7 +3597,7 @@ class _LiveTimelineState extends State<_LiveTimeline> {
       }),
     );
     // The target time and the Catch-up hint float above the bar, like
-    // [_ScrubBar]'s: beside it they took its width and moved every point.
+    // [ScrubBar]'s: beside it they took its width and moved every point.
     final timeStyle = widget.timeStyle ??
         const TextStyle(color: Colors.white70, fontSize: 12);
     final row = Stack(clipBehavior: Clip.none, children: [
@@ -3484,9 +3634,12 @@ class _LiveTimelineState extends State<_LiveTimeline> {
   }
 }
 
-class _SkipButton extends StatefulWidget {
-  const _SkipButton(
-      {required this.icon, required this.onSeek, this.iconSize = 28});
+class SkipHoldButton extends StatefulWidget {
+  const SkipHoldButton(
+      {super.key,
+      required this.icon,
+      required this.onSeek,
+      this.iconSize = 28});
 
   final IconData icon;
 
@@ -3498,10 +3651,10 @@ class _SkipButton extends StatefulWidget {
   final void Function(Duration amount) onSeek;
 
   @override
-  State<_SkipButton> createState() => _SkipButtonState();
+  State<SkipHoldButton> createState() => _SkipButtonState();
 }
 
-class _SkipButtonState extends State<_SkipButton> {
+class _SkipButtonState extends State<SkipHoldButton> {
   Timer? _holdTimer;
   int _tick = 0;
   bool _heldPastTap = false;
@@ -3619,7 +3772,7 @@ class _SkipButtonState extends State<_SkipButton> {
 }
 
 /// The bar's round-button focus look: accent ring, dark sheen and glow, on
-/// at once (no fade). [_SkipButton] and [_RingIconButton] share it, so the
+/// at once (no fade). [SkipHoldButton] and [RingIconButton] share it, so the
 /// bar has one focus highlight.
 Decoration _ringDecoration(BuildContext context, bool focused) {
   final scheme = Theme.of(context).colorScheme;
@@ -3653,13 +3806,14 @@ Decoration _ringDecoration(BuildContext context, bool focused) {
 }
 
 /// A round bar button (star, previous / next, restart, play / pause) with
-/// [_SkipButton]'s focus ring. Stock IconButtons showed Material's faint
+/// [SkipHoldButton]'s focus ring. Stock IconButtons showed Material's faint
 /// grey focus circle, fading in, beside the -10 / +10 rings (owner photos,
 /// 2026-11-19: "two focus highlights is weird, the lighter one is barely
 /// noticeable"). OK acts on the press only: the Homatics remote sends an
 /// OK repeat ~420 ms after a press, which paused and played again.
-class _RingIconButton extends StatefulWidget {
-  const _RingIconButton({
+class RingIconButton extends StatefulWidget {
+  const RingIconButton({
+    super.key,
     required this.icon,
     required this.tooltip,
     required this.onPressed,
@@ -3676,10 +3830,10 @@ class _RingIconButton extends StatefulWidget {
   final FocusNode? focusNode;
 
   @override
-  State<_RingIconButton> createState() => _RingIconButtonState();
+  State<RingIconButton> createState() => _RingIconButtonState();
 }
 
-class _RingIconButtonState extends State<_RingIconButton> {
+class _RingIconButtonState extends State<RingIconButton> {
   bool _focused = false;
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {

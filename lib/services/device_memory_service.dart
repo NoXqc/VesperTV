@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../utils/desktop_platform.dart';
+
 /// Real device memory info from Android's ActivityManager — see
 /// MainActivity.kt's doc comment for why this needs a small native call
 /// (Flutter has no built-in way to ask "how much RAM does this device
@@ -81,6 +83,8 @@ class DeviceTypeService {
   /// previous size-based behaviour rather than forcing a TV layout onto a
   /// phone.
   static Future<bool> isTelevision() async {
+    // Apple TV has no Kotlin channel; it is always a TV.
+    if (isAppleTv) return television = true;
     try {
       return television =
           await _channel.invokeMethod<bool>('isTelevision') ?? false;

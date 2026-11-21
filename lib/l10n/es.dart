@@ -3903,6 +3903,8 @@ const Map<String, String> kEs = {
       "Un reproductor IPTV sencillo: la guía clásica compacta, grupos que se pliegan, sin Acabado refinado y sin Inicio, perfiles, Sports Trak ni Media Hub. Desactívalo para dejarlo todo como estaba. Las pestañas también se pueden volver a activar una a una.",
   "Removes the Home tab.":
       "Quita la pestaña Inicio.",
+  "Press Menu again to go to the Apple TV Home screen.":
+      "Pulsa Menú otra vez para volver a la pantalla de inicio del Apple TV.",
   // Vesper AI settings tool + guide order (2026-11-14).
   "Hide Home":
       "Ocultar Inicio",

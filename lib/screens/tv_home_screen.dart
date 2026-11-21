@@ -26,9 +26,11 @@ import '../services/back_press_swallow.dart';
 import '../services/perf_diagnostics.dart';
 import '../services/startup_quiet.dart';
 import '../services/app_exit.dart';
+import '../services/apple_tv_menu.dart';
 import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
+import '../widgets/desktop_video_status.dart';
 import '../services/app_update_service.dart';
 import '../services/desktop_window.dart';
 import '../services/desktop_mini_player.dart';
@@ -93,6 +95,7 @@ import '../services/vesper_ai/vesper_ai.dart';
 import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/app_store.dart';
+import '../widgets/tv_canvas.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -2045,7 +2048,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final renderObject =
         FocusManager.instance.primaryFocus?.context?.findRenderObject();
     if (renderObject is! RenderBox || !renderObject.attached) return;
-    final topLeft = renderObject.localToGlobal(Offset.zero);
+    final focused = FocusManager.instance.primaryFocus!.context!;
+    final topLeft = overlayRectOf(focused, renderObject).topLeft;
     final size = renderObject.size;
     final overlay = Overlay.of(context, rootOverlay: true);
     _leftEdgeHintOverlay = OverlayEntry(
@@ -2178,10 +2182,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool get _showRecentGroup =>
       context.read<AppPreferences>().recentChannelsGroup;
 
-  // iPhone: its player has catch-up (DesktopCatchup); Windows keeps the
-  // group off until it's tested there.
+  // iPhone and Apple TV: their player has catch-up (DesktopCatchup);
+  // Windows keeps the group off until it's tested there.
   bool get _showCatchupGroup =>
-      (!usesMediaKitTarget || isIosTarget) &&
+      (!usesMediaKitTarget || isIosTarget || isAppleTv) &&
       !context.read<AppPreferences>().hideCatchupGroup;
 
   /// Settings > Interface > Live TV > Show channels while moving through
@@ -2926,6 +2930,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   @override
   void dispose() {
+    AppleTvMenu.setAtRoot(false);
     _playlistListened?.removeListener(_onPlaylistChanged);
     GuideKey.unregister(this);
     HardwareKeyboard.instance.removeHandler(_noteKey);
@@ -2989,6 +2994,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    if (isAppleTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reportAppleTvRoot());
+    }
     debugPrint('GuideFocus: back on the TV home (tab $_tab, depth '
         '$_focusDepth, full screen '
         '${context.read<PlaybackService>().isFullscreenActive}, '
@@ -3483,12 +3491,34 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // The target platform (not dart:io), so Android tests on a Windows PC
     // take the Android path.
     if (usesMediaKitTarget) {
-      // One stream at a time: the preview's connection goes first.
-      DesktopMiniPlayer.instance.clear();
-      _catchupPreview = null;
-      await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) =>
-              DesktopPlayerScreen(channel: channel, catchupAt: at)));
+      // Like Android: the preview plays it first, OK again on the same one
+      // goes full screen with the same session (owner, 2026-11-20: Apple TV
+      // opened it full screen at once).
+      final mini = DesktopMiniPlayer.instance;
+      context.read<PlaybackService>().zapList =
+          _currentLiveChannels(context.read<PlaylistManager>());
+      final last = _catchupPreview;
+      if (last != null &&
+          last.id == channel.id &&
+          last.at == at &&
+          mini.inCatchup &&
+          mini.channel.value?.id == channel.id) {
+        final session = mini.take();
+        if (session == null) return;
+        _catchupPreview = null;
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => DesktopPlayerScreen(
+                  channel: channel,
+                  existingPlayer: session.$1,
+                  existingController: session.$2,
+                )));
+        return;
+      }
+      _catchupPreview = (id: channel.id, at: at);
+      mini.playCatchup(channel, at,
+          playlists: context.read<PlaylistManager>(),
+          epg: context.read<EpgService>(),
+          storage: context.read<StorageService>());
       return;
     }
     final playback = context.read<PlaybackService>();
@@ -3517,7 +3547,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       context.read<PlaybackService>().zapList =
           _currentLiveChannels(context.read<PlaylistManager>());
       final mini = DesktopMiniPlayer.instance;
-      if (mini.channel.value?.id == channel.id) {
+      // Its catch-up in the preview: OK on the channel = live again there.
+      if (mini.channel.value?.id == channel.id && !mini.inCatchup) {
         final session = mini.take();
         if (session == null) return;
         Navigator.of(context).push(MaterialPageRoute(
@@ -4123,7 +4154,25 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         child: PerfDiagnostics.timedSync('homeBuild', () => _build(context)));
     PerfDiagnostics.part('homeMake', sw.elapsedMicroseconds);
     _lastBuilt = built;
+    if (isAppleTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reportAppleTvRoot());
+    }
     return built;
+  }
+
+  /// Apple TV: whether the Siri Remote's Menu should leave the app now, the
+  /// way Back would from here ([_backToSportsOrExit]); AppleTvMenu.
+  void _reportAppleTvRoot() {
+    if (!mounted) return;
+    AppleTvMenu.setAtRoot(ModalRoute.of(context)?.isCurrent == true &&
+        TickerMode.valuesOf(context).enabled &&
+        !_compact &&
+        _focusDepth == 0 &&
+        _movingChannel == null &&
+        _movingGroupKey == null &&
+        !(context.read<AppPreferences>().sportsMode &&
+            Navigator.of(context).canPop()) &&
+        !ProfileGate.wouldReturnToSelector);
   }
 
   Widget _build(BuildContext context) {
@@ -4763,6 +4812,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   @override
   void didPushNext() {
+    AppleTvMenu.setAtRoot(false);
     ++_browseFocusRequest;
     _previewCovered = true;
     _releasePreviewHint?.call();
@@ -6109,6 +6159,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             return _idlePreview();
           }
           final controller = DesktopMiniPlayer.instance.controller;
+          final remote = context.read<AppPreferences>().isTelevision;
           return ExcludeFocus(
             child: InkWell(
               onTap: () {
@@ -6135,23 +6186,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   if (controller != null)
                     DesktopReconnectingBadge(
                         recovery: DesktopLiveRecovery.of(controller.player)),
+                  // A remote (Apple TV): Android's preview, the picture and
+                  // a spinner until it plays (owner, 2026-11-20).
+                  if (controller != null && remote)
+                    DesktopBufferingSpinner(player: controller.player),
                   // Stop: nothing plays, the app stays open (Windows user,
                   // 2026-11-14: only quitting stopped a channel).
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Material(
-                      color: Colors.black54,
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        iconSize: 18,
-                        visualDensity: VisualDensity.compact,
-                        tooltip: tr('Stop playback'),
-                        icon: const Icon(Icons.stop, color: Colors.white),
-                        onPressed: DesktopMiniPlayer.instance.clear,
+                  if (!remote)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Material(
+                        color: Colors.black54,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          iconSize: 18,
+                          visualDensity: VisualDensity.compact,
+                          tooltip: tr('Stop playback'),
+                          icon: const Icon(Icons.stop, color: Colors.white),
+                          onPressed: DesktopMiniPlayer.instance.clear,
+                        ),
                       ),
                     ),
-                  ),
                   if (controller != null && showBadges)
                     Positioned(
                       top: 8,
@@ -6162,40 +6218,41 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             player: controller.player),
                       ),
                     ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 20, 10, 8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.8),
-                            Colors.transparent,
+                  if (!remote)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(10, 20, 10, 8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.8),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(minimized.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13)),
+                            Text(tr('Click to resume'),
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 11)),
                           ],
                         ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(minimized.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13)),
-                          Text(tr('Click to resume'),
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 11)),
-                        ],
-                      ),
                     ),
-                  ),
                 ],
               ),
             ),

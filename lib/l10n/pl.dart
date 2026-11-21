@@ -3496,6 +3496,8 @@ const Map<String, String> kPl = {
       "Prosty odtwarzacz IPTV: klasyczny kompaktowy przewodnik, zwijane grupy, bez Dopracowanego wykończenia i bez Startu, profili, Sports Trak ani Media Hub. Wyłącz, aby przywrócić wszystko jak było. Karty można też włączać ponownie pojedynczo.",
   "Removes the Home tab.":
       "Usuwa kartę Start.",
+  "Press Menu again to go to the Apple TV Home screen.":
+      "Naciśnij ponownie Menu, aby wrócić do ekranu głównego Apple TV.",
   // Vesper AI settings tool + guide order (2026-11-14).
   "Hide Home":
       "Ukryj Start",

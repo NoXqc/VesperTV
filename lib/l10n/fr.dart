@@ -3916,6 +3916,8 @@ const Map<String, String> kFr = {
       "Un lecteur IPTV simple : le guide classique compact, des groupes qui se replient, pas de Finition raffinée, et ni Accueil, ni profils, ni Sports Trak, ni Media Hub. Désactivez-le pour tout remettre comme avant. Les onglets peuvent aussi être réactivés un par un.",
   "Removes the Home tab.":
       "Retire l’onglet Accueil.",
+  "Press Menu again to go to the Apple TV Home screen.":
+      "Appuyez de nouveau sur Menu pour revenir à l’écran d’accueil de l’Apple TV.",
   // Vesper AI settings tool + guide order (2026-11-14).
   "Hide Home":
       "Masquer l'Accueil",

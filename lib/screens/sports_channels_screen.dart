@@ -22,6 +22,7 @@ import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
 import '../utils/desktop_platform.dart';
+import '../widgets/desktop_video_status.dart';
 
 /// Shared all-channel picker: selection is independent of filters and paging.
 class SportsChannelPicker extends StatefulWidget {
@@ -1210,11 +1211,13 @@ class _ChannelsHero extends StatelessWidget {
                 color: Colors.black54,
                 child: previewing
                     ? (mini != null
-                        ? Video(
-                            controller: mini,
-                            controls: NoVideoControls,
-                            pauseUponEnteringBackgroundMode:
-                                mediaKitPausesInBackground)
+                        ? DesktopVideoWithSpinner(
+                            player: mini.player,
+                            video: Video(
+                                controller: mini,
+                                controls: NoVideoControls,
+                                pauseUponEnteringBackgroundMode:
+                                    mediaKitPausesInBackground))
                         : const VideoPlayerPane(
                             showEpgBar: false, showControls: false))
                     : Center(
