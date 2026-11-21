@@ -3305,6 +3305,7 @@ const Map<String, String> kUk = {
   "Side drawer": "Бічна панель",
   "Last channel": "Останній канал",
   "Player bar": "Панель плеєра",
+  "Back to the guide": "Назад до телегіду",
   "Nothing": "Нічого",
   "Fast forward": "Перемотати вперед",
   "Rewind": "Перемотати назад",

@@ -3740,6 +3740,7 @@ const Map<String, String> kFr = {
       "Dernière chaîne",
   "Player bar":
       "Barre du lecteur",
+  "Back to the guide": "Retour au guide",
   "Nothing":
       "Rien",
   "Fast forward":

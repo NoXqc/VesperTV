@@ -3688,6 +3688,7 @@ const Map<String, String> kEl = {
       "Τελευταίο κανάλι",
   "Player bar":
       "Γραμμή αναπαραγωγής",
+  "Back to the guide": "Πίσω στον οδηγό",
   "Nothing":
       "Τίποτα",
   "Fast forward":
