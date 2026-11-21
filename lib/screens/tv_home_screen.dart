@@ -11173,12 +11173,18 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void moveVertical(int delta) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return;
-    final targetRow = rowIndex + delta;
+    var targetRow = rowIndex + delta;
     if (targetRow < 0) {
       widget.onReachedTop?.call();
       return;
     }
-    if (targetRow >= widget.channels.length) return;
+    if (targetRow >= widget.channels.length) {
+      // Down on the last channel: back to the first (Reddit + owner,
+      // 2026-11-21). Up on the first still goes to the search button, and
+      // a 10-row jump (jumpVertical) stops at the end.
+      if (delta != 1 || widget.channels.length < 2) return;
+      targetRow = 0;
+    }
     final time = _referenceTime(_focusedProgram);
     _ensureRowVisible(targetRow);
     final blocks = _rowBlocks[targetRow];

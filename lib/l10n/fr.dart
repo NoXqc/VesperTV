@@ -4150,4 +4150,11 @@ const Map<String, String> kFr = {
       "Une mise à jour testée par semaine.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Les correctifs dès qu'ils sont prêts, avant la mise à jour de la semaine. Une version de test peut avoir de nouveaux bugs : envoyez un journal si quelque chose ne va pas.",
+  "Player": "Lecteur",
+  "Player bar transparency": "Transparence de la barre du lecteur",
+  "Options row transparency": "Transparence de la rangée d'options",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barre d'infos de la chaîne en bas et la barre des films / épisodes. 0 % est opaque, 15 % comme avant, 100 % est transparent.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La rangée de boutons ouverte avec Bas (Chaînes, Sous-titres, Multivue...). 0 % est opaque, 15 % comme avant, 100 % est transparent.",
 };

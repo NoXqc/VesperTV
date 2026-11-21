@@ -78,7 +78,8 @@ class _Epg extends EpgService {
             now.minute - now.minute % 30);
         EpgProgram p(String title, int from, int to) => EpgProgram(
             channelId: channelId,
-            title: title,
+            // The second row's titles end in " 2": rows can be told apart.
+            title: channelId == 'plain.ca' ? '$title 2' : title,
             start: base.add(Duration(minutes: from)),
             stop: base.add(Duration(minutes: to)));
         return [
@@ -285,6 +286,19 @@ void main() {
     // view is the usual live one again, not that programme's start.
     expect(tester.getTopLeft(find.text('Half hour').first), live,
         reason: 'walking back ends at the live position');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Down on the last channel goes back to the first',
+      (tester) async {
+    await pumpHome(tester);
+    await intoGuide(tester);
+    expect(focusedTitle(), startsWith('On now,'));
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now 2'));
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now,'),
+        reason: 'the last channel wraps to the first');
     expect(tester.takeException(), isNull);
   });
 }

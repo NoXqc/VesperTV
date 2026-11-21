@@ -4040,4 +4040,11 @@ const Map<String, String> kDe = {
       "Ein getestetes Update pro Woche.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Korrekturen, sobald sie fertig sind, vor dem wöchentlichen Update. Eine Testversion kann neue Fehler haben: Senden Sie ein Protokoll, wenn etwas nicht funktioniert.",
+  "Player": "Player",
+  "Player bar transparency": "Transparenz der Player-Leiste",
+  "Options row transparency": "Transparenz der Optionsreihe",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Die Senderinfoleiste unten und die Leiste für Filme / Folgen. 0 % ist deckend, 15 % wie bisher, 100 % ist durchsichtig.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Die Tastenreihe, die sich mit Runter öffnet (Sender, Untertitel, Multiview...). 0 % ist deckend, 15 % wie bisher, 100 % ist durchsichtig.",
 };

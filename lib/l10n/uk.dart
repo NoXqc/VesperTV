@@ -3609,4 +3609,11 @@ const Map<String, String> kUk = {
       "Одне перевірене оновлення на тиждень.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Виправлення одразу, щойно вони готові, ще до щотижневого оновлення. Тестова версія може мати нові помилки: надішліть журнал, якщо щось не працює.",
+  "Player": "Плеєр",
+  "Player bar transparency": "Прозорість панелі плеєра",
+  "Options row transparency": "Прозорість ряду параметрів",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Інформаційна панель каналу внизу та панель фільмів / серій. 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Ряд кнопок, що відкривається кнопкою Вниз (Канали, Субтитри, Multiview...). 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
 };

@@ -4099,4 +4099,11 @@ const Map<String, String> kEl = {
       "Μία δοκιμασμένη ενημέρωση την εβδομάδα.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Οι διορθώσεις μόλις γίνουν, πριν από την εβδομαδιαία ενημέρωση. Μια δοκιμαστική έκδοση μπορεί να έχει νέα σφάλματα: στείλτε ένα αρχείο καταγραφής αν κάτι χαλάσει.",
+  "Player": "Αναπαραγωγή",
+  "Player bar transparency": "Διαφάνεια γραμμής αναπαραγωγής",
+  "Options row transparency": "Διαφάνεια σειράς επιλογών",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Η γραμμή πληροφοριών καναλιού κάτω και η γραμμή ταινιών / επεισοδίων. 0% αδιαφανές, 15% όπως πριν, 100% διάφανο.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Η σειρά κουμπιών που ανοίγει με Κάτω (Κανάλια, Υπότιτλοι, Multiview...). 0% αδιαφανές, 15% όπως πριν, 100% διάφανο.",
 };

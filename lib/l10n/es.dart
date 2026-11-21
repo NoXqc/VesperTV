@@ -4137,4 +4137,11 @@ const Map<String, String> kEs = {
       "Una actualización probada por semana.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Las correcciones en cuanto están listas, antes de la actualización semanal. Una versión de prueba puede tener errores nuevos: envía un registro si algo falla.",
+  "Player": "Reproductor",
+  "Player bar transparency": "Transparencia de la barra del reproductor",
+  "Options row transparency": "Transparencia de la fila de opciones",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barra de información del canal abajo y la barra de películas / episodios. 0 % es opaco, 15 % como antes, 100 % es transparente.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La fila de botones que se abre con Abajo (Canales, Subtítulos, Multivista...). 0 % es opaco, 15 % como antes, 100 % es transparente.",
 };

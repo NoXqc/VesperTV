@@ -4144,4 +4144,11 @@ const Map<String, String> kIt = {
       "Un aggiornamento testato a settimana.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Le correzioni appena sono pronte, prima dell'aggiornamento settimanale. Una versione di prova può avere nuovi bug: invia un log se qualcosa non va.",
+  "Player": "Lettore",
+  "Player bar transparency": "Trasparenza della barra del lettore",
+  "Options row transparency": "Trasparenza della riga delle opzioni",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barra informazioni del canale in basso e la barra di film / episodi. 0% è opaco, 15% come prima, 100% è trasparente.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La riga di pulsanti che si apre con Giù (Canali, Sottotitoli, Multiview...). 0% è opaco, 15% come prima, 100% è trasparente.",
 };

@@ -629,6 +629,18 @@ class AppConstants {
   static const String keyGuideFullVideo = 'vesper_guide_full_video';
   static const String keyGuideTransparency = 'vesper_guide_transparency';
 
+  /// Settings > Playback > Player bar / Options row transparency (percent),
+  /// per viewer. The single Player menu transparency of test +948 seeds both.
+  static const String keyPlayerMenuTransparency =
+      'vesper_player_menu_transparency';
+  static const String keyPlayerBarTransparency =
+      'vesper_player_bar_transparency';
+  static const String keyPlayerOptionsTransparency =
+      'vesper_player_options_transparency';
+
+  /// The TV player's options row order (tile ids), per viewer.
+  static const String keyPlayerOptionsOrder = 'vesper_player_options_order';
+
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
 

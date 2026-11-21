@@ -485,6 +485,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-21 - player batch +945..+950 (`claude/player-options-order`, merged into main with
+  release-channels; main = `1.0.73+950`, the first Sunday stable's name):** TV player options row order (hold OK on a
+  tile = move, `vesper_player_options_order`, `lib/widgets/player_options_order.dart`; tile ids are saved, never rename),
+  Settings > Playback > Player: **Player bar transparency** + **Options row transparency** (per viewer, 0 % solid,
+  15 % = old look, 100 % clear, `playerMenuAlpha`), Timeline guide Down on the last channel wraps to the first, Sports
+  Trak top row clock (Show clock). **Reload on 4K** (owner LOG-PSBGV7): the S905X4 has ONE 4K HEVC decoder, so
+  `reloadCurrentChannel` first lets the same player re-take the stream (`_reuseNativeLive`), 4K (>= 3000 px or
+  `Real4kChannels`) closes the old player before the new one (`_replaySame` + `play()`), HD keeps build-then-swap
+  (test/reload_4k_decoder_test.dart). +950 is on the Homatics; the 4K Reload is not box-tested yet.
 - **Claude, 2026-11-21 - weekly stable + test builds (`claude/release-channels`, owner: "lets implement it. it will
   help me slow down"):** AMD's Discord suggestion. Stable every **Sunday** (first: 1.0.73 on Sunday 2026-11-22), test builds
   = GitHub pre-releases `<next>-dev.<N>` in between, hotfix = the only mid-week stable. App: Settings > Check for

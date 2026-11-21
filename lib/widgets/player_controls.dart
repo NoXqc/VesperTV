@@ -1,4 +1,5 @@
 import '../utils/refined_finish.dart';
+import 'player_options_order.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -445,6 +446,39 @@ bool _isDnsLookupFailure(String raw) {
       lower.contains('nodename nor servname');
 }
 
+/// Settings > Playback > Player bar / Options row transparency: the alpha
+/// for a background whose alpha at the default 15 % is [base]. 0 % = solid,
+/// 15 % = [base], 100 % = clear.
+double playerMenuAlpha(double base, int transparency) {
+  const d = AppPreferences.defaultPlayerMenuTransparency;
+  final t = transparency.clamp(0, 100);
+  if (t <= d) return base + (1 - base) * (d - t) / d;
+  return base * (100 - t) / (100 - d);
+}
+
+/// [c] at [transparency] ([playerMenuAlpha]).
+Color playerMenuColor(Color c, int transparency) =>
+    c.withValues(alpha: playerMenuAlpha(c.a, transparency));
+
+/// The viewer's Player bar / Options row transparency. Read in a build (it
+/// selects; never inside a LayoutBuilder).
+int playerBarTransparency(BuildContext context) {
+  try {
+    return context.select<AppPreferences, int>((p) => p.playerBarTransparency);
+  } on ProviderNotFoundException {
+    return AppPreferences.defaultPlayerMenuTransparency;
+  }
+}
+
+int playerOptionsTransparency(BuildContext context) {
+  try {
+    return context
+        .select<AppPreferences, int>((p) => p.playerOptionsTransparency);
+  } on ProviderNotFoundException {
+    return AppPreferences.defaultPlayerMenuTransparency;
+  }
+}
+
 /// Bottom-anchored playback controls: play/pause, seek bar, elapsed/total
 /// duration. Rebuilds on every controller tick via [ValueListenableBuilder]
 /// rather than manual `setState` calls. Fullscreen/immersive mode is a
@@ -626,7 +660,13 @@ class PlayerControls extends StatelessWidget {
 
   /// Recall, Watch from the start, Reload, tracks, Audio sync, linked
   /// channel, Multiview: in the bar on phones, in the options row on TV.
-  List<Widget> _actionButtons(BuildContext context, PlaybackService? playback) {
+  List<Widget> _actionButtons(BuildContext context, PlaybackService? playback) =>
+      [for (final (_, tile) in _actionTiles(context, playback)) tile];
+
+  /// [_actionButtons] with each one's id, for the viewer's options row
+  /// order (ids are saved: never rename one).
+  List<(String, Widget)> _actionTiles(
+      BuildContext context, PlaybackService? playback) {
     int? audioDelay;
     try {
       audioDelay = context.watch<AppPreferences>().audioDelayMs;
@@ -635,7 +675,7 @@ class PlayerControls extends StatelessWidget {
     }
     return [
       if (isLive && channel != null)
-        LabeledIconButton(
+        ('recall', LabeledIconButton(
           icon: Icons.history,
           label: tr('Recall — go back to a recent channel'),
           shortLabel: tr('Recent'),
@@ -643,11 +683,11 @@ class PlayerControls extends StatelessWidget {
             onActivity?.call();
             showRecallPicker(context, channel!);
           },
-        ),
+        )),
       // Start over: the programme on now, from
       // its start (catch-up channels only).
       if (isLive && channel != null && channel!.hasCatchup)
-        LabeledIconButton(
+        ('start_over', LabeledIconButton(
           icon: Icons.restart_alt,
           label: tr('Watch from the start'),
           shortLabel: tr('Start over'),
@@ -659,7 +699,7 @@ class PlayerControls extends StatelessWidget {
               playback?.playCatchup(channel!, now.start);
             }
           },
-        ),
+        )),
       // Manual recovery for a channel that's silently
       // stalled (frozen frame, no spinner, no error) — see
       // PlaybackService.reloadCurrentChannel's doc comment
@@ -667,7 +707,7 @@ class PlayerControls extends StatelessWidget {
       // automatic watchdog. Live only, same gating as Recall
       // above.
       if (isLive && channel != null)
-        LabeledIconButton(
+        ('reload', LabeledIconButton(
           icon: Icons.refresh,
           label: tr('Reload channel'),
           shortLabel: tr('Reload'),
@@ -675,7 +715,7 @@ class PlayerControls extends StatelessWidget {
             onActivity?.call();
             context.read<PlaybackService>().reloadCurrentChannel();
           },
-        ),
+        )),
       // Keyed by stream: the bar stays mounted
       // across zaps (and a native live zap
       // keeps the controller), so without a
@@ -684,16 +724,16 @@ class PlayerControls extends StatelessWidget {
       // channel's audio tracks never showed
       // (CBC Montreal described-video track,
       // owner 2026-10-26).
-      _AudioTrackButton(
+      ('audio', _AudioTrackButton(
           key: ValueKey(Object.hash('audio', controller, channel?.id)),
-          controller: controller),
-      _SubtitleButton(
+          controller: controller)),
+      ('subtitles', _SubtitleButton(
           key: ValueKey(Object.hash('subs', controller, channel?.id)),
-          controller: controller),
+          controller: controller)),
       // Every stream, not only multi-track ones: the
       // sound can be off on any channel (Shield +
       // soundbar user, 2026-11-05).
-      LabeledIconButton(
+      ('audio_sync', LabeledIconButton(
         icon: Icons.av_timer,
         label: tr('Audio sync'),
         detail: audioDelay == null || audioDelay == 0
@@ -703,21 +743,21 @@ class PlayerControls extends StatelessWidget {
           onActivity?.call();
           showAudioDelayAdjuster(context);
         },
-      ),
+      )),
       // Live buffer (Settings > Playback) from the player: the native player
       // takes the new reserve at once, so a stalling channel can be tried
       // with a bigger one without leaving it.
       if (isLive && channel != null)
-        _LiveBufferButton(
+        ('buffer', _LiveBufferButton(
           controller: controller,
           channel: channel!,
           ownsPlayer: playback?.controller == controller,
           onActivity: onActivity,
-        ),
+        )),
       if (linkedChannel != null)
-        _LinkedChannelButton(linkedChannel: linkedChannel!),
+        ('linked', _LinkedChannelButton(linkedChannel: linkedChannel!)),
       if (onOpenMultiview != null)
-        LabeledIconButton(
+        ('multiview', LabeledIconButton(
           icon: Icons.grid_view,
           label: tr('Open in Multiview'),
           shortLabel: tr('Multiview'),
@@ -725,7 +765,7 @@ class PlayerControls extends StatelessWidget {
             onActivity?.call();
             onOpenMultiview!();
           },
-        ),
+        )),
     ];
   }
 
@@ -762,10 +802,17 @@ class PlayerControls extends StatelessWidget {
       sound: _AudioSummary(
           key: ValueKey(Object.hash('sound', controller, channel?.id)),
           controller: controller),
+      // One movable row in the viewer's order (hold OK on a tile).
       tiles: [
-        for (final o in leadingOptions) option(o),
-        ..._actionButtons(context, playback),
-        for (final o in trailingOptions) option(o),
+        ReorderableOptionTiles(
+          active: active,
+          onActivity: onActivity,
+          tiles: [
+            for (final o in leadingOptions) (o.id ?? o.label, option(o)),
+            ..._actionTiles(context, playback),
+            for (final o in trailingOptions) (o.id ?? o.label, option(o)),
+          ],
+        ),
       ],
     );
   }
@@ -851,7 +898,8 @@ class PlayerControls extends StatelessWidget {
         ? MediaQuery.viewPaddingOf(context)
         : EdgeInsets.zero;
     return Container(
-      color: RefinedFinish.surface(context, Colors.black54),
+      color: RefinedFinish.surface(context,
+          playerMenuColor(Colors.black54, playerBarTransparency(context))),
       padding: EdgeInsets.fromLTRB(
           12 + inset.left, 6, 12 + inset.right, 6 + inset.bottom),
       child: ValueListenableBuilder<VideoPlayerHdrValue>(
@@ -1081,7 +1129,11 @@ class PlayerControls extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+          colors: [
+            playerMenuColor(Colors.black.withValues(alpha: 0.8),
+                playerBarTransparency(context)),
+            Colors.transparent
+          ],
         ),
       ),
       padding: EdgeInsets.fromLTRB(
@@ -2855,7 +2907,9 @@ class LiveInfoBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(
           20 + inset.left, 7, 20 + inset.right, 8 + inset.bottom),
       decoration: BoxDecoration(
-        color: RefinedFinish.surface(context, const Color(0xD90D1014)),
+        color: RefinedFinish.surface(context,
+            playerMenuColor(
+                const Color(0xD90D1014), playerBarTransparency(context))),
         border: const Border(top: BorderSide(color: Colors.white12)),
       ),
       child: Column(
@@ -2902,13 +2956,23 @@ class PlayerOptionsPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
+    // Options row transparency: the fade behind the row, and the pill gets
+    // a dark fill below 15 % (none at 15 %: its gradient replaced the
+    // colour, the old look) up to solid at 0 %.
+    final t = playerOptionsTransparency(context);
+    final pillFill = Colors.black.withValues(
+        alpha: playerMenuAlpha(0, t));
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          stops: [0, 0.65, 1],
-          colors: [Color(0xCC000000), Color(0x66000000), Color(0x00000000)],
+          stops: const [0, 0.65, 1],
+          colors: [
+            playerMenuColor(const Color(0xCC000000), t),
+            playerMenuColor(const Color(0x66000000), t),
+            const Color(0x00000000),
+          ],
         ),
       ),
       // 40 at the sides clears TV overscan (the first tile was cut off on
@@ -2935,14 +2999,18 @@ class PlayerOptionsPill extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: [
-                        Colors.white.withValues(alpha: 0.10),
-                        Colors.white.withValues(alpha: 0.04),
+                        Color.alphaBlend(
+                            Colors.white.withValues(alpha: 0.10), pillFill),
+                        Color.alphaBlend(
+                            Colors.white.withValues(alpha: 0.04), pillFill),
                       ]),
                       color: const Color(0xE6000000),
                       borderRadius: BorderRadius.circular(28),
                       border: Border.all(color: Colors.white24),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black54, blurRadius: 8),
+                      boxShadow: [
+                        BoxShadow(
+                            color: playerMenuColor(Colors.black54, t),
+                            blurRadius: 8),
                       ],
                     ),
                     child: _OptionTiles(
@@ -3050,7 +3118,12 @@ class PlayerOption {
       {required this.icon,
       required this.label,
       required this.onPressed,
-      this.detail});
+      this.detail,
+      this.id});
+
+  /// Its place in the viewer's options row order
+  /// ([ReorderableOptionTiles]); [label] when null.
+  final String? id;
 
   final IconData icon;
   final String label;

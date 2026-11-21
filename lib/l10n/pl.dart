@@ -3731,4 +3731,11 @@ const Map<String, String> kPl = {
       "Jedna przetestowana aktualizacja w tygodniu.",
   "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
       "Poprawki od razu, gdy są gotowe, przed cotygodniową aktualizacją. Wersja testowa może mieć nowe błędy: wyślij dziennik, jeśli coś nie działa.",
+  "Player": "Odtwarzacz",
+  "Player bar transparency": "Przezroczystość paska odtwarzacza",
+  "Options row transparency": "Przezroczystość rzędu opcji",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Pasek informacji o kanale na dole i pasek filmów / odcinków. 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Rząd przycisków otwierany strzałką w dół (Kanały, Napisy, Multiview...). 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
 };
