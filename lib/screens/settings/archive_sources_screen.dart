@@ -27,6 +27,7 @@ import '../../widgets/tv_text_field_gate.dart';
 import 'addons_screen.dart';
 import 'hub_collections_pane.dart';
 import 'media_server_screen.dart';
+import 'silo_connect_screen.dart';
 import 'phone_link_screen.dart';
 import 'settings_catalog.dart' show SettingsCategory;
 import 'settings_menu_screen.dart'
@@ -1473,8 +1474,12 @@ class _AddSourceState extends State<_AddSource> {
         ('stremio', Icons.move_down, tr('Import from Stremio'),
             tr('Sign in once, pick your add-ons'),
             () => _push(const StremioImportScreen())),
-      ('server', Icons.dns_outlined, tr('Connect Jellyfin / Emby / Plex'),
-          tr('Your own media server'), () => _push(const MediaServerScreen())),
+      ('server', Icons.dns_outlined, tr('Connect a media server'),
+          tr('Jellyfin, Emby or Plex'), () => _push(const MediaServerScreen())),
+      // Silo on its own (its own API and sign-in, not its Jellyfin port).
+      ('silo', Icons.storage_outlined, tr('Connect Silo'),
+          tr('Sign in with a code on this screen, then pick a profile'),
+          () => _push(const SiloConnectScreen())),
       ('trackers', Icons.playlist_add_check, tr('Trakt & Simkl'),
           tr('Your lists in the Media Hub'),
           () => openSettingsPage(context, (_) => const TrackersScreen(),

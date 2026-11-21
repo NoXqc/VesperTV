@@ -4106,4 +4106,43 @@ const Map<String, String> kEl = {
       "Η γραμμή πληροφοριών καναλιού κάτω και η γραμμή ταινιών / επεισοδίων. 0% αδιαφανές, 15% όπως πριν, 100% διάφανο.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "Η σειρά κουμπιών που ανοίγει με Κάτω (Κανάλια, Υπότιτλοι, Multiview...). 0% αδιαφανές, 15% όπως πριν, 100% διάφανο.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Σύνδεση διακομιστή πολυμέσων",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby ή Plex",
+  "Connect Silo":
+      "Σύνδεση Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Συνδεθείτε με έναν κωδικό σε αυτή την οθόνη και επιλέξτε προφίλ",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Συνδεθείτε στον διακομιστή Silo σας: οι βιβλιοθήκες ταινιών και σειρών του εμφανίζονται στο Media Hub. Τα αρχεία παίζουν όπως είναι αποθηκευμένα στον διακομιστή.",
+  "Couldn't find a Silo server at that address.":
+      "Δεν βρέθηκε διακομιστής Silo σε αυτή τη διεύθυνση.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "Στο τηλέφωνό σας, σαρώστε τον κωδικό QR ή ανοίξτε το {url} και εισαγάγετε αυτόν τον κωδικό:",
+  "Sign in with a password instead":
+      "Σύνδεση με κωδικό πρόσβασης",
+  "Sign in with a code instead":
+      "Σύνδεση με κωδικό",
+  "Sign-in was refused on the server.":
+      "Η σύνδεση απορρίφθηκε στον διακομιστή.",
+  "Could not connect to Silo. Try again.":
+      "Δεν ήταν δυνατή η σύνδεση με το Silo. Δοκιμάστε ξανά.",
+  "Too many tries. Try again in a few minutes.":
+      "Πάρα πολλές προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.",
+  "Choose a profile":
+      "Επιλέξτε προφίλ",
+  "PIN for {name}":
+      "PIN για {name}",
+  "Wrong PIN.":
+      "Λάθος PIN.",
+  "Sign in":
+      "Σύνδεση",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "Η σύνδεση με τον διακομιστή έληξε. Συνδέστε ξανά τον διακομιστή στις Ρυθμίσεις.",
+  "The server can't play this file: {reason}":
+      "Ο διακομιστής δεν μπορεί να παίξει αυτό το αρχείο: {reason}",
+  "The server can't play this file right now.":
+      "Ο διακομιστής δεν μπορεί να παίξει αυτό το αρχείο αυτή τη στιγμή.",
 };

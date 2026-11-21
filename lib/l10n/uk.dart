@@ -3616,4 +3616,43 @@ const Map<String, String> kUk = {
       "Інформаційна панель каналу внизу та панель фільмів / серій. 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "Ряд кнопок, що відкривається кнопкою Вниз (Канали, Субтитри, Multiview...). 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Підключити медіасервер",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby або Plex",
+  "Connect Silo":
+      "Підключити Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Увійдіть за кодом на цьому екрані, потім виберіть профіль",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Увійдіть на свій сервер Silo: його бібліотеки фільмів і серіалів з'являться в Media Hub. Файли відтворюються так, як вони збережені на сервері.",
+  "Couldn't find a Silo server at that address.":
+      "За цією адресою не знайдено сервер Silo.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "На телефоні відскануйте QR-код або відкрийте {url} і введіть цей код:",
+  "Sign in with a password instead":
+      "Увійти за паролем",
+  "Sign in with a code instead":
+      "Увійти за кодом",
+  "Sign-in was refused on the server.":
+      "Сервер відхилив вхід.",
+  "Could not connect to Silo. Try again.":
+      "Не вдалося підключитися до Silo. Спробуйте ще раз.",
+  "Too many tries. Try again in a few minutes.":
+      "Забагато спроб. Спробуйте ще раз за кілька хвилин.",
+  "Choose a profile":
+      "Виберіть профіль",
+  "PIN for {name}":
+      "PIN для {name}",
+  "Wrong PIN.":
+      "Неправильний PIN.",
+  "Sign in":
+      "Увійти",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "Вхід на сервер закінчився. Підключіть сервер знову в Налаштуваннях.",
+  "The server can't play this file: {reason}":
+      "Сервер не може відтворити цей файл: {reason}",
+  "The server can't play this file right now.":
+      "Сервер зараз не може відтворити цей файл.",
 };

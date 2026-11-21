@@ -59,6 +59,7 @@ import '../services/desktop_player_control.dart';
 import '../services/skip_segments.dart';
 import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
+import '../services/silo_api.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
 import 'desktop_multiview_screen.dart';
@@ -818,6 +819,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (!_currentChannel.transientPlayback) {
       unawaited(WatchTracker.instance.started(_currentChannel.id));
     }
+    _siloPlaying();
     // DesktopPlayerScreen deliberately never calls PlaybackService.play()
     // (see this class's own doc comment) — meaning nothing on Windows
     // ever recorded a "last channel" at all, since StorageService
@@ -1267,8 +1269,22 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         _currentChannel, _player.state.position, _player.state.duration));
   }
 
+  /// A Silo server's play: its heartbeat reads mpv's position until the
+  /// channel changes or the screen closes (a no-op for any other stream).
+  void _siloPlaying() {
+    final url = _currentChannel.url;
+    SiloSessions.instance.playing(url, () {
+      if (!mounted || _currentChannel.url != url) return null;
+      final state = _player.state;
+      return (position: state.position, paused: !state.playing);
+    });
+  }
+
   /// Trakt/Simkl: report mpv's exact position independently of saved progress.
   void _reportStopped() {
+    // A Silo server's play ends here (a no-op for any other stream).
+    SiloSessions.instance
+        .stopped(_currentChannel.url, _player.state.position);
     if (_currentChannel.transientPlayback) return;
     final state = _player.state;
     // A Media Hub source's "being downloaded" clip isn't the title.
@@ -1382,6 +1398,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     await _openMedia(channel, start: start, play: play);
     if (!mounted) return;
     unawaited(WatchTracker.instance.started(channel.id));
+    _siloPlaying();
     _applySeriesSubtitles();
     if (_isLive) _DesktopLiveHistory.record(channel);
     // See initState's identical call for why — keeps it current across a

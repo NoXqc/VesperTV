@@ -24,6 +24,8 @@ import '../services/playback_service.dart';
 import '../services/recording_service.dart';
 import '../services/tracker_api.dart';
 import '../services/archive_ready_watch.dart';
+import '../services/media_server_errors.dart';
+import '../services/silo_api.dart';
 import '../services/stream_resolver.dart';
 import '../services/watch_tracker.dart';
 import '../services/vesper_ai/watch_list.dart';
@@ -99,10 +101,39 @@ ArchiveStreamOption preferredArchiveStream(
 /// [_track] keeps the original link: `ArchiveReadyWatch` must re-ask the
 /// add-on, not the "being downloaded" clip it redirected to. A version
 /// AIOStreams' Jellyfin API serves is an add-on link, off the server.
-Future<ResolvedLink> _resolve(ArchiveStreamOption o) =>
-    o.source.server != null && o.stream.url.startsWith(o.source.baseUrl)
-        ? Future.value(ResolvedLink(o.stream.url))
-        : resolveLink(o.stream.url, headers: o.stream.requestHeaders);
+/// A Silo version starts a play on the server, which hands out the link
+/// ([SiloApi.startPlayback]); each Play gets a new one.
+Future<ResolvedLink> _resolve(
+    ArchiveService service, ArchiveStreamOption o) async {
+  if (_isSilo(o)) {
+    final play = await service.startSiloPlayback(o.source, o.stream.url);
+    return ResolvedLink(play.url, headers: play.headers);
+  }
+  if (o.source.server != null && o.stream.url.startsWith(o.source.baseUrl)) {
+    return ResolvedLink(o.stream.url);
+  }
+  return resolveLink(o.stream.url, headers: o.stream.requestHeaders);
+}
+
+/// A Silo server's file: its link is only good for one play, so a resume
+/// never reuses one saved earlier.
+bool _isSilo(ArchiveStreamOption o) =>
+    o.source.server?.kind == MediaServerKind.silo &&
+    SiloApi.isPlayLink(o.stream.url);
+
+/// Play failed on the server's side (a Silo server refused the file or the
+/// sign-in ran out): said plainly, nothing plays.
+void _serverPlayFailed(BuildContext context, Object error) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(error is MediaServerLoginException
+        ? tr('The server sign-in has expired. Connect the server again in Settings.')
+        : error is SiloPlaybackRefusedException && error.message.isNotEmpty
+            ? tr("The server can't play this file: {reason}",
+                {'reason': error.message})
+            : tr("The server can't play this file right now.")),
+    backgroundColor: Colors.red.shade900,
+  ));
+}
 
 /// [archiveProviderFailed]: the link answered with the provider's error
 /// clip. Said plainly instead of playing a clip that looks like our error.
@@ -195,12 +226,20 @@ Future<void> playArchiveTitle(
   var options = session.options;
   final restored = savedChoice ??
       ArchiveResumeChoice(options, reason: ArchiveResumeReason.notResuming);
-  String? resolvedUrl =
-      identical(restored.picked, picked) ? restored.url : null;
+  String? resolvedUrl = identical(restored.picked, picked) && !_isSilo(picked)
+      ? restored.url
+      : null;
   Map<String, String>? resolvedHeaders;
   // A link that failed at the provider: say so and offer the others.
   while (resolvedUrl == null && picked!.stream.ytId == null) {
-    final link = await _resolve(picked);
+    final ResolvedLink link;
+    try {
+      link = await _resolve(service, picked);
+    } catch (error) {
+      if (!_isSilo(picked)) rethrow;
+      if (context.mounted) _serverPlayFailed(context, error);
+      return;
+    }
     if (!context.mounted || !resumeSource.isCurrent) return;
     if (!archiveProviderFailed(picked, link.url, link.totalBytes)) {
       resolvedUrl = link.url;
@@ -296,8 +335,18 @@ Future<void> playArchiveTitle(
         .channelFor(source, meta, o.stream, episode: video)
         .copyWith(mediaFileInfo: archiveMediaFileInfo(o));
     _track(ch, meta, video);
-    final nextLink = restoredNext.url == null ? await _resolve(o) : null;
-    final nextUrl = restoredNext.url ?? nextLink!.url;
+    final reuse = _isSilo(o) ? null : restoredNext.url;
+    ResolvedLink? nextLink;
+    if (reuse == null) {
+      try {
+        nextLink = await _resolve(service, o);
+      } catch (error) {
+        if (!_isSilo(o)) rethrow;
+        debugPrint('Silo: next episode refused (${error.runtimeType})');
+        return null;
+      }
+    }
+    final nextUrl = reuse ?? nextLink!.url;
     final nextChannel = ch.copyWith(
         url: nextUrl,
         httpHeaders: nextLink?.headers ??
@@ -330,7 +379,14 @@ Future<void> playArchiveTitle(
     current: (id) => selectedStreams[id],
     select: (id, option) async {
       if (!belongs(id) || !resumeSource.isCurrent) return null;
-      final link = await _resolve(option);
+      final ResolvedLink link;
+      try {
+        link = await _resolve(service, option);
+      } catch (error) {
+        if (!_isSilo(option)) rethrow;
+        if (context.mounted) _serverPlayFailed(context, error);
+        return null;
+      }
       final url = link.url;
       if (!resumeSource.isCurrent) return null;
       return service
@@ -433,7 +489,12 @@ Future<List<DownloadItem>?> archiveDownloadItems(
               : preferredArchiveStream(acceptable, first));
       if (!context.mounted) return null;
     }
-    if (o == null || o.stream.ytId != null || o.stream.url.isEmpty) {
+    // A Silo file's link is only good for one play (the server's own
+    // downloads aren't wired in yet).
+    if (o == null ||
+        o.stream.ytId != null ||
+        o.stream.url.isEmpty ||
+        SiloApi.isPlayLink(o.stream.url)) {
       skipped++;
       continue;
     }

@@ -12,8 +12,10 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import '../../widgets/tv_menu_tile.dart';
 import 'plex_connect_screen.dart';
+import 'silo_connect_screen.dart';
 
-/// Media Hub > Connect Jellyfin / Emby: server address, user name and
+/// Media Hub > Connect a media server: Plex and Silo open their own
+/// sign-in screens; Jellyfin / Emby here: server address, user name and
 /// password. The server kind (and Emby's `/emby` path) is detected, so
 /// there is nothing to pick. On success the server's movie and TV
 /// libraries become Media Hub rows (see `MediaServerApi`); the server is
@@ -172,7 +174,7 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsScaffold(
-      title: tr('Connect Jellyfin / Emby / Plex'),
+      title: tr('Connect a media server'),
       body: ListView(
           // Sized to its rows: a floating panel hugs them.
           shrinkWrap: true,
@@ -185,6 +187,16 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
             onTap: () async {
               final added = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(builder: (_) => const PlexConnectScreen()));
+              if (added == true && context.mounted) Navigator.of(context).pop();
+            },
+          ),
+          TvMenuTile(
+            icon: Icons.dns_outlined,
+            title: tr('Connect Silo'),
+            subtitle: tr('Sign in with a code on this screen, then pick a profile'),
+            onTap: () async {
+              final added = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const SiloConnectScreen()));
               if (added == true && context.mounted) Navigator.of(context).pop();
             },
           ),

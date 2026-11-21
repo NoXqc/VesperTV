@@ -96,6 +96,7 @@ import 'services/archive_service.dart';
 import 'services/hub_iptv_sources.dart';
 import 'services/backup_service.dart';
 import 'services/tracker_sync.dart';
+import 'services/silo_api.dart';
 import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
@@ -814,6 +815,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Asked once per launch, before anything decides a layout — see
       // DeviceTypeService for why screen width couldn't answer this.
       _preferences.isTelevision = await DeviceTypeService.isTelevision();
+      if (_preferences.isTelevision) SiloApi.formFactor = 'tv';
       // A TV has no touch screen, so the focus highlight always shows.
       // Flutter's automatic mode hides it until it sees a "keyboard" event,
       // and a TV's own remote forwarded over HDMI-CEC (owner's Sony on the

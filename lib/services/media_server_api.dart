@@ -8,11 +8,12 @@ import '../models/archive_models.dart';
 import 'archive_api_service.dart';
 import 'media_server_errors.dart';
 import 'plex_api.dart';
+import 'silo_api.dart';
 import 'stream_headers.dart';
 
 export 'media_server_errors.dart';
 
-/// HTTP client for Jellyfin, Emby and Plex, mapped onto the Media
+/// HTTP client for Jellyfin, Emby, Plex and Silo, mapped onto the Media
 /// Hub's models: the user's movie and TV libraries are catalogs, a series'
 /// episodes are its `videos`, and Play is the server's direct (original
 /// file, no transcode) stream URL. No state: the login lives on the
@@ -33,6 +34,9 @@ class MediaServerApi {
 
   final http.Client _client;
   late final _plex = PlexApi(_client);
+
+  /// Silo servers (`SiloApi`): sign-in, browse and Play's sessions.
+  late final silo = SiloApi(_client);
 
   Future<ArchiveSource> connectPlex(PlexServer server, String deviceId) =>
       _plex.connect(server, deviceId);
@@ -179,6 +183,7 @@ class MediaServerApi {
   /// id). Other kinds (music, photos, books…) are left out.
   Future<List<ArchiveCatalog>> libraries(ArchiveSource s) async {
     if (s.server!.kind == MediaServerKind.plex) return _plex.libraries(s);
+    if (s.server!.kind == MediaServerKind.silo) return silo.libraries(s);
     final j = await _getAuthed(s, '/Users/${s.server!.userId}/Views');
     return [
       for (final v in (j['Items'] as List? ?? const []))
@@ -229,6 +234,10 @@ class MediaServerApi {
     if (s.server!.kind == MediaServerKind.plex) {
       return _plex.catalog(s, catalog, skip: skip, search: search);
     }
+    if (s.server!.kind == MediaServerKind.silo) {
+      return silo.fetchCatalog(s, catalog,
+          skip: skip, limit: catalogPageSize, search: search);
+    }
     final q = {
       'ParentId': catalog.id,
       'Recursive': 'true',
@@ -271,6 +280,9 @@ class MediaServerApi {
   /// The full item; a series also gets its episodes as `videos`.
   Future<ArchiveMeta?> fetchMeta(ArchiveSource s, ArchiveMeta preview) async {
     if (s.server!.kind == MediaServerKind.plex) return _plex.meta(s, preview);
+    if (s.server!.kind == MediaServerKind.silo) {
+      return silo.fetchMeta(s, preview);
+    }
     final uid = s.server!.userId;
     final item = await _getAuthed(s, '/Users/$uid/Items/${preview.id}');
     final meta = _meta(s, item) ?? preview;
@@ -322,6 +334,7 @@ class MediaServerApi {
   /// file as before.
   Future<List<ArchiveStream>> streams(ArchiveSource s, String itemId) async {
     if (s.server!.kind == MediaServerKind.plex) return _plex.streams(s, itemId);
+    if (s.server!.kind == MediaServerKind.silo) return silo.streams(s, itemId);
     final login = s.server!;
     final key = login.kind == MediaServerKind.jellyfin ? 'ApiKey' : 'api_key';
     String link([String? sourceId]) =>
