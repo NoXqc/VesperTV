@@ -168,7 +168,7 @@ class _MultiviewCell {
 /// [main] = 1 + 3: one big 16:9 screen on the left two thirds, three small
 /// ones stacked on the right (all 4 slots, kept for users who like it with
 /// Swap mode, owner 2026-11-03).
-@visibleForTesting
+/// Shared with the Apple TV Multiview (DesktopMultiviewScreen on a remote).
 List<Rect?> multiviewSlotRects(Size area, int slots,
     {int? enlarged,
     int? fullscreen,
@@ -251,6 +251,77 @@ List<Rect?> multiviewSlotRects(Size area, int slots,
   out[2] = n == 3 ? at((w0 - w) / 2, top + h + g, w) : at(left, top + h + g, w);
   if (n == 4) out[3] = at(left + w + g, top + h + g, w);
   return out;
+}
+
+/// Multiview header buttons: a focused one fills with the theme's accent
+/// and gets its outline (the default focus tint was hard to see, user
+/// reports 2026-11-15). Android's Multiview and the Apple TV one.
+ButtonStyle multiviewHeaderButtonStyle(Color accent) => ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.focused)
+              ? accent.withValues(alpha: 0.3)
+              : null),
+      side: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.focused)
+              ? BorderSide(color: accent, width: 2)
+              : null),
+      overlayColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.focused) ? Colors.transparent : null),
+    );
+
+/// The "Before you start" popup on entering Multiview (one connection per
+/// screen), until "Don't show this again". Android's and Apple TV's.
+Future<void> showMultiviewTips(BuildContext context) async {
+  final storage = context.read<StorageService>();
+  if (storage.getMultiviewHideTips()) return;
+  var dontShow = false;
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (dialogContext, setDialogState) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.amber),
+            const SizedBox(width: 8),
+            Text(tr('Before you start'),
+                style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr('Every screen in Multiview is its own connection to your provider. Your playlist must allow at least as many connections as screens you open (see Max connections in Playlist Manager).\n\nIf two screens share an account that allows only one connection, they keep kicking each other off and will freeze or buffer. Tip: use channels from different playlists, one per account.\n\nA screen that freezes restarts on its own. If it doesn\'t, press OK on it and choose Reload.'),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              GlassFocusFrame(
+                  child: CheckboxListTile(
+                value: dontShow,
+                onChanged: (v) => setDialogState(() => dontShow = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: Text(tr('Don\'t show this again'),
+                    style: const TextStyle(color: Colors.white)),
+              )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(tr('OK')),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (dontShow) await storage.setMultiviewHideTips(true);
 }
 
 class _MultiviewScreenState extends State<MultiviewScreen> {
@@ -500,21 +571,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     return KeyEventResult.handled;
   }
 
-  /// Header buttons: a focused one fills with the theme's accent and gets
-  /// its outline (the default focus tint was hard to see, user reports
-  /// 2026-11-15).
-  static ButtonStyle _headerButtonStyle(Color accent) => ButtonStyle(
-        backgroundColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.focused)
-                ? accent.withValues(alpha: 0.3)
-                : null),
-        side: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.focused)
-                ? BorderSide(color: accent, width: 2)
-                : null),
-        overlayColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.focused) ? Colors.transparent : null),
-      );
+  static ButtonStyle _headerButtonStyle(Color accent) =>
+      multiviewHeaderButtonStyle(accent);
 
   /// Add screen: a new empty screen, focused, with the channel picker open.
   /// Backing out of the picker takes the empty screen away again.
@@ -690,58 +748,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// Shown on entering Multiview until the user ticks "Don't show this
   /// again" — replaced the old always-on sidebar caveats (requested
   /// directly), which cost the grid width.
-  Future<void> _showTips() async {
-    final storage = context.read<StorageService>();
-    if (storage.getMultiviewHideTips()) return;
-    var dontShow = false;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: Row(
-            children: [
-              const Icon(Icons.info_outline, color: Colors.amber),
-              const SizedBox(width: 8),
-              Text(tr('Before you start'),
-                  style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tr('Every screen in Multiview is its own connection to your provider. Your playlist must allow at least as many connections as screens you open (see Max connections in Playlist Manager).\n\nIf two screens share an account that allows only one connection, they keep kicking each other off and will freeze or buffer. Tip: use channels from different playlists, one per account.\n\nA screen that freezes restarts on its own. If it doesn\'t, press OK on it and choose Reload.'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 12),
-                GlassFocusFrame(
-                    child: CheckboxListTile(
-                  value: dontShow,
-                  onChanged: (v) => setDialogState(() => dontShow = v ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(tr('Don\'t show this again'),
-                      style: const TextStyle(color: Colors.white)),
-                )),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              autofocus: true,
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(tr('OK')),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (dontShow) await storage.setMultiviewHideTips(true);
-  }
+  Future<void> _showTips() => showMultiviewTips(context);
 
   /// Send log: one line per playing screen every 10 s (buffer, freezes,
   /// frames shown per second, dropped frames), to tell a provider that
@@ -1797,7 +1804,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             left: _rects[0]!.left,
             width: _rects[0]!.width,
             top: math.min(_rects[0]!.bottom + 8, size.height - 48),
-            child: const Center(child: _SwapModePill()),
+            child: const Center(child: MultiviewSwapModePill()),
           ),
         if (_panelFor != null)
           Positioned(
@@ -1923,10 +1930,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       onHold: cell.channel == null ? null : onHold,
       child: ValueListenableBuilder<int>(
         valueListenable: _active,
-        builder: (context, activeCell, _) => _MultiviewCellTile(
+        builder: (context, activeCell, _) => MultiviewCellTile(
           focusNode: cell.focusNode,
           channel: cell.channel,
-          controller: cell.controller,
+          video: cell.controller != null && cell.controller!.value.isInitialized
+              ? multiviewVideo(cell.controller!)
+              : null,
+          aspectRatio: cell.controller?.value.aspectRatio,
           active: index == activeCell && cell.channel != null,
           onTap: onTap,
           onLongPress: cell.channel == null ? null : onHold,
@@ -1937,7 +1947,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           bare: full,
           alignment: Alignment.center,
           badge: _swapMode && index == 0
-              ? _SwapModeBadge(swaps: _swapCount)
+              ? MultiviewSwapModeBadge(swaps: _swapCount)
               : _lighter.contains(cell.channel?.id)
                   ? const _LighterBadge()
                   : null,
@@ -2015,22 +2025,22 @@ List<int> swapRotation(List<int> slots, int step) {
 }
 
 /// Swap mode on the big screen: a gold flash over the tile on every swap.
-class _SwapModeBadge extends StatefulWidget {
-  const _SwapModeBadge({required this.swaps});
+class MultiviewSwapModeBadge extends StatefulWidget {
+  const MultiviewSwapModeBadge({super.key, required this.swaps});
 
   final int swaps;
 
   @override
-  State<_SwapModeBadge> createState() => _SwapModeBadgeState();
+  State<MultiviewSwapModeBadge> createState() => _SwapModeBadgeState();
 }
 
-class _SwapModeBadgeState extends State<_SwapModeBadge>
+class _SwapModeBadgeState extends State<MultiviewSwapModeBadge>
     with SingleTickerProviderStateMixin {
   late final _flash = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 450));
 
   @override
-  void didUpdateWidget(_SwapModeBadge old) {
+  void didUpdateWidget(MultiviewSwapModeBadge old) {
     super.didUpdateWidget(old);
     if (widget.swaps != old.swaps) _flash.forward(from: 0);
   }
@@ -2064,14 +2074,14 @@ class _SwapModeBadgeState extends State<_SwapModeBadge>
 /// Swap mode's blinking "SWAP" pill, in the black band under the big screen
 /// (owner, 2026-10-29: inside the picture it covered the score bar; the
 /// first blink rate was too fast).
-class _SwapModePill extends StatefulWidget {
-  const _SwapModePill();
+class MultiviewSwapModePill extends StatefulWidget {
+  const MultiviewSwapModePill({super.key});
 
   @override
-  State<_SwapModePill> createState() => _SwapModePillState();
+  State<MultiviewSwapModePill> createState() => _SwapModePillState();
 }
 
-class _SwapModePillState extends State<_SwapModePill>
+class _SwapModePillState extends State<MultiviewSwapModePill>
     with SingleTickerProviderStateMixin {
   late final _blink = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1300))
@@ -2117,11 +2127,13 @@ class _SwapModePillState extends State<_SwapModePill>
   }
 }
 
-class _MultiviewCellTile extends StatefulWidget {
-  const _MultiviewCellTile({
+class MultiviewCellTile extends StatefulWidget {
+  const MultiviewCellTile({
+    super.key,
     required this.focusNode,
     required this.channel,
-    required this.controller,
+    required this.video,
+    this.aspectRatio,
     required this.active,
     required this.onTap,
     required this.onLongPress,
@@ -2149,7 +2161,13 @@ class _MultiviewCellTile extends StatefulWidget {
   final Alignment alignment;
   final FocusNode focusNode;
   final Channel? channel;
-  final VideoPlayerHdrController? controller;
+
+  /// The screen's picture (Android's texture / native tile, the Apple TV
+  /// player's media_kit video); null = empty or still loading.
+  final Widget? video;
+
+  /// The picture's own shape (null or 0 = 16:9).
+  final double? aspectRatio;
   final bool active;
 
   /// How far past the video's true aspect ratio the frame is stretched — see
@@ -2160,10 +2178,10 @@ class _MultiviewCellTile extends StatefulWidget {
   final VoidCallback? onLongPress;
 
   @override
-  State<_MultiviewCellTile> createState() => _MultiviewCellTileState();
+  State<MultiviewCellTile> createState() => _MultiviewCellTileState();
 }
 
-class _MultiviewCellTileState extends State<_MultiviewCellTile> {
+class _MultiviewCellTileState extends State<MultiviewCellTile> {
   bool _focused = false;
 
   Widget _withBadge(Widget tile) => widget.badge == null
@@ -2195,11 +2213,9 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
     // first, modest value to judge on real hardware, not a measured
     // "right" number — tune directly if it reads as too stretched or not
     // enough once seen on the actual screen.
+    final shape = widget.aspectRatio;
     final ratio =
-        (widget.controller != null && widget.controller!.value.aspectRatio != 0
-                ? widget.controller!.value.aspectRatio
-                : 16 / 9) *
-            widget.widthBoost;
+        (shape != null && shape != 0 ? shape : 16 / 9) * widget.widthBoost;
     final accent = Theme.of(context).colorScheme.primary;
     return Align(
       alignment: widget.alignment,
@@ -2245,20 +2261,18 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
               child: _withBadge(AutoHideOverlay(
                 flashKey: (widget.channel?.id, widget.active, _focused),
                 hidden: widget.active ? const MultiviewAudioBadge() : null,
-                video: widget.controller != null &&
-                        widget.controller!.value.isInitialized
-                    ? multiviewVideo(widget.controller!)
-                    : ColoredBox(
-                        color: const Color(0xFF1A1A1A),
-                        child: Center(
-                          child: Icon(
-                              widget.channel == null
-                                  ? Icons.add_circle_outline
-                                  : Icons.hourglass_empty,
-                              color: Colors.white38,
-                              size: 36),
-                        ),
+                video: widget.video ??
+                    ColoredBox(
+                      color: const Color(0xFF1A1A1A),
+                      child: Center(
+                        child: Icon(
+                            widget.channel == null
+                                ? Icons.add_circle_outline
+                                : Icons.hourglass_empty,
+                            color: Colors.white38,
+                            size: 36),
                       ),
+                    ),
                 overlay: widget.channel == null
                     ? const SizedBox.shrink()
                     : Positioned(

@@ -74,6 +74,7 @@ import 'sports_league_manager_screen.dart';
 import 'sports_standings_screen.dart';
 import '../l10n/l10n.dart';
 import '../utils/desktop_platform.dart';
+import '../widgets/desktop_video_status.dart';
 
 // Keep UI and playback routing on the same Flutter target. This also lets
 // Android widget tests on a Windows development PC exercise the TV path.
@@ -5132,11 +5133,13 @@ class _HeroVideo extends StatelessWidget {
                 ? const SizedBox()
                 : miniController != null
                     // Windows: media_kit renders the mini player's texture.
-                    ? Video(
-                        controller: miniController,
-                        controls: NoVideoControls,
-                        pauseUponEnteringBackgroundMode:
-                            mediaKitPausesInBackground)
+                    ? DesktopVideoWithSpinner(
+                        player: miniController.player,
+                        video: Video(
+                            controller: miniController,
+                            controls: NoVideoControls,
+                            pauseUponEnteringBackgroundMode:
+                                mediaKitPausesInBackground))
                     : VideoPlayerPane(
                         key: ValueKey(playingChannel.id),
                         showEpgBar: false,

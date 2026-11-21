@@ -133,10 +133,13 @@ class DesktopSubtitles {
 /// text track and no online search is possible (live channels, no add-on).
 class DesktopSubtitleButton extends StatefulWidget {
   const DesktopSubtitleButton(
-      {super.key, required this.player, required this.channel});
+      {super.key, required this.player, required this.channel, this.tile});
 
   final mk.Player player;
   final Channel channel;
+
+  /// The TV options row's tile, given the picker to open.
+  final Widget Function(VoidCallback open)? tile;
 
   @override
   State<DesktopSubtitleButton> createState() => _DesktopSubtitleButtonState();
@@ -459,6 +462,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
     if (DesktopSubtitles.embedded(_player).isEmpty && !_canSearchOnline) {
       return const SizedBox.shrink();
     }
+    if (widget.tile case final tile?) return tile(_openPicker);
     final on = _player.state.track.subtitle.id != 'no' &&
         _player.state.track.subtitle.id != 'auto';
     return IconButton(

@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 
 import '../utils/video_quality.dart';
 import 'data_pool_card.dart';
+import 'gold_tag.dart';
 
 /// The Windows player bar's badges, like Android's quality / FPS / audio
 /// channel pills: HD / FHD / 4K from the decoded picture
@@ -12,9 +13,14 @@ import 'data_pool_card.dart';
 /// from mpv every 5 s (no event for a mid-stream change). Hidden while
 /// nothing is reported.
 class DesktopQualityBadges extends StatefulWidget {
-  const DesktopQualityBadges({super.key, required this.player});
+  const DesktopQualityBadges(
+      {super.key, required this.player, this.gold = false});
 
   final Player player;
+
+  /// The TV live info bar's gold tags (Android's, `LiveInfoBar`) instead
+  /// of the glowing pills.
+  final bool gold;
 
   @override
   State<DesktopQualityBadges> createState() => _DesktopQualityBadgesState();
@@ -83,6 +89,15 @@ class _DesktopQualityBadgesState extends State<DesktopQualityBadges> {
       if (_channels case final c?) c,
     ];
     if (pills.isEmpty) return const SizedBox.shrink();
+    if (widget.gold) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        for (final text in pills)
+          GoldTag(
+              label: text,
+              fontSize: 12,
+              margin: const EdgeInsets.only(left: 8)),
+      ]);
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

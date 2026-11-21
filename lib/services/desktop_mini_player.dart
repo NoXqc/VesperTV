@@ -5,6 +5,10 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
+import 'desktop_catchup.dart';
+import 'epg_service.dart';
+import 'playlist_manager.dart';
+import 'storage_service.dart';
 import 'desktop_live_recovery.dart';
 import 'desktop_stream_setup.dart';
 
@@ -42,6 +46,74 @@ class DesktopMiniPlayer {
   /// The session's player (Vesper AI's [DesktopPlayerControl]).
   Player? get player => _player;
 
+  /// Catch-up playing here (the guide's OK on a past programme, or a
+  /// full-screen catch-up left with Back), like Android's preview. Null =
+  /// the live channel.
+  DesktopCatchup? _catchup;
+
+  /// Taken by [take] with the player, until the full-screen player that
+  /// gets the player claims it ([claimCatchup]).
+  DesktopCatchup? _handover;
+
+  /// Catch-up is playing (not the live channel).
+  bool get inCatchup => _catchup?.active ?? false;
+
+  /// The guide's OK on a past programme: [live] from [at] here, OK again
+  /// goes full screen on it (`TvHomeScreen._previewOrOpenCatchup`).
+  void playCatchup(Channel live, DateTime at,
+      {required PlaylistManager playlists,
+      required EpgService epg,
+      required StorageService storage}) {
+    final player = _ensurePlayer();
+    _completedSub?.cancel();
+    _completedSub = null;
+    _catchup?.dispose();
+    DesktopLiveRecovery.of(player).stop();
+    final catchup = DesktopCatchup.forApp(player,
+        playlists: playlists, epg: epg, storage: storage, onLive: _toLive);
+    _catchup = catchup;
+    channel.value = live;
+    unawaited(catchup.play(live, at));
+  }
+
+  /// Catch-up reached now (or Back to live): the live channel again on
+  /// the same player.
+  Future<void> _toLive(Channel live) async {
+    _catchup?.dispose();
+    _catchup = null;
+    final player = _player;
+    if (player == null) return;
+    try {
+      await openDesktopStream(player, live);
+    } catch (e) {
+      debugPrint('DesktopMiniPlayer: live open failed (${e.runtimeType})');
+    }
+    if (_player == player && channel.value?.id == live.id) {
+      DesktopLiveRecovery.of(player).watch(live);
+    }
+  }
+
+  /// The full-screen player that got [take]'s player takes its catch-up.
+  DesktopCatchup? claimCatchup(Player player) {
+    final catchup = _handover;
+    _handover = null;
+    if (catchup == null || catchup.player == player) return catchup;
+    catchup.dispose();
+    return null;
+  }
+
+  Player _ensurePlayer() {
+    if (_player == null || _controller == null) {
+      final created = newDesktopPlayer(bigCache: true);
+      // Same reconnect tuning as DesktopPlayerScreen.initState — see its
+      // comment.
+      configureDesktopStreamPlayer(created, 'mini');
+      _player = created;
+      _controller = desktopVideoController(created);
+    }
+    return _player!;
+  }
+
   /// Re-opens a live preview that reports `completed` — same app-level
   /// safety net as `DesktopPlayerScreen`'s own, since mpv's reconnect
   /// options don't catch every way a live stream ends. Only set for a
@@ -54,15 +126,9 @@ class DesktopMiniPlayer {
   /// one (just opens the new stream on it) so switching channels in the
   /// preview box never stacks up decoders.
   void play(Channel ch) {
-    if (_player == null || _controller == null) {
-      final created = newDesktopPlayer(bigCache: true);
-      // Same reconnect tuning as DesktopPlayerScreen.initState — see its
-      // comment.
-      configureDesktopStreamPlayer(created, 'mini');
-      _player = created;
-      _controller = desktopVideoController(created);
-    }
-    final player = _player!;
+    _catchup?.dispose();
+    _catchup = null;
+    final player = _ensurePlayer();
     // Waits, retries and copies: DesktopLiveRecovery (it stays with the
     // player when full screen takes it over).
     unawaited(openDesktopStream(player, ch).then((_) {
@@ -73,9 +139,13 @@ class DesktopMiniPlayer {
     channel.value = ch;
   }
 
-  void minimize(Channel ch, Player player, VideoController controller) {
+  void minimize(Channel ch, Player player, VideoController controller,
+      {DesktopCatchup? catchup}) {
     _completedSub?.cancel();
     _completedSub = null;
+    if (_catchup != catchup) _catchup?.dispose();
+    _catchup = catchup;
+    catchup?.onLive = _toLive;
     // Only one minimized session can exist at a time (there's only one
     // pill) — if something else was already minimized, it has no other
     // reference anywhere, so it must be disposed here or it'd keep
@@ -87,7 +157,12 @@ class DesktopMiniPlayer {
     _controller = controller;
     channel.value = ch;
     // A stream handed over from full screen had no recovery here before.
-    DesktopLiveRecovery.of(player).watch(ch);
+    // Catch-up is finite: never reconnected as live.
+    if (catchup == null) {
+      DesktopLiveRecovery.of(player).watch(ch);
+    } else {
+      DesktopLiveRecovery.of(player).stop();
+    }
   }
 
   /// Hands the live session back to a freshly reopened
@@ -100,6 +175,9 @@ class DesktopMiniPlayer {
     if (player == null || controller == null) return null;
     _completedSub?.cancel();
     _completedSub = null;
+    _handover?.dispose();
+    _handover = _catchup;
+    _catchup = null;
     _player = null;
     _controller = null;
     channel.value = null;
@@ -119,6 +197,10 @@ class DesktopMiniPlayer {
   void clear() {
     _completedSub?.cancel();
     _completedSub = null;
+    _catchup?.dispose();
+    _catchup = null;
+    _handover?.dispose();
+    _handover = null;
     DesktopLiveRecovery.disposePlayer(_player);
     _player = null;
     _controller = null;

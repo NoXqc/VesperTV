@@ -64,7 +64,11 @@ class _TrailerButtonState extends State<TrailerButton> {
       final url = await (widget.service ?? TrailerService.instance).resolve(
           widget.request,
           addons: context.read<ArchiveService?>()?.enabledSources ?? const []);
+      // Apple TV has no web view: YouTube trailers can't play there, so
+      // the button stays hidden for them (direct trailers play in the
+      // player; owner, 2026-11-20).
       final canOpen = url != null &&
+          !(isAppleTv && TrailerLinks.videoId(url.toString()) != null) &&
           (widget.available != null
               ? await widget.available!(url)
               : (Platform.isAndroid || usesMediaKit) || await canLaunchUrl(url));

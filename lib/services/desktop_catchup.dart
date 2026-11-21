@@ -7,6 +7,9 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import 'catchup_format.dart';
+import 'epg_service.dart';
+import 'playlist_manager.dart';
+import 'storage_service.dart';
 import 'catchup_session.dart';
 import 'desktop_stream_setup.dart';
 
@@ -28,6 +31,23 @@ class DesktopCatchup {
       DateTime Function()? clock})
       : clock = clock ?? DateTime.now;
 
+  /// Built on the app's own services (not a screen's context): the session
+  /// can move between the full-screen player and the guide's preview
+  /// ([DesktopMiniPlayer]) and outlive either, like Android's catch-up in
+  /// PlaybackService.
+  factory DesktopCatchup.forApp(Player player,
+          {required PlaylistManager playlists,
+          required EpgService epg,
+          required StorageService storage,
+          required Future<void> Function(Channel live) onLive}) =>
+      DesktopCatchup(player,
+          profileFor: (id) =>
+              playlists.profiles.where((p) => p.id == id).firstOrNull,
+          guide: (live) => epg.getPrograms(live.epgId),
+          keepPlaying: storage.getCatchupKeepPlaying,
+          format: CatchupFormat(storage),
+          onLive: onLive);
+
   /// Which Xtream catch-up link each playlist gets (`.m3u8` / `.ts`),
   /// shared with Android ([CatchupFormat]). Null = always `.m3u8`.
   final CatchupFormat? format;
@@ -38,8 +58,9 @@ class DesktopCatchup {
   final bool Function() keepPlaying;
 
   /// Called when catch-up hands back to the live channel (caught up, Back
-  /// to live, or no catch-up for that time).
-  final Future<void> Function(Channel live) onLive;
+  /// to live, or no catch-up for that time). Whoever holds the session
+  /// now: the full-screen player or the guide's preview.
+  Future<void> Function(Channel live) onLive;
   final DateTime Function() clock;
 
   CatchupSession? session;

@@ -19,10 +19,15 @@ import 'tv_menu_tile.dart';
 /// ([DesktopAudio.remember]).
 class DesktopAudioButton extends StatefulWidget {
   const DesktopAudioButton(
-      {super.key, required this.player, required this.channel});
+      {super.key, required this.player, required this.channel, this.tile});
 
   final mk.Player player;
   final Channel channel;
+
+  /// The TV options row's tile, given the picker to open; shown only when
+  /// the file has two or more tracks (Android's Audio tile; Audio sync is
+  /// its own tile there).
+  final Widget Function(VoidCallback open)? tile;
 
   @override
   State<DesktopAudioButton> createState() => _DesktopAudioButtonState();
@@ -124,6 +129,11 @@ class _DesktopAudioButtonState extends State<DesktopAudioButton> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.tile case final tile?) {
+      return DesktopAudio.tracksOf(widget.player).length < 2
+          ? const SizedBox.shrink()
+          : tile(_openPicker);
+    }
     return IconButton(
       icon: const Icon(Icons.multitrack_audio, color: Colors.white),
       tooltip: tr('Audio track'),

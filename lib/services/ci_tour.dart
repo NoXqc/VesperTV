@@ -4,7 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../l10n/l10n.dart';
 import '../models/playlist_profile.dart';
+import '../widgets/player_controls.dart';
 import 'storage_service.dart';
 import 'vesper_ai/vesper_ai.dart';
 
@@ -69,26 +71,51 @@ class CiTour {
     await _key('enter');
     await _wait(8);
     await _shot('full-screen');
-    // The bar opens on Play / Pause; Left twice = Multiview (Stop between).
+    // The Android TV player's flow: a zap shows the live info bar alone,
+    // OK the bar with star / Play-Pause / Channel schedule (Play / Pause
+    // focused), Down the options row; Multiview is one of its tiles.
+    await _key('down');
+    await _wait(1);
+    await _shot('zap-info-bar');
+    await _key('up');
+    await _wait(6);
     await _key('enter');
     await _wait(2);
     await _shot('full-screen-bar');
-    await _key('left');
-    await _key('left');
+    await _key('down');
     await _wait(1);
-    await _shot('bar-multiview-button');
-    // Multiview with this channel on screen 1, then screen 2's picker (a
-    // fresh install has the 2-screen layout: screen 2 is under screen 1).
+    await _shot('options-row');
+    for (var i = 0; i < 16 && _focusedLabel() != tr('Open in Multiview'); i++) {
+      await _key('right');
+    }
+    await _wait(1);
+    await _shot('options-multiview');
+    // Android's Multiview: the "Before you start" tips first (OK closes
+    // them), this channel on screen 1; Up from it = the header, Right to
+    // Add screen, OK = screen 2 with the live guide open on the left.
     await _key('enter');
     await _wait(8);
-    await _shot('multiview');
-    await _key('down');
+    await _shot('multiview-tips');
     await _key('enter');
-    await _wait(2);
+    await _wait(3);
+    await _shot('multiview');
+    await _key('up');
+    await _wait(1);
+    await _shot('multiview-header');
+    for (var i = 0; i < 4 && _focusedText() != tr('Add screen'); i++) {
+      await _key('right');
+    }
+    await _key('enter');
+    await _wait(3);
     await _shot('multiview-picker');
+    // Back: guide -> groups -> closed (screen 2 goes again), then leaving
+    // Multiview plays screen 1's channel in full screen again.
     await _back();
     await _wait(1);
-    // Leaving Multiview plays screen 1's channel in full screen again.
+    await _back();
+    await _wait(1);
+    await _back();
+    await _wait(1);
     await _back();
     await _wait(6);
     await _shot('back-from-multiview');
@@ -182,8 +209,33 @@ class CiTour {
     }
     await WidgetsBinding.instance.endOfFrame;
     final focus = FocusManager.instance.primaryFocus;
-    _log('key $name -> ${focus?.debugLabel ?? focus?.context?.widget}');
+    _log('key $name -> '
+        '${_focusedLabel() ?? focus?.debugLabel ?? focus?.context?.widget}');
   }
+
+  /// The text of the focused button (a header's TextButton.icon), if any.
+  static String? _focusedText() {
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return null;
+    String? text;
+    void visit(Element e) {
+      if (text != null) return;
+      final w = e.widget;
+      if (w is Text) {
+        text = w.data;
+        return;
+      }
+      e.visitChildren(visit);
+    }
+
+    (context as Element).visitChildren(visit);
+    return text;
+  }
+
+  /// The options row tile that has focus (its label), if one has.
+  static String? _focusedLabel() => FocusManager.instance.primaryFocus?.context
+      ?.findAncestorWidgetOfExactType<LabeledIconButton>()
+      ?.label;
 
   /// The Siri Remote's Menu: the engine's popRoute.
   static Future<void> _back() async {

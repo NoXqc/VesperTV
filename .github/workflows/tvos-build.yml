@@ -116,7 +116,7 @@ jobs:
       # screen, Sports Trak, Settings, Search): out/tour-NN-<stop>.png.
       - name: UI tour on the Apple TV simulator
         if: ${{ !inputs.testflight }}
-        run: bash tools/tvos/sim_tour.sh 420
+        run: bash tools/tvos/sim_tour.sh 540
 
       - name: Build the player smoke test
         if: ${{ always() && !inputs.testflight }}

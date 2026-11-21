@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../screens/desktop_player_screen.dart';
+import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import 'live_resume_hint.dart';
 import '../l10n/l10n.dart';
@@ -14,6 +19,8 @@ import '../l10n/l10n.dart';
 /// that needs an extra "hold" gesture on a D-pad remote (where a plain
 /// press is already claimed for normal navigation); there's no
 /// equivalent conflict here since this pill is its own clickable target.
+/// A TV remote (Apple TV) gets Android's: hold Right from anywhere, and
+/// the pill says so (owner, 2026-11-20: both TV apps the same).
 ///
 /// Lives directly above `MaterialApp`'s `Navigator` (see main.dart's
 /// `builder`), same reason as `LiveResumeHint`: works from any screen,
@@ -29,12 +36,17 @@ class DesktopLiveResumeHint extends StatefulWidget {
 }
 
 class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
+  // LiveResumeHint's hold.
+  static const _holdDuration = Duration(milliseconds: 1200);
+  Timer? _holdTimer;
+
   @override
   void initState() {
     super.initState();
     DesktopMiniPlayer.instance.channel.addListener(_onChanged);
     LiveResumeHint.hiddenBy.addListener(_onHiddenChanged);
     LiveResumeHint.pillEnabled.addListener(_onHiddenChanged);
+    FocusManager.instance.addEarlyKeyEventHandler(_handleGlobalKey);
   }
 
   @override
@@ -42,7 +54,40 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
     DesktopMiniPlayer.instance.channel.removeListener(_onChanged);
     LiveResumeHint.hiddenBy.removeListener(_onHiddenChanged);
     LiveResumeHint.pillEnabled.removeListener(_onHiddenChanged);
+    FocusManager.instance.removeEarlyKeyEventHandler(_handleGlobalKey);
+    _holdTimer?.cancel();
     super.dispose();
+  }
+
+  bool get _remote => context.read<AppPreferences>().isTelevision;
+
+  bool get _textFieldFocused =>
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<EditableText>() !=
+      null;
+
+  /// A remote: LiveResumeHint's hold Right (see its doc comment). The
+  /// press itself goes on to the screen; only the repeats of a held key
+  /// are kept back.
+  KeyEventResult _handleGlobalKey(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowRight ||
+        !_remote ||
+        DesktopMiniPlayer.instance.channel.value == null ||
+        _textFieldFocused) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent) {
+      _holdTimer?.cancel();
+      _holdTimer = Timer(_holdDuration, () {
+        _holdTimer = null;
+        if (mounted && !_textFieldFocused) _resume();
+      });
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyRepeatEvent) return KeyEventResult.handled;
+    _holdTimer?.cancel();
+    _holdTimer = null;
+    return KeyEventResult.ignored;
   }
 
   void _onChanged() {
@@ -78,6 +123,7 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
       return const Positioned(
           bottom: 24, left: 0, right: 0, child: SizedBox.shrink());
     }
+    final remote = _remote;
 
     return Positioned(
       bottom: 24,
@@ -121,17 +167,39 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600),
                           ),
-                          Text(
-                            tr('Click to resume'),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 11),
-                          ),
+                          if (remote)
+                            // LiveResumeHint's line: the D-pad's Right.
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  tr('Hold '),
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 11),
+                                ),
+                                const Icon(Icons.keyboard_arrow_right,
+                                    color: Colors.white70, size: 14),
+                                Text(
+                                  tr(' to resume'),
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 11),
+                                ),
+                              ],
+                            )
+                          else
+                            Text(
+                              tr('Click to resume'),
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11),
+                            ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.fullscreen,
-                        color: Colors.white70, size: 18),
+                    if (!remote) ...[
+                      const SizedBox(width: 10),
+                      const Icon(Icons.fullscreen,
+                          color: Colors.white70, size: 18),
+                    ],
                   ],
                 ),
               ),
