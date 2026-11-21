@@ -10182,6 +10182,10 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   /// A phone: the old two-line channel column, no number ([build]).
   static bool _phoneColumn = false;
+
+  /// Settings > Interface > Guide > Long channel names on two lines. Set
+  /// each build, like [_phoneColumn].
+  static bool _twoLineNames = false;
   static const double _rulerHeight = 32;
 
   /// How often the "now" line (and every row's now/later styling) redraws
@@ -11198,6 +11202,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // 2026-11-19): wider than the old two-line column (136/160/210).
     // Phones keep that old column: one-line names left the programmes a
     // sliver of a 390 px screen (owner's phone, +891).
+    _twoLineNames = prefs.guideTwoLineNames;
     _phoneColumn = !prefs.isTelevision &&
         !isDesktopTarget &&
         MediaQuery.sizeOf(context).shortestSide < 600;
@@ -11309,7 +11314,8 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                                     alignment: Alignment.topCenter,
                                     child: _ChannelLabel(
                                         channel: widget.channels[i],
-                                        number: _phoneColumn || !prefs.guideChannelNumbers
+                                        number: _phoneColumn ||
+                                                !prefs.guideChannelNumbers
                                             ? null
                                             : i + 1,
                                         playlistTag: _playlistTagFor(i),
@@ -12017,6 +12023,9 @@ class _ChannelLabel extends StatelessWidget {
     final fontSize = _compactUi ? 11.0 : (_largeUi ? 14.0 : 12.0);
     // Phones: the name on two lines in the narrow column (before +886).
     final phone = _TimelineGuideState._phoneColumn;
+    // Two lines on phones, or on TV with Long channel names on two lines
+    // (owner, 2026-11-20: long names were cut).
+    final wrap = phone || _TimelineGuideState._twoLineNames;
     final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(
@@ -12057,8 +12066,8 @@ class _ChannelLabel extends StatelessWidget {
             Expanded(
               child: Text(
                 channel.name,
-                maxLines: phone && !(_compactUi && tag != null) ? 2 : 1,
-                softWrap: phone,
+                maxLines: wrap && !(_compactUi && tag != null) ? 2 : 1,
+                softWrap: wrap,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: Colors.white, fontSize: fontSize),
               ),

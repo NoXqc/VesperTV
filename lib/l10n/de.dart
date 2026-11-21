@@ -2087,6 +2087,10 @@ const Map<String, String> kDe = {
   "Channel numbers": "Kanalnummern",
   "Show a number before each channel in the guide.":
       "Vor jedem Sender im Guide eine Nummer anzeigen.",
+  "Long channel names on two lines":
+      "Lange Sendernamen zweizeilig",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Sendernamen, die nicht passen, gehen im Guide in eine zweite Zeile.",
   "Programme details in the guide": "Sendungsdetails im Guide",
   "Stay on a programme for 1 second to see its description under it.":
       "Bleib 1 Sekunde auf einer Sendung, um ihre Beschreibung darunter zu sehen.",

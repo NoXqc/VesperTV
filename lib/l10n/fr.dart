@@ -2186,6 +2186,10 @@ const Map<String, String> kFr = {
   "Channel numbers": "Numéros de chaîne",
   "Show a number before each channel in the guide.":
       "Afficher un numéro devant chaque chaîne dans le guide.",
+  "Long channel names on two lines":
+      "Noms de chaînes longs sur deux lignes",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Les noms de chaînes trop longs passent sur une deuxième ligne dans le guide.",
   "Programme details in the guide": "Détails du programme dans le guide",
   "Stay on a programme for 1 second to see its description under it.":
       "Restez 1 seconde sur un programme pour voir sa description en dessous.",

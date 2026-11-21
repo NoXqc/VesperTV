@@ -2130,6 +2130,10 @@ const Map<String, String> kEl = {
   "Channel numbers": "Αριθμοί καναλιών",
   "Show a number before each channel in the guide.":
       "Εμφάνιση αριθμού πριν από κάθε κανάλι στον οδηγό.",
+  "Long channel names on two lines":
+      "Μεγάλα ονόματα καναλιών σε δύο γραμμές",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Τα ονόματα καναλιών που δεν χωράνε συνεχίζουν σε δεύτερη γραμμή στον οδηγό.",
   "Programme details in the guide": "Λεπτομέρειες προγράμματος στον οδηγό",
   "Stay on a programme for 1 second to see its description under it.":
       "Μείνετε 1 δευτερόλεπτο σε ένα πρόγραμμα για να δείτε την περιγραφή του από κάτω.",

@@ -55,6 +55,9 @@ class AppPreferences extends ChangeNotifier {
   /// The number before each channel in the TV guide's channel list
   /// (Discord, 2026-11-20: some viewers never use numbers).
   late bool guideChannelNumbers;
+
+  /// Long channel names wrap onto a second line in the Timeline.
+  late bool guideTwoLineNames;
   late bool guideCompact;
 
   /// Interface size in the TV home (per viewer): 'compact' (smaller tabs,
@@ -495,6 +498,7 @@ class AppPreferences extends ChangeNotifier {
     guideExpanded = _storage.getGuideExpanded();
     guideRowDetails = _storage.getGuideRowDetails();
     guideChannelNumbers = _storage.getGuideChannelNumbers();
+    guideTwoLineNames = _storage.getGuideTwoLineNames();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -563,6 +567,7 @@ class AppPreferences extends ChangeNotifier {
     guideExpanded = _storage.getGuideExpanded();
     guideRowDetails = _storage.getGuideRowDetails();
     guideChannelNumbers = _storage.getGuideChannelNumbers();
+    guideTwoLineNames = _storage.getGuideTwoLineNames();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
     guideFocusPreview = _storage.getGuideFocusPreview();
@@ -663,6 +668,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideChannelNumbers(bool value) {
     guideChannelNumbers = value;
     _storage.setGuideChannelNumbers(value);
+    notifyListeners();
+  }
+
+  void setGuideTwoLineNames(bool value) {
+    guideTwoLineNames = value;
+    _storage.setGuideTwoLineNames(value);
     notifyListeners();
   }
 

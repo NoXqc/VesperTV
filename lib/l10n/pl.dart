@@ -2088,6 +2088,10 @@ const Map<String, String> kPl = {
   "Channel numbers": "Numery kanałów",
   "Show a number before each channel in the guide.":
       "Pokazuj numer przed każdym kanałem w przewodniku.",
+  "Long channel names on two lines":
+      "Długie nazwy kanałów w dwóch wierszach",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Nazwy kanałów, które się nie mieszczą, przechodzą w przewodniku do drugiego wiersza.",
   "Programme details in the guide": "Szczegóły programu w przewodniku",
   "Stay on a programme for 1 second to see its description under it.":
       "Zatrzymaj się na programie przez 1 sekundę, aby zobaczyć jego opis pod nim.",

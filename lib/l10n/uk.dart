@@ -2075,6 +2075,10 @@ const Map<String, String> kUk = {
   "Channel numbers": "Номери каналів",
   "Show a number before each channel in the guide.":
       "Показувати номер перед кожним каналом у телегіді.",
+  "Long channel names on two lines":
+      "Довгі назви каналів у два рядки",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Назви каналів, що не вміщаються, переносяться в програмі на другий рядок.",
   "Programme details in the guide": "Подробиці програми в телегіді",
   "Stay on a programme for 1 second to see its description under it.":
       "Затримайтеся на програмі 1 секунду, щоб побачити її опис під нею.",
