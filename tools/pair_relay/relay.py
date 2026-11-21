@@ -55,17 +55,25 @@ apart. PAIR_REQUIRE_APP=1 rejects calls without it (403); until then they
 are only counted (hourly line on stderr, no ids) — 1.0.14/1.0.15 don't
 send it yet. The phone's browser PUT /api/s/<id> is never checked.
 
-It also forwards **Send log** (Settings > Device & data, lib/services/
+It also forwards **Send log** (Settings > Help, lib/services/
 app_log.dart) to the owner's private Discord channel. The app redacts the
-text first; nothing is stored here.
+text first. With PAIR_LOG_READ_KEY set, the log is also kept for 14 days
+(LOG_KEEP) so the GitHub issue helper can read it from the code a user
+puts in an issue (.github/workflows/issue-helper.yml); it is never shown
+to anyone else.
 
     POST   /api/log     -> 204; text/plain body (<= 1 MB), X-Log-Code
                            header (LOG-XXXXXX). 429 after LOG_PER_HOUR per
-                           IP, 503 without PAIR_LOG_WEBHOOK, 502 if Discord
-                           refused it.
+                           IP, 503 without PAIR_LOG_WEBHOOK or
+                           PAIR_LOG_READ_KEY, 502 if neither Discord nor the
+                           store took it.
+    GET    /api/log/<code> -> 200 text/plain with the right X-Log-Key
+                           header (403 otherwise), 404 if unknown/expired or
+                           without PAIR_LOG_READ_KEY.
 
-PAIR_LOG_WEBHOOK (the Discord webhook URL) is a secret: it lives only in
-/etc/pair-relay.env on the VPS, never in the repo.
+PAIR_LOG_WEBHOOK (the Discord webhook URL) and PAIR_LOG_READ_KEY are
+secrets: they live only in /etc/pair-relay.env on the VPS (the key also in
+the repo's VESPER_LOG_READ_KEY Actions secret), never in the repo.
 
 **Vesper AI link** (ai_link.py): an AI app's MCP requests and the phone
 page reach the viewer's TV through a long-poll; nothing is stored.
@@ -150,6 +158,10 @@ LOG_WEBHOOK = os.environ.get("PAIR_LOG_WEBHOOK", "")
 LOG_MAX_BODY = 1024 * 1024
 LOG_PER_HOUR = 5
 LOG_CODE_RE = re.compile(r"^LOG-[2-9A-HJ-NP-Z]{6}$")
+LOG_READ_KEY = os.environ.get("PAIR_LOG_READ_KEY", "")
+LOG_KEEP = 14 * 24 * 3600
+LOG_STORE_MAX = 300 * 1024 * 1024  # oldest logs go first past this
+LOG_GET_RE = re.compile(r"^/api/log/(LOG-[2-9A-HJ-NP-Z]{6})$")
 _log_lock = threading.Lock()
 _log_hits = {}  # ip -> [timestamps in the last hour]
 
@@ -242,7 +254,69 @@ def _vault_prune():
 def _vault_pruner():
     while True:
         _vault_prune()
+        _log_prune()
         time.sleep(VAULT_PRUNE_EVERY)
+
+
+def _log_dir():
+    return os.path.join(VAULT_DIR, "logs")
+
+
+def _log_save(code, body):
+    """Keeps a sent log for the issue helper; False if it couldn't."""
+    if not LOG_READ_KEY:
+        return False
+    d = _log_dir()
+    path = os.path.join(d, code + ".txt")
+    try:
+        os.makedirs(d, mode=0o700, exist_ok=True)
+        with _log_lock:
+            with open(path + ".tmp", "wb") as f:
+                f.write(body)
+            os.replace(path + ".tmp", path)
+            now = time.time()
+            os.utime(path, (now, now))
+    except OSError as e:
+        print(f"log {code}: not kept ({e.__class__.__name__})",
+              file=sys.stderr, flush=True)
+        return False
+    _log_prune()
+    return True
+
+
+def _log_prune():
+    """Drops logs older than LOG_KEEP, then the oldest past LOG_STORE_MAX."""
+    d = _log_dir()
+    now = time.time()
+    with _log_lock:
+        try:
+            names = os.listdir(d)
+        except OSError:
+            return
+        kept = []
+        for name in names:
+            path = os.path.join(d, name)
+            try:
+                st = os.stat(path)
+            except OSError:
+                continue
+            old = now - st.st_mtime
+            if old > LOG_KEEP or (name.endswith(".tmp") and old > 60):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+            elif name.endswith(".txt"):
+                kept.append((st.st_mtime, st.st_size, path))
+        total = sum(size for _, size, _ in kept)
+        for _, size, path in sorted(kept):
+            if total <= LOG_STORE_MAX:
+                break
+            try:
+                os.remove(path)
+                total -= size
+            except OSError:
+                pass
 
 
 def _token_hash(token):
@@ -342,6 +416,9 @@ class Handler(BaseHTTPRequestHandler):
             if not self._app_ok():
                 return
             return ai_link.poll(self)
+        lg = LOG_GET_RE.match(path)
+        if lg:
+            return self._log_get(lg.group(1))
         v = VAULT_ID_RE.match(path)
         if v:
             if not self._app_ok():
@@ -450,8 +527,25 @@ class Handler(BaseHTTPRequestHandler):
 
     # ----------------------------------------------------------------- log
 
+    def _log_get(self, code):
+        """The issue helper reads a kept log (GitHub Actions, secret key)."""
+        if not LOG_READ_KEY:
+            return self._send(404)
+        key = self.headers.get("X-Log-Key", "")
+        if not hmac.compare_digest(key.encode(), LOG_READ_KEY.encode()):
+            return self._send(403)
+        path = os.path.join(_log_dir(), code + ".txt")
+        try:
+            if time.time() - os.path.getmtime(path) > LOG_KEEP:
+                return self._send(404)
+            with open(path, "rb") as f:
+                body = f.read()
+        except OSError:
+            return self._send(404)
+        return self._send(200, body, "text/plain; charset=utf-8")
+
     def _log_post(self):
-        if not LOG_WEBHOOK:
+        if not LOG_WEBHOOK and not LOG_READ_KEY:
             return self._send(503)
         code = self.headers.get("X-Log-Code", "")
         try:
@@ -475,8 +569,10 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(length)
         if len(body) != length:
             return self._send(400)
-        text = body.decode("utf-8", "replace")
-        return self._send(204 if _post_discord(code, text) else 502)
+        kept = _log_save(code, body)
+        sent = bool(LOG_WEBHOOK) and _post_discord(
+            code, body.decode("utf-8", "replace"))
+        return self._send(204 if sent or kept else 502)
 
     # --------------------------------------------------------------- vault
 

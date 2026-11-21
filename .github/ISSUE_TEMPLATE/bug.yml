@@ -1,0 +1,54 @@
+name: Bug report
+description: Something in VesperTV doesn't work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! An automatic helper reads every new issue and answers within a few minutes. The developer reads them too.
+
+        **The fastest way to a fix is a log code.** In VesperTV open **Settings > Help > Send log**, press **Send**, and copy the code it shows (like `LOG-7K2QXM`). The log holds what the app did recently and your device model. Addresses, usernames and passwords are removed before it is sent, and the log stays private: it is never posted here.
+  - type: input
+    id: log
+    attributes:
+      label: Log code
+      description: From Settings > Help > Send log, sent right after the problem happened.
+      placeholder: LOG-XXXXXX
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Android TV box / Google TV
+        - Fire TV
+        - Android phone or tablet
+        - Windows
+        - Linux
+        - iPhone or iPad
+        - Apple TV
+        - Mac
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Device model
+      placeholder: e.g. Fire TV Stick 4K Max, Homatics Box R 4K Plus, Nvidia Shield
+  - type: input
+    id: version
+    attributes:
+      label: VesperTV version
+      description: Settings > Backup & devices > Check for Updates shows it.
+      placeholder: e.g. 1.0.72
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?
+      description: Photos or screenshots of the screen help a lot. Please don't post playlist links, server addresses or passwords.

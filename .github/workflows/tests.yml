@@ -11,6 +11,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Read-only: it also runs automatic fix branches (issue-helper.yml), whose
+# code nobody has reviewed yet.
+permissions:
+  contents: read
+
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
