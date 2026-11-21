@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,7 +41,9 @@ class _Controller extends ZapController {
 void main() {
   Future<void> open(WidgetTester tester,
       {required Map<PlayerArrow, String> arrows,
-      required Future<void> Function(PlaybackService playback) check}) async {
+      required Future<void> Function(PlaybackService playback) check,
+      bool overGuide = false}) async {
+    final navigator = GlobalKey<NavigatorState>();
     final previousPlatform = VideoPlayerPlatform.instance;
     VideoPlayerPlatform.instance = _VideoPlatform();
     addTearDown(() => VideoPlayerPlatform.instance = previousPlatform);
@@ -82,9 +86,17 @@ void main() {
           ChangeNotifierProvider<EpgService>.value(value: epg),
         ],
         child: MaterialApp(
+            navigatorKey: navigator,
             navigatorObservers: [appRouteObserver],
-            home: PlayerScreen(channel: channel))));
+            home: overGuide
+                ? const Scaffold(body: Text('The guide'))
+                : PlayerScreen(channel: channel))));
     await tester.pumpAndSettle();
+    if (overGuide) {
+      unawaited(navigator.currentState!.push(MaterialPageRoute<void>(
+          builder: (_) => PlayerScreen(channel: channel))));
+      await tester.pumpAndSettle();
+    }
     expect(buttons.player, isNotNull);
     await check(playback);
     expect(tester.takeException(), isNull);
@@ -120,6 +132,18 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
       expect(find.byType(PlayerSidePanel), findsOneWidget);
+    });
+  });
+
+  testWidgets('Left can go back to the guide, like Back', (tester) async {
+    await open(tester, overGuide: true, arrows: {PlayerArrow.left: 'back'},
+        check: (_) async {
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayerScreen), findsNothing);
+      expect(find.byType(PlayerSidePanel), findsNothing);
+      expect(find.text('The guide'), findsOneWidget);
     });
   });
 }

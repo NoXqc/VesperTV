@@ -1540,6 +1540,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         _lastChannel();
       case 'bar':
         _openBar();
+      case 'back':
+        // The Back button's own path: the PopScope decides (nothing is on
+        // screen here, so the player closes to the guide).
+        unawaited(Navigator.of(context).maybePop());
     }
   }
 

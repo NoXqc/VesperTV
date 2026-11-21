@@ -3734,6 +3734,7 @@ const Map<String, String> kIt = {
       "Ultimo canale",
   "Player bar":
       "Barra del lettore",
+  "Back to the guide": "Torna alla guida",
   "Nothing":
       "Niente",
   "Fast forward":

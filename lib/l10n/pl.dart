@@ -3331,6 +3331,7 @@ const Map<String, String> kPl = {
   "Side drawer": "Panel boczny",
   "Last channel": "Ostatni kanał",
   "Player bar": "Pasek odtwarzacza",
+  "Back to the guide": "Powrót do przewodnika",
   "Nothing": "Nic",
   "Fast forward": "Przewiń do przodu",
   "Rewind": "Przewiń do tyłu",

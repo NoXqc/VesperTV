@@ -16,7 +16,10 @@ the section sits in **Backup & devices** (owner: a remote is a device), not Play
   hold / forget). 15 s with nothing = "your device keeps it for itself".
 - `settings_catalog.dart` `_remote()` - the link, the four arrow choices, Reset.
 - `player_screen.dart` `_runArrow` - Left/Right (no bar focused) and Up/Down (nothing on screen) on a
-  live / catch-up channel. VOD keeps Right = sources, Up/Down = bar.
+  live / catch-up channel. VOD keeps Right = sources, Up/Down = bar. Choices (`PlayerArrow.actions`):
+  Side drawer, Last channel, Channel up / down, Player bar, **Back to the guide** (`back`, 2026-11-21,
+  uzumaki: Left = what Back does, `Navigator.maybePop` through the player's PopScope; then Left in the
+  guide walks to the groups and the tabs), Nothing.
 
 ## Rules
 - **Key interception = `FocusManager.addEarlyKeyEventHandler`.** A `HardwareKeyboard` handler can't stop

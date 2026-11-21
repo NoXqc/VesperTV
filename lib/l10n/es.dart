@@ -3727,6 +3727,7 @@ const Map<String, String> kEs = {
       "Último canal",
   "Player bar":
       "Barra del reproductor",
+  "Back to the guide": "Volver a la guía",
   "Nothing":
       "Nada",
   "Fast forward":
