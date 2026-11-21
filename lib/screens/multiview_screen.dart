@@ -279,6 +279,9 @@ Future<void> showMultiviewTips(BuildContext context) async {
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (dialogContext, setDialogState) => AlertDialog(
+        // Taller than a 540-high TV screen with Apple TV's font: it
+        // overflowed under "Don't show this again" (tour, +921).
+        scrollable: true,
         backgroundColor: const Color(0xFF1A1A1A),
         title: Row(
           children: [

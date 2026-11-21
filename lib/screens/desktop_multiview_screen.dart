@@ -340,7 +340,14 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     _panelPick?.complete(null);
     final done = Completer<Channel?>();
     _panelPick = done;
-    setState(() => _panelFor = index);
+    // The header goes with it (Add screen / Change channel from it): its
+    // focus listener never heard the guide take the focus, and it stayed
+    // over the guide's titles (Apple TV tour, +921).
+    _headerTimer?.cancel();
+    setState(() {
+      _panelFor = index;
+      _headerShown = false;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final panel = _panelKey.currentState;
       if (!mounted || panel == null) return;

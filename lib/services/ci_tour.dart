@@ -108,10 +108,8 @@ class CiTour {
     await _key('enter');
     await _wait(3);
     await _shot('multiview-picker');
-    // Back: guide -> groups -> closed (screen 2 goes again), then leaving
-    // Multiview plays screen 1's channel in full screen again.
-    await _back();
-    await _wait(1);
+    // Back: the guide closes (screen 2 goes again), then leaving Multiview
+    // plays screen 1's channel in full screen again.
     await _back();
     await _wait(1);
     await _back();

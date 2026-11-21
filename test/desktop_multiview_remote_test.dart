@@ -121,6 +121,30 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('Add screen from the header: screen 2, the guide, no header',
+      (tester) async {
+    await pump(tester, tv: true);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SportsModeLivePanel), findsOneWidget);
+    expect(find.byType(MultiviewCellTile), findsNWidgets(2));
+    // The header slid away: it stayed over the guide's titles (tour, +921).
+    expect(tester.widget<AnimatedSlide>(find.byType(AnimatedSlide).last).offset,
+        const Offset(0, -1));
+    await tester.pump(const Duration(seconds: 5));
+  });
+
   testWidgets('a remote: the tips first, OK closes them onto screen 1',
       (tester) async {
     await pump(tester, tv: true, tips: true);

@@ -62,6 +62,7 @@ import '../services/ios_pip.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
 import 'desktop_multiview_screen.dart';
+import '../services/ci_tour.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -333,7 +334,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       if (_controlsVisible || _tvOptions) return;
       _zapHud?.cancel();
       setState(() => _tvZapInfo = true);
-      _zapHud = Timer(const Duration(seconds: 3), () {
+      // The CI tour's screenshot comes a few seconds after the key.
+      _zapHud = Timer(const Duration(seconds: CiTour.enabled ? 12 : 3), () {
         _zapHud = null;
         if (mounted) setState(() => _tvZapInfo = false);
       });
