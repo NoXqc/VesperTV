@@ -26,9 +26,11 @@ Why this split: issue text and logs are written by strangers and may try to stee
 injection). With no write tools, the worst a trick issue can get is an odd comment.
 
 ## Known fixes (owner's rules)
-`.github/issue-helper/known-fixes.md`: problems users fix themselves (first: turn off Live stream format:
-HLS in Playlist Manager when HLS stutters). The helper reads it first and answers with the entry's steps;
-the fixer changes nothing for a match. The owner adds entries in plain words.
+Owner (2026-11-21): user errors get a fix from the helper itself, not after waiting for him; HLS off was
+his example. The reply prompt tells Claude to search settings_catalog.dart, playlist_manager_screen.dart
+(per-playlist: Live stream format HLS, backup servers) and player_controls.dart for a setting or action
+that fixes or avoids the problem, matched to the Send log (`StreamFormat:` etc.), and only suggest what it
+found. `.github/issue-helper/known-fixes.md` is optional: fixes the owner already confirmed (HLS off).
 
 ## Automatic fixes for live playback bugs (owner, 2026-11-21)
 "Anything that hurts the user's experience during a live stream": the helper's JSON has `autofix`

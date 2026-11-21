@@ -82,9 +82,9 @@ jobs:
             sections 1, 10 (hard-won rules) and 11 matter most. It is very long, so
             Grep it and dev-notes/ for the feature in question instead of reading it
             whole. docs/remote.html is the user guide (every button and menu).
-            Read .github/issue-helper/known-fixes.md FIRST: the owner's rules for
-            problems users can fix themselves. When the issue or log matches an entry,
-            use that entry's kind and give its steps in the reply.
+            .github/issue-helper/known-fixes.md has fixes the owner already confirmed;
+            use one when it matches. It is short on purpose: most of the time you find
+            the fix yourself (see "what the user can do" below).
 
             Issue #${{ github.event.issue.number }} in ${{ github.repository }}.
             Event: ${{ github.event_name }} (issue_comment = the reporter just added a
@@ -118,9 +118,23 @@ jobs:
               * user_error: say kindly that VesperTV is working and what is going on
                 (never blame them), then numbered steps that fix it on their side.
               * bug: say it looks like a problem in VesperTV and that it's being looked
-                at, then a workaround they can use now if one exists (for example the
-                channel's HD copy instead of 4K, Reload, turning a setting off or on,
-                another stream format), one line each.
+                at, then a workaround they can use now, one line each.
+              What the user can do: don't wait for the developer when the app already
+              has an answer. Look for a setting or action that fixes or avoids the
+              problem, and match it to what the log shows. Where to look: every
+              Settings row in lib/screens/settings/settings_catalog.dart (title and
+              help text say what it does); each playlist's own options in
+              lib/screens/settings/playlist_manager_screen.dart (for example Live
+              stream format: HLS on or off, backup servers); the player's buttons and
+              options row in lib/widgets/player_controls.dart (Reload, Sources, Buffer,
+              audio and subtitle tracks...); docs/remote.html for remote shortcuts.
+              The log names the state: for example `StreamFormat: HLS (playlist
+              setting)` means HLS is on for that playlist, and many `Unexpected start
+              code prefix` lines with it mean the provider's HLS is damaged, so the fix
+              is turning HLS off. Other typical answers: the channel's HD copy instead
+              of 4K, another copy of the channel through Sources, Reload, a backup
+              server, updating the playlist or the guide. Only suggest what you found
+              in the code, with its exact path.
               * known device or provider limit (CLAUDE.md lists them, for example the
                 Fire TV keyboard Back button, Multiview needing one provider connection
                 per screen): explain it kindly and what works instead.
@@ -146,7 +160,7 @@ jobs:
               Wi-Fi, device limits CLAUDE.md lists, features, questions, setup help.
           claude_args: |
             --model claude-opus-5-5
-            --max-turns 30
+            --max-turns 45
             --allowedTools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue list:*)"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch"
             --json-schema '{"type":"object","properties":{"kind":{"type":"string","enum":["bug","user_error","feature","question","duplicate","not_vesper","spam"]},"labels":{"type":"array","items":{"type":"string"}},"reply":{"type":"string"},"owner_note":{"type":"string"},"autofix":{"type":"boolean"}},"required":["kind","labels","reply","owner_note","autofix"]}'

@@ -1,8 +1,9 @@
 # Known fixes (the owner's rules for the issue helper)
 
-The issue helper reads this file before it answers. When an issue matches an entry, it gives that
-fix in its reply. Add an entry for any problem users can fix themselves: what the user sees, how to
-recognise it (in the issue or the Send log), and the exact steps. Menu paths must match the app.
+Optional. The issue helper finds fixes on its own: it searches the app's settings, each playlist's
+options and the player's buttons for something that fixes or avoids the problem, and matches them to
+the Send log (issue-helper.yml). This file only holds fixes the owner has already confirmed, so they
+are given the same way every time. Nothing needs to be added for the helper to suggest a setting.
 
 ## Live channels stutter or freeze with HLS on (owner, 2026-11-21)
 - **The user sees:** live channels stutter, freeze every few seconds, or the picture and sound
