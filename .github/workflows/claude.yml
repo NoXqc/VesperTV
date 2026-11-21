@@ -23,7 +23,7 @@ jobs:
       contains(github.event.comment.body, '@claude') &&
       github.event.comment.user.login == github.repository_owner
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: write
       pull-requests: write
@@ -47,5 +47,7 @@ jobs:
           # No `prompt`: that would switch the action from answering the
           # comment to a fixed task. House rules go in as extra instructions.
           claude_args: |
+            --model claude-opus-5-5
+            --effort max
             --allowedTools "Bash(flutter analyze:*),Bash(flutter test:*),Bash(dart format:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh pr view:*)"
             --append-system-prompt "Follow the repository's CLAUDE.md. It is long: Grep it for the area you touch, and read section 10 before changing UI or focus code. Files are CRLF. Only run dart format on files you changed. flutter analyze must stay at the 16-info baseline and flutter test must pass. A LOG- code in the issue is a user's Send log the developer can read on his PC; it is not in this run. Never change signing, release or secret files, and never bump the version in pubspec.yaml."

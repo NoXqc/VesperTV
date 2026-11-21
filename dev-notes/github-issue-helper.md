@@ -13,7 +13,7 @@ their log. Two workflows:
    comment) and downloads it from the relay (`GET pair.vespertv.app/api/log/<code>`, header
    `X-Log-Key` = secret `VESPER_LOG_READ_KEY`) into `.issue-log/<code>.txt`, NVIDIA/Amazon noise lines
    dropped. The log is never posted.
-2. `anthropics/claude-code-action@v1` (Sonnet 5.5, 30 turns) with `allowed_non_write_users: "*"`
+2. `anthropics/claude-code-action@v1` (Opus 5.5, 30 turns; owner: always Opus) with `allowed_non_write_users: "*"`
    (issues come from strangers) and only `Read, Grep, Glob, gh issue view, gh issue list`; Edit /
    Write / web tools are disallowed. It returns JSON through `--json-schema`: `kind` (bug / feature /
    question / duplicate / not_vesper / spam), `labels`, `reply`, `owner_note`.
@@ -31,8 +31,9 @@ injection). With no write tools, the worst a trick issue can get is an odd comme
 no sound, player/decoder error, reconnect loop, player hang/crash, with enough to look at; never
 provider-side HTTP errors, Wi-Fi, listed device limits). Then two more jobs in issue-helper.yml:
 - **fix** (contents read): one try per issue (`auto-fix` label) and at most 3 a day; the issue text
-  and log go to `.issue-log/`; Claude (Opus 5.5, 80 turns) may only Read/Grep/Glob/Edit/Write: Bash,
-  web and edits to `.git` / `.github` / `.claude` are disallowed, so nothing it writes runs. Afterwards
+  and log go to `.issue-log/`; Claude (Opus 5.5, `--effort max`, 120 turns) may only
+  Read/Grep/Glob/Edit/Write: Bash, web and edits to `.git` / `.github` / `.claude` are disallowed and
+  `--settings` blocks reads/writes outside the checkout, so nothing it writes runs. Afterwards
   `.git` and `~/.claude` are deleted and only `$FIX_DIRS` (lib, test, the vendored player's
   android/src, android/app/src/main/kotlin) are compared (`diff -ruN a b`) into an artifact patch.
 - **pr** (contents/PR/issues/actions write): fresh checkout, `.github/scripts/open_fix_pr.py` refuses
@@ -45,7 +46,7 @@ Nothing merges; the owner reviews, builds and tests on a box first.
 
 ## @claude (owner only)
 `github.event.comment.user.login == github.repository_owner`, so nobody else can spend the plan or get
-code written. Flutter 3.47.9 is set up so Claude can run `flutter analyze` / `flutter test`. House rules
+code written. Opus 5.5 with `--effort max` (owner: extra effort for fixes). Flutter 3.47.9 is set up so Claude can run `flutter analyze` / `flutter test`. House rules
 go in through `--append-system-prompt` (no `prompt` input: that switches the action out of answering
 the comment). It pushes a `claude/...` branch and opens a pull request; nothing merges or releases.
 
