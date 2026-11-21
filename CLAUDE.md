@@ -457,6 +457,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-20 - release 1.0.72 (beta), +928 (latest):** owner chose to release from just before the Apple TV
+  merge (can't box-test its Android player rework yet), plus Settings > Interface > Guide > Long channel names on two lines
+  (per viewer, off). Android + Windows (zip from the same commit); Linux asset stays 1.0.70-869. Released from
+  `claude/release-1072` (d44ebea + the option + this commit) = origin/main; local main also has the Apple TV merge
+  (fa006a3) on top, unreleased, needs a box test (+927). Since 1.0.71: the sync fix (held settings written at every
+  launch, safe held edits), scan to link, Dispatcharr / Tuliprox sign-ins in Transfer / sync / backups, guide programme
+  details + edge to edge, channel numbers, editor Link guide / Channel order, Media Hub IPTV copies in Sources, phone
+  Media Hub pill, Ukrainian, backup How often, Update Content refreshes the guide. Site / README Windows + Linux
+  buttons now use `releases/latest/download/...` (the 1.0.70 tag links were 404 after the in-place rename). Notes:
+  dev-notes/releases/1.0.72.md. Next build > 928.
 - **Claude, 2026-11-20 - sync fix + scan to link, +924 (`claude/sync-held-fix`, merged into local main, not pushed,
   not released):** a user's TV 1 lost favourites / group changes after linking TV 2. 1.0.71's fast launch skipped the
   pre-load sync with Fast startup on, the only one allowed to write held keys (`SyncState.deferred`), so linked
