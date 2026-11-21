@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nox_iptv/widgets/mode_button.dart';
 import 'package:nox_iptv/l10n/l10n.dart';
 import 'package:nox_iptv/screens/settings/check_updates_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -268,7 +269,7 @@ void main() {
       await openUpdater(tester, httpClient, size: 100 * mb);
       final message = tr('Free about {mb} MB and try again.', {'mb': 300});
       expect(find.textContaining(message), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, tr('Install')), findsNothing);
+      expect(find.widgetWithText(ModeButton, tr('Install')), findsNothing);
       expect(find.textContaining('Exception:'), findsNothing);
       expect(httpClient.requests, 0);
       expect(calls.any((call) => call.method == 'installApk'), false);
@@ -286,7 +287,7 @@ void main() {
         ]));
     expect(find.textContaining(tr('Download failed. Please try again.')),
         findsOneWidget);
-    expect(find.widgetWithText(FilledButton, tr('Install')), findsNothing);
+    expect(find.widgetWithText(ModeButton, tr('Install')), findsNothing);
     expect(await tester.runAsync(apk.exists), false);
     expect(tester.takeException(), null);
     await tester.pumpWidget(const SizedBox());
@@ -299,7 +300,7 @@ void main() {
         client([
           [1, 2, 3, 4]
         ]));
-    final install = find.widgetWithText(FilledButton, 'Install');
+    final install = find.widgetWithText(ModeButton, 'Install');
     expect(install, findsOneWidget);
     await tester.tap(install);
     await tester.pumpAndSettle();

@@ -68,6 +68,7 @@ import '../widgets/move_to_group_dialog.dart';
 import '../widgets/phone_pill_bar.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
+import '../services/real_4k_channels.dart';
 import '../widgets/real_4k_tag.dart';
 import '../widgets/rec_cue.dart';
 import '../widgets/roll_down_menu.dart';
@@ -3745,8 +3746,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// fullscreen on whatever's actually playing (PlaybackService's
   /// currentChannel) — not whichever row the D-pad cursor happens to be
   /// sitting on. No-ops if nothing's playing yet.
-  /// Timeline guide's Left: step one 30-minute slot back in time, and
-  /// only once the guide's time window has no earlier slot left fall back
+  /// Timeline guide's Left: the previous programme, and only once the
+  /// guide's time window has nothing earlier left fall back
   /// to the usual "press again to leave for the groups" edge behaviour.
   void _handleTimelineLeft() {
     final moved = _timelineGuideKey.currentState?.moveHorizontal(-1) ?? false;
@@ -4468,9 +4469,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                           // a dead end — otherwise finding your way
                                           // back to fullscreen meant re-selecting
                                           // the same channel from the list again.
-                                          // In the timeline guide, Right steps
-                                          // the view one 30-minute slot instead
-                                          // (see moveHorizontal).
+                                          // In the timeline guide, Right goes to
+                                          // the next programme (see
+                                          // moveHorizontal).
                                           const SingleActivator(
                                               LogicalKeyboardKey
                                                   .arrowRight): (_focusDepth ==
@@ -10468,7 +10469,19 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
     final now = DateTime.now();
     final slot = _cursorSlot;
-    if (slot == null || slot == _floorToSlot(now)) return false;
+    // The view counts too: Left back onto the programme on now leaves the
+    // cursor live while the view can still show another time (a long
+    // programme pages to its start), and Back then left the guide.
+    final atLiveView = !_gridHScroll.hasClients ||
+        !_gridHScroll.position.hasContentDimensions ||
+        (_gridHScroll.offset -
+                    _xFor(_floorToSlot(now))
+                        .clamp(0.0, _gridHScroll.position.maxScrollExtent))
+                .abs() <
+            1;
+    if ((slot == null || slot == _floorToSlot(now)) && atLiveView) {
+      return false;
+    }
     _cursorSlot = null;
     if (_gridHScroll.hasClients) {
       _gridHScroll.jumpTo(_xFor(_floorToSlot(now))
@@ -10930,13 +10943,12 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
   }
 
-  /// The 30-minute column Left/Right have stepped to — the slot's start
-  /// time. Null means the live slot (follows the clock; "now"). Left/
-  /// Right step exactly one slot per press instead of hopping to the
-  /// neighbouring programme, which for a long one could be an hour or
-  /// more away (reported directly: "only move the guide by 30 min
-  /// blocks, not the end of your current channel"). Up/Down then keep
-  /// whatever column this names.
+  /// The time column Up/Down keep: the start of the programme Left/Right
+  /// last moved to (or a slot's start at the window's edges, see
+  /// [moveHorizontal]). Null means the live slot (follows the clock;
+  /// "now"). Left/Right stepped one 30-minute slot per press until
+  /// 2026-11-21 (an earlier report: "only move the guide by 30 min blocks");
+  /// the owner then asked for the highlight to move instead of the guide.
   DateTime? _cursorSlot;
 
   static const Duration _slot = Duration(minutes: 30);
@@ -10953,20 +10965,77 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     return (slot == null || slot == _floorToSlot(now)) ? now : slot;
   }
 
-  /// Steps the guide one 30-minute slot left (-1) or right (+1): scrolls
-  /// the view by that amount and focuses whichever block in the current
-  /// row covers the new slot (which may be the very same long block —
-  /// then only the view moves, and the sticky label keeps its title
-  /// readable). Returns false when there's nowhere further that way (the
-  /// edge of the guide's time window), so the caller can fall back to
-  /// its own edge behaviour.
+  /// Left (-1) / Right (+1) in the guide. Returns false when there's
+  /// nowhere further that way (the edge of the guide's time window), so the
+  /// caller can fall back to its own edge behaviour.
+  ///
+  /// Left/Right go to the previous / next programme in the row, and the
+  /// view stays put unless that programme would barely show (owner +
+  /// Reddit, 2026-11-21: stepping by 30-minute slots moved the whole guide
+  /// on every press, crawled through a long title with the highlight
+  /// standing still, and never reached a short programme that doesn't cover
+  /// a :00 / :30 mark, like a 10-minute news). The slot steps below remain
+  /// for the window's edges (catch-up into the past, the next window).
   bool moveHorizontal(int dir) {
+    final rowIndex = _focusedRowIndex;
+    if (rowIndex == null) return false;
+    final blocks = _rowBlocks[rowIndex];
+    final focused = blocks?.where((b) => b.node.hasFocus).firstOrNull;
+    if (blocks == null || focused == null) return _moveBySlot(dir);
+    ({DateTime start, DateTime end, FocusNode node})? next;
+    for (final b in blocks) {
+      if (b.node == focused.node) continue;
+      if (dir > 0
+          ? b.start.isAfter(focused.start) &&
+              (next == null || b.start.isBefore(next.start))
+          : b.start.isBefore(focused.start) &&
+              (next == null || b.start.isAfter(next.start))) {
+        next = b;
+      }
+    }
+    if (next == null) return _moveBySlot(dir);
+    final now = DateTime.now();
+    final start = next.start.isBefore(_windowStart) ? _windowStart : next.start;
+    final end = next.end.isAfter(_windowEnd) ? _windowEnd : next.end;
+    final live = !next.start.isAfter(now) && next.end.isAfter(now);
+    _cursorSlot = live ? null : start;
+    if (_gridHScroll.hasClients && _gridHScroll.position.hasContentDimensions) {
+      final pos = _gridHScroll.position;
+      final viewLeft = pos.pixels;
+      final viewRight = viewLeft + pos.viewportDimension;
+      final left = _xFor(start);
+      final right = _xFor(end);
+      final shown = (right < viewRight ? right : viewRight) -
+          (left > viewLeft ? left : viewLeft);
+      final wanted = right - left < _slot.inMinutes * _pixelsPerMinute
+          ? right - left
+          : _slot.inMinutes * _pixelsPerMinute;
+      if (live && widget.anchor == null) {
+        // Back on the programme airing now: the guide's live position,
+        // wherever the steps before left the view. Paging to that block's
+        // own start put the view up to an hour back on a long programme,
+        // so walking back from later hours never ended in the usual view
+        // (owner, 2026-11-21: rows of different lengths).
+        pos.jumpTo(_xFor(_floorToSlot(now)).clamp(0.0, pos.maxScrollExtent));
+      } else if (shown < wanted - 1) {
+        _gridHScroll
+            .jumpTo(_xFor(_floorToSlot(start)).clamp(0.0, pos.maxScrollExtent));
+      }
+    }
+    _focusBlock(next.node);
+    return true;
+  }
+
+  /// One 30-minute slot left (-1) or right (+1): the window's edges.
+  bool _moveBySlot(int dir) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return false;
     final now = DateTime.now();
     final program = _focusedProgram;
-    final current = _cursorSlot ??
-        _floorToSlot((program == null || program.isNowPlaying(now))
+    // Floored: a programme step leaves the cursor on a block's own start.
+    final current = _cursorSlot != null
+        ? _floorToSlot(_cursorSlot!)
+        : _floorToSlot((program == null || program.isNowPlaying(now))
             ? now
             : (program.start.isBefore(_windowStart)
                 ? _windowStart
@@ -11265,7 +11334,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         MediaQuery.sizeOf(context).shortestSide < 600;
     _channelColumnWidth = _phoneColumn
         ? (prefs.compactUi ? 136 : (prefs.largeUi ? 210 : 160))
-        : (prefs.compactUi ? 190 : (prefs.largeUi ? 300 : 240));
+        // +20 / +24 / +32 for the wider logo box (_ChannelLabel), so names
+        // keep their room.
+        : (prefs.compactUi ? 210 : (prefs.largeUi ? 332 : 264));
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -12046,6 +12117,55 @@ class _GuideRowDetailsState extends State<_GuideRowDetails> {
   }
 }
 
+/// A guide row's channel name. A name on two lines kept running under the
+/// 4K tag in the row's top-right corner (owner photos, 2026-11-21: "TNT
+/// Sports Ultimate 4K UHD"): when a 4K channel's name doesn't fit on one
+/// line, it stops short of the tag. A one-line name sits under it, centred,
+/// and keeps the full width (owner, 2026-10-20).
+@visibleForTesting
+class GuideChannelName extends StatelessWidget {
+  const GuideChannelName(
+      {required this.channel, required this.twoLines, required this.style});
+
+  final Channel channel;
+  final bool twoLines;
+  final TextStyle style;
+
+  /// The compact 4K tag (~24 px) + its 4 px from the edge.
+  static const double tagRoom = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    Text name() => Text(
+          channel.name,
+          maxLines: twoLines ? 2 : 1,
+          softWrap: twoLines,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        );
+    if (!twoLines) return name();
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: Real4kChannels.ids,
+      builder: (context, ids, _) {
+        if (!ids.contains(channel.id)) return name();
+        return LayoutBuilder(builder: (context, constraints) {
+          final painter = TextPainter(
+            text: TextSpan(text: channel.name, style: style),
+            maxLines: 1,
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout(maxWidth: constraints.maxWidth);
+          final wraps = painter.didExceedMaxLines;
+          painter.dispose();
+          if (!wraps) return name();
+          return Padding(
+              padding: const EdgeInsets.only(right: tagRoom), child: name());
+        });
+      },
+    );
+  }
+}
+
 class _ChannelLabel extends StatelessWidget {
   const _ChannelLabel(
       {required this.channel,
@@ -12075,6 +12195,11 @@ class _ChannelLabel extends StatelessWidget {
     // Number, logo and name on one line (TiviMate's guide); Compact UI
     // smaller.
     final logo = _compactUi ? 24.0 : (_largeUi ? 42.0 : 32.0);
+    // Wide logos (Sky's bars, most providers' banners) shrank to a thin
+    // strip in a square box (Apple TV tester, 2026-11-20): the box is wider
+    // than tall, so they show 1.75x bigger; a square logo keeps its size.
+    // Phones keep the square box in their narrow column.
+    final logoWidth = _TimelineGuideState._phoneColumn ? logo : logo * 1.75;
     // The programme titles' size (12): 14 cut most names short (owner
     // photo, +875).
     final fontSize = _compactUi ? 11.0 : (_largeUi ? 14.0 : 12.0);
@@ -12102,7 +12227,7 @@ class _ChannelLabel extends StatelessWidget {
               ),
             if (number != null) SizedBox(width: _compactUi ? 6 : 10),
             SizedBox(
-              width: logo,
+              width: logoWidth,
               height: logo,
               child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                   ? CachedNetworkImage(
@@ -12114,18 +12239,16 @@ class _ChannelLabel extends StatelessWidget {
                       // again (Homatics, 2026-11-12). Width only, see the
                       // live list.
                       memCacheWidth:
-                          (logo * MediaQuery.of(context).devicePixelRatio)
+                          (logoWidth * MediaQuery.of(context).devicePixelRatio)
                               .round(),
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
             ),
             SizedBox(width: _compactUi || phone ? 6 : 10),
             Expanded(
-              child: Text(
-                channel.name,
-                maxLines: wrap && !(_compactUi && tag != null) ? 2 : 1,
-                softWrap: wrap,
-                overflow: TextOverflow.ellipsis,
+              child: GuideChannelName(
+                channel: channel,
+                twoLines: wrap && !(_compactUi && tag != null),
                 style: TextStyle(color: Colors.white, fontSize: fontSize),
               ),
             ),

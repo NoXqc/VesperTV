@@ -1,3 +1,4 @@
+import 'baked_backdrop.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -356,7 +357,7 @@ class _SettingsBackdropState extends State<SettingsBackdrop> {
     ui.Image? image;
     if (bytes != null) {
       try {
-        image = await SettingsBackdrop.blurred(bytes);
+        image = _dimmed(await SettingsBackdrop.blurred(bytes));
       } catch (e) {
         debugPrint('SettingsBackdrop: wallpaper failed: $e');
       }
@@ -366,37 +367,57 @@ class _SettingsBackdropState extends State<SettingsBackdrop> {
     if (mounted && image != _image) setState(() => _image = image);
   }
 
+  /// The 50 % dim painted into the small picture once, not as a
+  /// full-screen layer on every frame.
+  static ui.Image _dimmed(ui.Image source) {
+    final w = source.width, h = source.height;
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder)
+      ..drawImage(source, Offset.zero, Paint())
+      ..drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+          Paint()..color = const Color(0x80000000));
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(w, h);
+    picture.dispose();
+    source.dispose();
+    return image;
+  }
+
+  // One layer a frame, not three: the theme glow (a full-screen gradient,
+  // hidden anyway under a wallpaper), the wallpaper scaled up and a
+  // full-screen dim cost 12 ms of every Settings / Sports frame on the
+  // Homatics (2026-11-21, BakedBackdrop). Now the dimmed wallpaper alone,
+  // or the glow baked into a small image.
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final image = _image;
-    return Stack(fit: StackFit.expand, children: [
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          gradient: RadialGradient(
-            center: const Alignment(-0.8, -0.9),
-            radius: 1.7,
-            colors: [
-              Color.alphaBlend(
-                  scheme.primary.withValues(alpha: 0.16), Colors.black),
-              Color.alphaBlend(
-                  scheme.secondary.withValues(alpha: 0.05), Colors.black),
-              Colors.black,
-            ],
-            stops: const [0, 0.5, 1],
-          ),
+    if (image != null) {
+      return RepaintBoundary(
+        child: RawImage(
+          image: image,
+          fit: BoxFit.cover,
+          // Scaled up from 160 px: bilinear is what medium does there too.
+          filterQuality: FilterQuality.low,
+        ),
+      );
+    }
+    return BakedBackdrop(layers: [
+      BoxDecoration(
+        color: Colors.black,
+        gradient: RadialGradient(
+          center: const Alignment(-0.8, -0.9),
+          radius: 1.7,
+          colors: [
+            Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.16), Colors.black),
+            Color.alphaBlend(
+                scheme.secondary.withValues(alpha: 0.05), Colors.black),
+            Colors.black,
+          ],
+          stops: const [0, 0.5, 1],
         ),
       ),
-      if (image != null)
-        RepaintBoundary(
-          child: RawImage(
-            image: image,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium,
-          ),
-        ),
-      if (image != null) const ColoredBox(color: Color(0x80000000)),
     ]);
   }
 }

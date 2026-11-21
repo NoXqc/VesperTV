@@ -1,3 +1,4 @@
+import 'baked_backdrop.dart';
 import 'glass_menu.dart';
 import '../utils/refined_finish.dart';
 
@@ -760,14 +761,20 @@ class SportsBackdrop extends StatelessWidget {
                 .clamp(64, 512);
             final src = _src(logoUrl, px);
             final dark = _src(sportsDarkLogoUrl(logoUrl), px);
-            final icon =
-                Icon(sportIcon(league), size: side * 0.8, color: Colors.white);
+            // Faded by tinting the image / icon (modulate = the same alpha),
+            // not an Opacity layer: that one drew the logo offscreen again on
+            // every frame of the page (Pick the channel, owner 2026-11-21).
+            final alpha = src == null ? 0.05 : 0.08;
+            final fade = Colors.white.withValues(alpha: alpha);
+            final icon = Icon(sportIcon(league), size: side * 0.8, color: fade);
             return Stack(
               children: [
                 if (glow != null)
                   Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
+                    // Baked once (BakedBackdrop): a full-screen gradient
+                    // redrawn on every frame costs ~10 ms on the Homatics.
+                    child: BakedBackdrop(layers: [
+                      BoxDecoration(
                         gradient: RadialGradient(
                           center: const Alignment(0.75, -0.3),
                           radius: 1.1,
@@ -777,31 +784,32 @@ class SportsBackdrop extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ),
+                    ]),
                   ),
                 Align(
                   alignment: const Alignment(0.9, -0.2),
-                  child: Opacity(
-                    opacity: src == null ? 0.05 : 0.08,
-                    child: SizedBox.square(
-                      dimension: side,
-                      child: src == null
-                          ? icon
-                          : CachedNetworkImage(
-                              imageUrl: dark ?? src,
-                              fit: BoxFit.contain,
-                              memCacheWidth: px,
-                              fadeInDuration: Duration.zero,
-                              errorWidget: (_, __, ___) => dark == null
-                                  ? icon
-                                  : CachedNetworkImage(
-                                      imageUrl: src,
-                                      fit: BoxFit.contain,
-                                      memCacheWidth: px,
-                                      errorWidget: (_, __, ___) => icon,
-                                    ),
-                            ),
-                    ),
+                  child: SizedBox.square(
+                    dimension: side,
+                    child: src == null
+                        ? icon
+                        : CachedNetworkImage(
+                            imageUrl: dark ?? src,
+                            fit: BoxFit.contain,
+                            memCacheWidth: px,
+                            fadeInDuration: Duration.zero,
+                            color: fade,
+                            colorBlendMode: BlendMode.modulate,
+                            errorWidget: (_, __, ___) => dark == null
+                                ? icon
+                                : CachedNetworkImage(
+                                    imageUrl: src,
+                                    fit: BoxFit.contain,
+                                    memCacheWidth: px,
+                                    color: fade,
+                                    colorBlendMode: BlendMode.modulate,
+                                    errorWidget: (_, __, ___) => icon,
+                                  ),
+                          ),
                   ),
                 ),
               ],

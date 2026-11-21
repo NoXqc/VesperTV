@@ -173,8 +173,8 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         (context) => SettingsScaffold(
               title: tr('Check for Updates'),
               body: ListView(
-          // Sized to its rows: a floating panel hugs them.
-          shrinkWrap: true,
+                // Sized to its rows: a floating panel hugs them.
+                shrinkWrap: true,
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
@@ -195,10 +195,12 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
     switch (_status) {
       case _Status.idle:
         return [
-          OutlinedButton.icon(
-            icon: const Icon(Icons.system_update),
-            label: Text(tr('Check for Updates')),
-            onPressed: _check,
+          ModeButton(
+            autofocus: true,
+            icon: Icons.system_update,
+            label: tr('Check for Updates'),
+            selected: false,
+            onTap: _check,
           ),
         ];
       case _Status.checking:
@@ -218,7 +220,11 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         return [
           Text(tr('You\'re on the latest version.')),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _check, child: Text(tr('Check Again'))),
+          ModeButton(
+              autofocus: true,
+              label: tr('Check Again'),
+              selected: false,
+              onTap: _check),
         ];
       case _Status.updateAvailable:
         final update = _update!;
@@ -229,10 +235,12 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
           ),
           const SizedBox(height: 16),
           if (_updateService.downloadInBrowser) ...[
-            FilledButton.icon(
-              icon: const Icon(Icons.open_in_browser),
-              label: Text(tr('Open Download Page')),
-              onPressed: _openWindowsDownload,
+            ModeButton(
+              autofocus: true,
+              icon: Icons.open_in_browser,
+              label: tr('Open Download Page'),
+              selected: false,
+              onTap: _openWindowsDownload,
             ),
             const SizedBox(height: 4),
             Text(
@@ -240,17 +248,20 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else
-            FilledButton.icon(
+            // ModeButton, not FilledButton: the solid pastel fill looked the
+            // same focused or not, so the remote's cursor was invisible.
+            ModeButton(
               autofocus: true,
-              icon: const Icon(Icons.download),
-              label: Text(tr('Download & Install')),
-              onPressed: _download,
+              icon: Icons.download,
+              label: tr('Download & Install'),
+              selected: false,
+              onTap: _download,
             ),
           // After the button, capped: long release notes used to push the button
           // below the fold of a lazy list, out of the remote's reach (1.0.40).
           if (update.releaseNotes.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text(update.releaseNotes,
+            Text(plainReleaseNotes(update.releaseNotes),
                 maxLines: 12,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall),
@@ -268,10 +279,12 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         return [
           Text(tr('Download complete.')),
           const SizedBox(height: 16),
-          FilledButton.icon(
-            icon: const Icon(Icons.install_mobile),
-            label: Text(tr('Install')),
-            onPressed: _install,
+          ModeButton(
+            autofocus: true,
+            icon: Icons.install_mobile,
+            label: tr('Install'),
+            selected: false,
+            onTap: _install,
           ),
           const SizedBox(height: 4),
           Text(
@@ -286,8 +299,30 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
                   {'p': _errorMessage ?? tr('unknown error')}),
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _check, child: Text(tr('Try Again'))),
+          ModeButton(
+              autofocus: true,
+              label: tr('Try Again'),
+              selected: false,
+              onTap: _check),
         ];
     }
   }
+}
+
+/// The GitHub release body is Markdown; the dialog shows plain text, so
+/// `## heading`, `**bold**` and backticks used to show up as-is.
+String plainReleaseNotes(String notes) {
+  final lines = <String>[];
+  for (var line in notes.replaceAll('\r', '').split('\n')) {
+    line = line
+        .replaceFirst(RegExp(r'^\s*#{1,6}\s*'), '')
+        .replaceAll('**', '')
+        .replaceAll('__', '')
+        .replaceAll('`', '')
+        .replaceFirstMapped(RegExp(r'^(\s*)[-*]\s+'), (m) => '${m[1]}• ')
+        .replaceAllMapped(RegExp(r'\[([^\]]+)\]\([^)]+\)'), (m) => m[1]!);
+    if (line.trim().isEmpty && (lines.isEmpty || lines.last.isEmpty)) continue;
+    lines.add(line.trim().isEmpty ? '' : line);
+  }
+  return lines.join('\n').trim();
 }

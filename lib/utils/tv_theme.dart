@@ -274,7 +274,8 @@ ThemeData _tvTheme(CyberpunkPalette palette, bool refinedFinish) {
         // the Live TV list already has.
         outlinedButtonTheme:
             OutlinedButtonThemeData(style: _tvButtonStyle(scheme)),
-        filledButtonTheme: FilledButtonThemeData(style: _tvButtonStyle(scheme)),
+        filledButtonTheme:
+            FilledButtonThemeData(style: tvFilledButtonStyle(scheme)),
         textButtonTheme: TextButtonThemeData(style: _tvButtonStyle(scheme)),
         // Plain `IconButton`s (player bar: Recall, Favorite, Reload,
         // Pause/skip) had no theme of their own, so they fell back to
@@ -301,6 +302,55 @@ ThemeData _tvTheme(CyberpunkPalette palette, bool refinedFinish) {
 /// paint a gradient like `_SelectableRow`/`_GroupRow` do for this same
 /// state, so this stays transparent — the border + glow (added by each
 /// consuming theme's `focusColor`, already set above) carry it instead.
+/// Filled buttons on a TV, in [ModeButton]'s look: a dark see-through
+/// button with a thin outline, and on focus a bright border, accent text, a
+/// dark accent tint and a soft glow. The stock filled style kept its solid
+/// pastel fill when NOT focused and only turned see-through on focus, so the
+/// solid one was usually the wrong one (owner photos, 2026-11-21: Check for
+/// Updates, Group management's Confirm; the focus was on the back arrow).
+/// Also the app theme on TV boxes (main.dart). Cached per scheme: the
+/// style holds closures, and a theme must come back equal (CLAUDE.md §10
+/// "Frame cost on weak boxes" (2)).
+ButtonStyle tvFilledButtonStyle(ColorScheme scheme) {
+  final cached = _tvFilledStyles[scheme];
+  if (cached != null) return cached;
+  if (_tvFilledStyles.length >= 16) _tvFilledStyles.clear();
+  return _tvFilledStyles[scheme] = _buildTvFilledButtonStyle(scheme);
+}
+
+final _tvFilledStyles = <ColorScheme, ButtonStyle>{};
+
+ButtonStyle _buildTvFilledButtonStyle(ColorScheme scheme) {
+  bool on(Set<WidgetState> s) =>
+      s.contains(WidgetState.focused) && !s.contains(WidgetState.disabled);
+  return ButtonStyle(
+    backgroundColor: WidgetStateProperty.resolveWith((s) {
+      if (s.contains(WidgetState.disabled)) return null;
+      return on(s)
+          ? Color.lerp(Colors.black, scheme.primaryContainer, 0.4)
+          : Colors.transparent;
+    }),
+    foregroundColor: WidgetStateProperty.resolveWith((s) {
+      if (s.contains(WidgetState.disabled)) return null;
+      return on(s) ? scheme.primary : scheme.onSurface;
+    }),
+    iconColor: WidgetStateProperty.resolveWith((s) {
+      if (s.contains(WidgetState.disabled)) return null;
+      return on(s) ? scheme.tertiary : scheme.onSurface;
+    }),
+    side: WidgetStateProperty.resolveWith((s) {
+      if (on(s)) return BorderSide(color: scheme.primary, width: 2);
+      if (s.contains(WidgetState.disabled)) {
+        return BorderSide(color: scheme.onSurface.withValues(alpha: 0.12));
+      }
+      return BorderSide(color: scheme.outline);
+    }),
+    elevation: WidgetStateProperty.resolveWith((s) => on(s) ? 6 : 0),
+    shadowColor: WidgetStatePropertyAll(scheme.primary.withValues(alpha: 0.6)),
+    surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+  );
+}
+
 ButtonStyle _tvButtonStyle(ColorScheme scheme, {bool isIcon = false}) {
   const focusFill = Colors.transparent;
   final focusForeground = isIcon ? scheme.tertiary : scheme.primary;

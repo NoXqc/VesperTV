@@ -1111,6 +1111,10 @@ class SportsChannelMatcher {
   /// When a guide programme for [g] may start: around a game's start; a
   /// fight card's main event comes hours after the prelims; a golf round
   /// runs all day, so its day (today's, while it's on).
+  /// How long before kickoff a guide block that names both teams and is
+  /// still on at kickoff may start (the build-up listed with the game).
+  static const _coverBefore = Duration(hours: 3);
+
   static (DateTime, DateTime) _guideWindow(SportsGame g) {
     if (g.end != null) {
       final now = DateTime.now().toUtc();
@@ -1340,9 +1344,13 @@ class SportsChannelMatcher {
     // A selected future day still works; mixed My Teams dates may not expand
     // a scan across weeks. Only nearby games contribute SQL candidate terms.
     final ordered = [...games]..sort((a, b) => a.start.compareTo(b.start));
-    final anchor =
-        ordered.where((g) => _guideWindow(g).$2.isAfter(now)).firstOrNull ??
-            ordered.last;
+    // A game still on counts too: 30 min after kickoff its window had
+    // passed, the anchor moved to a later game and the live game left the
+    // guide scan, so only the viewer's pick stayed in its menu (Man City v
+    // Fulham at 45', owner 2026-11-21).
+    bool current(SportsGame g) =>
+        _guideWindow(g).$2.isAfter(now) || g.state == GameState.live;
+    final anchor = ordered.where(current).firstOrNull ?? ordered.last;
     final lower = _guideWindow(anchor).$1;
     final upper = lower.add(const Duration(hours: 36));
     final scanGames = games.where((g) {
@@ -1377,7 +1385,8 @@ class SportsChannelMatcher {
     for (final t in byLength) {
       if (!terms.any(t.contains)) terms.add(t);
     }
-    final earliest = lower;
+    // Back far enough for a block already on at kickoff (see [_coverBefore]).
+    final earliest = lower.subtract(_coverBefore - const Duration(hours: 1));
     var latest = _guideWindow(anchor).$2;
     for (final g in scanGames) {
       final (_, to) = _guideWindow(g);
@@ -1543,7 +1552,17 @@ class SportsChannelMatcher {
       ];
       for (final p in programmes) {
         final start = p.start.toUtc();
-        if (start.isBefore(from) || !start.isBefore(to)) continue;
+        // A block that began before the window but is on at kickoff (UK
+        // guides list the build-up: TNT Sports' "Premier League : Manchester
+        // City v Fulham" 06:00-10:00 for a 07:30 kickoff, owner 2026-11-21):
+        // it counts when it names the teams, checked below.
+        final covers = g.end == null &&
+            start.isBefore(from) &&
+            !start.isBefore(g.start.subtract(_coverBefore)) &&
+            p.stop.toUtc().isAfter(g.start.add(const Duration(minutes: 15)));
+        if ((start.isBefore(from) && !covers) || !start.isBefore(to)) {
+          continue;
+        }
         final title = sportsNormalize(p.title);
         final byName = groups.every((group) => group.any(title.contains));
         // Both team codes as words ("TOR @ BOS", GiladG2 on Discord,
@@ -1553,13 +1572,16 @@ class SportsChannelMatcher {
             title.contains(codes.$1) &&
             title.contains(codes.$2);
         if (!byName && !byCode && !series.any(title.contains)) continue;
+        // A series title alone ("Premier League") doesn't make a long block
+        // this game's: only the teams do.
+        if (covers && !byName && !byCode) continue;
         if (!byName &&
             g.league.kind == SportsKind.team &&
             namesOtherGame(g, title)) {
           continue;
         }
-        final diff = g.end != null
-            ? 0 // golf: all day, nothing to be early or late for
+        final diff = g.end != null || covers
+            ? 0 // golf: all day; a block on at kickoff: right on time
             : start.difference(g.start).inMinutes;
         if ((byName || byCode) && !_byEpgId.containsKey(p.channelId)) {
           hiddenInGuide ??= _hiddenByEpgId[p.channelId];

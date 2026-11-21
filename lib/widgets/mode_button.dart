@@ -21,6 +21,7 @@ class ModeButton extends StatefulWidget {
     required this.onTap,
     this.icon,
     this.focusNode,
+    this.autofocus = false,
   });
 
   final IconData? icon;
@@ -28,6 +29,7 @@ class ModeButton extends StatefulWidget {
   final bool selected;
   final VoidCallback onTap;
   final FocusNode? focusNode;
+  final bool autofocus;
 
   @override
   State<ModeButton> createState() => _ModeButtonState();
@@ -107,6 +109,7 @@ class _ModeButtonState extends State<ModeButton> {
           ),
           child: InkWell(
             focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
             borderRadius: BorderRadius.circular(8),
             onTap: widget.onTap,
             onFocusChange: (f) => setState(() => _focused = f),

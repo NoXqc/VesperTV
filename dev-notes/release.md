@@ -46,6 +46,14 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
    `published` event; a brand-new non-pre-release announces itself. Preview the post locally:
    `gh api repos/NoXqc/VesperTV/releases/tags/<ver> > r.json && python .github/scripts/discord_release.py r.json --dry-run`.
    The workflow skips drafts and pre-releases (test builds never get announced).
+9. **Delete old local APKs, at release time only (owner, 2026-11-21):** when a release is cut
+   (`/cutr`), delete the local Android APKs in `C:\Users\aarse` (`VesperTV-test-<N>*.apk`,
+   `VesperTV-<ver>-<N>.apk`) older than the two newest by build number `N`. Never during test
+   builds. **Per platform:** a build made for another platform (Apple TV / iPhone branches such as
+   `claude/appletv-*`, `claude/tvos-*`, `claude/ios-*`, and other players' test builds) is not
+   counted against the Android ones: the newest one for that platform stays even when its number
+   is lower. Each APK is ~105 MB: 90 of them (8.7 GB) filled C: on 2026-11-21 and a build failed
+   with "not enough space on the disk". Released APKs stay downloadable from GitHub.
 
 ### Android-only release (owner instruction, 2026-10-29)
 For 1.0.46+514 the owner explicitly deferred Windows work. Do not build or test

@@ -1,4 +1,5 @@
 import '../widgets/glass_menu.dart';
+import '../widgets/baked_backdrop.dart';
 import '../widgets/gold_tag.dart';
 import '../utils/refined_finish.dart';
 import '../widgets/sports_league_rail.dart';
@@ -4548,10 +4549,12 @@ class _TeamGlow extends StatelessWidget {
         duration: const Duration(milliseconds: 400),
         // SizedBox.expand: AnimatedSwitcher lays children out loosely, so
         // a bare DecoratedBox would collapse to zero size.
+        // Baked once into a small image: the two full-screen gradients cost
+        // 20 ms of every frame on the Homatics (BakedBackdrop).
         child: SizedBox.expand(
           key: ValueKey('${game?.id}'),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
+          child: BakedBackdrop(layers: [
+            BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.topRight,
@@ -4563,17 +4566,15 @@ class _TeamGlow extends StatelessWidget {
                 stops: const [0, 0.5, 1],
               ),
             ),
-            child: const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black],
-                  stops: [0.3, 0.85],
-                ),
+            const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black],
+                stops: [0.3, 0.85],
               ),
             ),
-          ),
+          ]),
         ),
       ),
     );
@@ -6645,9 +6646,19 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
         borderSide: BorderSide(color: color, width: width),
       );
 
+  // Searched once per query: a build also runs on every frame of the
+  // keyboard sliding in or out (viewInsets below), and each one scanned all
+  // channel names again (owner, 2026-11-21: the page was laggy).
+  String? _resultsFor;
+  List<Channel> _results = const [];
+
   @override
   Widget build(BuildContext context) {
-    final results = widget.matcher.search(_query);
+    if (_resultsFor != _query) {
+      _resultsFor = _query;
+      _results = widget.matcher.search(_query);
+    }
+    final results = _results;
     final epg = context.read<EpgService>();
     final playlists = context.read<PlaylistManager>();
     // Two providers' TSN 1 look alike: every row names its playlist as soon
@@ -6729,11 +6740,19 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                   ),
                   const SizedBox(height: 10),
                   Expanded(
-                    // Glass panel: TvMenuTile draws its glass rows inside it,
-                    // like the hold menus.
-                    child: GlassMenuSurface(
-                      radius: 16,
-                      child: Column(
+                    // Settings' list look: only the focused row draws its
+                    // glass, idle rows nothing, on a plain outline. A glass
+                    // panel (fill, gradient, shadow) under glass rows was
+                    // drawn again on every frame over the page's backdrop and
+                    // the live video's memory traffic (owner, 2026-11-21:
+                    // "still slow", 70 ms frames).
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: GlassRowScope(
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
@@ -6795,7 +6814,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                             ),
                           ),
                         ],
-                      ),
+                      )),
                     ),
                   ),
                 ],

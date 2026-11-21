@@ -219,15 +219,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder channelLabels() => find.byWidgetPredicate(
-      (w) => w.runtimeType.toString() == '_ChannelLabel');
+  Finder channelLabels() => find
+      .byWidgetPredicate((w) => w.runtimeType.toString() == '_ChannelLabel');
 
-  testWidgets('TV guide: number + logo + name on one line (240 wide)',
+  testWidgets(
+      'TV guide: number + logo + name on one line (264 wide: the logo box is 1.75x wider than tall)',
       (tester) async {
     await pumpHome(tester);
     final label = channelLabels().first;
     expect((tester.widget(label) as dynamic).number, 1);
-    expect(tester.getSize(label).width, 240);
+    expect(tester.getSize(label).width, 264);
   });
 
   testWidgets('phone guide keeps the narrow two-line channel column',

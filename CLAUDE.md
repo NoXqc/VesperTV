@@ -296,7 +296,7 @@ inaccurate. Recoverable from commit c18de49.)
   Expand catalog and Search on each (+774). `select` asserts inside a LayoutBuilder: select in `build`.
   (15) Hold menus / roll-downs (`showGlassMenu`, `showRollDownMenu`): the glass is the page captured
   small and blurred ONCE on open (`GlassFrost`), never a live BackdropFilter; rows (`TvDialogOption`)
-  sit on an `InkLayer`; Refined finish's focused-row glass (`MinimalGlassFocus`: group rows, TvMenuTile,
+  sit on an `InkLayer`; `GlassMenuSurface` without a menu's capture (a page using it, Sports Trak's Pick the channel) draws a darker fill, never a live blur (110-130 ms frames, 2026-11-21); Refined finish's focused-row glass (`MinimalGlassFocus`: group rows, TvMenuTile,
   ModeButton) is a tint, not a blur (Home row menu photo, +782). (16) Home's backdrop cuts instead
   of crossfading while the mini player plays on the native surface: the two full-screen fading
   pictures + the video's memory traffic gave half-drawn frames (black lower half, jagged edge) on
@@ -307,6 +307,13 @@ inaccurate. Recoverable from commit c18de49.)
   back logic must route it through its PopScope (`DesktopPlayerScreen` is `canPop: false` ->
   `_handleBack`, or a live channel was dropped instead of handed to the mini player).
   Measured 2026-11-13 with `Frames:` over adb logcat (Settings, Multiview); an audit agent's list in HANDOFF.
+  (19) **Full-screen gradients are expensive on the Homatics: bake them** (2026-11-21, measured with temporary layer
+  switches in Sports Trak's Pick the channel, `Frames:` avgRaster): all layers 50 ms; without the team-colour glow (two
+  full-screen LinearGradients) 30; without the Settings wallpaper backdrop (radial gradient + scaled picture + 50 % dim)
+  37; without the panel shadow 45; without the league logo 50; all four off 7. `widgets/baked_backdrop.dart`
+  (`BakedBackdrop`): decorations painted once into a 1/8-size image (`toImageSync`, cached by layers + size, shared),
+  drawn stretched with FilterQuality.low; `SettingsBackdrop` bakes the dim into its 160 px wallpaper and skips the hidden
+  gradient. Result: 24 ms. Any new full-screen gradient behind a page: use BakedBackdrop.
   (18) **The TV screen does not watch PlaylistManager** (2026-11-18, +838..+847): it listens and rebuilds on the
   TV tab only when `PlaylistManager.liveViewSignature()` changes (live lists, hidden, edits, merges, own groups,
   viewer, groups + order, playlists, favourites, error); the browse tabs rebuild on every change as before. The

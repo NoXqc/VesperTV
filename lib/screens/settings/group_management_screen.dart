@@ -168,7 +168,31 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
     final clamped = index.clamp(0, 3);
     if (clamped == _tabController.index) return;
     setState(() => _tabController.index = clamped);
-    _tabScopes[clamped].requestFocus();
+    _focusTab(clamped, 0);
+  }
+
+  /// TabBarView builds a page only once it slides into view, so asking the
+  /// new tab's scope for focus right away found no children: focus sat on
+  /// the empty scope (nothing highlighted until Up). Wait for the page, then
+  /// focus the row used last there, else its first row.
+  void _focusTab(int index, int frames) {
+    if (!mounted || _tabController.index != index) return;
+    final scope = _tabScopes[index];
+    final rows =
+        scope.traversalDescendants.where((n) => n.canRequestFocus).toList();
+    if (rows.isEmpty) {
+      if (frames < 30) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _focusTab(index, frames + 1));
+        WidgetsBinding.instance.scheduleFrame();
+      }
+      return;
+    }
+    final last = scope.focusedChild;
+    (last != null && last.canRequestFocus && rows.contains(last)
+            ? last
+            : rows.first)
+        .requestFocus();
   }
 
   /// Left/Right switching tabs unconditionally made "Show All"/"Hide All"
@@ -350,10 +374,16 @@ class _ConfirmTab extends StatelessWidget {
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              autofocus: true,
-              onPressed: onConfirm,
-              child: Text(tr('Confirm')),
+            // ModeButton, not FilledButton: the solid pastel fill looked the
+            // same focused or not (owner photo, 2026-11-21).
+            SizedBox(
+              width: 240,
+              child: ModeButton(
+                autofocus: true,
+                label: tr('Confirm'),
+                selected: false,
+                onTap: onConfirm,
+              ),
             ),
           ],
         ),

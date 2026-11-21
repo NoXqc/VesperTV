@@ -82,6 +82,7 @@ import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
 import 'widgets/native_video_hole.dart';
 import 'services/viewer_profile_service.dart';
+import 'models/cyberpunk_palette.dart';
 import 'utils/constants.dart';
 import 'utils/startup_routes.dart';
 import 'utils/route_observer.dart';
@@ -1881,12 +1882,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             locale: L10n.locale,
             supportedLocales: L10n.supportedLocales,
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
-            theme: ThemeData(
-              brightness: Brightness.dark,
-              colorScheme:
-                  buildPaletteColorScheme(prefs.palette, Brightness.dark),
-              useMaterial3: true,
-            ),
+            theme: _appTheme(prefs.palette, prefs.isTelevision),
             home: StartupProfileScreen(onSelected: _finishProfileSelection),
           );
         }
@@ -1961,18 +1957,35 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           // remove the toggle". No `darkTheme`/`themeMode` at all, so
           // there's nothing for a system-level light-mode change to flip.
           theme: RefinedFinish.apply(
-              ThemeData(
-                brightness: Brightness.dark,
-                colorScheme:
-                    buildPaletteColorScheme(prefs.palette, Brightness.dark),
-                useMaterial3: true,
-              ),
+              _appTheme(prefs.palette, prefs.isTelevision),
               prefs.refinedFinish),
           routes: {Navigator.defaultRouteName: _buildTvRoot},
         );
       },
     );
   }
+
+  /// The app's theme. On a TV box its filled buttons take the TV look
+  /// (`tvFilledButtonStyle`): screens outside `withTvThemeIfNeeded` kept a
+  /// solid pastel fill that looked focused when it wasn't. Cached per
+  /// palette: a theme built in `build` must come back equal (CLAUDE.md §10
+  /// "Frame cost on weak boxes" (2)).
+  static ThemeData _appTheme(CyberpunkPalette palette, bool tv) {
+    final key = (palette, tv);
+    final cached = _appThemes[key];
+    if (cached != null) return cached;
+    if (_appThemes.length >= 16) _appThemes.clear();
+    final scheme = buildPaletteColorScheme(palette, Brightness.dark);
+    return _appThemes[key] = ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      useMaterial3: true,
+      filledButtonTheme:
+          tv ? FilledButtonThemeData(style: tvFilledButtonStyle(scheme)) : null,
+    );
+  }
+
+  static final _appThemes = <(CyberpunkPalette, bool), ThemeData>{};
 
   /// Same rule as TvHomeScreen's one-column phone layout (`_compact`).
   static bool _isPortraitPhone(BuildContext context) {

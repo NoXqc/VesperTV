@@ -223,13 +223,12 @@ class _FrostedBackdropState extends State<_FrostedBackdrop> {
   @override
   Widget build(BuildContext context) {
     final scope = context.getInheritedWidgetOfExactType<_GlassFrostScope>();
-    if (scope == null || !GlassBlur.live) {
-      return BackdropFilter(
-        enabled: GlassBlur.live,
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: widget.child,
-      );
-    }
+    // No captured frost (a page using the panel itself, not a menu): no
+    // blur, never a live BackdropFilter. Sports Trak's Pick the channel page
+    // re-blurred its whole results panel on every frame it drew: 110-130 ms
+    // frames on the Homatics (owner, 2026-11-21; CLAUDE.md §10 rule 15).
+    // The panel's fill is darker then ([GlassMenuSurface.build]).
+    if (scope == null || !GlassBlur.live) return widget.child;
     return CustomPaint(
       key: _key,
       painter: _FrostPainter(scope.frost,
@@ -308,6 +307,10 @@ class GlassMenuSurface extends StatelessWidget {
     }
 
     final accent = readableAccent(theme.colorScheme.primary);
+    // Frosted glass only with a menu's one-time capture (see
+    // _FrostedBackdrop).
+    final frosted = GlassBlur.live &&
+        context.getInheritedWidgetOfExactType<_GlassFrostScope>() != null;
     // Menus retain the chosen accent on both light and dark app themes.
     // Same app theme in = the same menu theme out: its button styles hold
     // closures, so a fresh copy never compares equal and `Theme` rebuilt
@@ -362,9 +365,9 @@ class GlassMenuSurface extends StatelessWidget {
                   type: MaterialType.transparency,
                   child: Ink(
                     decoration: BoxDecoration(
-                      // Darker without the blur: the video behind stays
-                      // quiet under the text.
-                      color: GlassBlur.live
+                      // Darker without the blur: the video or page behind
+                      // stays quiet under the text.
+                      color: frosted
                           ? const Color(0xC20D1016)
                           : const Color(0xEB0D1016),
                       borderRadius: borderRadius,
