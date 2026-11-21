@@ -174,12 +174,16 @@ iPhone job. Before the first run:
 1. App Store Connect > VesperTV > add the **tvOS** platform (same bundle id
    `app.vespertv.player`, one listing for iPhone, iPad and Apple TV).
 2. Bump `+N` in pubspec.yaml if this version's Apple TV train has seen it.
-3. Internal TestFlight only: flutter-tvos signs its engine with an Apple
-   Distribution certificate from the keychain, which this runner doesn't
-   have (Xcode cloud-signs through the API key). External testers and App
-   Review reject an unsigned engine (ITMS-91065). For those, export the
-   Apple Distribution certificate as a .p12 into two more secrets and import
-   it into a temporary keychain before the build.
+3. flutter-tvos signs its engine with an Apple Distribution certificate
+   from a keychain; without one only internal TestFlight works (external
+   testers and App Review reject an unsigned engine, ITMS-91065). Since
+   2026-11-20 the upload step imports it from two secrets into a temporary
+   keychain: `APPLE_DIST_CERT_P12` (the .p12, base64) and
+   `APPLE_DIST_CERT_PASSWORD`. Made without a Mac: openssl key + CSR on the
+   owner's PC (outside the repo), certificate from developer.apple.com, .p12
+   in the 3DES / SHA-1 format the macOS keychain reads. Valid until
+   2027-11; renew it the same way. The step warns in the log when the
+   engine still went unsigned.
 
 ## Test box
 
