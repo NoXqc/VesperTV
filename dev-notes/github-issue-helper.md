@@ -25,6 +25,24 @@ their log. Two workflows:
 Why this split: issue text and logs are written by strangers and may try to steer the AI (prompt
 injection). With no write tools, the worst a trick issue can get is an odd comment.
 
+## Automatic fixes for live playback bugs (owner, 2026-11-21)
+"Anything that hurts the user's experience during a live stream": the helper's JSON has `autofix`
+(true only for a VesperTV bug while watching live TV: won't start, freezes, stutters/buffers, black,
+no sound, player/decoder error, reconnect loop, player hang/crash, with enough to look at; never
+provider-side HTTP errors, Wi-Fi, listed device limits). Then two more jobs in issue-helper.yml:
+- **fix** (contents read): one try per issue (`auto-fix` label) and at most 3 a day; the issue text
+  and log go to `.issue-log/`; Claude (Opus 5.5, 80 turns) may only Read/Grep/Glob/Edit/Write: Bash,
+  web and edits to `.git` / `.github` / `.claude` are disallowed, so nothing it writes runs. Afterwards
+  `.git` and `~/.claude` are deleted and only `$FIX_DIRS` (lib, test, the vendored player's
+  android/src, android/app/src/main/kotlin) are compared (`diff -ruN a b`) into an artifact patch.
+- **pr** (contents/PR/issues/actions write): fresh checkout, `.github/scripts/open_fix_pr.py` refuses
+  a patch outside those folders, with AndroidManifest.xml, binary files, > 300 KB, or containing either
+  secret; applies it with `patch`, pushes `claude/auto-issue-N` (git hooks off), opens a **draft** PR
+  (label auto-fix) or, while Settings > Actions > "Allow GitHub Actions to create and approve pull
+  requests" is off, a compare link; runs tests.yml on the branch (tests.yml is now `contents: read`);
+  comments a fixed text on the issue. The new code only ever runs in tests.yml with a read-only token.
+Nothing merges; the owner reviews, builds and tests on a box first.
+
 ## @claude (owner only)
 `github.event.comment.user.login == github.repository_owner`, so nobody else can spend the plan or get
 code written. Flutter 3.47.9 is set up so Claude can run `flutter analyze` / `flutter test`. House rules

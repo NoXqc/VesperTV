@@ -6,6 +6,8 @@ that writes to GitHub, and it is not an AI: labels come from a fixed list,
 links outside VesperTV's own places are dropped, @mentions can't ping
 anyone, and the reply gets a footer saying it is automatic. A spam verdict
 posts nothing. $ISSUE = issue number, $GITHUB_REPOSITORY, $GH_TOKEN.
+A live playback bug Claude marked `autofix` sets the step output
+autofix=true, which starts the fixer jobs (issue-helper.yml).
 """
 import json
 import os
@@ -132,6 +134,13 @@ def main():
         r = gh("issue", "comment", issue, "--repo", repo, "--body-file", "-",
                body=reply + FOOTER)
         print("Reply posted." if r.returncode == 0 else r.stderr)
+
+    if kind == "bug" and out.get("autofix") is True:
+        summary(["", "Live playback bug: the fixer starts."])
+        path = os.environ.get("GITHUB_OUTPUT")
+        if path:
+            with open(path, "a", encoding="utf-8") as f:
+                f.write("autofix=true\n")
     return 0
 
 
