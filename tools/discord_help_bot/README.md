@@ -11,6 +11,17 @@ guide topics. If the question has no clear match, the app links to the guide and
 asks for a shorter topic. This is keyword search, so it cannot answer every
 wording or questions absent from the guide. The HTTP mode does not monitor channel messages. The optional Gateway mode below answers automatically in one configured help channel.
 
+## #bugs-issues-report: send bugs to GitHub (live since 2026-11-21)
+
+With `DISCORD_BUGS_CHANNEL_ID` set, `gateway.mjs` answers a new human message in that channel with the
+GitHub bug form link and the Send log tip (`bug-redirect.mjs`, `BUG_REPLY`). Once per person per 12 hours,
+never to the server owner or members with Manage Messages, mentions nobody, never reads message text (the
+Message Content intent is only requested when `DISCORD_HELP_CHANNEL_ID`, the guide answers, is also set).
+On the VPS the container `vespertv-discord-auto` runs it alone (guide answers stay off: owner pulled them
+2026-11-11), `--restart unless-stopped`, same lockdown as before (user 65534, read-only, no capabilities):
+`DISCORD_BUGS_CHANNEL_ID=1552746353183035553`. The issues themselves are answered by
+`.github/workflows/issue-helper.yml` (dev-notes/github-issue-helper.md).
+
 ## Maintain the answers
 
 `docs/remote.html` is the source of truth. Edit that page first, then run from the
