@@ -521,6 +521,13 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.guideChannelNumbers,
       (b, on) => b.prefs.setGuideChannelNumbers(on)),
   _switch(
+      'guide_two_line_names',
+      'guide',
+      'Long channel names on two lines',
+      'Channel names that don\'t fit wrap onto a second line in the guide.',
+      (b) => b.prefs.guideTwoLineNames,
+      (b, on) => b.prefs.setGuideTwoLineNames(on)),
+  _switch(
       'keep_groups_open',
       'guide',
       'Keep groups open',

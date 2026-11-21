@@ -1231,6 +1231,10 @@ class StorageService {
       _guideBool(AppConstants.keyGuideChannelNumbers) ?? true;
   Future<void> setGuideChannelNumbers(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideChannelNumbers), value);
+  bool getGuideTwoLineNames() =>
+      _guideBool(AppConstants.keyGuideTwoLineNames) ?? false;
+  Future<void> setGuideTwoLineNames(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideTwoLineNames), value);
   Future<void> setGuideExpanded(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideExpanded), value);
   bool getExpandedBrowse() =>

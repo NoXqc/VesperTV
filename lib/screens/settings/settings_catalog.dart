@@ -634,6 +634,14 @@ class SettingsCatalog {
               value: prefs.guideChannelNumbers,
               onChanged: prefs.setGuideChannelNumbers),
           SettingsToggle(
+              id: 'guide_two_line_names',
+              icon: Icons.wrap_text,
+              title: tr('Long channel names on two lines'),
+              help: tr(
+                  'Channel names that don\'t fit go on a second line in the guide.'),
+              value: prefs.guideTwoLineNames,
+              onChanged: prefs.setGuideTwoLineNames),
+          SettingsToggle(
               id: 'keep_groups_open',
               icon: Icons.view_sidebar_outlined,
               title: tr('Keep groups open'),

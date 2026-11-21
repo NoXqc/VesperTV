@@ -2173,6 +2173,10 @@ const Map<String, String> kEs = {
   "Channel numbers": "Números de canal",
   "Show a number before each channel in the guide.":
       "Mostrar un número delante de cada canal en la guía.",
+  "Long channel names on two lines":
+      "Nombres de canal largos en dos líneas",
+  "Channel names that don't fit go on a second line in the guide.":
+      "Los nombres de canal que no caben pasan a una segunda línea en la guía.",
   "Programme details in the guide": "Detalles del programa en la guía",
   "Stay on a programme for 1 second to see its description under it.":
       "Quédate 1 segundo en un programa para ver su descripción debajo.",

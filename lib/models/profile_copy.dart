@@ -48,6 +48,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyGuideExpanded,
     AppConstants.keyGuideRowDetails,
     AppConstants.keyGuideChannelNumbers,
+    AppConstants.keyGuideTwoLineNames,
     AppConstants.keyGuideCompact,
     AppConstants.keyCompactUi,
     AppConstants.keyUiSize,

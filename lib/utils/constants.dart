@@ -627,8 +627,12 @@ class AppConstants {
   /// Full-video Timeline: resting on a programme opens its details under
   /// the row (per viewer, on by default).
   static const String keyGuideRowDetails = 'vesper_guide_row_details';
-  static const String keyGuideChannelNumbers =
-      'vesper_guide_channel_numbers';
+  static const String keyGuideChannelNumbers = 'vesper_guide_channel_numbers';
+
+  /// Settings > Interface > Guide > Long channel names on two lines (per
+  /// viewer, off): the Timeline's channel names wrap like before the
+  /// one-line column (+886).
+  static const String keyGuideTwoLineNames = 'vesper_guide_two_line_names';
 
   /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
   /// channel rows in the TV home (per viewer, like the guide layout).

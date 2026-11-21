@@ -2182,6 +2182,10 @@ const Map<String, String> kIt = {
   "Channel numbers": "Numeri dei canali",
   "Show a number before each channel in the guide.":
       "Mostra un numero davanti a ogni canale nella guida.",
+  "Long channel names on two lines":
+      "Nomi lunghi dei canali su due righe",
+  "Channel names that don't fit go on a second line in the guide.":
+      "I nomi dei canali che non entrano vanno su una seconda riga nella guida.",
   "Programme details in the guide": "Dettagli del programma nella guida",
   "Stay on a programme for 1 second to see its description under it.":
       "Resta 1 secondo su un programma per vederne la descrizione sotto.",
