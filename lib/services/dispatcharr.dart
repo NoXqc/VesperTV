@@ -215,6 +215,29 @@ String? dispatcharrOutputFormat(String url) {
   };
 }
 
+/// [url] (a Dispatcharr channel) as one MPEG-TS stream: `.m3u8` -> `.ts`,
+/// an `output_format` / `output` query -> `mpegts`. [Dispatcharr.holdChannel]
+/// reads it as one long download (an HLS playlist would end at once).
+String dispatcharrTsUrl(String url) {
+  final u = Uri.tryParse(url);
+  if (u == null) return url;
+  var out = u;
+  if (u.path.toLowerCase().endsWith('.m3u8')) {
+    out = out.replace(
+        path: '${u.path.substring(0, u.path.length - '.m3u8'.length)}.ts');
+  }
+  final q = Map<String, String>.of(out.queryParameters);
+  var changed = false;
+  for (final key in const ['output_format', 'output']) {
+    if (q.containsKey(key)) {
+      q[key] = 'mpegts';
+      changed = true;
+    }
+  }
+  if (changed) out = out.replace(queryParameters: q);
+  return out == u ? url : out.toString();
+}
+
 /// [url] as a channel of the Dispatcharr at [server], or null when it is
 /// another server or not a channel URL. Host and port must match (the
 /// scheme may differ: a reverse proxy can add https).
@@ -445,6 +468,45 @@ class DispatcharrApi {
     return id is num ? id.toInt() : (id is String ? int.tryParse(id) : null);
   }
 
+  /// Opens [url] (a channel's stream) and gives its bytes as they come.
+  Future<Stream<List<int>>> openStream(
+      String url, Map<String, String> headers) async {
+    final request = http.Request('GET', Uri.parse(url))
+      ..headers.addAll({'User-Agent': 'VesperTV', ...headers});
+    final r = await _client.send(request).timeout(_timeout);
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      unawaited(r.stream.listen(null).cancel());
+      throw DispatcharrException('HTTP ${r.statusCode}', status: r.statusCode);
+    }
+    return r.stream;
+  }
+
+  /// How far behind live the proxy starts a new viewer (Settings > Proxy
+  /// in Dispatcharr, `new_client_behind_seconds`, 5 by default), or null
+  /// when this login may not read the settings or they don't say.
+  Future<int?> newClientBehindSeconds(DispatcharrLogin login) async {
+    final j =
+        await _get(login.server, '/api/core/settings/', apiKey: login.apiKey);
+    final list = j is List ? j : (j is Map ? j['results'] : null);
+    if (list is! List) return null;
+    for (final s in list) {
+      if (s is! Map || s['key'] != 'proxy_settings') continue;
+      var value = s['value'];
+      if (value is String) {
+        try {
+          value = jsonDecode(value);
+        } catch (_) {
+          return null;
+        }
+      }
+      final behind = value is Map ? value['new_client_behind_seconds'] : null;
+      return behind is num
+          ? behind.round()
+          : (behind is String ? int.tryParse(behind) : null);
+    }
+    return null;
+  }
+
   /// Channel [channelId]'s streams, in the order Dispatcharr tries them.
   Future<List<DispatcharrStream>> channelStreams(
       DispatcharrLogin login, int channelId) async {
@@ -537,6 +599,9 @@ class Dispatcharr {
   /// channel's stream), asked once per sign-in.
   Future<bool>? _admin;
 
+  /// The proxy's new_client_behind_seconds, asked once per sign-in.
+  Future<int?>? _behind;
+
   /// The Dispatcharr streams the last Sources lists offered, by URL: the
   /// channel they belong to and the stream id ([switchChannelTo]).
   final Map<String, ({Channel channel, DispatcharrChannelRef ref, int id})>
@@ -571,6 +636,7 @@ class Dispatcharr {
     _uuidIds.clear();
     _idUuids.clear();
     _admin = null;
+    _behind = null;
     _picks.clear();
     _streams.clear();
     _names = null;
@@ -672,6 +738,86 @@ class Dispatcharr {
     } catch (e) {
       debugPrint('Dispatcharr: switch to stream ${pick.id} failed ($e), '
           'it plays on its own');
+      return null;
+    }
+  }
+
+  /// How long after [switchChannelTo] the player should reconnect to see
+  /// the new stream at once (AMD, 2026-11-21, LOG-HZQBLZ). The switch comes
+  /// down the open connection only after what the player buffered ahead
+  /// (10-30 s), and ExoPlayer stumbled on the splice (timestamps 27 s back,
+  /// 1080p SDR -> 4K HDR10, audio sink errors, freezes): 29-42 s per pick.
+  /// A new viewer starts `new_client_behind_seconds` behind live (5 by
+  /// default, Dispatcharr 0.34.1 `output/ts/generator.py`), on the last
+  /// chunk received by then: reconnecting that long after the switch, plus
+  /// [_upstreamStart] for the new stream's first bytes, starts the fresh
+  /// connection on the new stream, past the splice.
+  Future<Duration> reconnectDelay() async {
+    final l = login.value;
+    int? behind;
+    if (l != null) {
+      try {
+        behind = await (_behind ??=
+                api.newClientBehindSeconds(l).catchError((Object e) {
+          debugPrint('Dispatcharr: proxy settings not read ($e)');
+          return null;
+        }))
+            .timeout(const Duration(seconds: 3));
+      } on TimeoutException {
+        _behind = null;
+      }
+    }
+    final seconds = (behind ?? 5).clamp(0, 30);
+    return Duration(seconds: seconds) + _upstreamStart;
+  }
+
+  /// The new upstream's connect + first chunk after a switch (AMD's log:
+  /// under a second to his provider).
+  static const _upstreamStart = Duration(seconds: 2);
+
+  /// One more viewer of [channel] on the server while the player
+  /// reconnects after [switchChannelTo] (its bytes are read and dropped).
+  /// Dispatcharr stops a channel as soon as its last viewer leaves
+  /// (`channel_shutdown_delay` 0 by default, 0.34.1 `server.py`
+  /// `handle_client_disconnect`) and the next viewer starts it again on its
+  /// first stream: the switch would be lost while the old player closes
+  /// before the new one opens. Returns the release once bytes arrive
+  /// (within [wait]), or null. Lets go by itself after [longest].
+  Future<Future<void> Function()?> holdChannel(Channel channel,
+      {Duration wait = const Duration(seconds: 4),
+      Duration longest = const Duration(seconds: 30)}) async {
+    StreamSubscription<List<int>>? sub;
+    Timer? limit;
+    var released = false;
+    Future<void> release() async {
+      if (released) return;
+      released = true;
+      limit?.cancel();
+      try {
+        await sub?.cancel().timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }
+
+    try {
+      final stream = await api
+          .openStream(dispatcharrTsUrl(channel.url), channel.httpHeaders)
+          .timeout(wait);
+      final first = Completer<void>();
+      sub = stream.listen((_) {
+        if (!first.isCompleted) first.complete();
+      }, onError: (Object e) {
+        if (!first.isCompleted) first.completeError(e);
+      }, onDone: () {
+        if (!first.isCompleted) first.completeError('closed by the server');
+      }, cancelOnError: true);
+      await first.future.timeout(wait);
+      limit = Timer(longest, () => unawaited(release()));
+      debugPrint('Dispatcharr: holding the channel while the player '
+          'reconnects');
+      return release;
+    } catch (e) {
+      debugPrint('Dispatcharr: could not hold the channel ($e)');
+      await release();
       return null;
     }
   }

@@ -870,7 +870,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
               playing, sources[picked], _playback.playLiveSource,
-              onServerSwitch: _watchServerSwitch);
+              onServerSwitch: _watchServerSwitch,
+              reconnect: _playback.reconnectAfterServerSwitch);
           if (note != null && mounted) {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text(note)));

@@ -38,6 +38,11 @@ import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
 
+/// Keeps [channel] open on its server while the player reconnects
+/// (`Dispatcharr.holdChannel`); returns the release, or null when it
+/// couldn't.
+typedef ServerHold = Future<Future<void> Function()?> Function(Channel channel);
+
 /// Owns the single, app-wide [VideoPlayerHdrController] for whatever channel
 /// is currently playing.
 ///
@@ -931,6 +936,83 @@ class PlaybackService extends ChangeNotifier {
     }
     await play(live);
   }
+
+  /// Dispatcharr switched the playing live channel to its stream [name]
+  /// on the server (`Dispatcharr.switchChannelTo`). Through the open
+  /// connection the new stream reaches the screen only once the buffered
+  /// video has played (10-30 s), then ExoPlayer stumbles on the splice
+  /// (timestamps jump back, the format changes) until a new player: 29-42 s
+  /// per pick on AMD's Box R (2026-11-21, LOG-HZQBLZ). [after] the switch
+  /// (`Dispatcharr.reconnectDelay`) a fresh connection starts on the new
+  /// stream, so the channel reconnects then.
+  ///
+  /// [hold] keeps the channel on the server meanwhile: Dispatcharr stops a
+  /// channel the moment its last viewer leaves (shutdown delay 0 by
+  /// default) and the next one restarts it on its first stream, and the
+  /// old player must go before the new one starts (the S905X4 boxes have
+  /// one 4K HEVC decoder). The same player re-takes the stream when it can
+  /// (native surface, like a zap), else [play] opens a new one after
+  /// closing the old. Nothing happens when the channel changed, catch-up
+  /// started, the viewer paused, another switch followed (it reconnects
+  /// instead), or the channel can't be held.
+  Future<void> reconnectAfterServerSwitch(Duration after, String name,
+      [ServerHold? hold]) async {
+    final gen = ++_serverSwitchGen;
+    final c = controller;
+    final ch = currentChannel;
+    if (c == null ||
+        ch == null ||
+        !ch.isLive ||
+        catchup != null ||
+        !c.value.isPlaying) {
+      return;
+    }
+    final start = clock();
+    bool stillOn() =>
+        gen == _serverSwitchGen &&
+        controller == c &&
+        currentChannel?.id == ch.id &&
+        currentChannel?.url == ch.url &&
+        catchup == null &&
+        !(_viewerPausedAt != null && !_viewerPausedAt!.isBefore(start));
+    debugPrint('SourceSwitch: Dispatcharr switched to $name, reconnecting in '
+        '${after.inSeconds} s');
+    await Future<void>.delayed(after);
+    if (!stillOn()) {
+      debugPrint('SourceSwitch: channel changed or paused, no reconnect');
+      return;
+    }
+    // Recorded now: the player plays the recorder's copy, not the server.
+    final openUrl = await openUrlFor?.call(ch) ?? ch.url;
+    if (openUrl != ch.url) {
+      debugPrint('SourceSwitch: playing from a recording, no reconnect');
+      return;
+    }
+    final release = hold == null ? null : await hold(ch);
+    if (hold != null && release == null) {
+      debugPrint('SourceSwitch: the channel could not be held, no reconnect');
+      return;
+    }
+    try {
+      if (!stillOn()) return;
+      if (await _reuseNativeLive(ch, openUrl, false)) {
+        debugPrint('SourceSwitch: reconnected (same player)');
+        return;
+      }
+      if (!stillOn()) return;
+      // Past play's same-channel no-op (as the HLS retry does).
+      currentChannel = null;
+      await play(ch, recordHistory: false);
+      await initFuture?.timeout(const Duration(seconds: 20), onTimeout: () {});
+      debugPrint('SourceSwitch: reconnected (new player)');
+    } catch (e) {
+      debugPrint('SourceSwitch: reconnect failed ($e)');
+    } finally {
+      await release?.call();
+    }
+  }
+
+  int _serverSwitchGen = 0;
 
   /// When the viewer last paused (Play/Pause), so [watchSourceSwitch]
   /// never undoes their own pause.

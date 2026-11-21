@@ -70,8 +70,9 @@ final _sourcesTool = VesperTool(
         if (e.current) return {'note': '${c.sourceName} is already playing.'};
         await _confirmRemote(box, caller, 'An AI app wants to play {title}.',
             {'title': c.sourceName});
-        final switched =
-            await playPickedLiveSource(playing, c, box.playback.playLiveSource);
+        final switched = await playPickedLiveSource(
+            playing, c, box.playback.playLiveSource,
+            reconnect: box.playback.reconnectAfterServerSwitch);
         return {
           'playing': c.sourceName,
           'channel': playing.name,

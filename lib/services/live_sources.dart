@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../widgets/live_source_drawer.dart';
 import 'dispatcharr.dart';
+import 'playback_service.dart' show ServerHold;
 import 'playlist_manager.dart';
 import 'tuliprox.dart';
 
@@ -177,11 +180,17 @@ Future<List<LiveSourceRow>?> _tuliproxRows(
 /// through [play] (the player's own way to open a source of the playing
 /// channel). A Dispatcharr stream, for an admin account, is a switch of
 /// the channel on the server instead ([Dispatcharr.switchChannelTo]): the
-/// player stays on (or goes back to) the channel. Returns the message to
-/// show, or null.
+/// player stays on (or goes back to) the channel. Staying on it, the
+/// player reconnects to it a few seconds later ([reconnect] after
+/// [Dispatcharr.reconnectDelay], the channel held by
+/// [Dispatcharr.holdChannel]), or the new stream would only show once the
+/// buffered video has played (AMD, 2026-11-21: 29-42 s). Returns the
+/// message to show, or null.
 Future<String?> playPickedLiveSource(
     Channel playing, Channel source, Future<void> Function(Channel source) play,
-    {void Function(String name)? onServerSwitch}) async {
+    {void Function(String name)? onServerSwitch,
+    Future<void> Function(Duration after, String name, ServerHold hold)?
+        reconnect}) async {
   // A Tuliprox source: the server splices it into the open stream, the
   // player keeps its connection (no play).
   if (Tuliprox.instance.isPick(source)) {
@@ -201,7 +210,14 @@ Future<String?> playPickedLiveSource(
     await play(source);
     return null;
   }
-  if (playing.url != channel.url) await play(channel);
+  if (playing.url != channel.url) {
+    await play(channel);
+  } else if (reconnect != null) {
+    unawaited(() async {
+      final after = await Dispatcharr.instance.reconnectDelay();
+      await reconnect(after, source.name, Dispatcharr.instance.holdChannel);
+    }());
+  }
   return tr(
       'Dispatcharr switched the channel to {stream}.', {'stream': source.name});
 }
