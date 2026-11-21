@@ -627,6 +627,8 @@ class PlaylistEditorServer extends ChangeNotifier {
             },
             if (c.epgIdOverride != null) 'eo': c.epgIdOverride,
             'q': e.copyRank(c),
+            // Duplicates' order: picture, then frame rate, then audio.
+            if (e.fpsRank(c) > 0) 'qf': e.fpsRank(c),
             // 5.1 or more measured: above the 2.0 copies in Duplicates.
             if (e.audioRank(c) > 1) 'qa': 1,
             if (e.probes[c.rawId] case final p?) 'p': p.label,

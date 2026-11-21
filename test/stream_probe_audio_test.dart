@@ -106,6 +106,39 @@ void main() {
     expect(edits.apply([ch('a'), ch('b')]), isEmpty,
         reason: 'a 2.0 copy is not hidden for its audio');
   });
+
+  test('copies: picture, then frame rate, then audio (clayts450, 2026-11-21)',
+      () {
+    Channel ch(String id) => Channel(
+        id: 'p::$id',
+        rawId: id,
+        playlistId: 'p',
+        name: 'SKY SPORTS +',
+        group: 'UK',
+        url: 'http://x/$id.ts');
+    final at = DateTime.now();
+    ProbeResult p(int h, double fps, int audio) => ProbeResult(
+        ok: true, at: at, height: h, fps: fps, audioChannels: audio);
+    final edits = PlaylistEdits(probes: {
+      'hd25': p(1080, 25, 6),
+      'hd50': p(1080, 50, 2),
+      'hd50a': p(1080, 50, 6),
+      'sd50': p(720, 50, 6),
+      'sd25': p(720, 25, 2),
+    });
+    int byQuality(String a, String b) {
+      final x = ch(a), y = ch(b);
+      var c = edits.copyRank(y).compareTo(edits.copyRank(x));
+      if (c == 0) c = edits.fpsRank(y).compareTo(edits.fpsRank(x));
+      if (c == 0) c = edits.audioRank(y).compareTo(edits.audioRank(x));
+      return c;
+    }
+
+    final order = ['sd25', 'hd25', 'sd50', 'hd50', 'hd50a']..sort(byQuality);
+    expect(order, ['hd50a', 'hd50', 'hd25', 'sd50', 'sd25']);
+    expect(edits.fpsRank(ch('hd50')), 50);
+    expect(edits.fpsRank(ch('untested')), 0);
+  });
 }
 
 /// PAT + PMT (H.264 on 0x100, DVB AC-3 on 0x101 via descriptor 0x6A, AAC
