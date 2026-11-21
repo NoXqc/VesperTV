@@ -4131,4 +4131,17 @@ const Map<String, String> kIt = {
   "Live now in Sports": "In diretta nello Sport",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Una riga «In diretta nello Sport» con le partite in corso nei tuoi campionati di Sports Trak trasmesse da uno dei tuoi canali. Una scheda riproduce il canale della partita.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Versione di prova {version} disponibile",
+  "Update channel":
+      "Canale di aggiornamento",
+  "Stable":
+      "Stabile",
+  "Test builds":
+      "Versioni di prova",
+  "One tested update a week.":
+      "Un aggiornamento testato a settimana.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Le correzioni appena sono pronte, prima dell'aggiornamento settimanale. Una versione di prova può avere nuovi bug: invia un log se qualcosa non va.",
 };

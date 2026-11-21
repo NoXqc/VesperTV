@@ -26,6 +26,9 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Android** (phones, Android TV boxes, Fire TV): `app-release.apk`, installed
   directly or side-loaded with [Downloader](https://amzn.to/2GYuEz9) — code **1760256** (or type `vespertv.app/apk`).
   Later updates install from **Settings > Check for updates**.
+- **Updates come once a week, on Sunday.** Want a fix before then? Settings > Check for updates >
+  **Update channel: Test builds** gets the test builds (GitHub pre-releases) as soon as they're out. They
+  can have new bugs; switch back to **Stable** any time (you're moved back at the next Sunday update).
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
   [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
 - **Linux (beta, x64)**, from the [latest release](../../releases/latest):

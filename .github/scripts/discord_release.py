@@ -5,6 +5,10 @@ Used by .github/workflows/discord-release.yml. Reads the release JSON
 and POSTs to the webhook in $DISCORD_RELEASE_WEBHOOK. `--dry-run` prints the
 payload instead (no webhook needed) - handy for checking the look locally.
 
+A pre-release is a test build (weekly stable + test builds, 2026-11-21): it
+goes to $DISCORD_TEST_WEBHOOK (a testers channel) in its own colour, never to
+the release channel, and is skipped while that secret isn't set.
+
 Standard library only, so the runner needs nothing installed.
 """
 import json
@@ -15,6 +19,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 GOLD = 0xF0C75E
+TEST_PURPLE = 0x9B7BFF
 REPO = 'NoXqc/VesperTV'
 LOGO = f'https://raw.githubusercontent.com/{REPO}/main/assets/icon/icon_flat.png'
 DOWNLOADER_CODE = '1760256'
@@ -51,6 +56,37 @@ def asset_url(release: dict, suffix: str) -> str | None:
         if asset['name'].lower().endswith(suffix):
             return asset['browser_download_url']
     return None
+
+
+def build_test_payload(release: dict) -> dict:
+    """A test build (pre-release) for the testers channel."""
+    tag = release['tag_name']
+    page = release['html_url']
+    apk = asset_url(release, '.apk')
+    zip_ = asset_url(release, '.zip')
+    android = (f'[Download the APK]({apk})' if apk else f'[Release page]({page})') + \
+        ' · or Settings > Check for Updates > Update channel: **Test builds**'
+    fields = [{'name': '📺 Android TV · Fire Stick · phone', 'value': android}]
+    if zip_:
+        fields.append({'name': '🖥️ Windows 10/11',
+                       'value': f'[Download the zip]({zip_}) · unzip, then run `VesperTV.exe`'})
+    return {
+        'username': 'VesperTV',
+        'avatar_url': LOGO,
+        'content': f'🧪 **Test build {tag}**',
+        'allowed_mentions': {'parse': []},
+        'embeds': [{
+            'title': release.get('name') or f'VesperTV {tag} (test build)',
+            'url': page,
+            'description': notes_for_discord(release.get('body') or ''),
+            'color': TEST_PURPLE,
+            'thumbnail': {'url': LOGO},
+            'fields': fields,
+            'footer': {'text': 'Test build: it can have new bugs. Send a log if something '
+                               'breaks. Everyone else gets these fixes in the weekly update.'},
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+        }],
+    }
 
 
 def build_payload(release: dict) -> dict:
@@ -91,17 +127,25 @@ def main() -> int:
     dry_run = '--dry-run' in sys.argv
     with open(args[0], encoding='utf-8') as f:
         release = json.load(f)
-    if release.get('draft') or release.get('prerelease'):
-        print(f"{release['tag_name']} is a draft/pre-release - not announced.")
+    if release.get('draft'):
+        print(f"{release['tag_name']} is a draft - not announced.")
         return 0
-    payload = build_payload(release)
+    test = bool(release.get('prerelease'))
+    payload = build_test_payload(release) if test else build_payload(release)
     if dry_run:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
-    webhook = os.environ.get('DISCORD_RELEASE_WEBHOOK', '').strip()
-    if not webhook:
-        print('::error::The DISCORD_RELEASE_WEBHOOK secret is not set.')
-        return 1
+    if test:
+        webhook = os.environ.get('DISCORD_TEST_WEBHOOK', '').strip()
+        if not webhook:
+            print(f"{release['tag_name']} is a test build and DISCORD_TEST_WEBHOOK "
+                  'is not set - not announced.')
+            return 0
+    else:
+        webhook = os.environ.get('DISCORD_RELEASE_WEBHOOK', '').strip()
+        if not webhook:
+            print('::error::The DISCORD_RELEASE_WEBHOOK secret is not set.')
+            return 1
     req = urllib.request.Request(
         webhook + ('&' if '?' in webhook else '?') + 'wait=true',
         data=json.dumps(payload).encode('utf-8'),

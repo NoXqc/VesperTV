@@ -3596,4 +3596,17 @@ const Map<String, String> kUk = {
   "Live now in Sports": "Зараз наживо у спорті",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Рядок «Зараз наживо у спорті» з матчами, що тривають зараз у ваших лігах Sports Trak і які транслює один із ваших каналів. Картка вмикає канал матчу.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Доступна тестова версія {version}",
+  "Update channel":
+      "Канал оновлень",
+  "Stable":
+      "Стабільна",
+  "Test builds":
+      "Тестові версії",
+  "One tested update a week.":
+      "Одне перевірене оновлення на тиждень.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Виправлення одразу, щойно вони готові, ще до щотижневого оновлення. Тестова версія може мати нові помилки: надішліть журнал, якщо щось не працює.",
 };

@@ -2878,11 +2878,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Apple installs App Store updates itself.
     if (_updateChecked || appStoreBuild) return;
     _updateChecked = true;
+    final channel =
+        UpdateChannel.parse(context.read<StorageService>().getUpdateChannel());
     // After the launch quiet period (StartupQuiet): the remote first.
     await StartupQuiet.after(const Duration(seconds: 3));
     UpdateInfo? update;
     try {
-      update = await AppUpdateService().checkForUpdate();
+      update = await AppUpdateService().checkForUpdate(channel: channel);
     } catch (_) {
       return;
     }

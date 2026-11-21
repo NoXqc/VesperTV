@@ -32,6 +32,14 @@ up on real boxes (weak CPUs, D-pad remotes, Fire OS quirks) — emulators/tests 
 Keep replies short; make routine calls yourself; **confirm before anything destructive or
 outward-facing** (deleting releases, force-pushes, posting). Only commit/release when asked.
 
+**Two release channels (owner, 2026-11-21): weekly stable every Sunday + test builds (GitHub
+pre-releases) in between.** The owner spends 40+ h a week on this beside a full-time job and asked for
+help slowing down. **End every fix / feature report with where it goes**, one line: **→ test build**
+(someone is waiting to try it, or it's risky), **→ Sunday's weekly update** (everything else), **→ hotfix**
+(crash at launch, lost data, nothing plays, updater broken), or **→ box test** (only his box). Don't push
+for mid-week releases; if he asks for a stable release on another day than Sunday, ask whether he means a
+test build or a hotfix. Table, branches, versions and steps: `dev-notes/release.md` §0.
+
 ## 1b. No more Codex (owner, 2026-11-12)
 The owner upgraded his Claude plan and dropped Codex: Claude does all the work, so don't offer to
 hand tasks to Codex or write Codex prompts. All 157 `codex/*` branches were merged and deleted locally
@@ -134,9 +142,22 @@ history: read them as notes about past work, and treat any open `cdx-do` item as
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
   (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.69 **+827**.)
+  Since 2026-11-21 `version:` holds the **next** stable name (after 1.0.72: `1.0.73+N`); a test build
+  (pre-release) is built with `--build-name=<next>-dev.<N> --build-number=<N>` (dev-notes/release.md §0.2).
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
-Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → Linux: `gh workflow run linux-flatpak.yml` and `linux-build.yml` with `--ref main -f release_tag=<tag>` (attach `VesperTV-linux-x86_64.flatpak` + `VesperTV-linux-x64.tar.gz`) → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
+Only release when the owner asks ("update the latest", "cut it", "fully release", `/cutr`). **Two channels
+since 2026-11-21 (release.md §0):** the **weekly stable on Sunday** (a new normal release, Latest: Android +
+Windows + Linux, announced in the release channel) and **test builds** (`/cutr test`: GitHub pre-release tagged
+`<next>-dev.<N>`, Android, offered only on Settings > Check for Updates > Update channel: Test builds,
+announced to testers via `DISCORD_TEST_WEBHOOK` when set). Hotfix = the only mid-week stable (§0.4).
+Weekly outline: `pubspec.yaml` `<ver>+N` (versionCode `+N` must always rise) → `flutter analyze` → build APK +
+verify signature (§5) → build Windows + zip → **commit & push first** → `gh release create <ver> --target <sha>
+--latest … app-release.apk VesperTV-windows-x64.zip` → make sure the tag equals HEAD → move `stable` to it →
+Linux: `gh workflow run linux-flatpak.yml` and `linux-build.yml` with `--ref main -f release_tag=<tag>` → verify
+downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The Stable updater offers
+any *different* tag (`_isDifferent`) except to a test-build install (newer only); never leave two `.zip`/`.apk`
+assets on a release.
 
 ## 7. Test devices (details in `dev-notes/devices.md`)
 **Main box since 2026-11-13: Homatics Box R 4K Plus `10.0.0.64:5555`** (owner: the Formuler is gone; its notes below are history).
@@ -464,6 +485,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-21 - weekly stable + test builds (`claude/release-channels`, owner: "lets implement it. it will
+  help me slow down"):** AMD's Discord suggestion. Stable every **Sunday** (first: 1.0.73 on Sunday 2026-11-22), test builds
+  = GitHub pre-releases `<next>-dev.<N>` in between, hotfix = the only mid-week stable. App: Settings > Check for
+  Updates > **Update channel** Stable / Test builds (`vesper_update_channel`, device-only, never transferred);
+  `AppUpdateService.checkForUpdate(channel:)` (test = `/releases/latest` + `/releases?per_page=20`, highest version
+  with an asset, `pickNewest`), semver `compareVersions` (`1.0.73-dev.951 < 1.0.73`), `shouldOffer` (a test-build
+  install only takes newer: no downgrade offers); "Test build … is available" in the screen and the launch popup.
+  7 languages. Discord: pre-releases go to `DISCORD_TEST_WEBHOOK` (purple embed; skipped until the owner sets the
+  secret). Docs: dev-notes/release.md §0 (table of what goes where, branches, versions, hotfix, switch-over),
+  §6b (test build steps), CLAUDE.md §1 (end every report with **→ test build / → Sunday / → hotfix / → box test**),
+  `/cutr test`. 1.0.72 and older can't see test builds (no setting): testers switch after installing 1.0.73.
 - **Claude, 2026-11-21 - Linux on the 1.0.72 release (owner: Flatpak on the release + future releases build it):**
   `VesperTV-linux-x86_64.flatpak` (Linux Flatpak run 44890879246) + `VesperTV-linux-x64.tar.gz` (Linux build run
   44853299883), both from the release commit 6f693f8, replace `VesperTV-1.0.70-869-linux-x64.tar.gz`. Names without a

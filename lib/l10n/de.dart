@@ -4027,4 +4027,17 @@ const Map<String, String> kDe = {
   "Live now in Sports": "Jetzt live im Sport",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Eine Reihe „Jetzt live im Sport“ mit den laufenden Spielen Ihrer Sports-Trak-Ligen, die einer Ihrer Sender überträgt. Eine Karte spielt den Sender des Spiels ab.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Testversion {version} verfügbar",
+  "Update channel":
+      "Update-Kanal",
+  "Stable":
+      "Stabil",
+  "Test builds":
+      "Testversionen",
+  "One tested update a week.":
+      "Ein getestetes Update pro Woche.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Korrekturen, sobald sie fertig sind, vor dem wöchentlichen Update. Eine Testversion kann neue Fehler haben: Senden Sie ein Protokoll, wenn etwas nicht funktioniert.",
 };

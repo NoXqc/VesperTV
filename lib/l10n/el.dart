@@ -4086,4 +4086,17 @@ const Map<String, String> kEl = {
   "Live now in Sports": "Ζωντανά στα Αθλητικά",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Μια σειρά «Ζωντανά στα Αθλητικά» με τους αγώνες που παίζονται τώρα στις λίγκες σας στο Sports Trak και τους μεταδίδει ένα από τα κανάλια σας. Μια κάρτα παίζει το κανάλι του αγώνα.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Δοκιμαστική έκδοση {version} διαθέσιμη",
+  "Update channel":
+      "Κανάλι ενημερώσεων",
+  "Stable":
+      "Σταθερή",
+  "Test builds":
+      "Δοκιμαστικές εκδόσεις",
+  "One tested update a week.":
+      "Μία δοκιμασμένη ενημέρωση την εβδομάδα.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Οι διορθώσεις μόλις γίνουν, πριν από την εβδομαδιαία ενημέρωση. Μια δοκιμαστική έκδοση μπορεί να έχει νέα σφάλματα: στείλτε ένα αρχείο καταγραφής αν κάτι χαλάσει.",
 };
