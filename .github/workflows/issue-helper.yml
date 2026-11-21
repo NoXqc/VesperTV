@@ -97,7 +97,7 @@ jobs:
               known device or provider limit (CLAUDE.md lists them, for example the
               Fire TV keyboard Back button, Multiview needing one provider connection
               per screen), explain it kindly. If it is a bug and there is no log, ask
-              for one: in VesperTV, Settings > Backup & devices > Send log, press
+              for one: in VesperTV, Settings > Help > Send log, press
               Send, then add the code it shows (like LOG-7K2QXM) in a comment, right
               after the problem happens. Ask for the device model and app version if
               missing. Never promise a fix or a date, never say you are the

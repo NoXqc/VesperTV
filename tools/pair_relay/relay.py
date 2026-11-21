@@ -55,7 +55,7 @@ apart. PAIR_REQUIRE_APP=1 rejects calls without it (403); until then they
 are only counted (hourly line on stderr, no ids) — 1.0.14/1.0.15 don't
 send it yet. The phone's browser PUT /api/s/<id> is never checked.
 
-It also forwards **Send log** (Settings > Backup & devices, lib/services/
+It also forwards **Send log** (Settings > Help, lib/services/
 app_log.dart) to the owner's private Discord channel. The app redacts the
 text first. With PAIR_LOG_READ_KEY set, the log is also kept for 14 days
 (LOG_KEEP) so the GitHub issue helper can read it from the code a user

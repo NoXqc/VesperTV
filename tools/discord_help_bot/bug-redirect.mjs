@@ -11,7 +11,7 @@ export const REPEAT_MS = 12 * 60 * 60 * 1000;
 export const BUG_REPLY = [
   'Thanks for the report! 🙏 Bugs are now tracked on **GitHub**: an automatic helper answers within minutes, and the developer sees every report in one place.',
   `👉 **Report it here:** <${BUG_FORM_URL}>`,
-  '**Tip:** add your log code. In VesperTV open **Settings > Backup & devices > Send log**, press Send, and put the code it shows (like `LOG-7K2QXM`) in the issue. The log stays private.',
+  '**Tip:** add your log code. In VesperTV open **Settings > Help > Send log**, press Send, and put the code it shows (like `LOG-7K2QXM`) in the issue. The log stays private.',
   'No GitHub account yet? It\'s free and takes a minute.',
 ].join('\n\n');
 
