@@ -255,6 +255,25 @@ class CloudSyncService extends ChangeNotifier {
     await syncNow(pushLocal: false).timeout(coldBudget, onTimeout: () => 0);
   }
 
+  /// Every launch, before the services load: writes what earlier syncs
+  /// held for a launch (playlists, settings, editor changes; everything
+  /// after a join that remapped ids) from this device's own sync file, no
+  /// network ([SyncEngine.applyHeld]). With Fast startup nothing else did
+  /// since 1.0.71, so those never arrived. Costs one file check when
+  /// nothing is held ([FileSyncStore.hasHeld]).
+  Future<void> applyHeldBeforeLoad() async {
+    final engine = await _ensureEngine();
+    final store = engine.store;
+    if (store is FileSyncStore && !store.hasHeld()) return;
+    final watch = Stopwatch()..start();
+    await init();
+    if (_status != SyncStatus.on) return;
+    final result = await engine.applyHeld();
+    if (store is FileSyncStore) store.markChecked();
+    debugPrint('Sync: launch wrote ${result?.pulled ?? 0} held settings '
+        'from this device\'s sync file, ${watch.elapsedMilliseconds} ms');
+  }
+
   /// Fast startup: the launch doesn't wait for the server (the state file
   /// + the round trip cost ~1.8 s of every cold launch on the Homatics,
   /// owner 2026-11-19). Called once the services are loaded and [onApplied]

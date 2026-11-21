@@ -2653,6 +2653,12 @@ const Map<String, String> kEs = {
       "Al restablecer el código de sincronización se eliminan todos tus datos cifrados del servidor. Los demás dispositivos dejan de sincronizarse y deben vincularse de nuevo con un código nuevo. Guarda el nuevo código de recuperación.",
   "This code works for one device, once. Create a new code to link another device.":
       "Este código sirve una sola vez para un dispositivo. Crea un código nuevo para vincular otro dispositivo.",
+  "Sync a phone? Scan the QR code":
+      "¿Sincronizar un teléfono? Escanea el código QR",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Este dispositivo ya se sincroniza. Para vincularlo con el código escaneado, primero deja de sincronizar aquí.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "¿Unirse a la sincronización del dispositivo que mostró este código? A partir de entonces, ambos tendrán las mismas listas, favoritos y ajustes.",
   "Guide transparency": "Transparencia de la guía",
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.": "0 % es opaco; 100 % es transparente.",

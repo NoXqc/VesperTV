@@ -2660,6 +2660,12 @@ const Map<String, String> kIt = {
       "La reimpostazione del codice di sincronizzazione elimina tutti i tuoi dati crittografati dal server. Tutti gli altri dispositivi smettono di sincronizzarsi e devono essere collegati di nuovo con un nuovo codice. Conserva il nuovo codice di recupero.",
   "This code works for one device, once. Create a new code to link another device.":
       "Questo codice funziona una sola volta, per un solo dispositivo. Crea un nuovo codice per collegare un altro dispositivo.",
+  "Sync a phone? Scan the QR code":
+      "Sincronizzare un telefono? Scansiona il codice QR",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Questo dispositivo è già sincronizzato. Per collegarlo con il codice scansionato, interrompi prima la sincronizzazione qui.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Unirsi alla sincronizzazione del dispositivo che ha mostrato questo codice? Da allora entrambi avranno le stesse playlist, preferiti e impostazioni.",
   "Guide transparency": "Trasparenza della guida",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.": "0% è opaco; 100% è trasparente.",

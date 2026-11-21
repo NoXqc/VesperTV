@@ -183,4 +183,83 @@ void main() {
         '3 -> 2 (+1 -2) 1:2->1 2:1->0 3:0->1');
     expect(syncListChange(l(['1::a']), null), '1 -> 0 (+0 -1) 1:1->0');
   });
+
+  group('rebaseHeldEdit on a JSON object (own groups, editor edits)', () {
+    Map<String, Object?> obj(Map<String, Object?> v) => s(jsonEncode(v));
+    Object? rebased(Object? held, Object? local, Object? merged) =>
+        jsonDecode((rebaseHeldEdit(held, local, merged) as Map)['v'] as String);
+
+    test('a new field here goes on top; the others\' fields stay', () {
+      final out = rebased(
+          null,
+          obj({
+            'groups': ['Kids'],
+            'moves': {'x': 'Kids'}
+          }),
+          obj({
+            'groups': ['Sports'],
+            'moves': {'a': 'Sports'},
+            'order': {
+              'Sports': ['a']
+            }
+          }));
+      expect(out, {
+        'groups': ['Sports', 'Kids'],
+        'moves': {'a': 'Sports', 'x': 'Kids'},
+        'order': {
+          'Sports': ['a']
+        },
+      });
+    });
+
+    test('only what the edit removed goes', () {
+      final held = obj({
+        'groups': ['A', 'B'],
+        'moves': {'a': 'A', 'b': 'B'},
+        'copies': {
+          'c': ['A']
+        }
+      });
+      final local = obj({
+        'groups': ['A'],
+        'moves': {'a': 'A'},
+      }); // B deleted, last copy removed (UserGroups drops the map)
+      final merged = obj({
+        'groups': ['A', 'B', 'C'],
+        'moves': {'a': 'A', 'b': 'B', 'c3': 'C'},
+        'copies': {
+          'c': ['A'],
+          'd': ['C']
+        }
+      });
+      expect(rebased(held, local, merged), {
+        'groups': ['A', 'C'],
+        'moves': {'a': 'A', 'c3': 'C'},
+        'copies': {
+          'd': ['C']
+        },
+      });
+    });
+
+    test('a reorder here keeps its order and the others\' additions', () {
+      final out = rebased(
+          obj({
+            'groups': ['A', 'B', 'C']
+          }),
+          obj({
+            'groups': ['C', 'A', 'B']
+          }),
+          obj({
+            'groups': ['A', 'B', 'C', 'D']
+          }));
+      expect(out, {
+        'groups': ['C', 'A', 'B', 'D']
+      });
+    });
+
+    test('a plain value is still the edit', () {
+      expect(rebaseHeldEdit(s('gold'), s('red'), s('blue')), s('red'));
+      expect(rebaseHeldEdit(obj({'a': 1}), null, obj({'a': 1, 'b': 2})), null);
+    });
+  });
 }

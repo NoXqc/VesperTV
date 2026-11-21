@@ -457,6 +457,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-20 - sync fix + scan to link, +924 (`claude/sync-held-fix`, merged into local main, not pushed,
+  not released):** a user's TV 1 lost favourites / group changes after linking TV 2. 1.0.71's fast launch skipped the
+  pre-load sync with Fast startup on, the only one allowed to write held keys (`SyncState.deferred`), so linked
+  devices never got playlists / settings (after a remapping join: nothing), and an edit there + one failed round sent
+  the stale list up as removals. Fix: `SyncEngine.applyHeld` (offline, base as the server) via
+  `CloudSyncService.applyHeldBeforeLoad` on every launch (marker `cloud_sync.json.held`), held state kept until a
+  round completes, `rebaseHeldEdit` merges JSON objects field by field. Owner-tested +923 (box -> cleared Xiaomi):
+  everything arrived, first restart 2 s for 213 settings (owner OK), normal launches 2 ms. Dispatcharr / Tuliprox
+  sign-ins now go with Transfer, sync and backups (a payload without one keeps the device's). Link a device QR =
+  `pair.vespertv.app/sync#code` (App Link, relay `/sync` + assetlinks deployed), joins only on OK. Details:
+  dev-notes/cloud-sync.md, HANDOFF.md. Next build > 924.
 - **Claude, 2026-11-20 - guide details + phone Media Hub pill (merged into local main, not pushed, not released; +911 on the Homatics,
   +910 on the owner's Xiaomi):** (1) Full-video Timeline guide (owner's TiviMate photo): resting **1 s** on a programme opens a card under
   its row (title, times, progress + min left, description), over the programmes only; any move closes it. 3-row layout grows upward

@@ -12,6 +12,7 @@ import '../../services/cloud_sync.dart' show SyncDeviceLimit, kSyncMaxDevices;
 import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
 import '../../services/parental_pin.dart';
+import '../../services/sync_link.dart';
 import '../../utils/time_format.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/pin_pad.dart';
@@ -39,7 +40,10 @@ String _syncError(TransferException error) => switch (error.kind) {
 /// Settings > Device & data > Sync. The app owns lifecycle and live apply;
 /// this route only observes the service and performs explicit user actions.
 class SyncScreen extends StatefulWidget {
-  const SyncScreen({super.key});
+  const SyncScreen({super.key, this.notice});
+
+  /// Shown first (a scanned QR on a device that already syncs).
+  final String? notice;
 
   @override
   State<SyncScreen> createState() => _SyncScreenState();
@@ -145,6 +149,13 @@ class _SyncScreenState extends State<SyncScreen> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (widget.notice != null) ...[
+                    Text(widget.notice!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                  ],
                   Text(
                       tr('Keep your setup and watch progress together across devices. No account needed.'),
                       style: const TextStyle(color: Colors.white70)),
@@ -272,6 +283,24 @@ class _SyncScreenState extends State<SyncScreen> {
       ),
     );
   }
+}
+
+/// A scanned Link a device QR ([SyncLinks]): Sync, and over it the join
+/// screen with the code filled in. It still asks first: a QR from someone
+/// else would otherwise put this device's setup into their sync.
+Future<void> openSyncLink(NavigatorState nav, String code) async {
+  final sync = nav.context.read<CloudSyncService>();
+  if (sync.status == SyncStatus.on) {
+    await nav.push(MaterialPageRoute<void>(
+        builder: (_) => SyncScreen(
+            notice: tr(
+                'This device already syncs. To link it with the scanned code, stop syncing here first.'))));
+    return;
+  }
+  unawaited(
+      nav.push(MaterialPageRoute<void>(builder: (_) => const SyncScreen())));
+  await nav.push(MaterialPageRoute<void>(
+      builder: (_) => _SyncJoinScreen(initialCode: code)));
 }
 
 /// Explicit traversal also includes the header Back button. Non-lazy content
@@ -416,7 +445,9 @@ class _SyncCodeScreenState extends State<_SyncCodeScreen> {
             ],
             const SizedBox(height: 20),
             if (active) ...[
-              // Plain text QR: codes stay on screen, never in a web URL.
+              // A link code's QR is a link a phone's camera opens VesperTV
+              // with, the code after the # (never sent to a server:
+              // syncLinkUrl). The recovery code's stays plain text.
               ExcludeFocus(
                   child: SelectableText(
                 link == null ? code : formatCloudCode(code),
@@ -429,9 +460,16 @@ class _SyncCodeScreenState extends State<_SyncCodeScreen> {
               const SizedBox(height: 16),
               ColoredBox(
                   color: Colors.white,
-                  child: QrImageView(data: code, size: 180)),
+                  child: Builder(builder: (context) {
+                    final data = link == null ? code : syncLinkUrl(code);
+                    return QrImageView(
+                        key: ValueKey('sync-qr:$data'), data: data, size: 180);
+                  })),
               if (link != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                Text(tr('Sync a phone? Scan the QR code'),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 Text(tr('Expires in {time}', {
                   'time':
                       '${remaining ~/ 60}:${(remaining % 60).toString().padLeft(2, '0')}'
@@ -455,7 +493,10 @@ class _SyncCodeScreenState extends State<_SyncCodeScreen> {
 }
 
 class _SyncJoinScreen extends StatefulWidget {
-  const _SyncJoinScreen();
+  const _SyncJoinScreen({this.initialCode});
+
+  /// From a scanned QR ([openSyncLink]): filled in, Join focused.
+  final String? initialCode;
   @override
   State<_SyncJoinScreen> createState() => _SyncJoinScreenState();
 }
@@ -469,6 +510,13 @@ class _SyncJoinScreenState extends State<_SyncJoinScreen> {
   final _keys = List.generate(12, (_) => FocusNode());
   bool _recovery = false, _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final code = widget.initialCode;
+    if (code != null) _controller.text = code;
+  }
 
   String get _clean => _controller.text.replaceAll(RegExp(r'[\s-]'), '');
   bool get _valid =>
@@ -574,7 +622,11 @@ class _SyncJoinScreenState extends State<_SyncJoinScreen> {
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text(_recovery
                 ? tr('Enter your 26-character recovery code')
-                : tr('Enter the 16-digit link code shown on the other device')),
+                : widget.initialCode != null
+                    ? tr(
+                        'Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.')
+                    : tr(
+                        'Enter the 16-digit link code shown on the other device')),
             TvMenuTile(
                 focusNode: _mode,
                 icon: Icons.swap_horiz,
@@ -596,7 +648,7 @@ class _SyncJoinScreenState extends State<_SyncJoinScreen> {
                       key: const ValueKey('sync-code-entry'),
                       controller: _controller,
                       focusNode: _field,
-                      autofocus: true,
+                      autofocus: widget.initialCode == null,
                       readOnly: readOnly || _busy,
                       autocorrect: false,
                       enableSuggestions: false,
@@ -661,6 +713,7 @@ class _SyncJoinScreenState extends State<_SyncJoinScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             TvMenuTile(
                 focusNode: _join,
+                autofocus: widget.initialCode != null,
                 icon: Icons.sync,
                 title: tr('Join sync'),
                 onTap: _submit),

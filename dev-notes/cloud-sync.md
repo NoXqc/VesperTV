@@ -17,9 +17,20 @@ lives in memory only for rate limiting.
   Never typed; nothing to brute-force offline.
 - **Link code** (to add a device): 16 digits, the same as Transfer's code. The linked device
   uploads the secret to the **vault** (`/api/v/`, 10 minutes, envelope `kind: sync-link`); the new
-  device types the code (or scans the QR) and gets the secret. `X-Vault-Once: 1` makes each
+  device types the code (or scans the QR, below) and gets the secret. `X-Vault-Once: 1` makes each
   link code single-use, for one device; Transfer uploads stay multi-read. Every link/recovery
   code for that secret shares the same limit of 4 devices per sync.
+- **Scan to link (2026-11-20, owner: "Sync a phone? Scan the QR code"):** the Link a device QR
+  holds `https://pair.vespertv.app/sync#<16 digits>` (`syncLinkUrl`); the code is after the `#`,
+  which browsers never send, so it never reaches the server. Android opens VesperTV for it (an
+  App Link: manifest `autoVerify` filter + the relay's `/.well-known/assetlinks.json` with the
+  release cert), `SyncLinkBridge.kt` -> `SyncLinks` (lib/services/sync_link.dart) ->
+  `openSyncLink`: Sync with the join screen filled in, Join focused, **it joins only on OK** (a
+  stranger's QR would otherwise put this device's setup into their sync); a device that already
+  syncs only gets a notice. Opened by a link on a fresh install, the "add your first playlist?"
+  prompt is skipped. Without the app (or a verified link), the relay's `/sync` page shows the code
+  and an "Open VesperTV" button (`intent://sync?c=` -> `vespertv://sync`). The recovery code's QR
+  stays plain text. iPhone: not done (would need universal links).
 - **Recovery code**: the secret itself, 26 characters of Crockford base32 (`ABCD-EFGH-…`). Shown
   once at setup ("Save this code. It's the only way back in if you lose all your devices. We
   can't recover it."), again behind the profile PIN, and as a QR. Optional in Backup & restore.
@@ -66,9 +77,23 @@ saved back over by them. So:
   hidden groups/channels, watch positions, palette) are written at once and the app runs the
   profile-switch reload (`applyActiveViewer`, `reloadForViewer`, `reloadPaletteForViewer`).
 - **Everything else** (playlists, Media Hub, settings, Sports Trak) is **held**
-  (`SyncState.deferred`): already merged and on the server, written at the next launch by the
-  sync that runs before the services load (`CloudSyncService.syncBeforeLoad`, max 4 s of splash).
-  Held keys are never pushed back as old values; a local edit to one is a normal change.
+  (`SyncState.deferred`): already merged and on the server, written at the next launch, before the
+  services load, by `CloudSyncService.applyHeldBeforeLoad` (every launch, also Fast startup): the
+  same merge with the base standing in for the server (`SyncEngine.applyHeld`, no network). An
+  empty `cloud_sync.json.held` file beside the state says something is held, so a launch with
+  nothing held costs one file check. With Fast startup off, `syncBeforeLoad` (online, max 4 s)
+  runs after it as before. A join that remapped playlist/profile ids holds everything, favourites
+  included, until that launch.
+  Held keys are never pushed back as old values. A local edit to one goes on top of what the sync
+  meant to write (`rebaseHeldEdit`: lists by entry, JSON objects such as own groups / editor edits
+  field by field, plain values = the edit), and the key stays held in the saved state until a
+  round completes, so a round cut short (network, busy) rebases it again next time.
+- **1.0.71 regression (fixed 2026-11-20, +922):** the fast launch (c2e5994) skipped the pre-load
+  sync with Fast startup on (the default) and nothing else wrote held keys: linked TVs never got
+  playlists / settings / editor changes, and after a remapping join nothing at all. An edit there
+  plus one failed round then sent the stale list up as removals (TV 1's favourites 3 -> 1), and a
+  new own group replaced the other TV's (non-list values were "the edit"). Tests in
+  `cloud_sync_test.dart` (`linkedTvs`).
 - The engine uploads before writing anything, and skips the round if the user changed one of the
   keys meanwhile (`SyncResult.busy`).
 

@@ -76,6 +76,22 @@ class SyncApiTests(unittest.TestCase):
     def meta(self):
         return json.loads(self.meta_path().read_text(encoding="utf-8"))
 
+    def test_link_qr_page_and_android_app_link(self):
+        status, headers, body = self.request(path="/.well-known/assetlinks.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Content-Type"], "application/json")
+        target = json.loads(body)[0]["target"]
+        self.assertEqual(target["package_name"], "com.nox.nox_iptv")
+        self.assertEqual(target["sha256_cert_fingerprints"][0].replace(":", "").lower(),
+                         "c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431")
+        status, headers, body = self.request(path="/sync")
+        self.assertEqual(status, 200)
+        self.assertTrue(headers["Content-Type"].startswith("text/html"))
+        self.assertIn(b"Link this phone to VesperTV", body)
+        # The page reads the code from the # only; nothing goes to a server.
+        self.assertNotIn(b"fetch(", body)
+        self.assertNotIn(b"XMLHttpRequest", body)
+
     def test_conditional_versions_and_wrong_token(self):
         self.assertEqual(self.request()[0], 404)
         status, headers, _ = self.put()

@@ -32,6 +32,8 @@ import 'services/app_exit.dart';
 import 'services/remote_buttons.dart';
 import 'services/startup_quiet.dart';
 import 'services/launcher_channels.dart';
+import 'services/sync_link.dart';
+import 'screens/settings/sync_screen.dart' show openSyncLink;
 import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
@@ -330,6 +332,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     unawaited(_episodeBackground?.openPending());
     unawaited(_sportsNotifications?.openPending());
     unawaited(LauncherChannels.instance.openPending());
+    unawaited(SyncLinks.instance.openPending());
   }
 
   /// Vesper AI (Settings > Vesper AI): the remote's voice button when it is
@@ -745,8 +748,15 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // cloud-sync.md). Never holds the splash more than a few seconds and
       // never fails the launch.
       _cloudSync = CloudSyncService(_storage);
-      // Fast startup: the pull runs once the services are up (below,
+      // What earlier syncs held for a launch is written from the device's
+      // own sync file (no network, nothing to do on most launches). Fast
+      // startup: the pull runs once the services are up (below,
       // initAndPullAfterLaunch), not before them.
+      try {
+        await _cloudSync.applyHeldBeforeLoad();
+      } catch (e) {
+        debugPrint('Sync: held settings not written at launch: $e');
+      }
       final syncBehindLaunch = _storage.getFastStartup();
       if (!syncBehindLaunch) {
         try {
@@ -1017,6 +1027,15 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         onShow: McpBridge.instance.resume,
       );
 
+      // Sync > Link a device's QR scanned with this phone's camera: Sync
+      // with the join screen, the code filled in (it asks before joining).
+      SyncLinks.instance
+        ..open = (code) async {
+          final nav = _navigatorKey.currentState;
+          if (nav != null) await openSyncLink(nav, code);
+        }
+        ..attach();
+
       // TV launcher rows (Settings > Interface > TV home screen): sent each
       // time the app goes away, since that's when the launcher shows them.
       LauncherChannels.instance
@@ -1054,7 +1073,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Settings first. `needsFullSync()` below is always false with zero
       // playlists (nothing enabled to be stale), so this can't race or
       // double up with that prompt.
-      if (_playlistManager.profiles.isEmpty) {
+      // Not when the app was opened by a scanned Link a device QR: that
+      // phone is about to get its playlists from sync (SyncLinks).
+      if (_playlistManager.profiles.isEmpty &&
+          !await SyncLinks.instance.hasPending) {
         _pendingAutoOpenAddPlaylist = await _confirmNewUserWantsPlaylist();
       }
 
@@ -1239,6 +1261,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         unawaited(_episodeBackground?.openPending());
         unawaited(_sportsNotifications?.openPending());
         unawaited(LauncherChannels.instance.openPending());
+        unawaited(SyncLinks.instance.openPending());
       });
       WidgetsBinding.instance.scheduleFrame();
       // `_epgService.init()` was started during the splash (see above);
@@ -1543,8 +1566,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             // No forced landscape on a phone: nobody asked for this one
             // (owner's iPhone, 2026-11-19: it turned sideways by itself).
             _navigatorKey.currentState?.push(MaterialPageRoute(
-                builder: (_) =>
-                    DesktopPlayerScreen(channel: channel, turnSideways: false)));
+                builder: (_) => DesktopPlayerScreen(
+                    channel: channel, turnSideways: false)));
             GuideKey.showPlayingGroupOnHome();
           } else if (inGuide &&
               DesktopMiniPlayer.instance.channel.value == null) {

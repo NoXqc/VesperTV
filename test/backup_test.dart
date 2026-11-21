@@ -122,8 +122,53 @@ void main() {
     expect(sync.keys, isNot(contains(AppConstants.keyLaunchWithProfiles)));
   });
 
-  test('automatic backup interval: weekly by default, never synced',
+  test('Dispatcharr / Tuliprox sign-ins go with Transfer, sync and backups',
       () async {
+    const dispatcharr =
+        '{"server":"http://d:9191","apiKey":"k","username":"u"}';
+    const tuliprox = '{"base":"http://t:8901/admin","username":"u","token":"j",'
+        '"issuedAt":"2026-11-20T10:00:00.000"}';
+    SharedPreferences.setMockInitialValues({
+      AppConstants.keyDispatcharr: dispatcharr,
+      AppConstants.keyTuliprox: tuliprox,
+    });
+    final storage = StorageService();
+    await storage.init();
+    final backup = storage.exportForBackup();
+    for (final out in [
+      storage.exportForTransfer(),
+      storage.exportForSync(),
+      backup
+    ]) {
+      expect(out[AppConstants.keyDispatcharr], {'t': 's', 'v': dispatcharr});
+      expect(out[AppConstants.keyTuliprox], {'t': 's', 'v': tuliprox});
+    }
+    // A backup brings them back.
+    await storage.setDispatcharr('');
+    await storage.setTuliprox('');
+    await storage.importForBackup(backup);
+    expect(storage.getDispatcharr(), dispatcharr);
+    expect(storage.getTuliprox(), tuliprox);
+    // An older backup or a transfer from an older version has none: this
+    // device stays signed in.
+    await storage.importForBackup({
+      AppConstants.keyStartSection: {'t': 's', 'v': 'home'}
+    });
+    expect(storage.getDispatcharr(), dispatcharr);
+    expect(storage.getTuliprox(), tuliprox);
+    await storage.importForTransfer({});
+    expect(storage.getDispatcharr(), dispatcharr);
+    expect(storage.getTuliprox(), tuliprox);
+    // One with another sign-in replaces it.
+    const other = '{"server":"http://e:9191","apiKey":"k2","username":"v"}';
+    await storage.importForTransfer({
+      AppConstants.keyDispatcharr: {'t': 's', 'v': other}
+    });
+    expect(storage.getDispatcharr(), other);
+    expect(storage.getTuliprox(), tuliprox);
+  });
+
+  test('automatic backup interval: weekly by default, never synced', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
     await storage.init();

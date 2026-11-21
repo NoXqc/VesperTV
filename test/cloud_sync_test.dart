@@ -699,4 +699,176 @@ void main() {
     expect(device.store.state!.deviceId, id);
     expect(SyncState.fromJson(device.store.state!.toJson())!.deviceId, id);
   });
+
+  // 2026-11-20 (owner, a user's report): TV 2 linked to TV 1's sync, then TV 1
+  // lost its favourites and own groups. TV 2 already had the same playlist
+  // (the welcome screen asks for one), so the join remapped ids and held
+  // everything; with Fast startup no launch ever wrote it.
+  Map<String, Object?> s(String v) => {'t': 's', 'v': v};
+  Map<String, Object?> playlist(String id) => s(jsonEncode([
+        {
+          'id': id,
+          'name': 'My IPTV',
+          'mode': 'xtream',
+          'xtreamServer': 'http://iptv.example:8080',
+          'xtreamUsername': 'user1',
+          'xtreamPassword': 'pw',
+        }
+      ]));
+  Object? decoded(Map<String, Object?> values, String key) =>
+      jsonDecode((values[key] as Map)['v'] as String);
+  Future<(_Device, _Device)> linkedTvs() async {
+    final tv1 = _Device({
+      'nox_playlists': playlist('P1'),
+      'nox_favorites': l(['P1::a', 'P1::b', 'P1::c']),
+      'nox_my_groups': s(jsonEncode({
+        'groups': ['Sports'],
+        'moves': {'P1::a': 'Sports'},
+        'order': {},
+      })),
+    });
+    final tv2 = _Device({
+      'nox_playlists': playlist('P2'),
+      'nox_favorites': l([]),
+    });
+    final secret = newSyncSecret();
+    await tv1.engine.start(secret);
+    await tv1.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    await tv2.engine.start(secret);
+    // Linked from Settings: the app is running.
+    await tv2.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    return (tv1, tv2);
+  }
+
+  test('a remapping join is written at the next launch, without the server',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final (tv1, tv2) = await linkedTvs();
+    expect(tv2.values['nox_favorites'], l([])); // held while it runs
+    expect(tv2.store.state!.deferred, isNotEmpty);
+
+    // Next launch: no network at all.
+    final saved = cloudTransferBase;
+    cloudTransferBase = 'http://127.0.0.1:1';
+    final r = await tv2.engine.applyHeld();
+    cloudTransferBase = saved;
+    expect(r!.pulled, greaterThan(0));
+    expect(tv2.values['nox_favorites'], l(['P1::a', 'P1::b', 'P1::c']));
+    expect((decoded(tv2.values, 'nox_playlists') as List).single['id'], 'P1');
+    expect(decoded(tv2.values, 'nox_my_groups'),
+        containsPair('groups', ['Sports']));
+    expect(tv2.store.state!.deferred, isEmpty);
+    // Nothing left to apply: a second launch is a no-op.
+    expect((await tv2.engine.applyHeld())!.pulled, 0);
+
+    // Both keep syncing; TV 1 keeps everything.
+    await tv2.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    await tv1.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    expect(tv1.values['nox_favorites'], l(['P1::a', 'P1::b', 'P1::c']));
+    expect(decoded(tv1.values, 'nox_my_groups'),
+        containsPair('groups', ['Sports']));
+  });
+
+  test('a held edit, then a failed sync, never removes the other TV\'s list',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final (tv1, tv2) = await linkedTvs();
+    // TV 2 shows no favourites yet: its viewer stars one, and the next
+    // sync doesn't get through (Wi-Fi, standby).
+    tv2.values['nox_favorites'] = l(['P2::z']);
+    await expectLater(
+        tv2.engine.sync(
+            applyNow: StorageService.isLiveSyncKey,
+            client:
+                MockClient((_) async => throw http.ClientException('offline'))),
+        throwsA(anything));
+    await tv2.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    await tv1.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    expect(
+        tv1.values['nox_favorites'], l(['P1::a', 'P1::b', 'P1::c', 'P1::z']));
+    // TV 2's launch shows the same.
+    await tv2.engine.applyHeld();
+    expect(
+        tv2.values['nox_favorites'], l(['P1::a', 'P1::b', 'P1::c', 'P1::z']));
+  });
+
+  test('a held own-groups edit adds to the other TV\'s groups', () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final (tv1, tv2) = await linkedTvs();
+    // TV 2's own groups (still its own, empty copy) get a new group.
+    tv2.values['nox_my_groups'] = s(jsonEncode({
+      'groups': ['Kids'],
+      'moves': {'P2::k': 'Kids'},
+      'order': {},
+    }));
+    await tv2.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    await tv1.engine.sync(applyNow: StorageService.isLiveSyncKey);
+    final groups = decoded(tv1.values, 'nox_my_groups') as Map;
+    expect(groups['groups'], ['Sports', 'Kids']);
+    expect(groups['moves'], {'P1::a': 'Sports', 'P1::k': 'Kids'});
+    await tv2.engine.applyHeld();
+    expect(decoded(tv2.values, 'nox_my_groups'), groups);
+  });
+
+  test('app service: held playlists are written at a Fast startup launch',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['p1::ch1'],
+      'nox_playlists': '[{"id":"p1","name":"Home"}]',
+    });
+    final storage = StorageService();
+    await storage.init();
+    String playlistsJson() =>
+        (storage.exportForSync()['nox_playlists'] as Map)['v'] as String;
+    final store = _MemoryStore();
+    final service = CloudSyncService(storage, store: store);
+    await service.init();
+    await service.setUp();
+    final code = (await service.recoveryCode())!;
+    final other = _Device({});
+    await other.engine.start(parseSyncRecoveryCode(code)!);
+    await other.engine.sync();
+    other.values['nox_playlists'] = s('[{"id":"p1","name":"Home renamed"}]');
+    await other.engine.sync();
+    service.startAutomatic();
+    await service.syncNow();
+    expect(playlistsJson(), contains('"Home"')); // held
+    service.dispose();
+
+    // Fast startup launch: only the offline step runs before the services.
+    final relaunched = CloudSyncService(storage, store: store);
+    await relaunched.applyHeldBeforeLoad();
+    expect(playlistsJson(), contains('Home renamed'));
+    expect(relaunched.status, SyncStatus.on);
+    relaunched.dispose();
+  });
+
+  test('file store: a marker says when something is held', () async {
+    final dir = await Directory.systemTemp.createTemp('sync_store_');
+    addTearDown(() => dir.delete(recursive: true));
+    final store = FileSyncStore('${dir.path}/sync.json');
+    expect(store.hasHeld(), isFalse);
+    final state = SyncState(
+        secret: newSyncSecret(),
+        deviceId: 'dev1',
+        version: 3,
+        base: const SyncSnapshot({}, {}),
+        deferred: {'nox_playlists': s('[]')});
+    await store.save(state);
+    expect(store.hasHeld(), isTrue);
+    expect(FileSyncStore('${dir.path}/sync.json').hasHeld(), isTrue);
+    await store.save(state.copyWith(deferred: const {}));
+    expect(store.hasHeld(), isFalse);
+    await store.save(state);
+    await store.save(null);
+    expect(store.hasHeld(), isFalse);
+
+    // A state saved by 1.0.71 (no marker yet) is read once.
+    final old = File('${dir.path}/old.json')..writeAsStringSync('{}');
+    final legacy = FileSyncStore(old.path);
+    expect(legacy.hasHeld(), isTrue);
+    legacy.markChecked();
+    expect(legacy.hasHeld(), isFalse);
+  });
 }

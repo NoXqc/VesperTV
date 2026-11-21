@@ -481,6 +481,7 @@ class FileSyncStore implements SyncStore {
     if (state == null) {
       final file = File(target);
       if (await file.exists()) await file.delete();
+      _markHeld(false);
       return;
     }
     final json = state.toJson();
@@ -489,6 +490,52 @@ class FileSyncStore implements SyncStore {
       tmp.writeAsStringSync(jsonEncode(json), flush: true);
       tmp.renameSync(target);
     });
+    _markHeld(state.deferred.isNotEmpty);
+    markChecked();
+  }
+
+  /// An empty file beside the state while it holds keys for a launch
+  /// ([SyncState.deferred]): the launch checks it ([hasHeld]) instead of
+  /// reading the whole state, so a launch with nothing held costs nothing.
+  File get _heldMarker => File('$path.held');
+
+  void _markHeld(bool held) {
+    try {
+      final marker = _heldMarker;
+      if (held == marker.existsSync()) return;
+      if (held) {
+        marker.writeAsStringSync('');
+      } else {
+        marker.deleteSync();
+      }
+    } catch (_) {
+      // Without the marker the next sync still applies them (one launch
+      // later); never fail a save over it.
+    }
+  }
+
+  /// Says the marker is kept up to date for this state (any save since
+  /// the marker exists).
+  File get _checkedMarker => File('$path.held-checked');
+
+  /// Whether the saved state holds keys for a launch (cheap: file checks,
+  /// no read). A state saved before the marker existed (1.0.71 and older,
+  /// where Fast startup left keys held for good) counts until it has been
+  /// read once ([markChecked]).
+  bool hasHeld() {
+    try {
+      if (_heldMarker.existsSync()) return true;
+      return !_checkedMarker.existsSync() && File(path).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void markChecked() {
+    try {
+      final checked = _checkedMarker;
+      if (!checked.existsSync()) checked.writeAsStringSync('');
+    } catch (_) {}
   }
 }
 
@@ -606,7 +653,28 @@ class SyncEngine {
     final done = Completer<void>();
     _running = done.future;
     try {
-      return await _sync(client, applyNow, pushLocal);
+      return await _sync(client, applyNow, pushLocal, false);
+    } finally {
+      _running = null;
+      done.complete();
+    }
+  }
+
+  /// Writes the keys earlier syncs held for a launch ([SyncState.deferred])
+  /// from the base this device already agreed with the server: the same
+  /// merge as a launch sync, without the network. For the launch, before
+  /// the services read storage: with Fast startup the online pull runs
+  /// after them (it cost 1.8 s of every launch), so nothing else ever wrote
+  /// held keys and a linked TV never got the playlists, settings or
+  /// editor changes, or anything at all after a remapping join (1.0.71).
+  /// The next online sync sends what this leaves different from the base.
+  Future<SyncResult?> applyHeld() async {
+    final running = _running;
+    if (running != null) await running;
+    final done = Completer<void>();
+    _running = done.future;
+    try {
+      return await _sync(null, null, false, true);
     } finally {
       _running = null;
       done.complete();
@@ -659,10 +727,16 @@ class SyncEngine {
     return out;
   }
 
+  /// [offline] ([applyHeld]): the base stands in for the server's
+  /// snapshot; nothing is fetched or uploaded and the base stays.
   Future<SyncResult?> _sync(http.Client? httpClient,
-      bool Function(String key)? applyNow, bool pushLocal) async {
+      bool Function(String key)? applyNow, bool pushLocal, bool offline) async {
     var state = await store.load();
     if (state == null) return null;
+    if (offline && (state.base == null || state.deferred.isEmpty)) {
+      return SyncResult(
+          pulled: 0, pushed: false, deferred: state.deferred.length);
+    }
     if (state.deviceId == null) {
       // Saved before the device limit: take a slot from now on.
       state = SyncState(
@@ -678,26 +752,36 @@ class SyncEngine {
     // Read with every held key, edited ones included (their edit goes on
     // top of the base's value, see [_effectiveLocal]).
     final effective = _effectiveLocal(state, local);
-    // Held keys the user has since edited here are ordinary changes now.
+    // Held keys the user has since edited here are ordinary changes now
+    // (rebased in [effective]). The saved state keeps them held until a
+    // round completes: saved trimmed, a round cut short (network, busy,
+    // app closed) left the next one reading the raw edited list as the
+    // change, and other devices' entries looked removed (one star on a
+    // just-linked TV after a failed sync emptied the other TV's
+    // favourites, 2026-11-20).
     final deferred = {
       for (final e in state.deferred.entries)
         if (syncValuesEqual(local[e.key], e.value)) e.key: e.value
     };
-    state = state.copyWith(deferred: deferred);
     state = state.copyWith(
         pending: stampLocalChanges(state.base, effective, state.pending,
             _now().millisecondsSinceEpoch));
     await store.save(state);
 
-    final client = await SyncClient.forSecret(state.secret,
-        deviceId: state.deviceId, client: httpClient);
+    final client = offline
+        ? null
+        : await SyncClient.forSecret(state.secret,
+            deviceId: state.deviceId, client: httpClient);
     try {
       for (var attempt = 0;; attempt++) {
-        final remote = await client.fetch(
-            knownVersion: state!.base == null ? null : state.version);
+        final remote = client == null
+            ? SyncRemote(state!.version, null)
+            : await client.fetch(
+                knownVersion: state!.base == null ? null : state.version);
         // Keys held from a live sync (SyncState.deferred) are written by
         // exactly this cold sync, so they always take the full path.
-        if (!pushLocal &&
+        if (!offline &&
+            !pushLocal &&
             remote.snapshot == null &&
             remote.version != 0 &&
             deferred.isEmpty) {
@@ -711,7 +795,7 @@ class SyncEngine {
         final remoteSnap = remote.snapshot ?? state.base!;
         // The server lost it (3 months unused): start it again from here
         // instead of reading that as "everything was removed".
-        final base = remote.version == 0 ? null : state.base;
+        final base = remote.version == 0 && !offline ? null : state.base;
         final pendingJoin = deferred.containsKey(AppConstants.keyPlaylists) ||
             deferred.containsKey(AppConstants.keyViewerProfiles);
         final matched = base == null || pendingJoin
@@ -757,8 +841,9 @@ class SyncEngine {
         // written here.
         var version = remote.version;
         var pushed = false;
-        if (remote.version == 0 ||
-            !syncValuesEqual(merged.toJson(), remoteSnap.toJson())) {
+        if (client != null &&
+            (remote.version == 0 ||
+                !syncValuesEqual(merged.toJson(), remoteSnap.toJson()))) {
           // Which settings changed (names only, never values): every
           // 5-minute sync re-uploaded the whole 325 KB snapshot on the
           // owner's Formuler while he only watched live TV (LOG-5BW3NJ).
@@ -778,11 +863,14 @@ class SyncEngine {
         }
 
         // The user changed one of these keys meanwhile: keep the old base
-        // so the next sync merges that edit properly.
-        final now = await data.exportForSync();
-        if ([...changed.keys, ...removed]
-            .any((k) => !syncValuesEqual(now[k], local[k]))) {
-          return SyncResult(pulled: 0, pushed: pushed, busy: true);
+        // so the next sync merges that edit properly. (Not offline: the
+        // launch runs it before anything else can write.)
+        if (!offline) {
+          final now = await data.exportForSync();
+          if ([...changed.keys, ...removed]
+              .any((k) => !syncValuesEqual(now[k], local[k]))) {
+            return SyncResult(pulled: 0, pushed: pushed, busy: true);
+          }
         }
         if (changed.isNotEmpty || removed.isNotEmpty) {
           // Send log: which keys other devices changed here (names only),
@@ -798,27 +886,32 @@ class SyncEngine {
           }
           await data.applySyncChanges(changed, removed);
         }
-        state = state.copyWith(
-            version: version,
-            base: merged,
-            pending: const {},
-            deferred: {
-              for (final e in deferred.entries)
-                if (!changed.containsKey(e.key) && !removed.contains(e.key))
-                  e.key: e.value,
-              ...hold,
-            },
-            lastSync: _now());
+        state = offline
+            // Everything held is written now; the base stays what the
+            // server holds, so the next sync sends what differs from it
+            // (edits rebased onto held keys, remapped ids) as changes.
+            ? state.copyWith(deferred: const {})
+            : state.copyWith(
+                version: version,
+                base: merged,
+                pending: const {},
+                deferred: {
+                  for (final e in deferred.entries)
+                    if (!changed.containsKey(e.key) && !removed.contains(e.key))
+                      e.key: e.value,
+                  ...hold,
+                },
+                lastSync: _now());
         await store.save(state);
         return SyncResult(
             pulled: changed.length + removed.length,
             pushed: pushed,
             applied: {...changed.keys, ...removed},
             deferred: state.deferred.length,
-            bytes: pushed ? client.lastPutBytes : 0);
+            bytes: pushed ? client!.lastPutBytes : 0);
       }
     } finally {
-      if (httpClient == null) client.close();
+      if (httpClient == null) client?.close();
     }
   }
 }

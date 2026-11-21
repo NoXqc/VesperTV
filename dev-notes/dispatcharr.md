@@ -33,7 +33,8 @@ other streams are only visible through its REST API.
 - `POST /api/accounts/token/` (JWT) once, then `GET /api/accounts/api-keys/`: **a user has ONE
   API key and `generate` replaces it**, so an existing key is reused and a new one is made only
   when there is none. Only `{server, apiKey, username}` is saved (`vesper_dispatcharr`,
-  device-only, not in backups / transfer / sync). Never the password.
+  goes with Transfer, sync and backups (owner 2026-11-20); a backup or transfer without it keeps the
+  device's own). Never the password.
 - Afterwards every call sends `X-API-Key`. Bad key = 401 -> "refused the saved sign-in".
 - Dispatcharr throttles sign-ins: a few quick tries give **HTTP 429** ("Too many tries. Wait a
   minute").

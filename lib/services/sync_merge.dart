@@ -248,7 +248,9 @@ class _SyncPlaylistRemap {
     if (bare == AppConstants.keyMyGroups) {
       return {
         ...data,
-        'moves': _mapKeys(data['moves']),
+        // Only when there: a `"moves": null` added here made every remap
+        // look like a change of the user's own groups.
+        if (data['moves'] is Map) 'moves': _mapKeys(data['moves']),
         // Editor Move / Copy: channel ids as keys, playlist ids inside the
         // provider-group references (`p:<playlist id>\u0000<title>`).
         if (data['pmoves'] is Map)
@@ -465,14 +467,94 @@ SyncSnapshot mergeSync({
 /// has since edited here: their edit applied on top of the value the sync
 /// meant to write ([merged], the base), not instead of it. [held] is what
 /// this device had when the key was held. Lists keep every merged entry
-/// the edit didn't remove; anything else is the edit. Treating the edited
-/// list itself as the change made every entry other devices had added
-/// look removed here: one starred channel on a just-linked TV emptied a
-/// viewer's favourites on all his devices (LOG-CGEYUG, Kal-el23).
+/// the edit didn't remove; JSON objects (own groups, editor edits, guide
+/// links) take only the fields the edit changed ([_rebaseObject]);
+/// anything else is the edit. Treating the edited list itself as the
+/// change made every entry other devices had added look removed here: one
+/// starred channel on a just-linked TV emptied a viewer's favourites on
+/// all his devices (LOG-CGEYUG, Kal-el23). A new own group there replaced
+/// the other TV's groups the same way (2026-11-20).
 Object? rebaseHeldEdit(Object? held, Object? local, Object? merged) {
   final lists = (_stringList(local) != null && _stringList(merged) != null) ||
       (_idList(local) != null && _idList(merged) != null);
-  return lists ? _both(held, local, merged, true) : local;
+  if (lists) return _both(held, local, merged, true);
+  final lo = _jsonObject(local), mo = _jsonObject(merged);
+  if (lo == null || mo == null) return local;
+  return _tag(
+      's', jsonEncode(_rebaseObject(_jsonObject(held) ?? const {}, lo, mo)));
+}
+
+/// A tagged string holding a JSON object, decoded; else null.
+Map<String, Object?>? _jsonObject(Object? tagged) {
+  if (tagged is! Map || tagged['t'] != 's') return null;
+  final v = tagged['v'];
+  if (v is! String || !v.trimLeft().startsWith('{')) return null;
+  try {
+    final o = jsonDecode(v);
+    return o is Map ? {for (final e in o.entries) '${e.key}': e.value} : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// [l] is [h] edited here, [m] what the sync meant to write: the fields
+/// the edit added, changed or removed since [h] go on top of [m]; the
+/// rest stays [m]'s. Nested objects the same way, string lists by entry.
+Map<String, Object?> _rebaseObject(Map h, Map l, Map m) {
+  final out = <String, Object?>{for (final e in m.entries) '${e.key}': e.value};
+  for (final key in {...h.keys, ...l.keys}) {
+    final k = '$key';
+    final inH = h.containsKey(key), inL = l.containsKey(key);
+    final hv = h[key], lv = l[key];
+    if (inH == inL && syncValuesEqual(hv, lv)) continue;
+    if (inL) {
+      out[k] = _rebaseValue(hv, lv, m[key]);
+      continue;
+    }
+    // Gone here: a map or list empties of what the edit removed only
+    // (UserGroups drops a map once its last entry goes).
+    final mv = m[key];
+    final rest = hv is Map && mv is Map
+        ? _rebaseObject(hv, const {}, mv)
+        : hv is List && mv is List
+            ? _rebaseValue(hv, const <Object?>[], mv)
+            : null;
+    if (rest == null ||
+        (rest is Map && rest.isEmpty) ||
+        (rest is List && rest.isEmpty)) {
+      out.remove(k);
+    } else {
+      out[k] = rest;
+    }
+  }
+  return out;
+}
+
+Object? _rebaseValue(Object? h, Object? l, Object? m) {
+  if (l is Map && m is Map) return _rebaseObject(h is Map ? h : const {}, l, m);
+  bool strings(Object? v) => v is List && v.every((x) => x is String);
+  if (!strings(l) || !strings(m) || (h != null && !strings(h))) return l;
+  final hs = [for (final x in (h as List?) ?? const []) x as String];
+  final ls = [for (final x in l as List) x as String];
+  final ms = [for (final x in m as List) x as String];
+  final hSet = hs.toSet(), lSet = ls.toSet();
+  if (hs.isNotEmpty && hSet.length == lSet.length && hSet.containsAll(lSet)) {
+    // Reordered here (Move Up / Down): this order, without what the others
+    // removed, then what they added.
+    return [
+      for (final x in ls)
+        if (ms.contains(x)) x,
+      for (final x in ms)
+        if (!lSet.contains(x)) x,
+    ];
+  }
+  final removed = hSet.difference(lSet);
+  return [
+    for (final x in ms)
+      if (!removed.contains(x)) x,
+    for (final x in ls)
+      if (!hSet.contains(x) && !ms.contains(x)) x,
+  ];
 }
 
 /// A joining device's value: lists combined, otherwise the server's.

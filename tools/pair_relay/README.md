@@ -37,6 +37,12 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   the TV answers them in phone-only mode (`McpBridge`, `lib/services/hub_remote.dart`). Its page alone
   allows `img-src https:` for the add-ons' own logos (`ai_link.HUB_CSP`). Lives only here (the TV never
   serves it); deploy it next to `relay.py` with `ai_link.py`.
+- `sync.html` — `/sync`, the page a Link a device QR opens without the app (shows the code
+  from the link's `#`, never sent here; "Open VesperTV" button). `relay.py` also serves
+  `/.well-known/assetlinks.json` (Android App Link for `com.nox.nox_iptv`, release cert), so
+  a phone's camera opens VesperTV directly. Deployed 2026-11-20 (owner OK): `relay.py` +
+  `sync.html` copied to `/opt/pair-relay/`, backup `relay.py.bak.20261120-200444`, only
+  pair-relay restarted.
 - `pair-relay.service` — systemd unit (`DynamicUser`, read-only filesystem, 128 MB cap).
 
 ## Local tests (no server access)

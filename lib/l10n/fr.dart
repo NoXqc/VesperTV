@@ -2665,6 +2665,12 @@ const Map<String, String> kFr = {
       "La réinitialisation du code de synchronisation supprime toutes vos données chiffrées du serveur. Tous les autres appareils cessent la synchronisation et doivent être réassociés avec un nouveau code. Conservez le nouveau code de récupération.",
   "This code works for one device, once. Create a new code to link another device.":
       "Ce code fonctionne une seule fois, pour un seul appareil. Créez un nouveau code pour associer un autre appareil.",
+  "Sync a phone? Scan the QR code":
+      "Synchroniser un téléphone ? Scannez le code QR",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Cet appareil est déjà synchronisé. Pour l'associer avec le code scanné, arrêtez d'abord la synchronisation ici.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Rejoindre la synchronisation de l'appareil qui a affiché ce code ? Ensuite, les deux gardent les mêmes playlists, favoris et réglages.",
   "Guide transparency": "Transparence du guide",
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.": "0 % est opaque ; 100 % est transparent.",

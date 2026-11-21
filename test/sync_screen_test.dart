@@ -11,6 +11,7 @@ import 'package:nox_iptv/services/cloud_transfer.dart';
 import 'package:nox_iptv/services/device_transfer.dart';
 import 'package:nox_iptv/services/parental_pin.dart';
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/services/sync_link.dart';
 import 'package:nox_iptv/widgets/tv_menu_tile.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -248,6 +249,48 @@ void main() {
     await tap(tester, 'Stop syncing on this device');
     expect(sync.stops, 1);
     expect(tile(tester, 'Set up sync').focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('link QR is a phone link with the code after the #',
+      (tester) async {
+    await pump(tester, state: SyncStatus.on);
+    await tap(tester, 'Link a device');
+    // The code is in the fragment: browsers never send it to a server.
+    final url = syncLinkUrl('1234567890123456');
+    expect(url, '$cloudTransferBase/sync#1234567890123456');
+    expect(find.byKey(ValueKey('sync-qr:$url')), findsOneWidget);
+    expect(find.text('Sync a phone? Scan the QR code'), findsOneWidget);
+  });
+
+  testWidgets('a scanned code opens Join filled in; it joins only on OK',
+      (tester) async {
+    final (sync, _) = await pump(tester);
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    unawaited(openSyncLink(nav, '1234567890123456'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text(
+            'Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.'),
+        findsOneWidget);
+    expect(sync.joined, isNull); // nothing without the user's OK
+    expect(tile(tester, 'Join sync').focusNode!.hasFocus, isTrue);
+    await tap(tester, 'Join sync');
+    expect(sync.joined, '1234567890123456');
+    expect(find.text('Join sync'), findsNothing); // back on Sync
+  });
+
+  testWidgets('a scanned code on a device that already syncs never joins',
+      (tester) async {
+    final (sync, _) = await pump(tester, state: SyncStatus.on);
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    unawaited(openSyncLink(nav, '1234567890123456'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text(
+            'This device already syncs. To link it with the scanned code, stop syncing here first.'),
+        findsOneWidget);
+    expect(find.text('Join sync'), findsNothing);
+    expect(sync.joined, isNull);
   });
 
   testWidgets('link QR expires and hides the code; Back restores link focus',

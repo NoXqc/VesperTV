@@ -88,6 +88,24 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="vespertv" android:host="launcher"/>
             </intent-filter>
+            <!-- Sync > Link a device's QR, scanned with a phone's camera:
+                 https://pair.vespertv.app/sync#<16-digit code> opens the app
+                 (verified by the relay's /.well-known/assetlinks.json), and
+                 that page's "Open VesperTV" button sends vespertv://sync?c=.
+                 The app asks before joining (SyncLinkBridge.kt). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="pair.vespertv.app"
+                    android:path="/sync"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="vespertv" android:host="sync"/>
+            </intent-filter>
             <!-- Vesper AI as the device's assistant (opt-in, set by the user:
                  adb shell settings put secure assistant
                  com.nox.nox_iptv/.MainActivity). See VoiceBridge.onIntent. -->

@@ -74,6 +74,7 @@ class MainActivity : FlutterActivity() {
     private val overlayProbe by lazy { OverlayProbeBridge(this) }
     private val voiceBridge by lazy { VoiceBridge(this) }
     private val launcherChannels by lazy { LauncherChannels(this) }
+    private val syncLinks = SyncLinkBridge()
 
     /**
      * Native video surface (beta, Settings > Interface > Background video): Flutter starts
@@ -145,6 +146,7 @@ class MainActivity : FlutterActivity() {
         setIntent(intent)
         voiceBridge.onIntent(intent)
         launcherChannels.onIntent(intent)
+        syncLinks.onIntent(intent)
     }
 
     override fun onResume() {
@@ -242,6 +244,10 @@ class MainActivity : FlutterActivity() {
         // TV launcher rows (Watch Next, Favourites) and their cards' links.
         launcherChannels.connect(flutterEngine.dartExecutor.binaryMessenger)
         launcherChannels.onIntent(intent)
+
+        // Sync > Link a device's QR scanned with this phone's camera.
+        syncLinks.connect(flutterEngine.dartExecutor.binaryMessenger)
+        syncLinks.onIntent(intent)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
             .setMethodCallHandler(overlayProbe::handle)

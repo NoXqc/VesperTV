@@ -2550,6 +2550,12 @@ const Map<String, String> kPl = {
       "Zresetowanie kodu synchronizacji usuwa wszystkie Twoje zaszyfrowane dane z serwera. Każde inne urządzenie przestaje się synchronizować i trzeba je połączyć ponownie nowym kodem. Zapisz nowy kod odzyskiwania.",
   "This code works for one device, once. Create a new code to link another device.":
       "Ten kod działa dla jednego urządzenia, jednorazowo. Utwórz nowy kod, aby połączyć kolejne urządzenie.",
+  "Sync a phone? Scan the QR code":
+      "Zsynchronizować telefon? Zeskanuj kod QR",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "To urządzenie jest już synchronizowane. Aby połączyć je ze zeskanowanym kodem, najpierw zatrzymaj tutaj synchronizację.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Dołączyć do synchronizacji urządzenia, które pokazało ten kod? Od tej chwili oba będą miały te same playlisty, ulubione i ustawienia.",
   "Guide transparency": "Przezroczystość przewodnika",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.":

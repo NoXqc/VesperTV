@@ -2528,6 +2528,12 @@ const Map<String, String> kUk = {
       "Скидання коду синхронізації видаляє всі ваші зашифровані дані із сервера. Усі інші пристрої припиняють синхронізацію, і їх треба пов'язати знову новим кодом. Збережіть новий код відновлення.",
   "This code works for one device, once. Create a new code to link another device.":
       "Цей код працює для одного пристрою, один раз. Створіть новий код, щоб пов'язати інший пристрій.",
+  "Sync a phone? Scan the QR code":
+      "Синхронізувати телефон? Відскануйте QR-код",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Цей пристрій уже синхронізується. Щоб під'єднати його за відсканованим кодом, спершу зупиніть тут синхронізацію.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Приєднатися до синхронізації пристрою, що показав цей код? Відтоді обидва матимуть однакові плейлисти, обране та налаштування.",
   "Guide transparency": "Прозорість телегіда",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.": "0% — суцільний; 100% — прозорий.",

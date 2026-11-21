@@ -93,6 +93,24 @@ import ai_link
 HOST = os.environ.get("PAIR_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PAIR_PORT", "8930"))
 PAGE = os.environ.get("PAIR_PAGE", os.path.join(os.path.dirname(__file__), "pair.html"))
+# Link a device's QR (2026-11-20): https://<this host>/sync#<16-digit code>.
+# Android opens VesperTV for it (an App Link, verified with ASSET_LINKS);
+# elsewhere this page shows the code. The code is after the #, which
+# browsers never send: it never reaches this server.
+SYNC_PAGE = os.environ.get(
+    "PAIR_SYNC_PAGE", os.path.join(os.path.dirname(__file__), "sync.html"))
+ASSET_LINKS = json.dumps([{
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+        "namespace": "android_app",
+        "package_name": "com.nox.nox_iptv",
+        # The release signing certificate (CLAUDE.md §5).
+        "sha256_cert_fingerprints": [
+            "C9:2A:34:6A:C5:B6:19:1A:37:3B:35:72:FA:0F:BD:72:"
+            "AB:DD:5F:64:DB:49:7B:D3:21:61:7B:8C:C4:56:24:31"
+        ],
+    },
+}]).encode()
 TTL = 600            # seconds a blob may wait for its TV
 MAX_BODY = 8 * 1024  # an encrypted form is well under 2 KB
 MAX_ITEMS = 2000     # memory cap; oldest are dropped first
@@ -303,6 +321,14 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/p", "/p/"):
             try:
                 return self._send(200, _load_page(), "text/html; charset=utf-8")
+            except OSError:
+                return self._send(500)
+        if path == "/.well-known/assetlinks.json":
+            return self._send(200, ASSET_LINKS)
+        if path in ("/sync", "/sync/"):
+            try:
+                with open(SYNC_PAGE, "rb") as f:
+                    return self._send(200, f.read(), "text/html; charset=utf-8")
             except OSError:
                 return self._send(500)
         if path in ("/ai", "/ai/"):

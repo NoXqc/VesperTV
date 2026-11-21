@@ -2613,6 +2613,12 @@ const Map<String, String> kEl = {
       "Η επαναφορά του κωδικού συγχρονισμού αφαιρεί όλα τα κρυπτογραφημένα δεδομένα σας από τον διακομιστή. Όλες οι άλλες συσκευές σταματούν να συγχρονίζονται και πρέπει να συνδεθούν ξανά με νέο κωδικό. Αποθηκεύστε τον νέο κωδικό ανάκτησης.",
   "This code works for one device, once. Create a new code to link another device.":
       "Αυτός ο κωδικός λειτουργεί μία φορά, για μία συσκευή. Δημιουργήστε νέο κωδικό για να συνδέσετε άλλη συσκευή.",
+  "Sync a phone? Scan the QR code":
+      "Συγχρονισμός κινητού; Σαρώστε τον κωδικό QR",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Αυτή η συσκευή συγχρονίζεται ήδη. Για να τη συνδέσετε με τον κωδικό που σαρώσατε, σταματήστε πρώτα τον συγχρονισμό εδώ.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Συμμετοχή στον συγχρονισμό της συσκευής που έδειξε αυτόν τον κωδικό; Από εκεί και πέρα και οι δύο θα έχουν τις ίδιες λίστες, αγαπημένα και ρυθμίσεις.",
   "Guide transparency": "Διαφάνεια οδηγού",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.": "0% είναι αδιαφανές· 100% είναι διαφανές.",

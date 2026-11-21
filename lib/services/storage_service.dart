@@ -384,7 +384,8 @@ class StorageService {
       _prefs.setString(AppConstants.keyArchivePosterPattern, pattern);
 
   /// Settings > Playlists & sources > Dispatcharr: the server and its API
-  /// key as JSON (`DispatcharrLogin`), '' = not connected. Device-only.
+  /// key as JSON (`DispatcharrLogin`), '' = not connected. Goes with a
+  /// transfer, sync and backups; one without it keeps this device's.
   String getDispatcharr() =>
       _prefs.getString(AppConstants.keyDispatcharr) ?? '';
   Future<void> setDispatcharr(String json) => json.isEmpty
@@ -392,15 +393,18 @@ class StorageService {
       : _prefs.setString(AppConstants.keyDispatcharr, json);
 
   /// Settings > Dispatcharr > Sources in the player ([DispatcharrSources]
-  /// name), '' = the default. Device-only, like the sign-in.
+  /// name), '' = the default. Transfers and syncs, like the sign-in.
   String getDispatcharrSources() =>
       _prefs.getString(AppConstants.keyDispatcharrSources) ?? '';
   Future<void> setDispatcharrSources(String name) =>
       _prefs.setString(AppConstants.keyDispatcharrSources, name);
 
   /// Settings > Playlists & sources > Tuliprox: the Web UI address, user
-  /// name and token as JSON (`TuliproxLogin`), '' = not connected.
-  /// Device-only: never in a backup, a transfer or sync.
+  /// name and token as JSON (`TuliproxLogin`), '' = not connected. Goes
+  /// with a transfer, sync and backups; one without it keeps this
+  /// device's. Each
+  /// device refreshes the token itself (hourly while used, `Tuliprox
+  /// ._fresh`); a synced newer one arrives at that device's next launch.
   String getTuliprox() => _prefs.getString(AppConstants.keyTuliprox) ?? '';
   Future<void> setTuliprox(String json) => json.isEmpty
       ? _prefs.remove(AppConstants.keyTuliprox)
@@ -1831,8 +1835,8 @@ class StorageService {
     AppConstants.keyArchiveReadyWatch,
     AppConstants.keyContentUpdates,
     AppConstants.keyContentUpdatesNextDue,
-    AppConstants.keyDispatcharr,
-    AppConstants.keyTuliprox,
+    // Not the Dispatcharr / Tuliprox sign-ins: Transfer and sync carry them,
+    // encrypted like the playlists' passwords (owner, 2026-11-20).
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
@@ -1883,14 +1887,25 @@ class StorageService {
     AppConstants.keyCloudTransfer,
     AppConstants.keyLastAutoBackup,
     AppConstants.keyContentUpdatesNextDue,
-    // Server sign-ins (a token / API key) never leave the device.
-    AppConstants.keyDispatcharr,
-    AppConstants.keyTuliprox,
+    // Not the Dispatcharr / Tuliprox sign-ins (owner, 2026-11-20: backups
+    // already hold the playlists' passwords).
   };
 
   static bool _backupable(String key) =>
       !_backupSkipExact.contains(key) &&
       !_transferSkipPrefixes.any(key.startsWith);
+
+  /// Server sign-ins a backup or transfer without one leaves as they are:
+  /// backups made before 2026-11-20 and transfers from older versions
+  /// never carried them, and restoring one shouldn't sign this device out.
+  static const _signInKeys = {
+    AppConstants.keyDispatcharr,
+    AppConstants.keyTuliprox,
+  };
+
+  static bool Function(String key) _keepSignInsUnless(
+          Map<String, Object?> values) =>
+      (key) => _signInKeys.contains(key) && !values.containsKey(key);
 
   /// Everything [_backupable] in the same type-tagged form as
   /// [exportForTransfer] — see `BackupService`.
@@ -1899,7 +1914,7 @@ class StorageService {
   /// Replaces the setup with a backup from [exportForBackup] (or an older
   /// one); the app must restart afterwards, as after a transfer.
   Future<void> importForBackup(Map<String, Object?> values) =>
-      _importWhere(values, _backupable);
+      _importWhere(values, _backupable, keep: _keepSignInsUnless(values));
 
   Map<String, Object> _exportWhere(bool Function(String key) include,
       {bool Function(String key)? skip}) {
@@ -2044,10 +2059,12 @@ class StorageService {
   /// Device-only keys ([_transferable] = false) are kept; everything else
   /// is removed first so nothing from the old setup lingers. The app must
   /// restart afterwards — services hold the old state in memory.
-  Future<void> importForTransfer(Map<String, Object?> values) => _importWhere(
-      values, _transferable,
-      keep:
-          values.containsKey(_transferArchiveExcluded) ? _isArchiveKey : null);
+  Future<void> importForTransfer(Map<String, Object?> values) {
+    final keepSignIns = _keepSignInsUnless(values);
+    final archive = values.containsKey(_transferArchiveExcluded);
+    return _importWhere(values, _transferable,
+        keep: (key) => keepSignIns(key) || (archive && _isArchiveKey(key)));
+  }
 
   /// Kept per device even when syncing, on top of what Transfer leaves
   /// out: each box has its own current viewer and its own backup timer.
@@ -2112,30 +2129,33 @@ class StorageService {
   Future<void> applySyncChanges(
       Map<String, Object?> changed, Set<String> removed) async {
     final before = getViewerProfiles();
-    for (final key in removed) {
-      if (_syncable(key)) await _prefs.remove(key);
-    }
+    // All at once: each write updates the in-memory copy at once and Android
+    // saves the queued ones together. One at a time, each waited for its
+    // own save of the whole settings file: 213 settings after a join took
+    // 2 s of the phone's launch (Xiaomi 17 Pro Max, 2026-11-20).
+    final writes = <Future<bool>>[
+      for (final key in removed)
+        if (_syncable(key)) _prefs.remove(key),
+    ];
     for (final entry in changed.entries) {
       if (!_syncable(entry.key)) continue;
       final tagged = entry.value;
       if (tagged is! Map) continue;
       final v = tagged['v'];
-      switch (tagged['t']) {
-        case 's' when v is String:
-          await _prefs.setString(entry.key, v);
-        case 'b' when v is bool:
-          await _prefs.setBool(entry.key, v);
-        case 'i' when v is int:
-          await _prefs.setInt(entry.key, v);
-        case 'd' when v is num:
-          await _prefs.setDouble(entry.key, v.toDouble());
-        case 'l' when v is List:
-          await _prefs.setStringList(entry.key, [
+      final write = switch (tagged['t']) {
+        's' when v is String => _prefs.setString(entry.key, v),
+        'b' when v is bool => _prefs.setBool(entry.key, v),
+        'i' when v is int => _prefs.setInt(entry.key, v),
+        'd' when v is num => _prefs.setDouble(entry.key, v.toDouble()),
+        'l' when v is List => _prefs.setStringList(entry.key, [
             for (final s in v)
               if (s is String) s
-          ]);
-      }
+          ]),
+        _ => null,
+      };
+      if (write != null) writes.add(write);
     }
+    await Future.wait(writes);
     await _followActiveViewer(before);
   }
 

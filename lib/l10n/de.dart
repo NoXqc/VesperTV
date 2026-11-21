@@ -2554,6 +2554,12 @@ const Map<String, String> kDe = {
       "Das Zurücksetzen des Synchronisierungscodes entfernt alle deine verschlüsselten Daten vom Server. Alle anderen Geräte synchronisieren nicht mehr und müssen mit einem neuen Code erneut verknüpft werden. Bewahre den neuen Wiederherstellungscode auf.",
   "This code works for one device, once. Create a new code to link another device.":
       "Dieser Code gilt einmalig für ein Gerät. Erstelle einen neuen Code, um ein weiteres Gerät zu verknüpfen.",
+  "Sync a phone? Scan the QR code":
+      "Ein Handy synchronisieren? QR-Code scannen",
+  "This device already syncs. To link it with the scanned code, stop syncing here first.":
+      "Dieses Gerät synchronisiert bereits. Um es mit dem gescannten Code zu verbinden, beende hier zuerst die Synchronisierung.",
+  "Join the sync of the device that showed this code? From then on both keep the same playlists, favourites and settings.":
+      "Der Synchronisierung des Geräts beitreten, das diesen Code angezeigt hat? Danach haben beide dieselben Playlists, Favoriten und Einstellungen.",
   "Guide transparency": "Transparenz des Programmführers",
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.":
