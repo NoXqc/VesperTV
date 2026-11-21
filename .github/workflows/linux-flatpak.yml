@@ -1,11 +1,18 @@
 # VesperTV as a Flatpak (app.vespertv.VesperTV): one .flatpak file that installs on
 # any distro with Flatpak (Discover on SteamOS, no distrobox), with its own libmpv +
-# FFmpeg (VA-API). A workflow artifact for now, not a release asset.
+# FFmpeg (VA-API). Always a workflow artifact; with "release_tag" it is also
+# attached to that release as VesperTV-linux-x86_64.flatpak (release step in
+# dev-notes/release.md; since 1.0.72).
 # Manifest + notes: linux/flatpak/, dev-notes/linux.md (Flatpak).
 name: Linux Flatpak
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Attach the .flatpak to this release (its tag must be the commit built); empty = artifact only
+        type: string
+        default: ''
   push:
     branches: [claude/linux-flatpak]
 
@@ -125,3 +132,38 @@ jobs:
           tail -60 run.log
           echo "exit $code (124 = still running after 20 s = started fine)"
           [ "$code" = 124 ]
+
+  release:
+    name: Attach to the release
+    needs: flatpak
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: VesperTV-*-x86_64.flatpak
+          path: dl
+      - name: Upload VesperTV-linux-x86_64.flatpak
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Only the Flatpak of the release's own commit goes on it.
+          tag_sha="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
+          if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+            echo "Tag $TAG is $tag_sha but this run built $GITHUB_SHA"; exit 1
+          fi
+          f="$(find dl -name '*.flatpak' -type f | head -1)"
+          if [ -z "$f" ]; then echo "No .flatpak in the artifact"; find dl; exit 1; fi
+          # One name for every release, so releases/latest/download/... links keep working.
+          cp "$f" VesperTV-linux-x86_64.flatpak
+          ls -l VesperTV-linux-x86_64.flatpak
+          gh release upload "$TAG" VesperTV-linux-x86_64.flatpak --clobber --repo "$REPO"
+          # Older versioned Flatpaks on this release go.
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' \
+            | grep '\.flatpak$' | grep -vx 'VesperTV-linux-x86_64.flatpak' \
+            | while read -r a; do gh release delete-asset "$TAG" "$a" --yes --repo "$REPO"; done
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[] | "\(.name) \(.size)"'

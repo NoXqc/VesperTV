@@ -2,12 +2,19 @@
 # workflow artifact. Same media_kit (mpv) player as Windows/macOS.
 #
 # Built on Ubuntu 24.04, so it needs a distro at least that new (glibc 2.39)
-# plus the system libmpv (Ubuntu/Mint: sudo apt install libmpv2). Not a
-# release asset: AppUpdateService offers nothing on Linux yet.
+# plus the system libmpv (Ubuntu/Mint: sudo apt install libmpv2). With
+# "release_tag" it is also attached to that release as VesperTV-linux-x64.tar.gz
+# (release step in dev-notes/release.md; since 1.0.72). AppUpdateService
+# offers nothing on Linux.
 name: Linux build
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Attach the .tar.gz to this release (its tag must be the commit built); empty = artifact only
+        type: string
+        default: ''
   push:
     branches: [main, claude/linux-build]
 
@@ -53,3 +60,38 @@ jobs:
         with:
           name: build-linux-log
           path: build-linux.log
+
+  release:
+    name: Attach to the release
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: VesperTV-linux
+          path: dl
+      - name: Upload VesperTV-linux-x64.tar.gz
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Only the build of the release's own commit goes on it.
+          tag_sha="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
+          if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+            echo "Tag $TAG is $tag_sha but this run built $GITHUB_SHA"; exit 1
+          fi
+          f="$(find dl -name '*-linux-x64.tar.gz' -type f | head -1)"
+          if [ -z "$f" ]; then echo "No .tar.gz in the artifact"; find dl; exit 1; fi
+          # One name for every release, so releases/latest/download/... links keep working.
+          cp "$f" VesperTV-linux-x64.tar.gz
+          ls -l VesperTV-linux-x64.tar.gz
+          gh release upload "$TAG" VesperTV-linux-x64.tar.gz --clobber --repo "$REPO"
+          # Older versioned tarballs on this release go.
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' \
+            | grep -- '-linux-x64\.tar\.gz$' | grep -vx 'VesperTV-linux-x64.tar.gz' \
+            | while read -r a; do gh release delete-asset "$TAG" "$a" --yes --repo "$REPO"; done
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[] | "\(.name) \(.size)"'

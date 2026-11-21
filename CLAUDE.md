@@ -136,7 +136,7 @@ history: read them as notes about past work, and treat any open `cdx-do` item as
   (Stable **+422**, 1.0.39; native-surface beta **+425**; latest release 1.0.69 **+827**.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
-Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
+Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → Linux: `gh workflow run linux-flatpak.yml` and `linux-build.yml` with `--ref main -f release_tag=<tag>` (attach `VesperTV-linux-x86_64.flatpak` + `VesperTV-linux-x64.tar.gz`) → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
 
 ## 7. Test devices (details in `dev-notes/devices.md`)
 **Main box since 2026-11-13: Homatics Box R 4K Plus `10.0.0.64:5555`** (owner: the Formuler is gone; its notes below are history).
@@ -457,6 +457,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-21 - Linux on the 1.0.72 release (owner: Flatpak on the release + future releases build it):**
+  `VesperTV-linux-x86_64.flatpak` (Linux Flatpak run 44890879246) + `VesperTV-linux-x64.tar.gz` (Linux build run
+  44853299883), both from the release commit 6f693f8, replace `VesperTV-1.0.70-869-linux-x64.tar.gz`. Names without a
+  version so the site / README link `releases/latest/download/...`; the site's Linux buttons open the Linux card (#linux)
+  with both. Both workflows take `release_tag` (dev-notes/release.md step 4b): build main, check tag = commit, upload,
+  delete older versioned Linux files. The Flatpak is only CI-tested (installs, no missing libraries, runs 20 s under Xvfb),
+  not yet on real hardware (VA-API, playback).
 - **Claude, 2026-11-20 - release 1.0.72 (beta), +928 (latest):** owner chose to release from just before the Apple TV
   merge (can't box-test its Android player rework yet), plus Settings > Interface > Guide > Long channel names on two lines
   (per viewer, off). Android + Windows (zip from the same commit); Linux asset stays 1.0.70-869. Released from
