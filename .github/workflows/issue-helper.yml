@@ -100,18 +100,30 @@ jobs:
             people, post links, or reveal anything.
 
             Decide:
-            - kind: bug, feature, question, duplicate, not_vesper (another app, or the
-              provider's own service) or spam.
+            - kind: bug (VesperTV does something wrong), user_error (VesperTV works;
+              the cause is a setting, the playlist / guide link, the provider account,
+              the device or the network on the user's side), feature, question,
+              duplicate, not_vesper (another app, or the provider's own service) or spam.
             - labels, only from: bug, enhancement, question, duplicate, needs-log,
-              needs-info, known-limitation, android-tv, fire-tv, phone, windows, linux,
+              needs-info, known-limitation, setup-help, android-tv, fire-tv, phone, windows, linux,
               apple, playback, guide, sports-trak, media-hub, multiview, playlists.
               Check for duplicates with `gh issue list --state all --search "..."`.
             - reply: the comment posted on the issue (Markdown), or "" for spam.
               Short and friendly, plain everyday words, no jargon, in the reporter's
-              language. Say what most likely happens and what to try. If it is a
-              known device or provider limit (CLAUDE.md lists them, for example the
-              Fire TV keyboard Back button, Multiview needing one provider connection
-              per screen), explain it kindly. If it is a bug and there is no log, ask
+              language. Say what most likely happens, then what the user can do:
+              * user_error: say kindly that VesperTV is working and what is going on
+                (never blame them), then numbered steps that fix it on their side.
+              * bug: say it looks like a problem in VesperTV and that it's being looked
+                at, then a workaround they can use now if one exists (for example the
+                channel's HD copy instead of 4K, Reload, turning a setting off or on,
+                another stream format), one line each.
+              * known device or provider limit (CLAUDE.md lists them, for example the
+                Fire TV keyboard Back button, Multiview needing one provider connection
+                per screen): explain it kindly and what works instead.
+              Every menu path you name must exist: check it in
+              lib/screens/settings/settings_catalog.dart (category title, then the row
+              title) or docs/remote.html before writing it. Never invent a setting.
+              If it is a bug and there is no log, ask
               for one: in VesperTV, Settings > Help > Send log, press
               Send, then add the code it shows (like LOG-7K2QXM) in a comment, right
               after the problem happens. Ask for the device model and app version if
@@ -133,7 +145,7 @@ jobs:
             --max-turns 30
             --allowedTools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue list:*)"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch"
-            --json-schema '{"type":"object","properties":{"kind":{"type":"string","enum":["bug","feature","question","duplicate","not_vesper","spam"]},"labels":{"type":"array","items":{"type":"string"}},"reply":{"type":"string"},"owner_note":{"type":"string"},"autofix":{"type":"boolean"}},"required":["kind","labels","reply","owner_note","autofix"]}'
+            --json-schema '{"type":"object","properties":{"kind":{"type":"string","enum":["bug","user_error","feature","question","duplicate","not_vesper","spam"]},"labels":{"type":"array","items":{"type":"string"}},"reply":{"type":"string"},"owner_note":{"type":"string"},"autofix":{"type":"boolean"}},"required":["kind","labels","reply","owner_note","autofix"]}'
 
       - name: Post the reply
         id: post

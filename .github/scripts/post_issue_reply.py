@@ -25,6 +25,7 @@ LABELS = {
     "needs-log": ("fbca04", "Waiting for a Send log code"),
     "needs-info": ("fbca04", "Waiting for more details"),
     "known-limitation": ("bfdadc", "Device or provider limit, not fixable in the app"),
+    "setup-help": ("bfd4f2", "Fixed with a setting or on the user's side"),
     "android-tv": ("0e8a16", "Android TV / Google TV boxes"),
     "fire-tv": ("ff9900", "Amazon Fire TV"),
     "phone": ("1d76db", "Android phones and tablets"),
