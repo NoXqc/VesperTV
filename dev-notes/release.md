@@ -14,6 +14,14 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
 4. **Gotcha:** `gh release edit --tag` leaves the old git tag behind and may put the new tag on a
    stale commit — confirm `git ls-remote --tags origin <ver>` equals `git rev-parse HEAD`. Repoint
    with `gh api -X PATCH repos/NoXqc/VesperTV/git/refs/tags/<tag> -f sha=<full-sha> -F force=true`.
+4b. **Linux (since 1.0.72):** once the tag is on HEAD (step 4), run
+   `gh workflow run linux-flatpak.yml --ref main -f release_tag=<ver>` and
+   `gh workflow run linux-build.yml --ref main -f release_tag=<ver>`. Each builds main's HEAD, stops if
+   the tag isn't that commit, uploads `VesperTV-linux-x86_64.flatpak` / `VesperTV-linux-x64.tar.gz`
+   with `--clobber` and deletes older versioned Linux files on the release (Flatpak ~10-15 min, tarball
+   ~4 min; the Flatpak job also installs it and runs it 20 s under Xvfb first). The names never change,
+   so the site / README link `releases/latest/download/<name>`. Announce (step 8) after both finish.
+   An Android-only release skips this (the Linux files stay those of the release they were built for).
 5. Experimental builds → `--prerelease` (skipped by `/releases/latest`, so Downloader and Check for
    Updates ignore them). Promote with `gh release edit <tag> --prerelease=false --latest`.
 6. **Verify what users get:** download

@@ -65,7 +65,9 @@ Discord (AMD, Steam Machine): the tarball needs `sudo apt install libmpv2`, Ubun
   `APPLICATION_ID` sed'ed to `app.vespertv.VesperTV` (the tarball keeps `com.nox.nox_iptv`: its
   settings folder is named after it; inside the Flatpak the window must carry the Flatpak id or
   Wayland shows no icon); job 2 runs flatpak-builder in `flathub-infra/flatpak-github-actions:gnome-51`
-  and uploads `VesperTV-<version>-x86_64.flatpak` as an artifact. Not a release asset yet.
+  and uploads `VesperTV-<version>-x86_64.flatpak` as an artifact. Run by hand with `release_tag`, a
+  third job puts it on that release as `VesperTV-linux-x86_64.flatpak` (release.md step 4b; first on
+  1.0.72, 2026-11-21, beside `VesperTV-linux-x64.tar.gz` from linux-build.yml the same way).
 - Permissions: network, Wayland + fallback X11, PulseAudio, `/dev/dri` (GPU, VA-API),
   `~/Documents/VesperTV` (backups). Restore from a file = file chooser portal; keep the screen on =
   `org.freedesktop.portal.Inhibit` (wakelock_plus), no extra permission. No in-app updater on Linux

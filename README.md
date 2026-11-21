@@ -16,7 +16,7 @@ No ads, no tracking, no account. VesperTV ships no content: you bring the source
 Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows. It also runs on
 Linux, including the **Steam Deck**.
 
-> **Android gets new features first.** Windows is in step with Android as of **1.0.72**; the Linux build (beta) is **1.0.70**.
+> **Android gets new features first.** Windows and the Linux build (beta) are in step with Android as of **1.0.72**.
 
 ## Download
 
@@ -28,11 +28,15 @@ Grab the latest release from the [Releases](../../releases) page or
   Later updates install from **Settings > Check for updates**.
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
   [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
-- **Linux (beta, x64)**: `VesperTV-1.0.70-869-linux-x64.tar.gz` from the
-  [latest release](../../releases/latest) (it is the 1.0.70 build). **Works on the Steam Deck** (SteamOS) and on
-  Ubuntu 24.04+ / Linux Mint 22+. It needs the system libmpv (`sudo apt install libmpv2`); on a
-  Steam Deck, run it in Desktop Mode inside an Ubuntu 24.04 [distrobox](https://distrobox.it/).
-  Extract, then run `./vespertv`. No automatic updates on Linux yet.
+- **Linux (beta, x64)**, from the [latest release](../../releases/latest):
+  - `VesperTV-linux-x86_64.flatpak` for any distro with Flathub, **the Steam Deck included** (Desktop
+    Mode): open it in Discover / GNOME Software, or `flatpak install --user VesperTV-linux-x86_64.flatpak`
+    (the first install also downloads the GNOME runtime). It brings its own video library.
+  - `VesperTV-linux-x64.tar.gz` for Ubuntu 24.04+ / Linux Mint 22+: needs the system libmpv
+    (`sudo apt install libmpv2`); extract, then run `./vespertv`. On a Steam Deck it runs inside an
+    Ubuntu 24.04 [distrobox](https://distrobox.it/).
+
+  No automatic updates on Linux yet.
 - **macOS (community build, unsigned)**: built automatically from `main` by the
   [macOS build](../../actions/workflows/macos-build.yml) workflow — open the latest
   run and download `VesperTV-macos-dmg` (needs a GitHub sign-in). It is not signed
