@@ -37,3 +37,13 @@ all five UI languages, no Install on failure and verified native installer hando
 Android :app:compileDebugKotlin succeeded. Cold-launch deletion and a real low-space
 Fire OS update still require device QA. No installable APK/version bump or upload
 was requested for this change; hosted test530 predates it.
+
+## Update channel (Claude, 2026-11-21)
+Settings > Check for Updates > Update channel: **Stable** (default, the Sunday release, `/releases/latest`
+only) or **Test builds** (also `/releases?per_page=20`: GitHub pre-releases tagged `<next>-dev.<N>`).
+`vesper_update_channel`, this device only (left out of Transfer / sync / backups). Both the screen and the
+launch popup use it. `AppUpdateService.pickNewest` takes the highest version with an asset for the device
+(`compareVersions`, semver: `1.0.73-dev.951 < 1.0.73`); `shouldOffer`: a test-build install only takes a
+newer version (Android never installs a lower build number). The size / storage / download checks above
+are unchanged. Release side: dev-notes/release.md §0. Tests: `test/app_update_channel_test.dart`,
+`test/check_updates_channel_test.dart`.

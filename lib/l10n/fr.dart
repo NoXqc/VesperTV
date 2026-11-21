@@ -4137,4 +4137,17 @@ const Map<String, String> kFr = {
   "Live now in Sports": "En direct dans Sports",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Une rangée « En direct dans Sports » avec les matchs en cours dans vos ligues Sports Trak qu'une de vos chaînes diffuse. Une carte lance la chaîne du match.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Version de test {version} disponible",
+  "Update channel":
+      "Canal de mise à jour",
+  "Stable":
+      "Stable",
+  "Test builds":
+      "Versions de test",
+  "One tested update a week.":
+      "Une mise à jour testée par semaine.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Les correctifs dès qu'ils sont prêts, avant la mise à jour de la semaine. Une version de test peut avoir de nouveaux bugs : envoyez un journal si quelque chose ne va pas.",
 };

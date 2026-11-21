@@ -563,6 +563,11 @@ class StorageService {
   Future<void> setSkippedUpdateVersion(String version) =>
       _prefs.setString(AppConstants.keySkippedUpdateVersion, version);
 
+  /// Check for Updates' Update channel ([AppConstants.keyUpdateChannel]).
+  String? getUpdateChannel() => _prefs.getString(AppConstants.keyUpdateChannel);
+  Future<void> setUpdateChannel(String channel) =>
+      _prefs.setString(AppConstants.keyUpdateChannel, channel);
+
   bool getShowClock() => _prefs.getBool(AppConstants.keyShowClock) ?? true;
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
@@ -1840,6 +1845,7 @@ class StorageService {
     AppConstants.keyCloudTransfer,
     AppConstants.keySplashGreeting,
     AppConstants.keySkippedUpdateVersion,
+    AppConstants.keyUpdateChannel,
     AppConstants.keyArchiveReadyWatch,
     AppConstants.keyContentUpdates,
     AppConstants.keyContentUpdatesNextDue,

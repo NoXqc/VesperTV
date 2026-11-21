@@ -80,10 +80,13 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
     final lines = UpdatePromptDialog.highlights(widget.update.releaseNotes);
     void close(UpdatePromptChoice c) => Navigator.of(context).pop(c);
     return AlertDialog(
-      title: Text(tr('{appName} {version} is available', {
-        'appName': AppConstants.appName,
-        'version': widget.update.version,
-      })),
+      title: Text(widget.update.testBuild
+          ? tr('Test build {version} is available',
+              {'version': widget.update.version})
+          : tr('{appName} {version} is available', {
+              'appName': AppConstants.appName,
+              'version': widget.update.version,
+            })),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Column(

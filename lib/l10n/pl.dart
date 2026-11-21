@@ -3718,4 +3718,17 @@ const Map<String, String> kPl = {
   "Live now in Sports": "Teraz na żywo w sporcie",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Wiersz „Teraz na żywo w sporcie” z meczami trwającymi teraz w Twoich ligach Sports Trak, które nadaje jeden z Twoich kanałów. Karta odtwarza kanał meczu.",
+  // Update channel (2026-11-21).
+  "Test build {version} is available":
+      "Dostępna wersja testowa {version}",
+  "Update channel":
+      "Kanał aktualizacji",
+  "Stable":
+      "Stabilna",
+  "Test builds":
+      "Wersje testowe",
+  "One tested update a week.":
+      "Jedna przetestowana aktualizacja w tygodniu.",
+  "Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.":
+      "Poprawki od razu, gdy są gotowe, przed cotygodniową aktualizacją. Wersja testowa może mieć nowe błędy: wyślij dziennik, jeśli coś nie działa.",
 };

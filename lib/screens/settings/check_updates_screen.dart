@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../services/app_update_service.dart';
+import '../../services/storage_service.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -14,6 +16,9 @@ import '../../l10n/l10n.dart';
 /// whether the actual install step needs a fresh user tap on its own
 /// confirmation dialog — nothing past handing the APK to the installer can
 /// be automated further.
+///
+/// Update channel (2026-11-21): Stable = the weekly release, Test builds =
+/// GitHub pre-releases too ([UpdateChannel]); this device only.
 class CheckUpdatesScreen extends StatefulWidget {
   const CheckUpdatesScreen({super.key, this.startWith, this.updateService});
 
@@ -45,10 +50,14 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
   double _downloadProgress = 0;
   String? _errorMessage;
   String? _downloadedApkPath;
+  late UpdateChannel _channel;
 
   @override
   void initState() {
     super.initState();
+    // Optional: a screen built without the app around it (tests) is Stable.
+    _channel = UpdateChannel.parse(
+        context.read<StorageService?>()?.getUpdateChannel());
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _currentVersion = info.version);
     });
@@ -69,7 +78,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
       _errorMessage = null;
     });
     try {
-      final update = await _updateService.checkForUpdate();
+      final update = await _updateService.checkForUpdate(channel: _channel);
       if (!mounted) return;
       setState(() {
         _update = update;
@@ -126,6 +135,18 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         _status = _Status.error;
         _errorMessage = e.toString();
       });
+    }
+  }
+
+  /// The other channel picked: saved, then checked at once (a download in
+  /// progress keeps going).
+  Future<void> _setChannel(UpdateChannel channel) async {
+    if (channel == _channel) return;
+    setState(() => _channel = channel);
+    await context.read<StorageService?>()?.setUpdateChannel(channel.name);
+    if (!mounted) return;
+    if (_status != _Status.downloading && _status != _Status.readyToInstall) {
+      await _check();
     }
   }
 
@@ -186,6 +207,8 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
                   ),
                   const SizedBox(height: 16),
                   ..._buildStatusContent(context),
+                  const SizedBox(height: 28),
+                  ..._buildChannel(context),
                 ],
               ),
             ));
@@ -230,7 +253,11 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         final update = _update!;
         return [
           Text(
-            tr('Version {version} is available', {'version': update.version}),
+            update.testBuild
+                ? tr('Test build {version} is available',
+                    {'version': update.version})
+                : tr('Version {version} is available',
+                    {'version': update.version}),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
@@ -306,6 +333,42 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
               onTap: _check),
         ];
     }
+  }
+
+  /// Stable / Test builds, under the check (the check button keeps the
+  /// first focus).
+  List<Widget> _buildChannel(BuildContext context) {
+    final small = Theme.of(context).textTheme.bodySmall;
+    return [
+      Text(tr('Update channel'), style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ModeButton(
+            icon: Icons.verified_outlined,
+            label: tr('Stable'),
+            selected: _channel == UpdateChannel.stable,
+            onTap: () => _setChannel(UpdateChannel.stable),
+          ),
+          ModeButton(
+            icon: Icons.science_outlined,
+            label: tr('Test builds'),
+            selected: _channel == UpdateChannel.test,
+            onTap: () => _setChannel(UpdateChannel.test),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Text(
+        _channel == UpdateChannel.stable
+            ? tr('One tested update a week.')
+            : tr(
+                'Fixes as soon as they are made, before the weekly update. A test build can have new bugs: send a log if something breaks.'),
+        style: small,
+      ),
+    ];
   }
 }
 

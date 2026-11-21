@@ -613,6 +613,10 @@ class AppConstants {
   /// (`widgets/update_prompt.dart`); a newer tag is offered again.
   static const String keySkippedUpdateVersion = 'vesper_skipped_update';
 
+  /// Check for Updates' Update channel: 'stable' (default, the weekly
+  /// release) or 'test' (GitHub pre-releases too). This device only.
+  static const String keyUpdateChannel = 'vesper_update_channel';
+
   /// Next splash greeting to show (index into SplashGreeting.bank).
   static const String keySplashGreeting = 'vesper_splash_greeting';
 

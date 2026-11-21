@@ -4,8 +4,11 @@
 # (dev-notes/release.md), and an edit does not fire `published` - so after
 # each release, run this by hand once:
 #   gh workflow run discord-release.yml -f tag=1.0.4
-# A brand-new (non-pre-)release announces itself automatically.
+# A brand-new release announces itself automatically.
 # The webhook URL lives only in the repo secret DISCORD_RELEASE_WEBHOOK.
+# A pre-release = a test build (dev-notes/release.md, two channels): it goes
+# to DISCORD_TEST_WEBHOOK (a testers channel) instead, and is skipped while
+# that secret isn't set.
 name: Announce release on Discord
 
 on:
@@ -30,6 +33,7 @@ jobs:
       - name: Post to Discord
         env:
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          DISCORD_TEST_WEBHOOK: ${{ secrets.DISCORD_TEST_WEBHOOK }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
