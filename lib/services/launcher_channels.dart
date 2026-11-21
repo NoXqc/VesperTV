@@ -10,12 +10,16 @@ import '../l10n/l10n.dart';
 import '../models/archive_library.dart';
 import '../models/archive_models.dart';
 import '../models/channel.dart';
+import '../models/sports.dart';
 import '../models/xtream_series.dart';
 import 'app_preferences.dart';
 import 'archive_service.dart';
+import 'epg_service.dart';
 import 'episode_alerts.dart';
+import 'multiview_sports.dart';
 import 'playback_service.dart';
 import 'playlist_manager.dart';
+import 'sports_follows.dart';
 import 'storage_service.dart';
 import 'vesper_ai/watch_list.dart';
 
@@ -23,8 +27,8 @@ import 'vesper_ai/watch_list.dart';
 /// LauncherChannels.kt) and what it opens (screens/launcher_open.dart):
 /// [channel] (an IPTV movie's page, or a live channel to play), [series]
 /// (an IPTV show's page), [hubItem] (a Media Hub title to resume),
-/// [hubTitle] (a Media Hub title's page) or [followed] (a "Notify me" show's
-/// page).
+/// [hubTitle] (a Media Hub title's page), [followed] (a "Notify me" show's
+/// page) or [game] (a live game: its [channel] full screen).
 class LauncherCard {
   LauncherCard({
     required this.key,
@@ -46,6 +50,10 @@ class LauncherCard {
     this.hubTitle,
     this.followed,
     this.showKey,
+    this.live = false,
+    this.art,
+    this.version,
+    this.game,
   });
 
   /// The card's own id, also in its link: one per episode, so a show's
@@ -58,7 +66,7 @@ class LauncherCard {
   /// 'row'.
   final String kind;
 
-  /// 'movie', 'episode', 'series' or 'channel'.
+  /// 'movie', 'episode', 'series', 'channel' or 'event' (a live game).
   final String type;
   final String title;
   final String? description;
@@ -86,6 +94,19 @@ class LauncherCard {
   /// show already in Continue watching gets no New episode card too.
   final String? showKey;
 
+  /// On now (the launcher's LIVE badge).
+  final bool live;
+
+  /// What LauncherArt.kt draws as the card's picture (a live game: logos,
+  /// score, clock, channel); [image] is used if it can't.
+  final Map<String, Object?>? art;
+
+  /// A hash of [art]: the picture's file name, and part of the card's link so
+  /// the launcher redraws it when the score changes.
+  final String? version;
+
+  final SportsGame? game;
+
   Map<String, Object?> toMap() => {
         'key': key,
         'kind': kind,
@@ -100,12 +121,18 @@ class LauncherCard {
         'position': positionMs,
         'duration': durationMs,
         'engaged': engagedMs,
+        if (live) 'live': true,
+        if (art != null) 'art': art,
+        if (version != null) 'v': version,
       };
 }
 
 /// Settings > Interface > TV home screen (Android TV, on by default): what's
-/// in progress and the Watch list in the launcher's Watch Next row, and the
-/// favourite channels as our own app channel, "Favourite channels". Android
+/// in progress and the Watch list in the launcher's Watch Next row, the
+/// favourite channels as our own app channel, "Favourite channels", and the
+/// live games one of the viewer's channels carries, "Live now in Sports"
+/// (its own switch; sent again every few minutes while the app is away, see
+/// [_liveTick]). Android
 /// TV launchers read these from the system (TvProvider): Projectivy, the
 /// stock Android TV home, Projectivy on a Fire TV stick. Native side:
 /// android/.../LauncherChannels.kt, channel `vespertv/launcher`.
@@ -129,6 +156,11 @@ class LauncherChannels {
   static const maxWatchList = 10;
   static const maxNew = 5;
   static const maxFavourites = 30;
+  static const maxLive = 15;
+
+  /// How often the live row is sent again while the app is away and games
+  /// are on (LauncherLiveExpiry.kt empties it after 20 min without one).
+  static const liveRefresh = Duration(minutes: 3);
 
   StorageService? _storage;
   PlaybackService? _playback;
@@ -136,6 +168,7 @@ class LauncherChannels {
   ArchiveService? _hub;
   AppPreferences? _prefs;
   EpisodeAlerts? _alerts;
+  EpgService? _epg;
 
   /// main.dart: true once a card can open (UI up, viewer chosen).
   bool Function() canOpen = () => false;
@@ -148,6 +181,11 @@ class LauncherChannels {
   String? _lastSent;
   DateTime? _openedAt;
 
+  /// The live row as last sent (a card's game and channel for [openPending]).
+  List<LauncherCard> _live = const [];
+  Timer? _liveTimer;
+  bool _hidden = false;
+
   bool get _supported =>
       _storage != null && Platform.isAndroid && (_prefs?.isTelevision ?? false);
 
@@ -158,6 +196,7 @@ class LauncherChannels {
     required ArchiveService hub,
     required AppPreferences prefs,
     EpisodeAlerts? alerts,
+    EpgService? epg,
   }) {
     _storage = storage;
     _playback = playback;
@@ -165,6 +204,7 @@ class LauncherChannels {
     _hub = hub;
     _prefs = prefs;
     _alerts = alerts;
+    _epg = epg;
     if (!_supported) return;
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'link') unawaited(openPending());
@@ -201,10 +241,23 @@ class LauncherChannels {
     final key = link == null ? null : Uri.tryParse(link)?.queryParameters['k'];
     if (key == null) return;
     _openedAt = DateTime.now();
-    if (key.startsWith('fav:')) await _playlist?.ensureLiveChannelsLoaded();
+    final isLive = key.startsWith('live:');
+    if (key.startsWith('fav:') || isLive) {
+      await _playlist?.ensureLiveChannelsLoaded();
+    }
     LauncherCard? card;
-    for (final c in [...watchNextCards(), ...favouriteCards()]) {
+    for (final c in [...watchNextCards(), ...favouriteCards(), ..._live]) {
       if (c.key == key) card = c;
+    }
+    if (card == null && isLive) {
+      // Sent by an earlier run of the app: the games as of now.
+      try {
+        for (final c in await liveCards()) {
+          if (c.key == key) card = c;
+        }
+      } catch (_) {}
+      // The game is over (or no channel carries it now): Sports Trak.
+      card ??= LauncherCard(key: key, kind: 'row', type: 'event', title: '');
     }
     if (card == null) {
       // Watched to the end, removed, or another viewer's card.
@@ -219,8 +272,13 @@ class LauncherChannels {
   /// moment later, so the player's last position is saved first.
   void appHidden() {
     if (!_supported) return;
+    _hidden = true;
     unawaited(Future<void>.delayed(const Duration(seconds: 2), publish));
   }
+
+  /// The app is on screen again: the live row needn't follow the scores
+  /// (no launcher shows them) until it's hidden.
+  void appShown() => _hidden = false;
 
   /// Sends the cards. Unchanged since the last send = nothing to do, unless
   /// [force] (the setting was switched).
@@ -234,7 +292,11 @@ class LauncherChannels {
     _publishing = true;
     try {
       final Map<String, Object?> payload;
+      final liveRow = storage.getLauncherRows() &&
+          storage.getLauncherLive() &&
+          MultiviewSports.leagues(storage).isNotEmpty;
       if (!storage.getLauncherRows()) {
+        _live = const [];
         payload = {'watchNext': const [], 'channels': const []};
       } else {
         await _playlist?.ensureLiveChannelsLoaded();
@@ -243,6 +305,16 @@ class LauncherChannels {
         final state = stampEngaged(
             watchNext, previous, DateTime.now().millisecondsSinceEpoch);
         await storage.setLauncherState(jsonEncode(state));
+        if (liveRow) {
+          try {
+            await liveCards();
+          } catch (e) {
+            // Scores feed down: the row as last sent.
+            debugPrint('Launcher: live games failed: $e');
+          }
+        } else {
+          _live = const [];
+        }
         payload = {
           'watchNext': [for (final c in watchNext) c.toMap()],
           'channels': [
@@ -250,16 +322,29 @@ class LauncherChannels {
               'id': 'favourites',
               'name': tr('Favourite channels'),
               'items': [for (final c in favouriteCards()) c.toMap()],
-            }
+            },
+            // Left out, the native side deletes the row (switched off, or
+            // no Sports Trak leagues).
+            if (liveRow)
+              {
+                'id': 'live',
+                'name': tr('Live now in Sports'),
+                'items': [for (final c in _live) c.toMap()],
+              },
           ],
         };
       }
       final sent = jsonEncode(payload);
-      if (!force && sent == _lastSent) return;
-      final report = await _channel.invokeMethod<Map>('publish', payload);
-      if (report?['error'] == null) _lastSent = sent;
-      // Send log: counts only, never titles.
-      debugPrint('Launcher: $report');
+      if (force || sent != _lastSent) {
+        final report = await _channel.invokeMethod<Map>('publish', payload);
+        if (report?['error'] == null) _lastSent = sent;
+        // Send log: counts only, never titles.
+        debugPrint('Launcher: $report');
+      } else if (_live.isNotEmpty) {
+        // Nothing changed: the live cards are still current.
+        await _channel.invokeMethod<void>('liveAlive');
+      }
+      await _scheduleLive(liveRow ? storage : null);
     } catch (e) {
       debugPrint('Launcher: publish failed: $e');
     } finally {
@@ -628,6 +713,124 @@ class LauncherChannels {
       ));
     }
     return cards;
+  }
+
+  /// Next look at the live row: every [liveRefresh] while games are on,
+  /// else a minute after the next one starts (at least [liveRefresh], at
+  /// most an hour away). [storage] null = no live row, no timer.
+  Future<void> _scheduleLive(StorageService? storage) async {
+    _liveTimer?.cancel();
+    _liveTimer = null;
+    if (storage == null) return;
+    var wait = const Duration(hours: 1);
+    if (_live.isNotEmpty) {
+      wait = liveRefresh;
+    } else {
+      try {
+        final next = await MultiviewSports.nextStart(storage);
+        if (next != null) {
+          final until =
+              next.difference(DateTime.now()) + const Duration(minutes: 1);
+          if (until < wait) wait = until < liveRefresh ? liveRefresh : until;
+        }
+      } catch (_) {}
+    }
+    _liveTimer?.cancel();
+    _liveTimer = Timer(wait, () => unawaited(_liveTick()));
+  }
+
+  /// Away: the cards again (scores, clocks, games starting or over). On
+  /// screen: only "still current" (no launcher shows them; leaving the app
+  /// sends fresh ones).
+  Future<void> _liveTick() async {
+    if (_hidden) {
+      await publish();
+      return;
+    }
+    if (_live.isNotEmpty) {
+      try {
+        await _channel.invokeMethod<void>('liveAlive');
+      } catch (_) {}
+    }
+    final storage = _storage;
+    final on = storage != null &&
+        storage.getLauncherRows() &&
+        storage.getLauncherLive();
+    await _scheduleLive(on ? storage : null);
+  }
+
+  /// Live now in Sports: games on right now in the viewer's Sports Trak
+  /// leagues (+ followed teams') that one of their channels carries, in
+  /// Home's order (My Teams, the starred league, the rest), each on its best
+  /// channel (the viewer's pick first, as everywhere).
+  Future<List<LauncherCard>> liveCards() async {
+    final storage = _storage, playlist = _playlist, epg = _epg;
+    if (storage == null || playlist == null || epg == null) return const [];
+    final games = await MultiviewSports.liveGames(
+        storage: storage, playlist: playlist, epg: epg);
+    final sorted = MultiviewSports.sortTodaysGames(games,
+        follows: SportsFollows.load(storage),
+        favoriteLeagueId: storage.getSportsFavoriteLeague());
+    final hideScores = storage.getSportsHideScores();
+    return _live = [
+      for (final g in sorted.take(maxLive)) liveCard(g, hideScores: hideScores)
+    ];
+  }
+
+  /// One live game's card: the matchup as its title; the score (unless
+  /// Sports Trak hides scores), clock, league and channel as its
+  /// description; the same drawn as its picture.
+  @visibleForTesting
+  static LauncherCard liveCard(LiveGameChannel g, {required bool hideScores}) {
+    final game = g.game, channel = g.channel;
+    final a = game.first, b = game.second;
+    final scored = !hideScores &&
+        !game.isEventOnly &&
+        (a.score?.isNotEmpty ?? false) &&
+        (b.score?.isNotEmpty ?? false);
+    final status = game.statusText.trim();
+    String side(SportsTeam t) =>
+        t.abbreviation.isNotEmpty ? t.abbreviation : t.shortName;
+    final art = <String, Object?>{
+      'live': tr('LIVE'),
+      'league': game.league.shortName,
+      'status': status,
+      'channel': channel.name,
+      if (game.isEventOnly) ...{
+        'event': game.title,
+        'logo': safeImage(game.league.logoUrl),
+      } else
+        'teams': [
+          for (final t in [a, b])
+            {
+              'name': side(t),
+              'logo': safeImage(t.logoUrl),
+              'color': t.color,
+              'score': scored ? t.score : null,
+            }
+        ],
+    };
+    return LauncherCard(
+      key: cardKey('live', '${game.league.id}:${game.id}'),
+      kind: 'row',
+      type: 'event',
+      title: game.title,
+      description: [
+        if (scored) '${side(a)} ${a.score} – ${b.score} ${side(b)}',
+        if (status.isNotEmpty) status,
+        game.league.name,
+        channel.name,
+      ].join(' · '),
+      image: safeImage(channel.logoUrl),
+      live: true,
+      art: art,
+      version: sha1
+          .convert(utf8.encode(jsonEncode(art)))
+          .toString()
+          .substring(0, 16),
+      channel: channel,
+      game: game,
+    );
   }
 
   /// The favourite live channels in the app's order (Home's Favourites row).

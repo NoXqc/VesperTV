@@ -1083,7 +1083,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             playlist: _playlistManager,
             hub: _archiveService,
             prefs: _preferences,
-            alerts: _episodeAlerts)
+            alerts: _episodeAlerts,
+            epg: _epgService)
         ..canOpen = (() =>
             mounted &&
             _ready &&
@@ -1093,8 +1094,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           final nav = _navigatorKey.currentState;
           if (nav != null) await openLauncherCard(nav, card);
         });
-      _launcherLifecycle =
-          AppLifecycleListener(onHide: LauncherChannels.instance.appHidden);
+      _launcherLifecycle = AppLifecycleListener(
+          onHide: LauncherChannels.instance.appHidden,
+          onShow: LauncherChannels.instance.appShown);
 
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category

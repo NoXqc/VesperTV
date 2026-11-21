@@ -4119,4 +4119,9 @@ const Map<String, String> kEs = {
       "Copias de calidad, respaldos y otras listas, como sin Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Qué transmisiones muestra Fuentes para un canal de Tuliprox",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Partidos en directo en la pantalla de inicio de la TV",
+  "Live now in Sports": "En directo en Deportes",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Una fila «En directo en Deportes» con los partidos en curso de tus ligas de Sports Trak que emite uno de tus canales. Una tarjeta reproduce el canal del partido.",
 };

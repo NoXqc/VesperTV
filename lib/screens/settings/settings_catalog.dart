@@ -546,6 +546,18 @@ class SettingsCatalog {
                   prefs.setLauncherRows(v);
                   unawaited(LauncherChannels.instance.publish(force: true));
                 }),
+          if (Platform.isAndroid && prefs.isTelevision && prefs.launcherRows)
+            SettingsToggle(
+                id: 'launcher_live',
+                icon: Icons.sports_score_outlined,
+                title: tr('Live games on the TV home screen'),
+                help: tr(
+                    "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel."),
+                value: prefs.launcherLive,
+                onChanged: (v) {
+                  prefs.setLauncherLive(v);
+                  unawaited(LauncherChannels.instance.publish(force: true));
+                }),
         ]),
         SettingsSection(title: tr('Live TV'), [
           SettingsChoice(

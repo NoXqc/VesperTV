@@ -113,8 +113,8 @@ class MultiviewSports {
 
   /// Home's Today's games order (owner): My Teams' games always first,
   /// then the starred league (League manager's favourite), then the rest;
-  /// within each, live, then upcoming, then final, by start time.
-  @visibleForTesting
+  /// within each, live, then upcoming, then final, by start time. The TV
+  /// launcher's live row uses it too.
   static List<LiveGameChannel> sortTodaysGames(List<LiveGameChannel> games,
       {required SportsFollows follows, String? favoriteLeagueId}) {
     int tier(SportsGame g) => follows.involves(g)
@@ -135,6 +135,32 @@ class MultiviewSports {
       });
   }
 
+  /// The viewer's Sports Trak leagues + their followed teams' leagues.
+  static List<SportsLeague> leagues(StorageService storage) {
+    final follows = SportsFollows.load(storage);
+    return <String, SportsLeague>{
+      for (final l in savedSportsLeagues(storage)) l.id: l,
+      for (final t in follows.teams)
+        if (sportsLeagueById(t.leagueId) case final l?) l.id: l,
+    }.values.toList();
+  }
+
+  /// When the next game in [leagues] starts today (the TV launcher's live row
+  /// checks again then). One already due but not started yet counts: its
+  /// start is in the past.
+  static Future<DateTime?> nextStart(StorageService storage) async {
+    final list = leagues(storage);
+    if (list.isEmpty) return null;
+    final games =
+        await SportsService.instance.gamesForDay(list, DateTime.now());
+    DateTime? next;
+    for (final g in games) {
+      if (g.state != GameState.pre) continue;
+      if (next == null || g.start.isBefore(next)) next = g.start;
+    }
+    return next;
+  }
+
   static Future<List<LiveGameChannel>> _games({
     required StorageService storage,
     required PlaylistManager playlist,
@@ -142,21 +168,18 @@ class MultiviewSports {
     required bool liveOnly,
     bool match = true,
   }) async {
-    final follows = SportsFollows.load(storage);
-    final leagues = <String, SportsLeague>{
-      for (final l in savedSportsLeagues(storage)) l.id: l,
-      for (final t in follows.teams)
-        if (sportsLeagueById(t.leagueId) case final l?) l.id: l,
-    };
-    if (leagues.isEmpty) return const [];
+    final list = leagues(storage);
+    if (list.isEmpty) return const [];
     final games = (await SportsService.instance
-            .gamesForDay(leagues.values.toList(), DateTime.now()))
+            .gamesForDay(list, DateTime.now()))
         .where((g) => !liveOnly || g.state == GameState.live)
         .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     if (games.isEmpty) return const [];
     if (!match) {
-      return [for (final g in games) (game: g, matches: const <ChannelMatch>[])];
+      return [
+        for (final g in games) (game: g, matches: const <ChannelMatch>[])
+      ];
     }
     final matcher = SportsChannelMatcher.shared(epg);
     await playlist.ensureLiveChannelsLoaded();

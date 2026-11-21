@@ -148,6 +148,9 @@
         </service>
         <receiver android:name=".SportsAlarmReceiver" android:exported="false"/>
         <receiver android:name=".RecorderAlarmReceiver" android:exported="false"/>
+        <!-- Clears the launcher's "Live now in Sports" row once the app stops
+             refreshing it (LauncherLiveExpiry.kt). -->
+        <receiver android:name=".LauncherLiveExpiry" android:exported="false"/>
         <receiver android:name=".BootReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -174,6 +177,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- The pictures of the launcher's live game cards (LauncherArt.kt).
+             Exported: the launcher (Projectivy, Android TV home) loads them
+             by their content:// address, as VLC's TV channels do. Read
+             only, and only the drawn cards (scores and team logos). -->
+        <provider
+            android:name=".LauncherArtProvider"
+            android:authorities="${applicationId}.launcherart"
+            android:exported="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -3591,4 +3591,9 @@ const Map<String, String> kUk = {
   "{n} playlists#one": "{n} плейлист",
   "{n} profiles#one": "{n} профіль",
   "{n} favorites#one": "{n} улюблений",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Матчі наживо на головному екрані ТБ",
+  "Live now in Sports": "Зараз наживо у спорті",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Рядок «Зараз наживо у спорті» з матчами, що тривають зараз у ваших лігах Sports Trak і які транслює один із ваших каналів. Картка вмикає канал матчу.",
 };

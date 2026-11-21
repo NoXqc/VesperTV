@@ -25,8 +25,9 @@ import java.util.concurrent.Executors
 
 /**
  * Settings > Interface > TV home screen: the launcher's Watch Next row (Continue watching,
- * next episodes, Watch list) and our "Favourites" app channel, through Android TV's
- * TvProvider. That is what Projectivy and the stock Android TV home read; Fire OS has it too.
+ * next episodes, Watch list), our "Favourites" app channel and "Live now in Sports" (live games
+ * a channel carries, pictures drawn by [LauncherArt], emptied by [LauncherLiveExpiry] when the
+ * app stops refreshing it), through Android TV's TvProvider. That is what Projectivy and the stock Android TV home read; Fire OS has it too.
  * Dart (lib/services/launcher_channels.dart) sends the whole wanted set each time; this diffs
  * it against our own rows by internal provider id, so unchanged cards are not rewritten
  * (every write makes the launcher reload). Channel `vespertv/launcher`.
@@ -71,6 +72,11 @@ class LauncherChannels(activity: Activity) {
             "takeLink" -> {
                 result.success(pendingLink)
                 pendingLink = null
+            }
+            "liveAlive" -> {
+                // The app is on screen with live cards sent: they stay until it's hidden.
+                worker.execute { LauncherLiveExpiry.fresh(context, true) }
+                result.success(null)
             }
             "publish" -> {
                 if (!supported()) {
@@ -204,6 +210,7 @@ class LauncherChannels(activity: Activity) {
                 "episode" -> TvContractCompat.PreviewProgramColumns.TYPE_TV_EPISODE
                 "series" -> TvContractCompat.PreviewProgramColumns.TYPE_TV_SERIES
                 "channel" -> TvContractCompat.PreviewProgramColumns.TYPE_CHANNEL
+                "event" -> TvContractCompat.PreviewProgramColumns.TYPE_EVENT
                 else -> TvContractCompat.PreviewProgramColumns.TYPE_MOVIE
             }
         )
@@ -222,8 +229,9 @@ class LauncherChannels(activity: Activity) {
         )
         int(m["position"])?.let { b.setLastPlaybackPositionMillis(it) }
         int(m["duration"])?.let { b.setDurationMillis(it) }
+        b.setLive(m["live"] == true)
         b.setInternalProviderId(key)
-        b.setIntentUri(cardLink(key))
+        b.setIntentUri(cardLink(key, m["v"] as? String))
     }
 
     private fun syncChannels(specs: List<Map<String, Any?>>): String {
@@ -234,6 +242,7 @@ class LauncherChannels(activity: Activity) {
             if (c.packageName == null || c.packageName == context.packageName) mine[id] = c
         }
         val out = StringBuilder()
+        var liveCards = 0
         for (spec in specs) {
             val id = spec["id"] as? String ?: continue
             val name = spec["name"] as? String ?: "VesperTV"
@@ -272,8 +281,17 @@ class LauncherChannels(activity: Activity) {
                         .build()
                 )
             }
-            out.append("$id ").append(syncPrograms(helper, channelId, items)).append("; ")
+            val art = HashSet<String>()
+            out.append("$id ").append(syncPrograms(helper, channelId, items, art))
+            if (id == LauncherLiveExpiry.CHANNEL_ID) {
+                liveCards = items.size
+                out.append(" art ${art.size}/${items.size}")
+                LauncherArt.prune(context, art)
+            }
+            out.append("; ")
         }
+        // Live cards stay only while the app keeps sending them.
+        LauncherLiveExpiry.fresh(context, liveCards > 0)
         // A channel Dart no longer sends (the setting was turned off) leaves the launcher.
         for (c in mine.values) helper.deletePreviewChannel(c.id)
         if (mine.isNotEmpty()) out.append("deleted ${mine.size}")
@@ -283,7 +301,8 @@ class LauncherChannels(activity: Activity) {
     private fun syncPrograms(
         helper: PreviewChannelHelper,
         channelId: Long,
-        items: List<Map<String, Any?>>
+        items: List<Map<String, Any?>>,
+        art: MutableSet<String>
     ): String {
         val resolver = context.contentResolver
         val existing = HashMap<String, PreviewProgram>()
@@ -305,8 +324,10 @@ class LauncherChannels(activity: Activity) {
         }
         var added = 0
         var updated = 0
-        items.forEachIndexed { i, m ->
-            val key = m["key"] as? String ?: return@forEachIndexed
+        items.forEachIndexed { i, sent ->
+            val key = sent["key"] as? String ?: return@forEachIndexed
+            // A live game card: its picture drawn here (else the channel's logo).
+            val m = LauncherArt.withArt(context, sent, art)
             // Higher weight = earlier in the row: the app's own order.
             val b = PreviewProgram.Builder().setChannelId(channelId).setWeight(items.size - i)
             fill(b, m, key)
@@ -329,9 +350,15 @@ class LauncherChannels(activity: Activity) {
         return "${items.size} (+$added ~$updated -$removed)"
     }
 
-    private fun cardLink(key: String): Uri {
-        val data = Uri.Builder().scheme(SCHEME).authority(HOST).path("open")
-            .appendQueryParameter("k", key).build()
+    /**
+     * [version] (a live card's picture hash) changes the link when the score does: Projectivy
+     * tells cards apart by their link and wouldn't redraw one that kept it. Dart reads only `k`.
+     */
+    private fun cardLink(key: String, version: String?): Uri {
+        val builder = Uri.Builder().scheme(SCHEME).authority(HOST).path("open")
+            .appendQueryParameter("k", key)
+        if (version != null) builder.appendQueryParameter("v", version)
+        val data = builder.build()
         val intent = Intent(Intent.ACTION_VIEW, data)
             .setComponent(ComponentName(context, MainActivity::class.java))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
