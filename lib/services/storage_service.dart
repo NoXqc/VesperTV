@@ -673,6 +673,10 @@ class StorageService {
       _prefs.getBool(AppConstants.keyLauncherRows) ?? true;
   Future<void> setLauncherRows(bool value) =>
       _prefs.setBool(AppConstants.keyLauncherRows, value);
+  bool getLauncherLive() =>
+      _prefs.getBool(AppConstants.keyLauncherLive) ?? true;
+  Future<void> setLauncherLive(bool value) =>
+      _prefs.setBool(AppConstants.keyLauncherLive, value);
   String? getLauncherState() => _prefs.getString(AppConstants.keyLauncherState);
   Future<void> setLauncherState(String json) =>
       _prefs.setString(AppConstants.keyLauncherState, json);
@@ -2088,6 +2092,7 @@ class StorageService {
     AppConstants.keyLiveGroupSort,
     AppConstants.keyStartSection,
     AppConstants.keyLauncherRows,
+    AppConstants.keyLauncherLive,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
   };

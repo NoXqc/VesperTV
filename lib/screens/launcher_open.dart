@@ -6,17 +6,21 @@ import '../models/archive_models.dart';
 import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
 import '../services/launcher_channels.dart';
+import '../services/multiview_sports.dart';
 import '../services/playback_service.dart';
+import '../services/storage_service.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'movie_detail_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
+import 'sports_screen.dart';
 
 /// Opens a TV launcher card ([LauncherChannels]) the way the same title
 /// opens from Home's rows: an IPTV movie or show on its page, a Media Hub
 /// title resumed (or its page, from the Watch list or a new episode), a
-/// favourite channel full screen. Over whatever was open, like a fresh pick.
+/// favourite channel or a live game's channel full screen (a game no
+/// longer on: Sports Trak). Over whatever was open, like a fresh pick.
 Future<void> openLauncherCard(NavigatorState nav, LauncherCard card) async {
   nav.popUntil((r) => r.isFirst);
   final context = nav.context;
@@ -79,6 +83,17 @@ Future<void> openLauncherCard(NavigatorState nav, LauncherCard card) async {
     await nav.push(
         MaterialPageRoute(builder: (_) => SeriesDetailScreen(series: series)));
     return;
+  }
+  if (card.type == 'event') {
+    final game = card.game, channel = card.channel;
+    if (game == null || channel == null) {
+      await nav.push(MaterialPageRoute(builder: (_) => const SportsScreen()));
+      return;
+    }
+    // As Home's game cards: the channel becomes the game's pick.
+    await MultiviewSports.rememberPick(
+        context.read<StorageService>(), game, channel);
+    if (!context.mounted) return;
   }
   final channel = card.channel;
   if (channel == null) return;

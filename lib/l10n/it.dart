@@ -4126,4 +4126,9 @@ const Map<String, String> kIt = {
       "Copie di qualità, riserve e altre playlist, come senza Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Quali stream Fonti mostra per un canale Tuliprox",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Partite in diretta nella schermata Home della TV",
+  "Live now in Sports": "In diretta nello Sport",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Una riga «In diretta nello Sport» con le partite in corso nei tuoi campionati di Sports Trak trasmesse da uno dei tuoi canali. Una scheda riproduce il canale della partita.",
 };

@@ -4132,4 +4132,9 @@ const Map<String, String> kFr = {
       "Copies de qualité, secours et autres listes, comme sans Tuliprox",
   "Which streams Sources lists for a Tuliprox channel":
       "Les flux que Sources liste pour une chaîne Tuliprox",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Matchs en direct sur l'écran d'accueil de la TV",
+  "Live now in Sports": "En direct dans Sports",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Une rangée « En direct dans Sports » avec les matchs en cours dans vos ligues Sports Trak qu'une de vos chaînes diffuse. Une carte lance la chaîne du match.",
 };

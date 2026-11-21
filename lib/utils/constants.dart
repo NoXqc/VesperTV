@@ -457,6 +457,10 @@ class AppConstants {
   /// Favourite channels row (LauncherChannels). Device-only.
   static const String keyLauncherRows = 'vesper_launcher_rows';
 
+  /// The TV launcher's "Live now in Sports" row (on by default, device-only;
+  /// needs [keyLauncherRows]).
+  static const String keyLauncherLive = 'vesper_launcher_live';
+
   /// LauncherChannels' note of each card it sent: its position and when it
   /// was last watched (Watch Next's order). Device-only.
   static const String keyLauncherState = 'vesper_launcher_state';

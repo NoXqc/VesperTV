@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/models/channel.dart';
+import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/services/launcher_channels.dart';
+import 'package:nox_iptv/services/multiview_sports.dart';
+import 'package:nox_iptv/services/sports_channel_matcher.dart';
 
 LauncherCard _card(String key, {int? position, int? engaged}) => LauncherCard(
     key: key,
@@ -139,5 +143,105 @@ void main() {
         .toMap();
     expect(poster['aspect'], 'poster');
     expect(poster['kind'], 'watchlist');
+  });
+
+  group('liveCard (Live now in Sports)', () {
+    final channel = Channel(
+        id: 'p::tsn1',
+        rawId: 'tsn1',
+        playlistId: 'p',
+        name: 'TSN 1 HD',
+        group: 'Sports',
+        url: 'http://provider.example/live/user/pass/1.ts',
+        logoUrl: 'https://logo.example/tsn.png');
+    SportsTeam team(String abbr, String? score) => SportsTeam(
+        id: abbr,
+        name: abbr,
+        shortName: abbr,
+        abbreviation: abbr,
+        logoUrl: 'https://a.espncdn.com/i/teamlogos/nhl/500/$abbr.png',
+        color: 'af1e2d',
+        score: score);
+    LiveGameChannel game({String? home = '2', String? away = '1'}) => (
+          game: SportsGame(
+            id: '401',
+            league: sportsLeagueById('nhl')!,
+            start: DateTime.utc(2026, 11, 21, 0),
+            state: GameState.live,
+            statusText: '2nd 12:10',
+            home: team('MTL', home),
+            away: team('TOR', away),
+          ),
+          matches: [ChannelMatch(channel, MatchReason.name, 90)],
+        );
+
+    test('score, clock, league and channel; a picture to draw', () {
+      final card = LauncherChannels.liveCard(game(), hideScores: false);
+      expect(card.type, 'event');
+      expect(card.kind, 'row');
+      expect(card.live, isTrue);
+      expect(card.key, startsWith('live:'));
+      expect(card.title, game().game.title);
+      expect(card.description, contains('2nd 12:10'));
+      expect(card.description, contains('TSN 1 HD'));
+      final teams = card.art!['teams'] as List;
+      expect([for (final t in teams) (t as Map)['score']], ['1', '2']);
+      expect(card.toMap()['live'], isTrue);
+      expect(card.toMap()['v'], card.version);
+      // The channel's logo if the picture can't be drawn.
+      expect(card.image, 'https://logo.example/tsn.png');
+    });
+
+    test('hidden scores never reach the launcher', () {
+      final card = LauncherChannels.liveCard(game(), hideScores: true);
+      final teams = card.art!['teams'] as List;
+      expect([for (final t in teams) (t as Map)['score']], [null, null]);
+      expect(card.description, isNot(contains('2 – 1')));
+      expect(card.description, isNot(contains('1 – 2')));
+    });
+
+    test('the same game keeps its key; a new score changes the picture', () {
+      final before = LauncherChannels.liveCard(game(), hideScores: false);
+      final after =
+          LauncherChannels.liveCard(game(home: '3'), hideScores: false);
+      expect(after.key, before.key);
+      expect(after.version, isNot(before.version));
+      expect(LauncherChannels.liveCard(game(), hideScores: false).version,
+          before.version);
+    });
+
+    test('nothing of the playlist login goes into the card', () {
+      final sent = LauncherChannels.liveCard(game(), hideScores: false)
+          .toMap()
+          .toString();
+      expect(sent, isNot(contains('provider.example')));
+      expect(sent, isNot(contains('pass')));
+    });
+
+    test('golf: the event and the league logo, no teams', () {
+      final golf = (
+        game: SportsGame(
+          id: 'g1',
+          league: sportsLeagueById('golf.pga')!,
+          start: DateTime.utc(2026, 11, 20, 12),
+          state: GameState.live,
+          statusText: 'Round 2',
+          home: const SportsTeam(
+              id: 'e',
+              name: 'RSM Classic',
+              shortName: 'RSM Classic',
+              abbreviation: ''),
+          away: const SportsTeam(
+              id: 'e',
+              name: 'RSM Classic',
+              shortName: 'RSM Classic',
+              abbreviation: ''),
+        ),
+        matches: [ChannelMatch(channel, MatchReason.guide, 80)],
+      );
+      final card = LauncherChannels.liveCard(golf, hideScores: false);
+      expect(card.art!.containsKey('teams'), isFalse);
+      expect(card.art!['event'], 'RSM Classic');
+    });
   });
 }

@@ -4081,4 +4081,9 @@ const Map<String, String> kEl = {
   "Which streams Sources lists for a Tuliprox channel":
       "Ποιες ροές δείχνουν οι Πηγές για ένα κανάλι Tuliprox",
   "Fallback": "Εφεδρική",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Ζωντανοί αγώνες στην αρχική οθόνη της TV",
+  "Live now in Sports": "Ζωντανά στα Αθλητικά",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Μια σειρά «Ζωντανά στα Αθλητικά» με τους αγώνες που παίζονται τώρα στις λίγκες σας στο Sports Trak και τους μεταδίδει ένα από τα κανάλια σας. Μια κάρτα παίζει το κανάλι του αγώνα.",
 };

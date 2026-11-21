@@ -4022,4 +4022,9 @@ const Map<String, String> kDe = {
   "Which streams Sources lists for a Tuliprox channel":
       "Welche Streams Quellen für einen Tuliprox-Sender listet",
   "Fallback": "Ersatz",
+  // TV launcher "Live now in Sports" row (2026-11-21).
+  "Live games on the TV home screen": "Live-Spiele auf dem TV-Startbildschirm",
+  "Live now in Sports": "Jetzt live im Sport",
+  "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
+      "Eine Reihe „Jetzt live im Sport“ mit den laufenden Spielen Ihrer Sports-Trak-Ligen, die einer Ihrer Sender überträgt. Eine Karte spielt den Sender des Spiels ab.",
 };
