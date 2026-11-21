@@ -16,6 +16,7 @@ import 'archive_cache.dart';
 import 'archive_stream_session.dart';
 import 'media_server_api.dart';
 import 'plex_api.dart';
+import 'silo_api.dart';
 import 'storage_service.dart';
 import 'stream_resolver.dart';
 import 'tracker_api.dart';
@@ -125,6 +126,16 @@ class ArchiveService extends ChangeNotifier {
         _servers = servers ?? MediaServerApi(),
         _trackers = trackers ?? TrackerApi() {
     _viewerState = _storage.viewerGeneration;
+    _servers.silo.onLoginChanged = _keepServerLogin;
+  }
+
+  /// A Silo sign-in was renewed (`SiloApi`): keep the new token pair, or
+  /// the next launch starts from the old one.
+  void _keepServerLogin(ArchiveSource source, MediaServerLogin login) {
+    unawaited(_saveSources([
+      for (final x in _storedSources)
+        x.manifestUrl == source.manifestUrl ? x.copyWith(server: login) : x,
+    ]));
   }
 
   final StorageService _storage;
@@ -613,6 +624,17 @@ class ArchiveService extends ChangeNotifier {
     final source = await _servers.connectPlex(server, deviceId);
     return _addServerSource(source);
   }
+
+  /// Adds a Silo server signed in on `SiloConnectScreen` (signing in again
+  /// as the same account and profile replaces the old sign-in).
+  Future<ArchiveSource> addSiloServer(ArchiveSource source) =>
+      _addServerSource(source);
+
+  /// Play on a Silo server: a session of its own for the picked file
+  /// ([SiloApi.startPlayback]); the players then report to it through
+  /// `SiloSessions`.
+  Future<SiloPlay> startSiloPlayback(ArchiveSource source, String link) =>
+      _servers.silo.startPlayback(source, link);
 
   Future<ArchiveSource> _addServerSource(ArchiveSource source) async {
     final list = _storedSources;

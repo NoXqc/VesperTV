@@ -7,7 +7,7 @@ sticks, phones and Windows 10/11 PCs:
   an XMLTV TV guide, catch-up, recording and Multiview
 - **Custom REST add-ons** in the Media Hub (any source following the
   catalog/stream add-on format)
-- **Your own Jellyfin, Emby or Plex server** — its movie and TV libraries in the Media Hub
+- **Your own Jellyfin, Emby, Plex or Silo server** — its movie and TV libraries in the Media Hub
 - **Trakt and Simkl** watch tracking, and **Sports Trak** live scores matched to
   the channels in your playlist
 - **Vesper AI**: type or speak what you want to watch
@@ -180,8 +180,9 @@ Grab the latest release from the [Releases](../../releases) page or
 
 ### Media Hub
 
-- **Films and series** from REST add-ons you add, and from your own Jellyfin / Emby / Plex
-  server (Plex uses a sign-in code approved on plex.tv/link). Paste many add-on links at once,
+- **Films and series** from REST add-ons you add, and from your own Jellyfin / Emby / Plex /
+  Silo server (Plex uses a sign-in code approved on plex.tv/link; Silo a code approved on the
+  server's own `/activate` page, then a profile). Paste many add-on links at once,
   or **import your add-ons from Stremio** with a code.
 - **Live TV add-ons** get their own Live TV section and play like live channels.
 - A **source picker** that fills in as each add-on answers, with format, file size and subtitle
@@ -291,8 +292,8 @@ locally. [Full guide and current limits](https://vespertv.app/remote.html#Vesper
 
 On first launch, add your playlist under Settings — either a direct M3U URL
 (with an optional separate EPG URL), or Xtream Codes credentials (server,
-username, password). Add-ons and Jellyfin / Emby / Plex servers are added from the
-Media Hub (Settings > Media Hub sources, or **Connect Jellyfin / Emby / Plex**).
+username, password). Add-ons and Jellyfin / Emby / Plex / Silo servers are added from the
+Media Hub (Settings > Media Hub sources, or **Connect a media server**).
 
 ## Community
 

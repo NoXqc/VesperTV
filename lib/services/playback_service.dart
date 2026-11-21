@@ -38,6 +38,7 @@ import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
 import '../l10n/l10n.dart';
+import 'silo_api.dart';
 
 /// Keeps [channel] open on its server while the player reconnects
 /// (`Dispatcharr.holdChannel`); returns the release, or null when it
@@ -740,6 +741,12 @@ class PlaybackService extends ChangeNotifier {
       if (!channel.transientPlayback) {
         unawaited(WatchTracker.instance.started(channel.id));
       }
+      // A Silo server's play: its heartbeat + position (a no-op otherwise).
+      SiloSessions.instance.playing(channel.url, () {
+        final c = controller;
+        if (c != newController || !c!.value.isInitialized) return null;
+        return (position: c.value.position, paused: !c.value.isPlaying);
+      });
       if (isLive) unawaited(_recordRealResolution(newController, channel));
       unawaited(DisplayMatch.start(
           _storage,
@@ -1905,6 +1912,10 @@ class PlaybackService extends ChangeNotifier {
         unawaited(
             WatchTracker.instance.stopped(ch.id, old.value.position, duration));
       }
+    }
+    if (ch != null && old != null) {
+      SiloSessions.instance.stopped(
+          ch.url, old.value.isInitialized ? old.value.position : Duration.zero);
     }
     if (ch != null) _rememberNextEpisode(ch);
     controller = null;

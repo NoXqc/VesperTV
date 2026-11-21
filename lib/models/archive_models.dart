@@ -263,13 +263,15 @@ class ArchiveCatalogProvider {
   }
 }
 
-/// The two media servers Settings > Connect Jellyfin / Emby speaks to. Emby
+/// The media servers Settings > Connect a media server speaks to. Emby
 /// is Jellyfin's parent (forked in 2018): same REST API, but different
-/// auth headers and often a `/emby` path (see `MediaServerApi`).
+/// auth headers and often a `/emby` path (see `MediaServerApi`). Plex and
+/// Silo have their own APIs (`PlexApi`, `SiloApi`).
 enum MediaServerKind {
   jellyfin('Jellyfin'),
   emby('Emby'),
-  plex('Plex');
+  plex('Plex'),
+  silo('Silo');
 
   const MediaServerKind(this.label);
   final String label;
@@ -278,6 +280,7 @@ enum MediaServerKind {
         'jellyfin' => MediaServerKind.jellyfin,
         'emby' => MediaServerKind.emby,
         'plex' => MediaServerKind.plex,
+        'silo' => MediaServerKind.silo,
         _ => null,
       };
 }
@@ -291,6 +294,10 @@ class MediaServerLogin {
     required this.token,
     required this.deviceId,
     this.userName = '',
+    this.refreshToken,
+    this.profileId,
+    this.profileName,
+    this.profileToken,
   });
 
   final MediaServerKind kind;
@@ -301,12 +308,37 @@ class MediaServerLogin {
   final String deviceId;
   final String userName;
 
+  /// Silo only: [token] is a short-lived access token (8 h) that this
+  /// renews (`SiloApi`); the household profile every request acts as, and
+  /// the token that unlocks a PIN profile for this sign-in.
+  final String? refreshToken;
+  final String? profileId;
+  final String? profileName;
+  final String? profileToken;
+
+  MediaServerLogin withTokens(String token, String? refreshToken) =>
+      MediaServerLogin(
+        kind: kind,
+        userId: userId,
+        token: token,
+        deviceId: deviceId,
+        userName: userName,
+        refreshToken: refreshToken ?? this.refreshToken,
+        profileId: profileId,
+        profileName: profileName,
+        profileToken: profileToken,
+      );
+
   Map<String, dynamic> toJson() => {
         'kind': kind.name,
         'userId': userId,
         'token': token,
         'deviceId': deviceId,
         if (userName.isNotEmpty) 'userName': userName,
+        if (refreshToken != null) 'refreshToken': refreshToken,
+        if (profileId != null) 'profileId': profileId,
+        if (profileName != null) 'profileName': profileName,
+        if (profileToken != null) 'profileToken': profileToken,
       };
 
   static MediaServerLogin? fromJson(Object? j) {
@@ -321,6 +353,10 @@ class MediaServerLogin {
       token: token,
       deviceId: j['deviceId']?.toString() ?? userId,
       userName: j['userName']?.toString() ?? '',
+      refreshToken: j['refreshToken']?.toString(),
+      profileId: j['profileId']?.toString(),
+      profileName: j['profileName']?.toString(),
+      profileToken: j['profileToken']?.toString(),
     );
   }
 }
@@ -554,6 +590,7 @@ class ArchiveSource {
           {bool? enabled,
           List<ArchiveCatalog>? catalogs,
           TrackerLogin? tracker,
+          MediaServerLogin? server,
           bool? otherChoice,
           bool? liveTvChoice}) =>
       ArchiveSource(
@@ -566,7 +603,7 @@ class ArchiveSource {
         catalogs: catalogs ?? this.catalogs,
         catalogProviderUrl: catalogProviderUrl,
         enabled: enabled ?? this.enabled,
-        server: server,
+        server: server ?? this.server,
         tracker: tracker ?? this.tracker,
         otherChoice: otherChoice ?? this.otherChoice,
         liveTvChoice: liveTvChoice ?? this.liveTvChoice,
