@@ -3596,4 +3596,11 @@ const Map<String, String> kUk = {
   "Live now in Sports": "Зараз наживо у спорті",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Рядок «Зараз наживо у спорті» з матчами, що тривають зараз у ваших лігах Sports Trak і які транслює один із ваших каналів. Картка вмикає канал матчу.",
+  "Player": "Плеєр",
+  "Player bar transparency": "Прозорість панелі плеєра",
+  "Options row transparency": "Прозорість ряду параметрів",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Інформаційна панель каналу внизу та панель фільмів / серій. 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Ряд кнопок, що відкривається кнопкою Вниз (Канали, Субтитри, Multiview...). 0% — непрозоро, 15% — як раніше, 100% — прозоро.",
 };

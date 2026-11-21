@@ -4124,4 +4124,11 @@ const Map<String, String> kEs = {
   "Live now in Sports": "En directo en Deportes",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Una fila «En directo en Deportes» con los partidos en curso de tus ligas de Sports Trak que emite uno de tus canales. Una tarjeta reproduce el canal del partido.",
+  "Player": "Reproductor",
+  "Player bar transparency": "Transparencia de la barra del reproductor",
+  "Options row transparency": "Transparencia de la fila de opciones",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barra de información del canal abajo y la barra de películas / episodios. 0 % es opaco, 15 % como antes, 100 % es transparente.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La fila de botones que se abre con Abajo (Canales, Subtítulos, Multivista...). 0 % es opaco, 15 % como antes, 100 % es transparente.",
 };

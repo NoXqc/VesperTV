@@ -998,6 +998,31 @@ class StorageService {
   Future<void> setHomeRows(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keyHomeRows), ids);
 
+  /// Settings > Playback > Player bar / Options row transparency, percent;
+  /// 15 = the player's menus as they were before the settings.
+  int _playerMenuPercent(String key) =>
+      (_prefs.getInt(_vk(key)) ??
+              _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
+              15)
+          .clamp(0, 100);
+  int getPlayerBarTransparency() =>
+      _playerMenuPercent(AppConstants.keyPlayerBarTransparency);
+  Future<void> setPlayerBarTransparency(int value) => _prefs.setInt(
+      _vk(AppConstants.keyPlayerBarTransparency), value.clamp(0, 100).toInt());
+  int getPlayerOptionsTransparency() =>
+      _playerMenuPercent(AppConstants.keyPlayerOptionsTransparency);
+  Future<void> setPlayerOptionsTransparency(int value) => _prefs.setInt(
+      _vk(AppConstants.keyPlayerOptionsTransparency),
+      value.clamp(0, 100).toInt());
+
+  /// The TV player's options row order (tile ids, see
+  /// `ReorderableOptionTiles`); empty = the default order.
+  List<String> getPlayerOptionsOrder() =>
+      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ??
+      const [];
+  Future<void> setPlayerOptionsOrder(List<String> ids) =>
+      _prefs.setStringList(_vk(AppConstants.keyPlayerOptionsOrder), ids);
+
   /// Sports tab league ids in display order; null = never chosen (the
   /// screen falls back to its own default set).
   List<String>? getSportsLeagues() =>

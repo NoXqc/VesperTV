@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:io';
 
@@ -591,12 +592,14 @@ class PlaybackService extends ChangeNotifier {
     }
     // A Media Hub source switch keeps the title ID (and its resume point)
     // but supplies a different file URL. Only the identical file is a no-op.
-    if (currentChannel?.id == channel.id &&
+    if (!_replaySame &&
+        currentChannel?.id == channel.id &&
         controller != null &&
         currentChannel?.url == channel.url) {
       return;
     }
-    if (currentChannel?.id == channel.id &&
+    if (!_replaySame &&
+        currentChannel?.id == channel.id &&
         controller != null &&
         !switchSource &&
         !Channel.isArchiveId(channel.rawId)) {
@@ -1201,6 +1204,10 @@ class PlaybackService extends ChangeNotifier {
   /// swap.
   bool _reloadingCurrentChannel = false;
 
+  /// [reloadCurrentChannel]'s 4K path: [play] starts the channel already
+  /// playing over again (it normally ignores that).
+  bool _replaySame = false;
+
   static const _audioChannel = MethodChannel('vespertv/audio');
   static const _videoChannel = MethodChannel('vespertv/video');
 
@@ -1405,9 +1412,43 @@ class PlaybackService extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final newController = streamController(
-        await openUrlFor?.call(channel) ?? channel.url,
-        httpHeaders: channel.httpHeaders);
+    final url = await openUrlFor?.call(channel) ?? channel.url;
+    // 1. The same player takes the stream again, on its own decoder (what a
+    // channel zap does). A second player beside a 4K one can't get a
+    // decoder on the Homatics' S905X4 (one 4K HEVC decoder:
+    // createComponent NO_MEMORY, then the error screen; owner LOG-PSBGV7,
+    // 2026-11-21: Reload on a frozen ESPN 4K).
+    if (currentChannel?.id == channel.id &&
+        await _reuseNativeLive(channel, url, false)) {
+      debugPrint('Reload: same player, same decoder');
+      _reloadingCurrentChannel = false;
+      reconnectStatus = null;
+      notifyListeners();
+      return;
+    }
+    if (currentChannel?.id != channel.id) {
+      _reloadingCurrentChannel = false;
+      return;
+    }
+    // 2. A 4K picture: the old player lets go of the decoder first, like a
+    // channel change ([play] tears down before it starts the new one).
+    final playing = controller?.value.size ?? Size.zero;
+    if (math.max(playing.width, playing.height) >= 3000 ||
+        Real4kChannels.contains(channel.id)) {
+      debugPrint('Reload: 4K, the old player goes first (one 4K decoder)');
+      _replaySame = true;
+      try {
+        await play(channel, recordHistory: false);
+      } finally {
+        _replaySame = false;
+        _reloadingCurrentChannel = false;
+      }
+      return;
+    }
+    // 3. Lighter streams: build the new player before dropping the old one
+    // (two HD decoders run side by side).
+    final newController =
+        createController(url, httpHeaders: channel.httpHeaders);
     try {
       final future =
           newController.initialize(viewType: _viewTypeFor(newController));

@@ -3727,30 +3727,40 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// day menu, Standings / My Teams / Networks / RedZone (zone 2).
   Widget _buildModeTools() {
     final live = _games.where((g) => g.state == GameState.live).length;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_dayOffset == 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: _LiveCount(count: live),
+    // The time at the right end, pinned while the chips scroll (owner,
+    // 2026-11-21: Show clock didn't reach Sports Trak).
+    return Row(children: [
+      Expanded(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_dayOffset == 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _LiveCount(count: live),
+                  ),
+                SportsChip(
+                  focusNode: _chipNode('day:menu'),
+                  label: _dayLabel(_dayOffset),
+                  icon: Icons.calendar_month,
+                  dropdown: true,
+                  selected: false,
+                  compact: true,
+                  onFocus: () => _zone = 2,
+                  onTap: _openDayMenu,
+                ),
+                ..._toolChips(),
+              ],
             ),
-          SportsChip(
-            focusNode: _chipNode('day:menu'),
-            label: _dayLabel(_dayOffset),
-            icon: Icons.calendar_month,
-            dropdown: true,
-            selected: false,
-            compact: true,
-            onFocus: () => _zone = 2,
-            onTap: _openDayMenu,
           ),
-          ..._toolChips(),
-        ],
+        ),
       ),
-    );
+      const _SportsClock(),
+    ]);
   }
 
   /// In the tools row beside the day menu (was the last chip of the league
@@ -4536,6 +4546,62 @@ class _EventHero extends StatelessWidget {
 
 /// Soft glow of the focused game's two team colours behind everything —
 /// the screen takes on the matchup's identity instead of a flat panel.
+/// Settings > Appearance > Show clock in Sports Trak's top row: the TV
+/// home's time, same size and colour. Its own widget: the row is built
+/// inside LayoutBuilders, where `context.select` asserts (CLAUDE.md §10).
+class _SportsClock extends StatefulWidget {
+  const _SportsClock();
+
+  @override
+  State<_SportsClock> createState() => _SportsClockState();
+}
+
+class _SportsClockState extends State<_SportsClock> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  /// One redraw per minute, on the minute.
+  void _schedule() {
+    final now = DateTime.now();
+    _timer = Timer(
+        Duration(seconds: 60 - now.second, milliseconds: -now.millisecond), () {
+      if (!mounted) return;
+      setState(() {});
+      _schedule();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool show;
+    try {
+      show = context.select<AppPreferences, bool>((p) => p.showClock);
+    } on ProviderNotFoundException {
+      show = false;
+    }
+    if (!show) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 4),
+      child: Text(TimeFormat.hm.format(DateTime.now()),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(color: Colors.white70)),
+    );
+  }
+}
+
 class _TeamGlow extends StatelessWidget {
   const _TeamGlow({required this.game});
   final SportsGame? game;

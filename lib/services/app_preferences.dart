@@ -626,6 +626,26 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The player's menus, each on its own (owner, 2026-11-21: the info bar
+  /// may look right while the options row is too light): 0 % solid, 100 %
+  /// clear; [defaultPlayerMenuTransparency] is their look before the
+  /// settings. Bar = the live info bar + the movie / episode bar; options
+  /// row = the row of buttons under it.
+  static const int defaultPlayerMenuTransparency = 15;
+  int get playerBarTransparency => _storage.getPlayerBarTransparency();
+  int get playerOptionsTransparency =>
+      _storage.getPlayerOptionsTransparency();
+
+  void setPlayerBarTransparency(int value) {
+    _storage.setPlayerBarTransparency(value);
+    notifyListeners();
+  }
+
+  void setPlayerOptionsTransparency(int value) {
+    _storage.setPlayerOptionsTransparency(value);
+    notifyListeners();
+  }
+
   /// Device-only: trailer playback while browsing movie/show details, opt-in.
   bool get autoTrailers => _storage.getAutoTrailers();
 

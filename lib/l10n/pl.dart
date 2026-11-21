@@ -3718,4 +3718,11 @@ const Map<String, String> kPl = {
   "Live now in Sports": "Teraz na żywo w sporcie",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Wiersz „Teraz na żywo w sporcie” z meczami trwającymi teraz w Twoich ligach Sports Trak, które nadaje jeden z Twoich kanałów. Karta odtwarza kanał meczu.",
+  "Player": "Odtwarzacz",
+  "Player bar transparency": "Przezroczystość paska odtwarzacza",
+  "Options row transparency": "Przezroczystość rzędu opcji",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Pasek informacji o kanale na dole i pasek filmów / odcinków. 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Rząd przycisków otwierany strzałką w dół (Kanały, Napisy, Multiview...). 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
 };

@@ -4131,4 +4131,11 @@ const Map<String, String> kIt = {
   "Live now in Sports": "In diretta nello Sport",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Una riga «In diretta nello Sport» con le partite in corso nei tuoi campionati di Sports Trak trasmesse da uno dei tuoi canali. Una scheda riproduce il canale della partita.",
+  "Player": "Lettore",
+  "Player bar transparency": "Trasparenza della barra del lettore",
+  "Options row transparency": "Trasparenza della riga delle opzioni",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barra informazioni del canale in basso e la barra di film / episodi. 0% è opaco, 15% come prima, 100% è trasparente.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La riga di pulsanti che si apre con Giù (Canali, Sottotitoli, Multiview...). 0% è opaco, 15% come prima, 100% è trasparente.",
 };

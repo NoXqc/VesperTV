@@ -33,6 +33,7 @@ import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_bar_title.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/player_options_order.dart';
 import '../widgets/player_overlays.dart';
 import '../widgets/skip_segment_button.dart';
 import '../widgets/watch_game_button.dart';
@@ -1850,6 +1851,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 _leaveScheduleChip();
               } else if (_panelOpen) {
                 _closePanel();
+              } else if (_optionsVisible && PlayerOptionsOrder.isMoving) {
+                // Back while a tile is being moved: done, the row stays.
+                PlayerOptionsOrder.endMove();
               } else if (_optionsVisible) {
                 _closeOptions();
               } else if (!_touch && _bottomVisible) {
@@ -2384,6 +2388,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             if (channel.isLive ||
                                                 playback.catchup != null) ...[
                                               PlayerOption(
+                                                id: 'channels',
                                                 icon: Icons.list,
                                                 label: tr('Channels'),
                                                 onPressed: _openPanel,
@@ -2391,6 +2396,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                               if (channel.isLive &&
                                                   playback.catchup == null)
                                                 PlayerOption(
+                                                  id: 'live_sources',
                                                   icon: Icons.swap_horiz,
                                                   label: tr('Sources'),
                                                   onPressed: _openLiveSources,
@@ -2398,6 +2404,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             ],
                                             if (prefs.dataPool)
                                               PlayerOption(
+                                                id: 'stream_info',
                                                 icon: Icons.analytics_outlined,
                                                 label: tr('Stream info'),
                                                 onPressed: _showDataPool,
@@ -2406,16 +2413,19 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           trailingOptions: [
                                             if (widget.sources != null)
                                               PlayerOption(
+                                                id: 'sources',
                                                 icon: Icons.swap_horiz,
                                                 label: tr('Sources'),
                                                 onPressed: _openSources,
                                               ),
                                             PlayerOption(
+                                              id: 'picture',
                                               icon: prefs.videoFit.icon,
                                               label: tr(prefs.videoFit.label),
                                               onPressed: _cycleFit,
                                             ),
                                             PlayerOption(
+                                              id: 'search',
                                               icon: Icons.search,
                                               label: tr('Search'),
                                               onPressed: () {

@@ -4027,4 +4027,11 @@ const Map<String, String> kDe = {
   "Live now in Sports": "Jetzt live im Sport",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Eine Reihe „Jetzt live im Sport“ mit den laufenden Spielen Ihrer Sports-Trak-Ligen, die einer Ihrer Sender überträgt. Eine Karte spielt den Sender des Spiels ab.",
+  "Player": "Player",
+  "Player bar transparency": "Transparenz der Player-Leiste",
+  "Options row transparency": "Transparenz der Optionsreihe",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "Die Senderinfoleiste unten und die Leiste für Filme / Folgen. 0 % ist deckend, 15 % wie bisher, 100 % ist durchsichtig.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "Die Tastenreihe, die sich mit Runter öffnet (Sender, Untertitel, Multiview...). 0 % ist deckend, 15 % wie bisher, 100 % ist durchsichtig.",
 };

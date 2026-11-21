@@ -4137,4 +4137,11 @@ const Map<String, String> kFr = {
   "Live now in Sports": "En direct dans Sports",
   "A \"Live now in Sports\" row with the games on now in your Sports Trak leagues that one of your channels carries. A card plays the game's channel.":
       "Une rangée « En direct dans Sports » avec les matchs en cours dans vos ligues Sports Trak qu'une de vos chaînes diffuse. Une carte lance la chaîne du match.",
+  "Player": "Lecteur",
+  "Player bar transparency": "Transparence de la barre du lecteur",
+  "Options row transparency": "Transparence de la rangée d'options",
+  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear.":
+      "La barre d'infos de la chaîne en bas et la barre des films / épisodes. 0 % est opaque, 15 % comme avant, 100 % est transparent.",
+  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
+      "La rangée de boutons ouverte avec Bas (Chaînes, Sous-titres, Multivue...). 0 % est opaque, 15 % comme avant, 100 % est transparent.",
 };
