@@ -1030,6 +1030,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Sync > Link a device's QR scanned with this phone's camera: Sync
       // with the join screen, the code filled in (it asks before joining).
       SyncLinks.instance
+        ..arrived = (() {
+          if (_newUserPromptPending) _respondToNewUserPrompt(false);
+        })
         ..canOpen = (() =>
             mounted &&
             _ready &&

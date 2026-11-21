@@ -31,6 +31,11 @@ class SyncLinks {
   /// before any screen exists (the first scan was taken and dropped there,
   /// and the welcome prompt showed instead, 2026-11-20).
   bool Function() canOpen = () => false;
+
+  /// A link arrived while the app runs (before [openPending]): main.dart
+  /// answers a waiting "Add your first playlist?" prompt with Skip, since
+  /// this device gets its playlists from sync.
+  void Function()? arrived;
   bool _attached = false;
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
@@ -40,7 +45,9 @@ class SyncLinks {
     if (_attached || !_supported) return;
     _attached = true;
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'link') unawaited(openPending());
+      if (call.method != 'link') return;
+      arrived?.call();
+      unawaited(openPending());
     });
   }
 
