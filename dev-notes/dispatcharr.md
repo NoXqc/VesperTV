@@ -137,7 +137,8 @@ format, a smooth "manual failover".
   as HLS at once (before: a failed read, a sniff, a retry).
 - **Admin = Dispatcharr switches:** `Dispatcharr.switchChannelTo` -> `POST /proxy/ts/change_stream/{channel uuid}`
   `{"stream_id"}` with `X-API-Key` (IsAdmin; DRF's ApiKeyAuthentication covers it). The player stays on the
-  channel (no reconnect); a viewer on a preview goes back to the channel. **Switches the channel for everyone
+  channel (since 2026-11-21 it reconnects a few seconds later, see the last section); a viewer on a preview
+  goes back to the channel. **Switches the channel for everyone
   watching it on that server.** Checked on the PC's server: a 45 s curl of the channel kept receiving bytes
   through the switch, `/proxy/ts/status/{uuid}` then reported the new `stream_id`. Xtream refs need the uuid:
   `GET /api/channels/channels/{id}/` (cached). Admin = `users/me` `user_level >= 10`, asked once per sign-in.
@@ -149,3 +150,41 @@ format, a smooth "manual failover".
   iPhone top bar (live, no Media Hub sources). No "Add another source" row there. Not run on a device.
 - Tests: `test/dispatcharr_switch_test.dart` (format rule, admin / non-admin / refused switch, active stream,
   pick helper). Analyze 16, 2139 tests.
+
+## 2026-11-21: reconnect after the switch (AMD, LOG-HZQBLZ, `claude/dispatcharr-switch-reconnect`)
+AMD (admin, mpeg-ts, SEI Box R 4K Plus = S905X4, native surface on): a Sources pick took **29-42 s** to show
+(15:27:42 -> 15:28:11, 15:48:05 -> 15:48:38, 15:57:20 -> 15:58:02). Since +865 an admin pick is
+`change_stream` and the player keeps its connection: the new stream comes down it only after what
+ExoPlayer buffered ahead (LiveBuffer 10-30 s, 51.7 s once), then the splice: "content time jumped 26814 ms
+backwards", ~78 `Unexpected audio track timestamp discontinuity`, 2,000+ dropped frames, 1080p SDR eac3-joc
+-> 4K HDR10 `hvc1.2.4.L153.B0`, freezes until a new player. Dispatcharr 0.34.1 stamps the TS
+discontinuity_indicator on the new source's first packets (`input/ts_discontinuity.py`); ExoPlayer's
+TsExtractor ignores it.
+- **Fix:** `playPickedLiveSource(..., reconnect:)` -> `PlaybackService.reconnectAfterServerSwitch(after, name,
+  hold)`: after `Dispatcharr.reconnectDelay()`, `Dispatcharr.holdChannel` opens one more viewer of the channel
+  (a TS GET read and dropped, `dispatcharrTsUrl`), then the same player re-takes the stream
+  (`_reuseNativeLive`, native surface, like a zap) or `play()` closes the old player and opens a new one;
+  the hold is released when the new one is up (auto after 30 s). Skipped when the channel / URL / player
+  changed, catch-up, the viewer paused (or wasn't playing), the channel plays from a recording, or the hold
+  fails (no bytes within 4 s).
+- **Why hold + close-first:** `channel_shutdown_delay` is 0 by default (`server.py` `handle_client_disconnect`
+  stops the channel when the last client leaves), and the next client restarts it on its first stream (the
+  switch is lost). Build-then-swap (`reloadCurrentChannel`) kept the channel but needs two decoders: the
+  S905X4 has ONE 4K HEVC decoder (`c2.amlogic.hevc.decoder NO_MEMORY`, +949's Reload fix on
+  `claude/player-options-order`). `reloadCurrentChannel` is not touched here.
+- **Delay** = proxy `new_client_behind_seconds` (5 by default; `GET /api/core/settings/` key `proxy_settings`,
+  admin, once per sign-in, 3 s cap, 0-30) + 2 s for the new upstream's first chunk. A new client starts on the
+  last chunk received `behind` seconds ago (`output/ts/generator.py` `find_chunk_index_by_time`,
+  ZREVRANGEBYSCORE <= target); sooner, it starts in the old stream and meets the splice. Chunks are
+  188 x 1361 B (~256 KB).
+- User `stream_limit` + `terminate_oldest`: the hold ends the old player's connection, the new player ends
+  the hold: fine. Rare: on a box without the native surface, `play()` asks `confirmOpen` (a recording on the
+  same account can show its question).
+- **Not changed:** `DesktopPlayerScreen` (iOS / computers / Apple TV) and a viewer on a stream played on its
+  own (goes back to the channel at once).
+- Send log: `SourceSwitch: Dispatcharr switched to X, reconnecting in N s`, `Dispatcharr: holding the channel
+  while the player reconnects`, `SourceSwitch: reconnected (same player|new player)`, `... no reconnect` (why).
+- Tests: `test/dispatcharr_switch_test.dart` (delay from the settings, reconnect only when switched on the
+  channel, hold / release / refusal / time limit, TS URL), `test/dispatcharr_switch_reconnect_test.dart`
+  (order hold -> dispose old -> open new -> release, channel change, pause, hold refused, not playing).
+  Not device-tested.
