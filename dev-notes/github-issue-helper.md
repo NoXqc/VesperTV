@@ -25,13 +25,18 @@ their log. Two workflows:
 Why this split: issue text and logs are written by strangers and may try to steer the AI (prompt
 injection). With no write tools, the worst a trick issue can get is an odd comment.
 
+## Known fixes (owner's rules)
+`.github/issue-helper/known-fixes.md`: problems users fix themselves (first: turn off Live stream format:
+HLS in Playlist Manager when HLS stutters). The helper reads it first and answers with the entry's steps;
+the fixer changes nothing for a match. The owner adds entries in plain words.
+
 ## Automatic fixes for live playback bugs (owner, 2026-11-21)
 "Anything that hurts the user's experience during a live stream": the helper's JSON has `autofix`
 (true only for a VesperTV bug while watching live TV: won't start, freezes, stutters/buffers, black,
 no sound, player/decoder error, reconnect loop, player hang/crash, with enough to look at; never
 provider-side HTTP errors, Wi-Fi, listed device limits). Then two more jobs in issue-helper.yml:
 - **fix** (contents read): one try per issue (`auto-fix` label) and at most 3 a day; the issue text
-  and log go to `.issue-log/`; Claude (Opus 5.5, `--effort max`, 120 turns) may only
+  and log go to `.issue-log/`; Claude (Opus 5.5, `--effort xhigh` (the app's "Extra"), 120 turns) may only
   Read/Grep/Glob/Edit/Write: Bash, web and edits to `.git` / `.github` / `.claude` are disallowed and
   `--settings` blocks reads/writes outside the checkout, so nothing it writes runs. Afterwards
   `.git` and `~/.claude` are deleted and only `$FIX_DIRS` (lib, test, the vendored player's
@@ -46,7 +51,7 @@ Nothing merges; the owner reviews, builds and tests on a box first.
 
 ## @claude (owner only)
 `github.event.comment.user.login == github.repository_owner`, so nobody else can spend the plan or get
-code written. Opus 5.5 with `--effort max` (owner: extra effort for fixes). Flutter 3.47.9 is set up so Claude can run `flutter analyze` / `flutter test`. House rules
+code written. Opus 5.5 with `--effort xhigh` (owner: "Extra", what he uses 90 % of the time; not max). Flutter 3.47.9 is set up so Claude can run `flutter analyze` / `flutter test`. House rules
 go in through `--append-system-prompt` (no `prompt` input: that switches the action out of answering
 the comment). It pushes a `claude/...` branch and opens a pull request; nothing merges or releases.
 
