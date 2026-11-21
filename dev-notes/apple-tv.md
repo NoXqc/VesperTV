@@ -54,8 +54,21 @@ Xcode only, so everything runs on the GitHub Mac runner
   package_info_plus, url_launcher, video_player (`*_tvos`, fluttertv.dev).
   They declare only `tvos:`, so other platforms never load them.
 - Siri Remote: swipes = arrow keys (held = repeat ~80 ms), click = Enter,
-  Menu = `popRoute` (Back), Play/Pause = mediaPlayPause. Long press on
-  Select is not documented: check the hold menus on a real box.
+  Menu = `popRoute` (Back), Play/Pause = mediaPlayPause. A click near the
+  clickpad's edge becomes an arrow (flutter-tvos `dpadDeadZone` 0.5).
+- **Hold OK (2026-11-21, Mycue66 on Discord: Sports Mode's hold OK for stats did
+  nothing):** flutter-tvos auto-repeats held arrows only (its native
+  `keyRepeatInitialDelay` / `keyRepeatInterval` 400 / 80 ms are "on a held
+  arrow/page button", `packages/flutter_tvos/lib/src/rcu/tv_remote_controller.dart`
+  at v3.47.9-tvos.1.11.5); a held click sends key-down ... key-up and nothing
+  between. Every hold in the app needs repeats (`HoldToActivate`, the Sports
+  Mode feed, the live panel, the player side panel, Multiview...), so no hold
+  ever opened on Apple TV. `services/held_ok_repeat.dart` (`HeldOkRepeat`,
+  installed in main.dart on Apple TV only) sends Android's repeats while an
+  activate key is down: first at 500 ms, then every 50 ms, through
+  `HardwareKeyboard` + the focus tree, until the key-up; a tick that comes
+  late sends nothing (a queued key-up wins); a key the platform repeats
+  itself is left alone. `test/held_ok_repeat_test.dart`. Not tried on a box.
 - Menu on the top screen must leave to the Apple TV Home screen (App
   Review). The engine makes every Menu press Back, so `VesperViewController`
   (tvos/Runner/AppDelegate.swift, set in Main.storyboard) lets a Menu press
