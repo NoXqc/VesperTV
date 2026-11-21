@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=VesperTV
+GenericName=TV Player
+Comment=Live TV with a guide, movies and shows from your own playlists
+Exec=vespertv
+Icon=app.vespertv.VesperTV
+Terminal=false
+Categories=AudioVideo;Video;Player;TV;
+Keywords=IPTV;TV;M3U;Xtream;EPG;Guide;Jellyfin;Emby;Plex;
+StartupNotify=true
+StartupWMClass=app.vespertv.VesperTV

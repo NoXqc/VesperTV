@@ -1,0 +1,6 @@
+# Built by .github/workflows/linux-flatpak.yml, never committed.
+vespertv-bundle.tar.gz
+.flatpak-builder/
+build-dir/
+repo/
+*.flatpak
