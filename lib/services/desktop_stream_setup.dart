@@ -175,6 +175,12 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // Software video: no GPU surfaces ([desktopSoftwareHwdec]).
   final hwdec = desktopSoftwareHwdec;
   if (hwdec != null) native.setProperty('hwdec', hwdec);
+  // Apple TV / iPhone: VideoToolbox gives 10-bit HDR (4K HEVC Main10)
+  // frames in a 10-bit format that the OpenGL ES output can't map, so the
+  // picture sampled zeros: every UHD channel was solid blue while the
+  // Data pool showed it decoding (Apple TV tester, 2026-11-20). 8-bit
+  // frames map; mpv still knows the stream is HDR10 and tone-maps it.
+  if (Platform.isIOS) native.setProperty('hwdec-image-format', 'nv12');
   native.setProperty(
       'demuxer-lavf-o', desktopLavfOptions(apple: Platform.isIOS));
   // mpv's network-timeout (media_kit sets 5 s) becomes ffmpeg's tcp

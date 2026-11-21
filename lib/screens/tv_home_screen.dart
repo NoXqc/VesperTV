@@ -11263,9 +11263,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     _phoneColumn = !prefs.isTelevision &&
         !isDesktopTarget &&
         MediaQuery.sizeOf(context).shortestSide < 600;
+    // +20 / +24 / +32 for the wider logo box (_ChannelLabel), so names
+    // keep their room.
     _channelColumnWidth = _phoneColumn
         ? (prefs.compactUi ? 136 : (prefs.largeUi ? 210 : 160))
-        : (prefs.compactUi ? 190 : (prefs.largeUi ? 300 : 240));
+        : (prefs.compactUi ? 210 : (prefs.largeUi ? 332 : 264));
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -12075,6 +12077,11 @@ class _ChannelLabel extends StatelessWidget {
     // Number, logo and name on one line (TiviMate's guide); Compact UI
     // smaller.
     final logo = _compactUi ? 24.0 : (_largeUi ? 42.0 : 32.0);
+    // Wide logos (Sky's bars, most providers' banners) shrank to a thin
+    // strip in a square box (Apple TV tester, 2026-11-20): the box is wider
+    // than tall, so they show 1.75x bigger; a square logo keeps its size.
+    // Phones keep the square box in their narrow column.
+    final logoWidth = _TimelineGuideState._phoneColumn ? logo : logo * 1.75;
     // The programme titles' size (12): 14 cut most names short (owner
     // photo, +875).
     final fontSize = _compactUi ? 11.0 : (_largeUi ? 14.0 : 12.0);
@@ -12102,7 +12109,7 @@ class _ChannelLabel extends StatelessWidget {
               ),
             if (number != null) SizedBox(width: _compactUi ? 6 : 10),
             SizedBox(
-              width: logo,
+              width: logoWidth,
               height: logo,
               child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                   ? CachedNetworkImage(
@@ -12114,7 +12121,7 @@ class _ChannelLabel extends StatelessWidget {
                       // again (Homatics, 2026-11-12). Width only, see the
                       // live list.
                       memCacheWidth:
-                          (logo * MediaQuery.of(context).devicePixelRatio)
+                          (logoWidth * MediaQuery.of(context).devicePixelRatio)
                               .round(),
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
