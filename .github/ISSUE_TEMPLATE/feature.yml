@@ -1,0 +1,25 @@
+name: Idea or request
+description: Something you'd like VesperTV to do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What you'd like, and what it would help you do. A photo of another app doing it is welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device you use VesperTV on
+      multiple: true
+      options:
+        - Android TV box / Google TV
+        - Fire TV
+        - Android phone or tablet
+        - Windows
+        - Linux
+        - iPhone or iPad
+        - Apple TV
+        - Mac

@@ -31,6 +31,12 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   file to the owner's private Discord channel and keeps nothing. 1 MB cap, 5 an hour per IP (+
   nginx `pairlog` zone). The webhook URL is a secret: `PAIR_LOG_WEBHOOK=` in root-only
   `/etc/pair-relay.env` (`EnvironmentFile`), never in the repo; without it the route answers 503.
+  **Issue helper (2026-11-21):** with `PAIR_LOG_READ_KEY=` (a long random string) in the same file, each
+  sent log is also kept 14 days in `$PAIR_VAULT_DIR/logs/` (300 MB cap, oldest first) and
+  `GET /api/log/LOG-XXXXXX` with header `X-Log-Key: <key>` returns it (403 wrong key, 404 unknown /
+  expired). The same key is the GitHub Actions secret `VESPER_LOG_READ_KEY`, which
+  `.github/workflows/issue-helper.yml` uses to read the log code a user puts in an issue. No key = old
+  behaviour (Discord only, nothing kept). The GET falls under nginx `location /` (no nginx change).
 - `pair.html` — copy `assets/pair/pair.html` next to `relay.py` (same file the TV serves).
 - `hub.html` — Settings > Media Hub sources > **Manage from phone** (2026-11-11), served at `/hub`. It
   sends JSON-RPC `hub/list|set|remove|url|add` to `/mcp/<link>` like the Vesper phone page (`/ai`);
