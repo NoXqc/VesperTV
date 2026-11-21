@@ -25,6 +25,12 @@ class SyncLinks {
   static const _channel = MethodChannel('vespertv/sync_link');
 
   Future<void> Function(String code)? open;
+
+  /// Whether [open] can show the join screen now. Until then the code
+  /// stays waiting: a link that starts the app arrives during the splash,
+  /// before any screen exists (the first scan was taken and dropped there,
+  /// and the welcome prompt showed instead, 2026-11-20).
+  bool Function() canOpen = () => false;
   bool _attached = false;
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
@@ -51,7 +57,7 @@ class SyncLinks {
 
   Future<void> openPending() async {
     final show = open;
-    if (show == null || !_supported) return;
+    if (show == null || !_supported || !canOpen()) return;
     String? code;
     try {
       code = await _channel.invokeMethod<String>('take');
