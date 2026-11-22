@@ -485,6 +485,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-21 - guide rows + reach, Apple TV remote (merged into main for Sunday's 1.0.73, owner: "Yes"):**
+  Unbeaten82 (Apple TV, full-video guide, Compact UI): (1) the bottom channel was always cut off: a focused block off the
+  view sideways called `Scrollable.ensureVisible`, which also scrolled the rows to the block's top, 4 px inside its row;
+  `_ProgramBlockState._revealHorizontally` now scrolls sideways only, the rows' scroll clamps (no iOS / tvOS bounce).
+  (2) The guide stopped 5 h ahead: Right / swipe / a computer's sideways wheel past the usual window (1 h back, 5 ahead)
+  opens a later 6 h window like catch-up's, up to 7 days (`_anchorFor`, `_shiftTo`, `_shiftPastEdge`); Back = now; a
+  programme crossing a window edge is one press. Every OS (one shared guide). (3) Details card line heights (Compact cut
+  2 px). `test/guide_whole_rows_test.dart`. Apple TV: touch surface setting (dev-notes/apple-tv.md, TestFlight 954), hold
+  OK repeats (`held_ok_repeat.dart`, 952), 4K HDR `hwdec-image-format nv12` on iOS / tvOS (929). Next build > 954.
 - **Claude, 2026-11-21 - Silo media server (`claude/silo-server`, worktree `VesperTV-claude-silo`):** Discord (BallerMC)
   + owner: Silo (siloserver.org) in the servers connector, every OS incl. iOS, standalone (owner: "not just through
   jellyfin"). Settings > Media Hub sources > **Connect Silo** (its own row; also inside Connect a media server): the

@@ -150,6 +150,18 @@ iPhone, so those keep their mouse layout):
 (media_kit needs libmpv); the CI tour walks bar -> Multiview button ->
 Multiview -> picker -> back (`lib/services/ci_tour.dart`).
 
+## Siri Remote touch surface (TestFlight 954)
+
+itSoTek (Apple TV 4K 3rd gen) and Mycue66: the lightest touch moved the
+selection. The flutter-tvos engine turns touchpad swipes into arrow keys
+itself (stock: one arrow per 0.3 of the pad, auto-repeat after 3 small
+moves). `services/apple_tv_remote.dart` sends calmer values through the
+`flutter_tvos` package (`TvRemoteController.config` + `init()`, applied in
+main.dart before runApp; a no-op off tvOS): Normal (default) 0.5 / repeat
+after 6 moves, Less sensitive 0.65 / 8, Very sensitive = the engine's own.
+Settings > Backup & devices > Remote > Touch surface, Apple TV only,
+`vesper_tvos_touch`, this device only. Not tried on hardware before 954.
+
 ## App icon and Top Shelf
 
 `assets/icon/gen_tvos_icons.py` (repo root) writes the layered App Icon
