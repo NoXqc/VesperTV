@@ -3656,4 +3656,13 @@ const Map<String, String> kUk = {
       "Сервер не може відтворити цей файл: {reason}",
   "The server can't play this file right now.":
       "Сервер зараз не може відтворити цей файл.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Сенсорна поверхня",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Наскільки легкий свайп на Siri Remote переміщує виділення. Лише цей пристрій.",
+  "Less sensitive":
+      "Менш чутлива",
+  "Very sensitive":
+      "Дуже чутлива",
 };

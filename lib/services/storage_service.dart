@@ -568,6 +568,11 @@ class StorageService {
   Future<void> setUpdateChannel(String channel) =>
       _prefs.setString(AppConstants.keyUpdateChannel, channel);
 
+  /// Apple TV touch surface ([AppConstants.keyAppleTvTouch]).
+  String? getAppleTvTouch() => _prefs.getString(AppConstants.keyAppleTvTouch);
+  Future<void> setAppleTvTouch(String level) =>
+      _prefs.setString(AppConstants.keyAppleTvTouch, level);
+
   bool getShowClock() => _prefs.getBool(AppConstants.keyShowClock) ?? true;
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
@@ -1871,6 +1876,7 @@ class StorageService {
     AppConstants.keySplashGreeting,
     AppConstants.keySkippedUpdateVersion,
     AppConstants.keyUpdateChannel,
+    AppConstants.keyAppleTvTouch,
     AppConstants.keyArchiveReadyWatch,
     AppConstants.keyContentUpdates,
     AppConstants.keyContentUpdatesNextDue,

@@ -4191,4 +4191,13 @@ const Map<String, String> kIt = {
       "Il server non può riprodurre questo file: {reason}",
   "The server can't play this file right now.":
       "Il server non può riprodurre questo file in questo momento.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Superficie touch",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Quanto basta uno scorrimento sul Siri Remote per spostare la selezione. Solo questo dispositivo.",
+  "Less sensitive":
+      "Meno sensibile",
+  "Very sensitive":
+      "Molto sensibile",
 };

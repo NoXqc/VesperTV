@@ -4087,4 +4087,13 @@ const Map<String, String> kDe = {
       "Der Server kann diese Datei nicht abspielen: {reason}",
   "The server can't play this file right now.":
       "Der Server kann diese Datei gerade nicht abspielen.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Touch-Oberfläche",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Wie leicht ein Wischen auf der Siri Remote die Auswahl bewegt. Nur dieses Gerät.",
+  "Less sensitive":
+      "Weniger empfindlich",
+  "Very sensitive":
+      "Sehr empfindlich",
 };

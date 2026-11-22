@@ -100,6 +100,9 @@ dependencies:
   package_info_plus_tvos: ^0.0.2
   url_launcher_tvos: ^0.0.1
   video_player_tvos: ^0.0.1
+  # Siri Remote touch surface tuning (services/apple_tv_remote.dart); does
+  # nothing on other platforms.
+  flutter_tvos: ^1.1.3
   # media_kit's video output on Apple TV + libmpv built on CI
   # (third_party/media_kit_video_tvos/README.md).
   media_kit_video_tvos:
