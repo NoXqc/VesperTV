@@ -2240,6 +2240,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // Xtream live lists load lazily per playlist (after launch).
       unawaited(context.read<PlaylistManager>().ensureLiveChannelsLoaded());
       _resetLiveListFocus();
+      _enterPickedGroupGuide();
       _collapseAfterTouchPick();
       return;
     }
@@ -2259,11 +2260,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // directly as the first favourite channel launching into fullscreen
       // on its own, with nothing actually tapped.
       _resetLiveListFocus();
+      _enterPickedGroupGuide();
       _collapseAfterTouchPick();
       return;
     }
     if (_tab == 'TV') {
       _resetLiveListFocus();
+      _enterPickedGroupGuide();
       _collapseAfterTouchPick();
       return;
     }
@@ -2296,15 +2299,55 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
   }
 
+  /// The row is focused after the next frame, once the picked group's list
+  /// is built. Asked at once, the node was still on the OLD list's row 0
+  /// (the list is keyed by group and only rebuilt in that frame): that row
+  /// took focus first (its description card, Preview on highlight) and on
+  /// the Homatics the new row never got it, so the group opened with
+  /// nothing focused and the old group's channel in the card (uzumaki +
+  /// owner photo, 2026-11-21).
   void _resetLiveListFocus() {
     if (_liveListController.hasClients) _liveListController.jumpTo(0);
-    final playlist = context.read<PlaylistManager>();
-    final channels = _currentLiveChannels(playlist);
-    if (channels.isEmpty) return;
-    final playback = context.read<PlaybackService>();
-    final firstIsPlaying = playback.liveChannel?.id == channels.first.id;
-    (firstIsPlaying ? _currentChannelFocusNode : _firstLiveChannelFocusNode)
-        .requestFocus();
+    _focusFirstLiveRow(3);
+  }
+
+  void _focusFirstLiveRow(int tries) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _tab != 'TV') return;
+      final channels = _currentLiveChannels(context.read<PlaylistManager>());
+      if (channels.isEmpty) return;
+      final playing = context.read<PlaybackService>().liveChannel;
+      final node = playing?.id == channels.first.id
+          ? _currentChannelFocusNode
+          : _firstLiveChannelFocusNode;
+      if (node.context == null) {
+        // Row 0 not built yet (the list was scrolled): after the jump.
+        if (_liveListController.hasClients && _liveListController.offset != 0) {
+          _liveListController.jumpTo(0);
+        }
+        if (tries > 0) _focusFirstLiveRow(tries - 1);
+        return;
+      }
+      node.requestFocus();
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Remote OK on a TV group: into its channels, in the Timeline guide too
+  /// (it kept focus on the group; uzumaki, 2026-11-21: "When I select a
+  /// group, no channel is selected, I expect that a channel is selected").
+  /// The list guide does it in [_resetLiveListFocus].
+  void _enterPickedGroupGuide() {
+    if (_compact ||
+        !context.read<AppPreferences>().isTelevision ||
+        context.read<AppPreferences>().guideViewMode != 'timeline') {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _tab != 'TV' || !_col1Scope.hasFocus) return;
+      _timelineGuideKey.currentState?.focusEntry();
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   bool _hasContinueWatchingRow(String idPrefix) {

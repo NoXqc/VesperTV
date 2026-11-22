@@ -316,13 +316,23 @@ void main() {
     await tester.tap(find.text('Catch-up'));
     await tester.pumpAndSettle();
     expect(find.text('Catchup channel'), findsWidgets);
+    final inGuideRows = find.descendant(
+        of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_ChannelLabel'),
+        matching: find.text('Catchup channel'));
+    expect(inGuideRows, findsOneWidget);
+    // The pick went into the channels: Back to the groups.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     await tester.longPress(find.text('Catch-up'));
     await tester.pumpAndSettle();
     expect(find.text('Catch-up playlists'), findsOneWidget);
     expect(find.text('1 channels'), findsOneWidget);
     await tester.tap(find.text('1 channels'));
     await tester.pumpAndSettle();
-    expect(find.text('Catchup channel'), findsNothing);
+    // Gone from the guide's rows (the card above may still name the
+    // programme the guide last had focused).
+    expect(inGuideRows, findsNothing);
     // Shown again the same way.
     await tester.longPress(find.text('Catch-up'));
     await tester.pumpAndSettle();
