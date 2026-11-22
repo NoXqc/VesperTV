@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../services/app_preferences.dart';
 import '../services/device_defaults.dart';
+import '../utils/desktop_platform.dart';
 
 /// "Press OK to type" for a text field on a TV box (remote, no touch).
 ///
@@ -63,7 +64,27 @@ class TvTextFieldGate extends StatefulWidget {
   static final _editors = <FocusNode, _TvTextFieldGateState>{};
 
   /// Screen-level shortcuts must leave arrows with an actively edited field.
-  static bool isEditing(FocusNode? node) => _editors[node]?._typing ?? false;
+  /// Never on Apple TV ([_fullScreenKeyboard]): an arrow only reaches the app
+  /// once its keyboard is gone. Screens ask this from their own key handlers,
+  /// some of which run before the gate's ([_TvTextFieldGateState._onKey]
+  /// ends typing): Add Playlist's fields, the Multiview picker, channel
+  /// linking, EPG matching. So the first Down after the keyboard is theirs.
+  static bool isEditing(FocusNode? node) =>
+      !_fullScreenKeyboard && (_editors[node]?._typing ?? false);
+
+  /// Apple TV: the system keyboard is a full-screen page that has the remote
+  /// to itself, and Menu closes it without telling the app (no inset, no
+  /// Back, the input connection stays open). So an arrow that reaches the
+  /// field means that keyboard is gone: typing ends and the arrow moves
+  /// focus. Before this, Down moved the field's cursor: Search's results
+  /// could never be reached (Mycue66), and Add Playlist's Xtream fields
+  /// needed Menu before Down (cleverclogs17), TestFlight 954, 2026-11-22.
+  /// Not on Android: Gboard and other overlay keyboards forward cursor
+  /// arrows while they are up.
+  @visibleForTesting
+  static bool? debugFullScreenKeyboard;
+
+  static bool get _fullScreenKeyboard => debugFullScreenKeyboard ?? isAppleTv;
 
   @override
   State<TvTextFieldGate> createState() => _TvTextFieldGateState();
@@ -161,14 +182,27 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) _rehide?.cancel();
+    if (_typing) _log('$state while typing');
     // Inactive can mean that the TV keyboard owns the window. Only an actual
     // background transition ends typing; never steal focus from that IME.
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _keyboardShown = false;
+      // Apple TV: the keyboard, and Siri dictation into it (hold the Siri
+      // button), are system pages. Ending typing here closes the input
+      // connection under them, which would close the keyboard at once: the
+      // likely cause of "voice search shuts it down immediately"
+      // (cleverclogs17, TestFlight 954; the TextGate lines in Send log tell).
+      // The next arrow or Menu ends typing there anyway.
+      if (TvTextFieldGate._fullScreenKeyboard) return;
       if (_typing && mounted) setState(() => _typing = false);
     }
+  }
+
+  /// Apple TV keyboard trace for Send log (`TextGate:` lines).
+  void _log(String what) {
+    if (TvTextFieldGate._fullScreenKeyboard) debugPrint('TextGate: $what');
   }
 
   void _stopTyping() {
@@ -182,6 +216,18 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     }
   }
 
+  /// Apple TV: the full-screen keyboard closed without a word to the app.
+  /// Read-only again closes the input connection (EditableText), so OK
+  /// reopens the keyboard as usual; [direction] then moves focus unless the
+  /// screen's own handling already did.
+  void _keyboardGone(TraversalDirection direction) {
+    _log('typing ended: ${direction.name}');
+    _keyboardShown = false;
+    _rehide?.cancel();
+    setState(() => _typing = false);
+    _move(direction);
+  }
+
   /// The next field never opens its keyboard by itself, even after the
   /// keyboard's Next: Fire OS reports Back on its keyboard as that same
   /// Next, and keeping the keyboard up across fields made Back walk from
@@ -189,6 +235,7 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   /// Max, 2026-10-19). One more OK per field, never stuck.
   void _onFocus() {
     if (widget.focusNode.hasFocus || !_typing) return;
+    _log('typing ended: focus left');
     _keyboardShown = false;
     setState(() => _typing = false);
     if (!_isFireOs && _canRecover) _hideAgainLater();
@@ -212,9 +259,16 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     final ok = key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.gameButtonA;
     if (_typing) {
-      // IMEs may forward cursor arrows while visible (including overlay
-      // Gboard with no inset). An arrow is not evidence of dismissal.
-      if (_arrows.containsKey(key)) return false;
+      final arrow = _arrows[key];
+      if (arrow != null) {
+        // Apple TV: the keyboard is gone ([TvTextFieldGate._fullScreenKeyboard]).
+        // Typing ends here, before the screen's own shortcuts see this arrow
+        // ([TvNavigationActivator]), and [_move] covers screens without them.
+        if (TvTextFieldGate._fullScreenKeyboard) _keyboardGone(arrow);
+        // Elsewhere IMEs may forward cursor arrows while visible (including
+        // overlay Gboard with no inset): an arrow is not evidence of dismissal.
+        return false;
+      }
       // Keyboard dismissed but the field kept focus (Formuler): OK raises
       // it again. Only the remote's own OK key: Fire OS turns Back on its
       // keyboard into a numpadEnter, which must not reopen it.
@@ -231,6 +285,7 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     // the keyboard (EditableText.didUpdateWidget).
     _rehide?.cancel();
     _keyboardShown = (View.maybeOf(context)?.viewInsets.bottom ?? 0) > 0;
+    _log('typing');
     setState(() => _typing = true);
     return true;
   }
@@ -284,10 +339,19 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     if (!context.read<AppPreferences>().isTelevision) {
       return widget.builder(context, false);
     }
+    // Apple TV: Menu reaches the app only once its keyboard is closed (Menu
+    // on the keyboard closes it inside the system), so Back goes back at
+    // once; it used to end typing first, one extra press before Down worked
+    // (cleverclogs17's Xtream fields: "hit the back button and then go down").
+    final fullScreenKeyboard = TvTextFieldGate._fullScreenKeyboard;
     return PopScope(
-      canPop: !_typing,
+      canPop: !_typing || fullScreenKeyboard,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _typing) _stopTyping();
+        if (!_typing) return;
+        if (fullScreenKeyboard) _log('typing ended: Back');
+        // Popped: this field goes with its page. Kept (another PopScope
+        // said no): typing ends, the keyboard closes.
+        if (!didPop) _stopTyping();
       },
       child: Actions(
         actions: _typing

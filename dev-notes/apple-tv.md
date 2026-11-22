@@ -162,6 +162,59 @@ after 6 moves, Less sensitive 0.65 / 8, Very sensitive = the engine's own.
 Settings > Backup & devices > Remote > Touch surface, Apple TV only,
 `vesper_tvos_touch`, this device only. Not tried on hardware before 954.
 
+## Text fields: leaving the keyboard (after TestFlight 954)
+
+Mycue66 (2026-11-22, Discord): on the main Search tab you could type and
+get results, but the remote never left the search box. Every TV text field
+sits behind `TvTextFieldGate` ("press OK to type"): OK makes the field
+editable and opens the input connection, and the gate stops "typing" when
+the keyboard reports going away (an inset dropping to 0, Back reaching the
+app, focus leaving, the app going to the background). While it is typing,
+arrows belong to the keyboard, so the field's cursor takes them and
+Search's own Up / Down (`TvNavigationActivator`) stand aside.
+
+Apple TV's keyboard is a full-screen system page, not an overlay:
+flutter-tvos opens it from a hidden proxy text field (engine strings
+`tvosKeyboardPending`, `tvosActivateKeyboard`, `tvosDismissKeyboard`,
+`textFieldDidEndEditing:`; the engine source isn't public). It reports no
+inset, and Menu on it closes it inside UIKit: the app gets no Back and the
+input connection stays open. So none of those signals came, the gate stayed
+"typing", and every Down moved the cursor. The keyboard has the remote to
+itself while it is up (the engine's press recognizers and touch swipes sit
+on the Flutter view, which the full-screen keyboard covers), so on Apple TV
+an arrow that reaches a typing field means the keyboard is gone:
+`_keyboardGone` ends typing in the gate's HardwareKeyboard handler, which
+runs before the focus tree, so the same press is Search's Down to the first
+result row (other screens: the gate's `_move`). OK on the field opens the
+keyboard again. Android is unchanged (Gboard forwards cursor arrows while
+it is up, so an arrow there proves nothing).
+
+Same day, cleverclogs17 (TestFlight 954): Add Playlist's Xtream fields at
+first launch needed Back, then Down. Same cause, plus an ordering detail:
+Add Playlist, the Multiview picker, channel linking and EPG matching move
+between fields from their own HardwareKeyboard handler, registered before
+the gate's, and stand aside while `TvTextFieldGate.isEditing`. So on Apple
+TV `isEditing` is always false (an arrow only arrives once the keyboard is
+gone) and their first Down works. Back: Menu also reaches the app only once
+the keyboard is closed, so the gate's PopScope lets the page go at once on
+Apple TV (it used to end typing first: that was his extra Back).
+
+His "voice search shuts it down immediately, as if it were a pop-up being
+canceled out by the system": VesperTV's Vesper AI panel has no microphone on
+Apple TV (no voice bridge; it opens on "Or type here"), so this is most
+likely the Siri button's dictation into Apple's keyboard. Hypothesis: the
+dictation page sends the app to the background (hidden / paused), and the
+gate ended typing on that, closing the input connection and with it the
+keyboard. On Apple TV the gate now keeps typing through the app leaving the
+screen (the next arrow or Menu ends it). Unconfirmed: `TextGate:` lines in
+Send log (typing, each lifecycle state while typing, typing ended: down /
+focus left / Back) will show it. If dictation still closes the keyboard with
+no `hidden` / `paused` line, it is the engine's keyboard proxy, not the app.
+
+Tests: the five "Apple TV" cases in `test/tv_text_field_gate_test.dart`
+(`TvTextFieldGate.debugFullScreenKeyboard`), all failing with the rule off.
+Not tried on a box yet.
+
 ## App icon and Top Shelf
 
 `assets/icon/gen_tvos_icons.py` (repo root) writes the layered App Icon

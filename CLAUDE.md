@@ -401,7 +401,14 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   `ExtendSelectionByCharacterIntent` with `focusInDirection`, deferred a microtask and skipped if
   focus already moved: Flutter delivers the key to the field even after a `HardwareKeyboard`
   handler handled it (Add Playlist's `_handleFieldEscapeKey`), and that handler must win.
-  `test/tv_text_field_gate_test.dart`.
+  `test/tv_text_field_gate_test.dart`. **Apple TV (2026-11-22):** the system keyboard is a full-screen
+  page that has the remote to itself, and Menu closes it without telling the app (no inset, no Back,
+  the input connection stays open), so the gate stayed "typing" and Down moved the cursor: Search
+  results were unreachable (Mycue66, TestFlight 954). On Apple TV only (`_fullScreenKeyboard`): an
+  arrow reaching a typing field ends typing in the HardwareKeyboard handler; `isEditing` is always
+  false (screens' own field handlers registered before the gate's, like Add Playlist's, take the first
+  Down); Menu pops the page at once; the app going to the background keeps typing (Siri dictation,
+  unconfirmed: `TextGate:` Send-log lines). Never on Android: Gboard forwards cursor arrows while up.
 - **Sports Trak, Settings and Search keep a background live channel playing** (owner reverted the
   1.0.24 parking on all three, 2026-10-20). Movies/TV Shows/Media Hub still park it
   (`_parkLiveChannel`). The parking was added because the video stayed on screen over those pages
@@ -506,7 +513,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   opens a later 6 h window like catch-up's, up to 7 days (`_anchorFor`, `_shiftTo`, `_shiftPastEdge`); Back = now; a
   programme crossing a window edge is one press. Every OS (one shared guide). (3) Details card line heights (Compact cut
   2 px). `test/guide_whole_rows_test.dart`. Apple TV: touch surface setting (dev-notes/apple-tv.md, TestFlight 954), hold
-  OK repeats (`held_ok_repeat.dart`, 952), 4K HDR `hwdec-image-format nv12` on iOS / tvOS (929). Next build > 954.
+  OK repeats (`held_ok_repeat.dart`, 952), 4K HDR `hwdec-image-format nv12` on iOS / tvOS (929). **Unbeaten82 confirmed on
+  TestFlight 954 (2026-11-22): no more solid blue on UHD channels, and the guide's bottom row shows whole.** Next build > 954.
 - **Claude, 2026-11-21 - Silo media server (`claude/silo-server`, worktree `VesperTV-claude-silo`):** Discord (BallerMC)
   + owner: Silo (siloserver.org) in the servers connector, every OS incl. iOS, standalone (owner: "not just through
   jellyfin"). Settings > Media Hub sources > **Connect Silo** (its own row; also inside Connect a media server): the
