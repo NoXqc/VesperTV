@@ -4151,4 +4151,52 @@ const Map<String, String> kIt = {
       "La barra informazioni del canale in basso e la barra di film / episodi. 0% è opaco, 15% come prima, 100% è trasparente.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "La riga di pulsanti che si apre con Giù (Canali, Sottotitoli, Multiview...). 0% è opaco, 15% come prima, 100% è trasparente.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Collega un server multimediale",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby o Plex",
+  "Connect Silo":
+      "Collega Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Accedi con un codice su questo schermo, poi scegli un profilo",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Accedi al tuo server Silo: le sue librerie di film e serie TV compaiono nel Media Hub. I file vengono riprodotti così come sono salvati sul server.",
+  "Couldn't find a Silo server at that address.":
+      "Nessun server Silo trovato a quell'indirizzo.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "Sul telefono, scansiona il codice QR oppure apri {url} e inserisci questo codice:",
+  "Sign in with a password instead":
+      "Accedi con una password",
+  "Sign in with a code instead":
+      "Accedi con un codice",
+  "Sign-in was refused on the server.":
+      "L'accesso è stato rifiutato sul server.",
+  "Could not connect to Silo. Try again.":
+      "Impossibile connettersi a Silo. Riprova.",
+  "Too many tries. Try again in a few minutes.":
+      "Troppi tentativi. Riprova tra qualche minuto.",
+  "Choose a profile":
+      "Scegli un profilo",
+  "PIN for {name}":
+      "PIN di {name}",
+  "Wrong PIN.":
+      "PIN errato.",
+  "Sign in":
+      "Accedi",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "L'accesso al server è scaduto. Ricollega il server in Impostazioni.",
+  "The server can't play this file: {reason}":
+      "Il server non può riprodurre questo file: {reason}",
+  "The server can't play this file right now.":
+      "Il server non può riprodurre questo file in questo momento.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Superficie touch",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Quanto basta uno scorrimento sul Siri Remote per spostare la selezione. Solo questo dispositivo.",
+  "Less sensitive":
+      "Meno sensibile",
+  "Very sensitive":
+      "Molto sensibile",
 };

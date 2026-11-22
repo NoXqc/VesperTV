@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'archive_service.dart';
 import 'archive_stream_size.dart';
 import 'storage_service.dart';
+import 'silo_api.dart';
 
 enum ArchiveResumeReason {
   notResuming,
@@ -186,9 +187,13 @@ class ArchiveResumeSource {
       return ArchiveResumeChoice(options,
           reason: ArchiveResumeReason.unmatched, detail: detail);
     }
-    final url = await (_probe?.call(picked.stream.url) ??
-        probeArchiveResumeUrl(picked.stream.url,
-            headers: picked.stream.requestHeaders));
+    // A Silo file is found again by its id; its link only exists once Play
+    // starts a session on the server, so there is nothing to probe.
+    final url = SiloApi.isPlayLink(picked.stream.url)
+        ? picked.stream.url
+        : await (_probe?.call(picked.stream.url) ??
+            probeArchiveResumeUrl(picked.stream.url,
+                headers: picked.stream.requestHeaders));
     if (!isCurrent) return fallback(ArchiveResumeReason.notResuming);
     if (url == null) {
       return ArchiveResumeChoice(

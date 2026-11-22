@@ -97,6 +97,8 @@ import 'services/archive_service.dart';
 import 'services/hub_iptv_sources.dart';
 import 'services/backup_service.dart';
 import 'services/tracker_sync.dart';
+import 'services/silo_api.dart';
+import 'services/apple_tv_remote.dart';
 import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
@@ -193,6 +195,8 @@ Future<void> _main() async {
   // Read straight from SharedPreferences: StorageService isn't up yet.
   try {
     final prefs = await SharedPreferences.getInstance();
+    // Apple TV: the Siri Remote's touch surface (a no-op elsewhere).
+    AppleTvRemote.apply(prefs.getString(AppConstants.keyAppleTvTouch));
     await L10n.apply(prefs.getString(AppConstants.keyLanguage) ?? 'auto');
     await SplashGreeting.pickNext(prefs);
   } catch (_) {
@@ -817,6 +821,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Asked once per launch, before anything decides a layout — see
       // DeviceTypeService for why screen width couldn't answer this.
       _preferences.isTelevision = await DeviceTypeService.isTelevision();
+      if (_preferences.isTelevision) SiloApi.formFactor = 'tv';
       // A TV has no touch screen, so the focus highlight always shows.
       // Flutter's automatic mode hides it until it sees a "keyboard" event,
       // and a TV's own remote forwarded over HDMI-CEC (owner's Sony on the

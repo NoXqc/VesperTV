@@ -4157,4 +4157,52 @@ const Map<String, String> kFr = {
       "La barre d'infos de la chaîne en bas et la barre des films / épisodes. 0 % est opaque, 15 % comme avant, 100 % est transparent.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "La rangée de boutons ouverte avec Bas (Chaînes, Sous-titres, Multivue...). 0 % est opaque, 15 % comme avant, 100 % est transparent.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Connecter un serveur multimédia",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby ou Plex",
+  "Connect Silo":
+      "Connecter Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Connectez-vous avec un code affiché ici, puis choisissez un profil",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Connectez-vous à votre serveur Silo : ses bibliothèques de films et de séries apparaissent dans le Media Hub. Les fichiers sont lus tels qu'ils sont stockés sur le serveur.",
+  "Couldn't find a Silo server at that address.":
+      "Aucun serveur Silo trouvé à cette adresse.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "Sur votre téléphone, scannez le code QR ou ouvrez {url} et entrez ce code :",
+  "Sign in with a password instead":
+      "Se connecter avec un mot de passe",
+  "Sign in with a code instead":
+      "Se connecter avec un code",
+  "Sign-in was refused on the server.":
+      "La connexion a été refusée sur le serveur.",
+  "Could not connect to Silo. Try again.":
+      "Impossible de se connecter à Silo. Réessayez.",
+  "Too many tries. Try again in a few minutes.":
+      "Trop d'essais. Réessayez dans quelques minutes.",
+  "Choose a profile":
+      "Choisir un profil",
+  "PIN for {name}":
+      "NIP de {name}",
+  "Wrong PIN.":
+      "NIP incorrect.",
+  "Sign in":
+      "Se connecter",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "La connexion au serveur a expiré. Reconnectez le serveur dans les Paramètres.",
+  "The server can't play this file: {reason}":
+      "Le serveur ne peut pas lire ce fichier : {reason}",
+  "The server can't play this file right now.":
+      "Le serveur ne peut pas lire ce fichier pour le moment.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Surface tactile",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Avec quelle légèreté un glissement sur la télécommande Siri déplace la sélection. Cet appareil seulement.",
+  "Less sensitive":
+      "Moins sensible",
+  "Very sensitive":
+      "Très sensible",
 };

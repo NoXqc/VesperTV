@@ -485,6 +485,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-21 - Silo media server (`claude/silo-server`, worktree `VesperTV-claude-silo`):** Discord (BallerMC)
+  + owner: Silo (siloserver.org) in the servers connector, every OS incl. iOS, standalone (owner: "not just through
+  jellyfin"). Settings > Media Hub sources > **Connect Silo** (its own row; also inside Connect a media server): the
+  server's usual address, a TV code approved on its `/activate` page (QR) or a
+  password, then a household profile (+ PIN). Native `/api/v2` (`services/silo_api.dart`), not its Jellyfin port (needs a
+  second address the admin sets). `MediaServerKind.silo`; `MediaServerLogin` gained `refreshToken` / `profileId` /
+  `profileName` / `profileToken` (8 h access token renewed on a 401, saved by `ArchiveService._keepServerLogin`). Play =
+  a session per play (`POST /playback/start`, original file, signed link, no header): the stream link is a placeholder
+  `…#silo-file=<id>` resolved in `archive_playback._resolve`; never reused from a resume, no downloads. Both players
+  report to `SiloSessions` (60 s heartbeat; Silo ends a play after 5 min without one). Tested against a real Silo in
+  Docker (`silo-test`, localhost:8090) + `test/silo_api_test.dart`. Details: dev-notes/silo.md.
 - **Claude, 2026-11-21 - player batch +945..+950 (`claude/player-options-order`, merged into main with
   release-channels; main = `1.0.73+950`, the first Sunday stable's name):** TV player options row order (hold OK on a
   tile = move, `vesper_player_options_order`, `lib/widgets/player_options_order.dart`; tile ids are saved, never rename),

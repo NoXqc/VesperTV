@@ -103,7 +103,7 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
     <div class="card"><h3 style="margin-top:0">Several playlists</h3>
       <p>In <b>Playlists</b>: <b>use other playlists as fallback</b> (a failing channel switches to the same channel from another provider), and <b>Combine playlists</b> (one lineup: a channel the first playlist already has is hidden in the others and kept as a fallback). Playlist order is the order in Playlist Manager on the TV.</p></div>
     <div class="card warn"><h3 style="margin-top:0">Stream test (careful)</h3>
-      <p>Opens each chosen stream for a few seconds to read its real quality (picture, and audio: 5.1 or stereo) and find dead links. In Duplicates, a 5.1 copy sorts above a stereo one of the same picture. Providers can block an account or your internet address after many connections in a row: test small batches (at most 60), stop any video on the TV first. Progress shows at the top of every tab.</p></div>
+      <p>Opens each chosen stream for a few seconds to read its real quality (picture, and audio: 5.1 or stereo) and find dead links. In Duplicates, copies sort by picture (1080p above 720p), then frame rate (50 fps above 25), then audio (5.1 above stereo). Providers can block an account or your internet address after many connections in a row: test small batches (at most 60), stop any video on the TV first. Progress shows at the top of every tab.</p></div>
     <div class="card"><h3 style="margin-top:0">Undo</h3>
       <p>Untick a switch, delete a rule, select channels then <b>Show</b> / <b>Reset name</b>, clear a group's new name, then save. On the TV: hold OK on a channel, Use the provider's name.</p></div>
   </section>
@@ -159,7 +159,7 @@ button.tag.on{background:var(--gold);color:#111;border-color:var(--gold)}
 
   <section id="t-dupes" style="display:none">
     <div class="card dim">Copies of the same channel (TSN 1 4K / FHD / HD). With <b>Hide lower-quality copies</b> on, only the best is listed;
-      the others stay as automatic fallbacks when it fails. Ranking uses the stream test when there is one, else the name label.
+      the others stay as automatic fallbacks when it fails. Ranking uses the stream test when there is one (picture, then frame rate, then 5.1 over stereo), else the name label.
       Tick <b>Always show</b> to keep a copy listed anyway. Renamed channels are grouped by their new name, so renaming
       <code>UK| NOW: Sky Sports PL</code> and <code>VIP: Sky Sports PL HD</code> the same makes them copies of one channel.</div>
     <div class="row"><input id="dq" placeholder="Search" class="grow"></div>
@@ -392,8 +392,9 @@ function renderDupes() {
   const q = $('dq').value.trim().toLowerCase();
   const groups = [...copies().values()].filter(l => l.length > 1 && (!q || l.some(c => (c.n + ' ' + shownName(c)).toLowerCase().includes(q))));
   $('dupeList').innerHTML = groups.slice(0, 300).map(l => {
-    // Picture first, then 5.1 audio over 2.0 (stream test).
-    l = [...l].sort((a, b) => b.q - a.q || (b.qa || 0) - (a.qa || 0));
+    // Picture first, then frame rate (50 over 25), then 5.1 audio over 2.0
+    // (stream test; clayts450, Discord 2026-11-21).
+    l = [...l].sort((a, b) => b.q - a.q || (b.qf || 0) - (a.qf || 0) || (b.qa || 0) - (a.qa || 0));
     return `<div class="card"><table>${l.map(c => `<tr class="${c.eh ? 'hidden-row' : ''}"><td>${esc(shownName(c))}<div class="dim" style="font-size:12px">${shownName(c) !== c.n ? esc(c.n) + ' · ' : ''}<span title="${groupNow(c) === c.g ? '' : esc('Provider group: ' + c.g)}">${esc(groupNow(c))}</span></div></td>
       <td>${c.eh ? '<span class="tag">fallback</span>' : '<span class="tag g">listed</span>'} ${c.p ? `<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>` : ''}</td>
       <td><label><input type="checkbox" data-shown="${esc(c.r)}" ${edits.shown.includes(c.r) ? 'checked' : ''}> Always show</label></td></tr>`).join('')}</table></div>`;

@@ -289,8 +289,18 @@ class PlaylistEdits {
     return ChannelCopyFallback.qualityRank(c.sourceName);
   }
 
-  /// Within one [copyRank]: 2 = 5.1 or more measured, 1 = fewer or not
-  /// measured. Orders copies (5.1 above 2.0, Discord 2026-11-19); never
+  /// Within one [copyRank]: the measured frame rate, rounded (50 above 25,
+  /// clayts450 on Discord, 2026-11-21: "1080/50 ranked higher than
+  /// 1080/25"); 0 = not measured. Orders copies only, like [audioRank].
+  int fpsRank(Channel c) {
+    final probe = probes[c.rawId];
+    if (probe == null || probe.isStale || !probe.ok) return 0;
+    final fps = probe.fps;
+    return fps == null || fps <= 0 ? 0 : fps.round();
+  }
+
+  /// Within one [copyRank] and [fpsRank]: 2 = 5.1 or more measured, 1 =
+  /// fewer or not measured. Orders copies (5.1 above 2.0, Discord 2026-11-19); never
   /// hides one ([apply] keeps using [copyRank]).
   int audioRank(Channel c) {
     final probe = probes[c.rawId];

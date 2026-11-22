@@ -4144,4 +4144,52 @@ const Map<String, String> kEs = {
       "La barra de información del canal abajo y la barra de películas / episodios. 0 % es opaco, 15 % como antes, 100 % es transparente.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "La fila de botones que se abre con Abajo (Canales, Subtítulos, Multivista...). 0 % es opaco, 15 % como antes, 100 % es transparente.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Conectar un servidor multimedia",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby o Plex",
+  "Connect Silo":
+      "Conectar Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Inicia sesión con un código en esta pantalla y elige un perfil",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Inicia sesión en tu servidor Silo: sus bibliotecas de películas y series aparecen en el Media Hub. Los archivos se reproducen tal como están guardados en el servidor.",
+  "Couldn't find a Silo server at that address.":
+      "No se encontró ningún servidor Silo en esa dirección.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "En tu teléfono, escanea el código QR o abre {url} e introduce este código:",
+  "Sign in with a password instead":
+      "Iniciar sesión con una contraseña",
+  "Sign in with a code instead":
+      "Iniciar sesión con un código",
+  "Sign-in was refused on the server.":
+      "El servidor rechazó el inicio de sesión.",
+  "Could not connect to Silo. Try again.":
+      "No se pudo conectar con Silo. Inténtalo de nuevo.",
+  "Too many tries. Try again in a few minutes.":
+      "Demasiados intentos. Inténtalo de nuevo en unos minutos.",
+  "Choose a profile":
+      "Elige un perfil",
+  "PIN for {name}":
+      "PIN de {name}",
+  "Wrong PIN.":
+      "PIN incorrecto.",
+  "Sign in":
+      "Iniciar sesión",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "La sesión del servidor ha caducado. Vuelve a conectar el servidor en Ajustes.",
+  "The server can't play this file: {reason}":
+      "El servidor no puede reproducir este archivo: {reason}",
+  "The server can't play this file right now.":
+      "El servidor no puede reproducir este archivo ahora mismo.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Superficie táctil",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Con qué suavidad un deslizamiento en el Siri Remote mueve la selección. Solo este dispositivo.",
+  "Less sensitive":
+      "Menos sensible",
+  "Very sensitive":
+      "Muy sensible",
 };

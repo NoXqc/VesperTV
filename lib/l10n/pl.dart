@@ -3738,4 +3738,52 @@ const Map<String, String> kPl = {
       "Pasek informacji o kanale na dole i pasek filmów / odcinków. 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
   "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear.":
       "Rząd przycisków otwierany strzałką w dół (Kanały, Napisy, Multiview...). 0% to pełne krycie, 15% jak dotąd, 100% to pełna przezroczystość.",
+  // Silo connector (2026-11-21).
+  "Connect a media server":
+      "Połącz serwer multimediów",
+  "Jellyfin, Emby or Plex":
+      "Jellyfin, Emby lub Plex",
+  "Connect Silo":
+      "Połącz Silo",
+  "Sign in with a code on this screen, then pick a profile":
+      "Zaloguj się kodem z tego ekranu, a potem wybierz profil",
+  "Sign in to your Silo server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server.":
+      "Zaloguj się do swojego serwera Silo: jego biblioteki filmów i seriali pojawią się w Media Hub. Pliki są odtwarzane tak, jak są zapisane na serwerze.",
+  "Couldn't find a Silo server at that address.":
+      "Nie znaleziono serwera Silo pod tym adresem.",
+  "On your phone, scan the QR code, or open {url} and enter this code:":
+      "Na telefonie zeskanuj kod QR albo otwórz {url} i wpisz ten kod:",
+  "Sign in with a password instead":
+      "Zaloguj się hasłem",
+  "Sign in with a code instead":
+      "Zaloguj się kodem",
+  "Sign-in was refused on the server.":
+      "Serwer odrzucił logowanie.",
+  "Could not connect to Silo. Try again.":
+      "Nie udało się połączyć z Silo. Spróbuj ponownie.",
+  "Too many tries. Try again in a few minutes.":
+      "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
+  "Choose a profile":
+      "Wybierz profil",
+  "PIN for {name}":
+      "PIN dla {name}",
+  "Wrong PIN.":
+      "Błędny PIN.",
+  "Sign in":
+      "Zaloguj się",
+  "The server sign-in has expired. Connect the server again in Settings.":
+      "Logowanie do serwera wygasło. Połącz serwer ponownie w Ustawieniach.",
+  "The server can't play this file: {reason}":
+      "Serwer nie może odtworzyć tego pliku: {reason}",
+  "The server can't play this file right now.":
+      "Serwer nie może teraz odtworzyć tego pliku.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Powierzchnia dotykowa",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Jak lekkie przesunięcie na pilocie Siri Remote przesuwa zaznaczenie. Tylko to urządzenie.",
+  "Less sensitive":
+      "Mniej czuła",
+  "Very sensitive":
+      "Bardzo czuła",
 };

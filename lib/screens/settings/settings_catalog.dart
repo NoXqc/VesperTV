@@ -17,6 +17,7 @@ import '../../services/device_defaults.dart';
 import '../../services/launcher_channels.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
+import '../../services/apple_tv_remote.dart';
 import '../../services/remote_buttons.dart';
 import '../../services/storage_service.dart';
 import '../../services/subtitle_tracks.dart';
@@ -1661,6 +1662,27 @@ class SettingsCatalog {
     final buttons = RemoteButtons.instance;
     final count = buttons.bindings.length;
     return SettingsSection(title: tr('Remote'), [
+      // Apple TV: how eagerly a swipe on the Siri Remote moves the selection
+      // (AppleTvRemote; this device only).
+      if (isAppleTv)
+        SettingsChoice(
+            id: 'apple_tv_touch',
+            icon: Icons.touch_app_outlined,
+            title: tr('Touch surface'),
+            help: tr(
+                'How lightly a swipe on the Siri Remote moves the selection. This device only.'),
+            options: [
+              SettingsOption(AppleTvRemote.low, tr('Less sensitive')),
+              SettingsOption(AppleTvRemote.normal, tr('Normal'),
+                  subtitle: tr('Default')),
+              SettingsOption(AppleTvRemote.high, tr('Very sensitive')),
+            ],
+            selected: AppleTvRemote.levelOf(_storage.getAppleTvTouch()),
+            onPick: (v) async {
+              AppleTvRemote.apply(v);
+              await _storage.setAppleTvTouch(v);
+              refresh();
+            }),
       SettingsLink(
           id: 'remote_buttons',
           floating: true,
