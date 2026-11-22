@@ -10136,8 +10136,9 @@ class _TimelineGuide extends StatefulWidget {
   /// blocks so the video shows through the grid.
   final bool translucent;
 
-  /// Catch-up: the time this window is centred on when it shows the past
-  /// (null = the usual window, an hour back to five ahead). The window is
+  /// The time this window is centred on when it shows the past (catch-up)
+  /// or hours past the usual window's end (null = the usual window, an
+  /// hour back to five ahead; Right goes on up to a week). The window is
   /// fixed per State (see [_TimelineGuideState._windowStart]), so moving
   /// it means [onShiftWindow] -> a remount; a wider window instead would
   /// build every row's blocks for days (they're not lazy within a row).
@@ -10320,8 +10321,37 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   late final DateTime _windowEnd;
   late final double _totalWidth;
 
-  /// Half the width of a catch-up (past) window around its anchor.
+  /// Half the width of a catch-up (past) or later window around its anchor.
   static const Duration _pastHalfWindow = Duration(hours: 3);
+
+  /// How far ahead Right can go: a later window past the usual one's
+  /// five hours (Unbeaten82, 2026-11-21: "only looks 6 hours into the
+  /// future"). Rows past the provider's guide show no data.
+  static const Duration _furthestAhead = Duration(days: 7);
+
+  /// The window that shows [time]: null = the usual one (an hour back to
+  /// five ahead), else one around [time].
+  DateTime? _anchorFor(DateTime time) {
+    final now = DateTime.now();
+    final usual = !time.isBefore(_floorToSlot(now.subtract(_windowBefore))) &&
+        time.isBefore(now.add(_windowAfter));
+    return usual ? null : time;
+  }
+
+  /// Moves to the window that shows [time], focus on [row] at [time].
+  /// False past [_furthestAhead] or without [_TimelineGuide.onShiftWindow].
+  bool _shiftTo(DateTime time, int row) {
+    final shift = widget.onShiftWindow;
+    final now = DateTime.now();
+    if (shift == null || !time.isBefore(now.add(_furthestAhead))) {
+      return false;
+    }
+    widget.holdFocus?.requestFocus();
+    shift(_anchorFor(time), row, time == _floorToSlot(now) ? null : time,
+        scrollTop: _gridVScroll.hasClients ? _gridVScroll.offset : null);
+    return true;
+  }
+
   bool _staleReported = false;
 
   // Two independent controller pairs (ruler mirrors the grid horizontally,
@@ -10361,10 +10391,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       _windowStart = now.subtract(_windowBefore);
       _windowEnd = now.add(_windowAfter);
     } else {
+      // The past (catch-up) or later hours: the same six hours around it.
       final centre = _floorToSlot(anchor);
       _windowStart = centre.subtract(_pastHalfWindow);
       final end = centre.add(_pastHalfWindow);
-      final latest = now.add(_windowAfter);
+      final latest = now.add(_furthestAhead);
       _windowEnd = end.isAfter(latest) ? latest : end;
     }
     final cursor = widget.initialCursor;
@@ -10422,7 +10453,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       if (row != null && row >= 0 && row < widget.channels.length) {
         _focusedRowIndex = row;
         _ensureRowVisible(row);
-        _focusRowAt(row, _timeForSlot(_cursorSlot), 5);
+        // The exact time: one press past a programme crossing the window's
+        // edge lands on the next one, even when that starts mid-slot.
+        _focusRowAt(row, widget.initialCursor ?? _timeForSlot(_cursorSlot), 5);
       }
     }
 
@@ -10470,18 +10503,56 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// right edge while in the past the window after. The view stays where
   /// it was; dragging on just carries on into the new hours.
   bool _onGridOverscroll(OverscrollNotification n) {
-    final shift = widget.onShiftWindow;
-    if (_swipeShifted ||
-        shift == null ||
-        n.dragDetails == null ||
+    if (n.dragDetails == null ||
         n.metrics.axis != Axis.horizontal ||
-        !_gridHScroll.hasClients) {
+        n.overscroll == 0) {
       return false;
     }
-    final left = _windowStart.add(
-        Duration(seconds: (n.metrics.pixels / _pixelsPerMinute * 60).round()));
+    return _shiftPastEdge(n.overscroll > 0);
+  }
+
+  /// A computer's sideways wheel (Shift + wheel, a trackpad) at the grid's
+  /// edge: the same as a drag past it. A wheel never overscrolls, so it
+  /// stopped at the window's end (the usual one: five hours ahead).
+  void _wheelPastEdge(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_gridHScroll.hasClients) return;
+    final pos = _gridHScroll.position;
+    if (!pos.hasContentDimensions) return;
+    var dx = event.scrollDelta.dx;
+    if (dx == 0 &&
+        event.kind == PointerDeviceKind.mouse &&
+        HardwareKeyboard.instance.isShiftPressed) {
+      dx = event.scrollDelta.dy;
+    }
+    if (dx > 0 && pos.pixels >= pos.maxScrollExtent - 1) {
+      _shiftPastEdge(true);
+    } else if (dx < 0 && pos.pixels <= pos.minScrollExtent + 1) {
+      _shiftPastEdge(false);
+    }
+  }
+
+  bool _shiftPastEdge(bool forward) {
+    final shift = widget.onShiftWindow;
+    if (_swipeShifted || shift == null || !_gridHScroll.hasClients) {
+      return false;
+    }
+    final left = _windowStart.add(Duration(
+        seconds: (_gridHScroll.offset / _pixelsPerMinute * 60).round()));
     final top = _gridVScroll.hasClients ? _gridVScroll.offset : null;
-    if (n.overscroll < 0) {
+    if (!forward && (widget.anchor?.isAfter(DateTime.now()) ?? false)) {
+      // A later window: the one before it (the usual one once that
+      // reaches it).
+      _swipeShifted = true;
+      shift(
+          _anchorFor(_windowStart.subtract(_slot)) == null
+              ? null
+              : _windowStart,
+          -1,
+          left,
+          scrollTop: top);
+      return true;
+    }
+    if (!forward) {
       DateTime? oldest;
       for (final c in widget.channels) {
         final floor = _catchupFloor(c);
@@ -10494,8 +10565,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       shift(_windowStart, -1, left, scrollTop: top);
       return true;
     }
-    if (n.overscroll > 0 && widget.anchor != null) {
-      final usual = !left.isBefore(DateTime.now().subtract(_windowBefore));
+    if (forward && _windowEnd.isBefore(DateTime.now().add(_furthestAhead))) {
+      // The window after: from the past, the usual one once it reaches
+      // back to the view; else one around this window's end.
+      final past = widget.anchor?.isBefore(DateTime.now()) ?? false;
+      final usual = past && _anchorFor(left) == null;
       _swipeShifted = true;
       shift(usual ? null : _windowEnd, -1, left, scrollTop: top);
       return true;
@@ -10816,7 +10890,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     final viewTop = pos.pixels;
     final viewBottom = viewTop + viewport;
     if (top < viewTop) {
-      _gridVScroll.jumpTo(top);
+      _gridVScroll.jumpTo(top.clamp(0.0, pos.maxScrollExtent));
     } else if (bottom > viewBottom) {
       _gridVScroll.jumpTo((bottom - viewport).clamp(0.0, pos.maxScrollExtent));
     }
@@ -11038,7 +11112,26 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         next = b;
       }
     }
-    if (next == null) return _moveBySlot(dir);
+    if (next == null) {
+      // A programme running past the window's edge: one press to the
+      // programme on the other side, in the window that shows it (slot
+      // steps crawled through it half an hour per press). Into the past
+      // stays with the catch-up steps.
+      if (dir > 0 &&
+          !focused.end.isBefore(_windowEnd) &&
+          _shiftTo(focused.end, rowIndex)) {
+        return true;
+      }
+      final later = widget.anchor?.isAfter(DateTime.now()) ?? false;
+      if (dir < 0 && later && focused.start.isBefore(_windowStart)) {
+        final before = focused.start.subtract(const Duration(minutes: 1));
+        final soonest = _floorToSlot(DateTime.now().subtract(_windowBefore));
+        if (!before.isBefore(soonest) && _shiftTo(before, rowIndex)) {
+          return true;
+        }
+      }
+      return _moveBySlot(dir);
+    }
     final now = DateTime.now();
     final start = next.start.isBefore(_windowStart) ? _windowStart : next.start;
     final end = next.end.isAfter(_windowEnd) ? _windowEnd : next.end;
@@ -11088,6 +11181,13 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     final target = current.add(_slot * dir);
     final shift = widget.onShiftWindow;
     if (target.isBefore(_floorToSlot(_windowStart))) {
+      // Back from later hours: the window before (the usual one once it
+      // shows the target).
+      final later = widget.anchor?.isAfter(now) ?? false;
+      if (later &&
+          !target.isBefore(_floorToSlot(now.subtract(_windowBefore)))) {
+        return _shiftTo(target, rowIndex);
+      }
       // Into the past on a catch-up row: a window further back.
       final floor = _catchupFloor(widget.channels[rowIndex]);
       if (shift != null && floor != null && !target.isBefore(floor)) {
@@ -11098,29 +11198,13 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       return false;
     }
     if (!target.isBefore(_windowEnd)) {
-      // Forward out of a past window: the next one, or the usual window
-      // once that reaches back to the target.
-      if (shift != null && widget.anchor != null) {
-        final usual =
-            !target.isBefore(_floorToSlot(now.subtract(_windowBefore)));
-        widget.holdFocus?.requestFocus();
-        shift(usual ? null : target, rowIndex,
-            target == _floorToSlot(now) ? null : target);
-        return true;
-      }
-      // The live window was fixed when this guide mounted, and it only
-      // remounts with an hour left ([_checkWindowStale]): a guide left open
-      // for hours stopped an hour ahead (owner + user, 2026-11-15; Who's
-      // watching and back "fixed" it). A fresh window reaches further.
-      if (shift != null &&
-          widget.anchor == null &&
-          target.isBefore(now.add(_windowAfter))) {
-        widget.holdFocus?.requestFocus();
-        shift(null, rowIndex, target,
-            scrollTop: _gridVScroll.hasClients ? _gridVScroll.offset : null);
-        return true;
-      }
-      return false;
+      // Forward: out of a past window, the next one or the usual window
+      // once that reaches back to the target. The usual window was fixed
+      // when this guide mounted and only remounts with an hour left
+      // ([_checkWindowStale]): a guide left open for hours stopped an hour
+      // ahead (owner + user, 2026-11-15), so a fresh one reaches further.
+      // Past its five hours: a later window, up to [_furthestAhead].
+      return _shiftTo(target, rowIndex);
     }
     final live = target == _floorToSlot(now);
     _cursorSlot = live ? null : target;
@@ -11517,89 +11601,102 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                       node: _gridFocusScope,
                       child: NotificationListener<OverscrollNotification>(
                         onNotification: _onGridOverscroll,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          controller: _gridHScroll,
-                          // iOS bounces by default, and a bounce sends no
-                          // OverscrollNotification: dragging past the left edge
-                          // never reached the catch-up past.
-                          physics: const ClampingScrollPhysics(),
-                          child: SizedBox(
-                            width: _totalWidth,
-                            height: widget.channels.length * _rowHeight + gap,
-                            child: Stack(
-                              children: [
-                                CustomScrollView(
-                                  controller: _gridVScroll,
-                                  slivers: [
-                                    GapExtentList(
-                                      rowExtent: _rowHeight,
-                                      gapAfter: gapRow,
-                                      gapExtent: gap,
-                                      delegate: SliverChildBuilderDelegate(
-                                        childCount: widget.channels.length,
-                                        (context, i) => Align(
-                                          alignment: Alignment.topLeft,
-                                          child: _cachedRow(
-                                              i,
-                                              epgLoading,
-                                              () => _TimelineRow(
-                                                    rowIndex: i,
-                                                    channel: widget.channels[i],
-                                                    programs: widget.epg
-                                                        .getPrograms(widget
-                                                            .channels[i].epgId),
-                                                    windowStart: _windowStart,
-                                                    windowEnd: _windowEnd,
-                                                    pixelsPerMinute:
-                                                        _pixelsPerMinute,
-                                                    onOpen: () => widget.onOpen(
-                                                        widget.channels[i]),
-                                                    onOpenCatchup: widget
-                                                                .onOpenCatchup ==
-                                                            null
-                                                        ? null
-                                                        : (at) => widget
-                                                                .onOpenCatchup!(
-                                                            widget.channels[i],
-                                                            at),
-                                                    onShowOptions: () =>
-                                                        widget.onShowOptions(
-                                                            widget.channels[i]),
-                                                    ensureRowVisible:
-                                                        _ensureRowVisible,
-                                                    onFocusChanged:
-                                                        widget.onFocusChanged,
-                                                    onFocusTracked: _trackFocus,
-                                                    onFocusedBlockGone:
-                                                        _onFocusedBlockGone,
-                                                    onRegisterBlock:
-                                                        _registerBlock,
-                                                    onUnregisterBlock:
-                                                        _unregisterBlock,
-                                                    hScroll: _gridHScroll,
-                                                    epgLoading: epgLoading,
-                                                    translucent:
-                                                        widget.translucent,
-                                                  )),
+                        child: Listener(
+                          onPointerSignal: _wheelPastEdge,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            controller: _gridHScroll,
+                            // iOS bounces by default, and a bounce sends no
+                            // OverscrollNotification: dragging past the left edge
+                            // never reached the catch-up past.
+                            physics: const ClampingScrollPhysics(),
+                            child: SizedBox(
+                              width: _totalWidth,
+                              height: widget.channels.length * _rowHeight + gap,
+                              child: Stack(
+                                children: [
+                                  CustomScrollView(
+                                    controller: _gridVScroll,
+                                    // Like the sideways scroll: iOS / tvOS bounce
+                                    // otherwise, and the rows could rest off
+                                    // their places.
+                                    physics: const ClampingScrollPhysics(),
+                                    slivers: [
+                                      GapExtentList(
+                                        rowExtent: _rowHeight,
+                                        gapAfter: gapRow,
+                                        gapExtent: gap,
+                                        delegate: SliverChildBuilderDelegate(
+                                          childCount: widget.channels.length,
+                                          (context, i) => Align(
+                                            alignment: Alignment.topLeft,
+                                            child: _cachedRow(
+                                                i,
+                                                epgLoading,
+                                                () => _TimelineRow(
+                                                      rowIndex: i,
+                                                      channel:
+                                                          widget.channels[i],
+                                                      programs: widget.epg
+                                                          .getPrograms(widget
+                                                              .channels[i]
+                                                              .epgId),
+                                                      windowStart: _windowStart,
+                                                      windowEnd: _windowEnd,
+                                                      pixelsPerMinute:
+                                                          _pixelsPerMinute,
+                                                      onOpen: () =>
+                                                          widget.onOpen(widget
+                                                              .channels[i]),
+                                                      onOpenCatchup: widget
+                                                                  .onOpenCatchup ==
+                                                              null
+                                                          ? null
+                                                          : (at) => widget
+                                                                  .onOpenCatchup!(
+                                                              widget
+                                                                  .channels[i],
+                                                              at),
+                                                      onShowOptions: () =>
+                                                          widget.onShowOptions(
+                                                              widget
+                                                                  .channels[i]),
+                                                      ensureRowVisible:
+                                                          _ensureRowVisible,
+                                                      onFocusChanged:
+                                                          widget.onFocusChanged,
+                                                      onFocusTracked:
+                                                          _trackFocus,
+                                                      onFocusedBlockGone:
+                                                          _onFocusedBlockGone,
+                                                      onRegisterBlock:
+                                                          _registerBlock,
+                                                      onUnregisterBlock:
+                                                          _unregisterBlock,
+                                                      hScroll: _gridHScroll,
+                                                      epgLoading: epgLoading,
+                                                      translucent:
+                                                          widget.translucent,
+                                                    )),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Positioned(
-                                  left: nowX,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: const IgnorePointer(
-                                    child: SizedBox(
-                                      width: 2,
-                                      child:
-                                          ColoredBox(color: Colors.redAccent),
+                                    ],
+                                  ),
+                                  Positioned(
+                                    left: nowX,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: const IgnorePointer(
+                                      child: SizedBox(
+                                        width: 2,
+                                        child:
+                                            ColoredBox(color: Colors.redAccent),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -12083,8 +12180,14 @@ class _GuideRowDetailsState extends State<_GuideRowDetails> {
         : (now.difference(program.start).inSeconds / total).clamp(0.0, 1.0);
     final left = (program.stop.difference(now).inSeconds / 60).ceil();
     final description = (program.description ?? '').trim();
+    // Own line heights: the theme's taller default made the title + times
+    // 2 px higher than [_TimelineGuideState._detailsHeightFor]'s gap in
+    // Compact UI with no description (the time line was cut).
     final lineStyle = TextStyle(
-        color: Colors.white70, fontSize: small ? 11 : 12, shadows: shadows);
+        color: Colors.white70,
+        fontSize: small ? 11 : 12,
+        height: 1.25,
+        shadows: shadows);
     final descStyle = lineStyle.copyWith(height: 1.3);
     return AnimatedOpacity(
       opacity: _shown ? 1 : 0,
@@ -12107,6 +12210,7 @@ class _GuideRowDetailsState extends State<_GuideRowDetails> {
               style: TextStyle(
                   color: Colors.white,
                   fontSize: small ? 13 : 15,
+                  height: 1.25,
                   fontWeight: FontWeight.w600,
                   shadows: shadows),
             ),
@@ -12856,16 +12960,23 @@ class _ProgramBlockState extends State<_ProgramBlock> {
   /// label keeps its title readable instead. Left/Right and Up/Down are
   /// dispatched explicitly (see [_TimelineGuideState.moveHorizontal]),
   /// which position the view themselves.
+  ///
+  /// Sideways only: `Scrollable.ensureVisible` also scrolled the rows,
+  /// putting the block's top (4 px inside its row) at the view's top, so
+  /// every row sat 4 px off: the top one cut, the next one peeking under
+  /// the last (Unbeaten82's photos, 2026-11-21). The row itself is
+  /// already in view ([_TimelineGuideState._ensureRowVisible], called
+  /// first by onFocusGained).
   void _revealHorizontally() {
-    if (widget.hScroll.hasClients) {
-      final pos = widget.hScroll.position;
-      final viewLeft = pos.pixels;
-      final viewRight = viewLeft + pos.viewportDimension;
-      final overlaps = widget.blockLeft < viewRight &&
-          widget.blockLeft + widget.blockWidth > viewLeft;
-      if (overlaps) return;
-    }
-    Scrollable.ensureVisible(context, duration: Duration.zero);
+    if (!widget.hScroll.hasClients) return;
+    final pos = widget.hScroll.position;
+    if (!pos.hasContentDimensions) return;
+    final viewLeft = pos.pixels;
+    final viewRight = viewLeft + pos.viewportDimension;
+    final overlaps = widget.blockLeft < viewRight &&
+        widget.blockLeft + widget.blockWidth > viewLeft;
+    if (overlaps) return;
+    pos.jumpTo(widget.blockLeft.clamp(0.0, pos.maxScrollExtent));
   }
 
   @override
