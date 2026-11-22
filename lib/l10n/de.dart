@@ -184,6 +184,9 @@ const Map<String, String> kDe = {
       "Verwende beim Start eines Titels die größte bekannte Dateigröße. Beim Fortsetzen bleibt der gewählte Stream erhalten.",
   "IPTV copies in Sources":
       "IPTV-Kopien in den Quellen",
+  "Faster downloads for big files": "Schnellerer Download großer Dateien",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Große Filmdateien (4K-Remuxe) werden über bis zu 3 Verbindungen gleichzeitig geladen, wenn eine einzelne langsamer ist, als der Film braucht, damit ein langsamer Server das Bild nicht einfrieren lässt.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Wenn du einen Media-Hub-Film oder eine Folge startest, bietet die Quellenliste auch denselben Titel aus deinen IPTV-Playlists an (nach Name und Jahr oder TMDB-ID zugeordnet). Standardmäßig aus.",
   "Prefer highest quality": "Höchste Qualität bevorzugen",

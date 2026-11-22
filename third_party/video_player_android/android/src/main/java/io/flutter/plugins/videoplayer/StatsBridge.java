@@ -42,13 +42,15 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     boolean onDemand = "setOnDemandBuffering".equals(call.method);
     boolean liveBuffer = "setLiveBuffer".equals(call.method);
     boolean thin = "setFrameThinning".equals(call.method);
+    boolean readAhead = "setReadAhead".equals(call.method);
     if ("setLiveBufferDefault".equals(call.method)) {
       Number ms = call.argument("ms");
       OnDemandLoadControl.setDefaultLiveReserveMs(ms == null ? 0 : ms.longValue());
       result.success(null);
       return;
     }
-    if (!finite && !onDemand && !liveBuffer && !thin && !"getStats".equals(call.method)) {
+    if (!finite && !onDemand && !liveBuffer && !thin && !readAhead
+        && !"getStats".equals(call.method)) {
       result.notImplemented();
       return;
     }
@@ -82,6 +84,18 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     if (onDemand) {
       player.setOnDemandBuffering(Boolean.TRUE.equals(call.argument("on")));
       result.success(null);
+      return;
+    }
+    if (readAhead) {
+      boolean on = Boolean.TRUE.equals(call.argument("on"));
+      Number mbps = call.argument("fileMbps");
+      String why = player.setReadAhead(on, mbps == null ? 0 : mbps.doubleValue());
+      Map<String, Object> r = new HashMap<>();
+      r.put("on", on && why == null);
+      if (why != null) r.put("reason", why);
+      ReadAhead ra = player.readAhead();
+      if (ra != null) r.put("windowMb", ra.windowBytes() / (1024 * 1024));
+      result.success(r);
       return;
     }
     Map<String, Object> m = new HashMap<>();
@@ -119,6 +133,15 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     if (loadError != null) m.put("lastLoadError", loadError);
     m.put("smallRam", BufferBudget.isSmallDeviceKnown());
     m.put("vodBufferMb", player.onDemandBufferBytes() / (1024 * 1024));
+    ReadAhead ahead = player.readAhead();
+    if (ahead != null && ahead.isArmed()) {
+      m.put("readAheadOn", true);
+      m.put("readAheadMb", ahead.bytesAhead() / (1024 * 1024));
+      m.put("readAheadRestarts", ahead.restarts());
+      m.put("readAheadConnections", ahead.connections());
+      String note = ahead.note();
+      if (note != null) m.put("readAheadNote", note);
+    }
     m.put("heapMb", Runtime.getRuntime().maxMemory() / (1024 * 1024));
     @Nullable DecoderCounters video = player.getExoPlayer().getVideoDecoderCounters();
     if (video != null) {

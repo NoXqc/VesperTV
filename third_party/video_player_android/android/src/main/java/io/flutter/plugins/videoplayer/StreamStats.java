@@ -33,6 +33,8 @@ final class StreamStats implements TransferListener {
   final java.util.concurrent.atomic.AtomicInteger reconnects =
       new java.util.concurrent.atomic.AtomicInteger();
   @Nullable volatile String lastReconnect;
+  /** Big movie files: several connections + a memory ring (HttpVideoAsset, progressive only). */
+  @Nullable volatile ReadAhead readAhead;
 
   /**
    * The player's first network requests ({sent ns, answered ns, ended ns, byte position, bytes}),
@@ -71,6 +73,11 @@ final class StreamStats implements TransferListener {
   /** A single progressive resource (not HLS/DASH): what LiveReconnectDataSource wraps. */
   boolean isProgressive() {
     return fileUri != null;
+  }
+
+  @Nullable
+  Uri fileUri() {
+    return fileUri;
   }
   private static final Pattern RANGE = Pattern.compile(
       "bytes\\s+(\\d+)-(\\d+)/(\\d+)", Pattern.CASE_INSENSITIVE);

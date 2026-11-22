@@ -189,6 +189,9 @@ const Map<String, String> kPl = {
       "Przy starcie tytułu używaj największego znanego rozmiaru pliku. Wznawianie zachowuje wybrany strumień.",
   "IPTV copies in Sources":
       "Kopie IPTV w źródłach",
+  "Faster downloads for big files": "Szybsze pobieranie dużych plików",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Duże pliki filmów (remuksy 4K) pobierają się przez maksymalnie 3 połączenia naraz, gdy jedno jest wolniejsze, niż wymaga film, aby wolny serwer nie zamrażał obrazu.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Gdy uruchamiasz film lub odcinek z Media Hub, lista źródeł pokazuje też ten sam tytuł z twoich playlist IPTV (dopasowany po nazwie i roku albo po id TMDB). Domyślnie wyłączone.",
   "Prefer highest quality": "Preferuj najwyższą jakość",

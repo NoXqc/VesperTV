@@ -186,6 +186,9 @@ const Map<String, String> kUk = {
       "Під час запуску назви використовувати найбільший відомий розмір файлу. Продовження зберігає вибраний потік.",
   "IPTV copies in Sources":
       "Копії IPTV у джерелах",
+  "Faster downloads for big files": "Швидше завантаження великих файлів",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Великі файли фільмів (4K-ремукси) завантажуються через до 3 з'єднань одночасно, коли одне повільніше, ніж потрібно фільму, щоб повільний сервер не заморожував зображення.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Коли ви запускаєте фільм або епізод із Media Hub, список джерел також пропонує той самий заголовок із ваших IPTV-плейлистів (за назвою й роком або за id TMDB). Типово вимкнено.",
   "Prefer highest quality": "Віддавати перевагу найвищій якості",

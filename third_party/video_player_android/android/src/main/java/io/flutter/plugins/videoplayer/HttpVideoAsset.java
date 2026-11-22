@@ -102,7 +102,17 @@ final class HttpVideoAsset extends VideoAsset {
     initialFactory.setTransferListener(stats);
     DataSource.Factory http = initialFactory;
     if (stats.isProgressive()) {
-      http = () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats);
+      // Big movie files can download over several connections (ReadAhead, off until Dart arms
+      // it). Its connections come from the same factory: same headers, counted in the stats.
+      if (stats.readAhead == null) {
+        stats.readAhead = new ReadAhead(initialFactory, stats.fileUri());
+      }
+      final ReadAhead readAhead = stats.readAhead;
+      http = readAhead == null
+          ? () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats)
+          : () -> new ReadAheadDataSource(
+              () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats),
+              readAhead);
     }
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, http);
     return new DefaultMediaSourceFactory(

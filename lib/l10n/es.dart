@@ -198,6 +198,9 @@ const Map<String, String> kEs = {
       "Elige el archivo de mayor tamaño conocido al iniciar. Al reanudar se conserva el flujo seleccionado.",
   "IPTV copies in Sources":
       "Copias IPTV en Fuentes",
+  "Faster downloads for big files": "Descarga más rápida de archivos grandes",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Los archivos de película grandes (remux 4K) se descargan por hasta 3 conexiones a la vez cuando una sola es más lenta de lo que necesita la película, para que un servidor lento no congele la imagen.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Al iniciar una película o un episodio de Media Hub, su lista de Fuentes también ofrece el mismo título de tus listas IPTV (emparejado por nombre y año, o por id de TMDB). Desactivado por defecto.",
   "Prefer highest quality": "Preferir la máxima calidad",

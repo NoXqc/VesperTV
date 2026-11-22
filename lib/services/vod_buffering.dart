@@ -17,6 +17,11 @@ class VodBuffering {
   /// [StorageService.getLiveBufferMs] at startup and on change.
   static int liveBufferMs = 0;
 
+  /// Settings > Playback > Faster downloads for big files (on by default):
+  /// big movie files may use several connections ([VodStallLog] arms it).
+  /// Set from [StorageService.getReadAhead] at startup and on change.
+  static bool readAhead = true;
+
   /// Sends [ms] to the native player as the live buffer every new player
   /// starts with (startup and on change).
   static Future<void> setLiveBufferDefault(int ms) async {

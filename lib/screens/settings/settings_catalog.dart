@@ -1004,6 +1004,19 @@ class SettingsCatalog {
                     'When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.'),
                 value: archive.iptvSources,
                 onChanged: archive.setIptvSources),
+          // The Android player only (vendored ExoPlayer's ReadAhead).
+          if (Platform.isAndroid)
+            SettingsToggle(
+                id: 'read_ahead',
+                icon: Icons.speed,
+                title: tr('Faster downloads for big files'),
+                help: tr(
+                    "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture."),
+                value: _storage.getReadAhead(),
+                onChanged: (v) => _save(() async {
+                      await _storage.setReadAhead(v);
+                      VodBuffering.readAhead = v;
+                    })),
           SettingsLink(
               id: 'stream_badges',
               floating: true,
