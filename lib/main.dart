@@ -30,6 +30,7 @@ import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/apple_tv_menu.dart';
 import 'services/apple_tv_storage.dart';
+import 'services/held_ok_repeat.dart';
 import 'services/app_exit.dart';
 import 'services/remote_buttons.dart';
 import 'services/startup_quiet.dart';
@@ -162,6 +163,8 @@ Future<void> _main() async {
     databaseFactory = databaseFactoryFfi;
   }
   if (isAppleTv) {
+    // The Siri Remote's click never repeats: without this no hold OK opens.
+    HeldOkRepeat.install();
     // media_kit picks libmpv's file by Platform.operatingSystem and has no
     // 'tvos' entry: give it the iOS framework path. If libmpv is missing,
     // Apple TV keeps Apple's player (usesMediaKit stays false).
