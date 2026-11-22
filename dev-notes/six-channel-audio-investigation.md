@@ -1,5 +1,8 @@
 # Issue #9 investigation: "6-channel audio not available in FireStick" (Claude, 2026-11-21)
 
+> Written by the reporter (corporate-gadfly) with their own AI tools and contributed with PR #12. The fix
+> (Compatibility video honours Surround passthrough) is summarised in CLAUDE.md §9.
+
 Media3 1.9.2's default PCM sink is not stereo-capped. Device logs now show E-AC-3 JOC
 six-channel input becoming stereo PCM, while a separate AAC channel initializes six-channel PCM.
 A narrowly scoped decoder-routing candidate is built for a same-stream device comparison.

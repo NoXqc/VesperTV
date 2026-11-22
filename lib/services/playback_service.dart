@@ -1789,11 +1789,18 @@ class PlaybackService extends ChangeNotifier {
   }
 
   /// Encoded output cannot be muted per tile; reconnect it as PCM for Multiview.
+  /// (PR #12, issue #9.) A player that is already gone natively counts as
+  /// not movable: Multiview then opens the channel anew, as before.
   static Future<bool> canHandOverToMultiview(VideoPlayerHdrController c) async {
     final platform = VideoPlayerPlatform.instance;
     if (platform is AndroidVideoPlayer) {
-      return !await platform
-          .isAudioPassthroughEnabled(SubtitleTracks.playerIdOf(c));
+      try {
+        return !await platform
+            .isAudioPassthroughEnabled(SubtitleTracks.playerIdOf(c));
+      } catch (e) {
+        debugPrint('Multiview: passthrough check failed ($e), reopening');
+        return false;
+      }
     }
     return true;
   }
