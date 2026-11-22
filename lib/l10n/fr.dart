@@ -4196,4 +4196,13 @@ const Map<String, String> kFr = {
       "Le serveur ne peut pas lire ce fichier : {reason}",
   "The server can't play this file right now.":
       "Le serveur ne peut pas lire ce fichier pour le moment.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Surface tactile",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Avec quelle légèreté un glissement sur la télécommande Siri déplace la sélection. Cet appareil seulement.",
+  "Less sensitive":
+      "Moins sensible",
+  "Very sensitive":
+      "Très sensible",
 };

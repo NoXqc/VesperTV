@@ -3777,4 +3777,13 @@ const Map<String, String> kPl = {
       "Serwer nie może odtworzyć tego pliku: {reason}",
   "The server can't play this file right now.":
       "Serwer nie może teraz odtworzyć tego pliku.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Powierzchnia dotykowa",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Jak lekkie przesunięcie na pilocie Siri Remote przesuwa zaznaczenie. Tylko to urządzenie.",
+  "Less sensitive":
+      "Mniej czuła",
+  "Very sensitive":
+      "Bardzo czuła",
 };

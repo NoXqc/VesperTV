@@ -4183,4 +4183,13 @@ const Map<String, String> kEs = {
       "El servidor no puede reproducir este archivo: {reason}",
   "The server can't play this file right now.":
       "El servidor no puede reproducir este archivo ahora mismo.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Superficie táctil",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Con qué suavidad un deslizamiento en el Siri Remote mueve la selección. Solo este dispositivo.",
+  "Less sensitive":
+      "Menos sensible",
+  "Very sensitive":
+      "Muy sensible",
 };

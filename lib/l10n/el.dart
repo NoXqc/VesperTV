@@ -4145,4 +4145,13 @@ const Map<String, String> kEl = {
       "Ο διακομιστής δεν μπορεί να παίξει αυτό το αρχείο: {reason}",
   "The server can't play this file right now.":
       "Ο διακομιστής δεν μπορεί να παίξει αυτό το αρχείο αυτή τη στιγμή.",
+  // Apple TV touch surface (2026-11-21).
+  "Touch surface":
+      "Επιφάνεια αφής",
+  "How lightly a swipe on the Siri Remote moves the selection. This device only.":
+      "Πόσο ελαφρύ σύρσιμο στο Siri Remote μετακινεί την επιλογή. Μόνο αυτή η συσκευή.",
+  "Less sensitive":
+      "Λιγότερο ευαίσθητη",
+  "Very sensitive":
+      "Πολύ ευαίσθητη",
 };

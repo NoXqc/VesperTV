@@ -617,6 +617,10 @@ class AppConstants {
   /// release) or 'test' (GitHub pre-releases too). This device only.
   static const String keyUpdateChannel = 'vesper_update_channel';
 
+  /// Apple TV: how eagerly the Siri Remote's touch surface moves the
+  /// selection ('low' / 'normal' / 'high', AppleTvRemote). This device only.
+  static const String keyAppleTvTouch = 'vesper_tvos_touch';
+
   /// Next splash greeting to show (index into SplashGreeting.bank).
   static const String keySplashGreeting = 'vesper_splash_greeting';
 
