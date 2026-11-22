@@ -292,51 +292,102 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
               style: const TextStyle(fontSize: 12, color: Colors.white54)),
         ],
         const SizedBox(height: 16),
-        Wrap(spacing: 10, runSpacing: 10, children: [
-          DetailPillButton(
-            focusNode: _playNode,
-            icon: _starting ? Icons.hourglass_top : Icons.play_arrow_rounded,
-            label: resume ? tr('Resume') : tr('Play'),
-            emphasized: true,
-            scale: 1,
-            onPressed: () => _play(restart: watched),
-          ),
-          TrailerButton(
-              focusNode: _trailerNode,
-              beforeOpen: () async => _backgroundTrailer.currentState?.stop(),
-              request: _trailerRequest),
-          if (resume)
+        _pillArrows(
+          nodes: [
+            _playNode,
+            _trailerNode,
+            if (resume) _restartNode,
+            _watchListNode,
+            if (downloadsAvailable) _downloadNode,
+            if (meta.cast.isNotEmpty) _castNode,
+          ],
+          child: Wrap(spacing: 10, runSpacing: 10, children: [
             DetailPillButton(
-              focusNode: _restartNode,
-              icon: Icons.replay_rounded,
-              label: tr('Restart'),
+              focusNode: _playNode,
+              icon: _starting ? Icons.hourglass_top : Icons.play_arrow_rounded,
+              label: resume ? tr('Resume') : tr('Play'),
+              emphasized: true,
               scale: 1,
-              onPressed: () => _play(restart: true),
+              onPressed: () => _play(restart: watched),
             ),
-          WatchListButton(
-            item: WatchListItem(hub: HubTitle(widget.source.manifestUrl, meta)),
-            focusNode: _watchListNode,
-            scale: 1,
-          ),
-          if (downloadsAvailable)
-            DownloadButton(
-              sourceId: movieId,
-              focusNode: _downloadNode,
+            TrailerButton(
+                focusNode: _trailerNode,
+                beforeOpen: () async => _backgroundTrailer.currentState?.stop(),
+                request: _trailerRequest),
+            if (resume)
+              DetailPillButton(
+                focusNode: _restartNode,
+                icon: Icons.replay_rounded,
+                label: tr('Restart'),
+                scale: 1,
+                onPressed: () => _play(restart: true),
+              ),
+            WatchListButton(
+              item:
+                  WatchListItem(hub: HubTitle(widget.source.manifestUrl, meta)),
+              focusNode: _watchListNode,
               scale: 1,
-              build: (context) => archiveDownloadItems(context,
-                  source: widget.source, meta: _meta),
             ),
-          if (meta.cast.isNotEmpty)
-            DetailPillButton(
-              focusNode: _castNode,
-              icon: Icons.groups_rounded,
-              label: tr('Cast'),
-              selected: _showCast,
-              scale: 1,
-              onPressed: () => setState(() => _showCast = !_showCast),
-            ),
-        ]),
+            if (downloadsAvailable)
+              DownloadButton(
+                sourceId: movieId,
+                focusNode: _downloadNode,
+                scale: 1,
+                build: (context) => archiveDownloadItems(context,
+                    source: widget.source, meta: _meta),
+              ),
+            if (meta.cast.isNotEmpty)
+              DetailPillButton(
+                focusNode: _castNode,
+                icon: Icons.groups_rounded,
+                label: tr('Cast'),
+                selected: _showCast,
+                scale: 1,
+                onPressed: () => setState(() => _showCast = !_showCast),
+              ),
+          ]),
+        ),
       ],
+    );
+  }
+
+  /// Left / Right walk the buttons in order, Up / Down the wrapped rows, as on
+  /// the IPTV movie page. Long labels (German) wrap them onto three rows:
+  /// Trailer ended row 1, so Right from it went by screen position to the
+  /// first poster right of it, far below, and Watch list was never next
+  /// (German Fire TV user, +917's report again, video 2026-11-21). Past the
+  /// last row, Up / Down keep the default search (Back arrow above on phones,
+  /// Explore more below).
+  Widget _pillArrows({required List<FocusNode> nodes, required Widget child}) {
+    void move(int delta) {
+      final active = nodes.where((node) => node.context != null).toList();
+      final i = active.indexWhere((node) => node.hasFocus);
+      final next = i + delta;
+      if (i >= 0 && next >= 0 && next < active.length) {
+        active[next].requestFocus();
+      }
+    }
+
+    void vertical({required bool down}) {
+      final target = detailNodeInRow(nodes, down: down);
+      if (target != null) {
+        target.requestFocus();
+      } else {
+        FocusManager.instance.primaryFocus?.focusInDirection(
+            down ? TraversalDirection.down : TraversalDirection.up);
+      }
+    }
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => move(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () => move(1),
+        const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+            vertical(down: false),
+        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+            vertical(down: true),
+      },
+      child: child,
     );
   }
 }

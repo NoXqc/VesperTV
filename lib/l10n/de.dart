@@ -3629,6 +3629,7 @@ const Map<String, String> kDe = {
       "Letzter Sender",
   "Player bar":
       "Player-Leiste",
+  "Back to the guide": "Zurück zum Guide",
   "Nothing":
       "Nichts",
   "Fast forward":

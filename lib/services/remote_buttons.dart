@@ -153,6 +153,9 @@ enum PlayerArrow {
     ('channel_up', 'Channel up'),
     ('channel_down', 'Channel down'),
     ('bar', 'Player bar'),
+    // What Back does: the guide, then Left / Back again = the groups, the
+    // tabs (uzumaki, Fire TV, Discord 2026-11-21).
+    ('back', 'Back to the guide'),
     ('none', 'Nothing'),
   ];
 }

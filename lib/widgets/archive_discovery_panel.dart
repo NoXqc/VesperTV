@@ -461,11 +461,11 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                 // ragged block with the icon at the bottom.
                 style: TextButton.styleFrom(alignment: Alignment.centerLeft),
                 icon: const Icon(Icons.movie_outlined),
-                label: Flexible(
-                  child: Text(
-                      tr('Add your TMDB key for collections and cast credits'),
-                      textAlign: TextAlign.start),
-                ),
+                // TextButton.icon already puts the label in a Flexible: a
+                // second one was a debug-build error (competing parent data).
+                label: Text(
+                    tr('Add your TMDB key for collections and cast credits'),
+                    textAlign: TextAlign.start),
                 onPressed: () async {
                   await Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const TmdbSettingsScreen()));
