@@ -9,6 +9,10 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
+import 'package:video_player_android/video_player_android.dart'
+    show AndroidVideoPlayer, AndroidVideoPlayerOptions;
+import 'package:video_player_platform_interface/video_player_platform_interface.dart'
+    show VideoPlayerPlatform;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
@@ -1791,6 +1795,23 @@ class PlaybackService extends ChangeNotifier {
     return (channel: ch, controller: c);
   }
 
+  /// Encoded output cannot be muted per tile; reconnect it as PCM for Multiview.
+  /// (PR #12, issue #9.) A player that is already gone natively counts as
+  /// not movable: Multiview then opens the channel anew, as before.
+  static Future<bool> canHandOverToMultiview(VideoPlayerHdrController c) async {
+    final platform = VideoPlayerPlatform.instance;
+    if (platform is AndroidVideoPlayer) {
+      try {
+        return !await platform
+            .isAudioPassthroughEnabled(SubtitleTracks.playerIdOf(c));
+      } catch (e) {
+        debugPrint('Multiview: passthrough check failed ($e), reopening');
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// The controller [releaseLive] would hand over now, or null.
   VideoPlayerHdrController? get liveHandover {
     final c = controller;
@@ -2121,6 +2142,7 @@ VideoPlayerHdrController streamController(
   Future<ClosedCaptionFile>? closedCaptionFile,
   VideoPlayerOptions? videoPlayerOptions,
   Map<String, String> httpHeaders = const {},
+  bool allowEncodedAudio = true,
 }) {
   // On a TV box another app taking audio focus (launcher previews, voice
   // assistant, CEC) made ExoPlayer pause silently: a frozen picture with
@@ -2143,6 +2165,12 @@ VideoPlayerHdrController streamController(
           o?.preventsDisplaySleepDuringVideoPlayback ?? true,
       webOptions: o?.webOptions,
       backBufferDurationMs: CatchupFormat.backBuffer.inMilliseconds,
+    );
+  }
+  if (Platform.isAndroid) {
+    videoPlayerOptions = AndroidVideoPlayerOptions(
+      allowEncodedAudio: allowEncodedAudio,
+      options: videoPlayerOptions,
     );
   }
   // A recording (RecordingService.channelFor): a local .ts file.

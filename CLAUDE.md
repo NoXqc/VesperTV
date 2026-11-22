@@ -223,7 +223,11 @@ audio stalls remains unconfirmed. See `dev-notes/vod-seek-buffering.md`.
 Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPassthrough`) — opt-in
 HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
 when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
-context-less sink above. Texture players (Multiview, Compatibility video) never pass through.
+context-less sink above. Multiview tiles never pass through. Since PR #12 (corporate-gadfly, issue #9,
+2026-11-22) the Compatibility video main player does too (`AndroidVideoPlayerOptions.allowEncodedAudio`,
+`TextureVideoPlayer`): Fire OS 6 sticks are on Compatibility video by default and their Dolby E-AC-3 decoder
+gives stereo, so 5.1 there needs passthrough. A passthrough player is never handed into Multiview
+(`PlaybackService.canHandOverToMultiview`: it reopens as PCM). Notes: dev-notes/six-channel-audio-investigation.md.
 Unreleased (2026-11-09): **`MatroskaAtmos.java`** (`HttpVideoAsset` wraps the extractors factory):
 MatroskaExtractor never flags Atmos (only TS frames and MP4's dec3 do), so Media Hub MKVs showed
 "E-AC-3 5.1". An MKV E-AC-3 track's first frame goes through `Ac3Util.parseAc3SyncframeInfo`; JOC

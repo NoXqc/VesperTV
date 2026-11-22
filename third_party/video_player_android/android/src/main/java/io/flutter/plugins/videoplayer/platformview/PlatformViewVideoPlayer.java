@@ -57,6 +57,8 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
       @NonNull VideoPlayerCallbacks events,
       @NonNull VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
+    final boolean passthrough = AudioPassthrough.isEnabled();
+    options.effectivePassthrough = passthrough;
     final OnDemandLoadControl[] policy = new OnDemandLoadControl[1];
     PlatformViewVideoPlayer player = new PlatformViewVideoPlayer(
         events,
@@ -122,7 +124,6 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           // Dolby Atmos / AC3 / DTS reach the receiver untouched; its volume
           // is then the TV's. Multiview tiles are texture players and never
           // get here.
-          final boolean passthrough = AudioPassthrough.isEnabled();
           DefaultRenderersFactory renderersFactory =
               new DefaultRenderersFactory(context) {
                 @Override

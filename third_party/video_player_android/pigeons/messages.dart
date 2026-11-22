@@ -84,6 +84,7 @@ class CreationOptions {
   Map<String, String> httpHeaders;
   String? userAgent;
   int? backBufferDurationMs;
+  bool? allowEncodedAudio;
 }
 
 class TexturePlayerIds {
@@ -202,6 +203,7 @@ abstract class AndroidVideoPlayerApi {
   TexturePlayerIds createForTextureView(CreationOptions options);
   void dispose(int playerId);
   void setMixWithOthers(bool mixWithOthers);
+  bool isAudioPassthroughEnabled(int playerId);
   String getLookupKeyForAsset(String asset, String? packageName);
 }
 

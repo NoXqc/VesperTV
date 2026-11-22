@@ -100,6 +100,7 @@ public class VideoPlayerPluginTest {
               null,
               new HashMap<>(),
               null,
+              null,
               null);
 
       final long playerId = plugin.createForPlatformView(options);
@@ -118,7 +119,7 @@ public class VideoPlayerPluginTest {
     nativeOutput.onMethodCall(new MethodCall("configure", java.util.Map.of("enabled", true)),
         mock(MethodChannel.Result.class));
     CreationOptions options = new CreationOptions("https://example.com/live", null,
-        new HashMap<>(), null, null);
+        new HashMap<>(), null, null, null);
     try (MockedStatic<PlatformViewVideoPlayer> main = mockStatic(PlatformViewVideoPlayer.class);
         MockedStatic<TextureVideoPlayer> tiles = mockStatic(TextureVideoPlayer.class)) {
       main.when(() -> PlatformViewVideoPlayer.create(any(), any(), any(), any()))
@@ -152,12 +153,34 @@ public class VideoPlayerPluginTest {
               null,
               new HashMap<>(),
               null,
+              null,
               null);
 
       final TexturePlayerIds ids = plugin.createForTextureView(options);
 
       final LongSparseArray<VideoPlayer> videoPlayers = getVideoPlayers();
       assertTrue(videoPlayers.get(ids.getPlayerId()) instanceof TextureVideoPlayer);
+    }
+  }
+
+  @Test
+  @Config(sdk = 25)
+  public void encodedAudioPermissionIsPerTexturePlayer() {
+    try (MockedStatic<TextureVideoPlayer> players = mockStatic(TextureVideoPlayer.class)) {
+      players.when(() -> TextureVideoPlayer.create(any(), any(), any(), any(), any()))
+          .thenReturn(mockedTile);
+      plugin.createForTextureView(new CreationOptions("https://example.com/main", null,
+          new HashMap<>(), null, null, true));
+      plugin.createForTextureView(new CreationOptions("https://example.com/tile", null,
+          new HashMap<>(), null, null, false));
+      plugin.createForTextureView(new CreationOptions("https://example.com/legacy", null,
+          new HashMap<>(), null, null, null));
+      ArgumentCaptor<VideoPlayerOptions> options = ArgumentCaptor.forClass(VideoPlayerOptions.class);
+      players.verify(() -> TextureVideoPlayer.create(any(), any(), any(), any(), options.capture()),
+          times(3));
+      assertTrue(options.getAllValues().get(0).allowEncodedAudio);
+      assertFalse(options.getAllValues().get(1).allowEncodedAudio);
+      assertFalse(options.getAllValues().get(2).allowEncodedAudio);
     }
   }
 }

@@ -56,6 +56,11 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   // VesperTV patch: Multiview's frame saver; texture players only (StatsBridge).
   @Nullable public FrameThinning frameThinning;
   private final boolean nativePassthrough;
+  private final boolean effectivePassthrough;
+
+  public boolean isAudioPassthroughEnabled() {
+    return effectivePassthrough;
+  }
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private boolean isDisposed = false;
@@ -96,6 +101,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     exoPlayer = exoPlayerProvider.get();
     vodTrace = new VodPlaybackTrace(exoPlayer);
     nativePassthrough = AudioPassthrough.isEnabled();
+    effectivePassthrough = options.effectivePassthrough;
     nativeSurfaceHolder = options.nativeSurfaceHolder;
     exoPlayer.addAnalyticsListener(
         new AnalyticsListener() {

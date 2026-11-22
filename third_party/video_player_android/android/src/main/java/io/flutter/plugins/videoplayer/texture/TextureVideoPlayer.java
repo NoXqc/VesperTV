@@ -56,6 +56,9 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
       @NonNull SurfaceProducer surfaceProducer,
       @NonNull VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
+    final boolean passthrough = options.allowEncodedAudio
+        && io.flutter.plugins.videoplayer.AudioPassthrough.isEnabled();
+    options.effectivePassthrough = passthrough;
     // VesperTV patch: Multiview's frame saver (ThinningVideoRenderer), switched from Dart.
     io.flutter.plugins.videoplayer.FrameThinning thinning =
         new io.flutter.plugins.videoplayer.FrameThinning();
@@ -153,8 +156,13 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
                     Context context,
                     boolean enableFloatOutput,
                     boolean enableAudioOutputPlaybackParams) {
-                  //noinspection deprecation — deliberate: see the comment above.
-                  return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder()
+                  // Multiview must keep per-instance volume; only the main
+                  // Compatibility player explicitly permits encoded output.
+                  @SuppressWarnings("deprecation")
+                  DefaultAudioSink.Builder sink = passthrough
+                      ? new DefaultAudioSink.Builder(context)
+                      : new DefaultAudioSink.Builder();
+                  return io.flutter.plugins.videoplayer.AudioDelay.wrap(sink
                       .setEnableFloatOutput(enableFloatOutput)
                       .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
                       .build());
