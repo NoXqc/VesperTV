@@ -355,6 +355,10 @@ const Map<String, String> kPl = {
   "Technical details": "Szczegóły techniczne",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "To wideo Dolby Vision, a to urządzenie nie odtwarza tego rodzaju Dolby Vision. Wybierz wersję bez DV (HDR10 lub SDR), jeśli źródło ją ma.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Ten kanał jest zabezpieczony (DRM) i nie udało się go odblokować. Klucze w Twojej playliście mogą być nieaktualne albo to urządzenie nie obsługuje tego rodzaju zabezpieczeń.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Serwer zamiast wideo wysłał pustą odpowiedź. Ten kanał może działać tylko w swoim kraju.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Ten strumień wielokrotnie się przerywał i restartował, więc odtwarzanie zatrzymano. Spróbuj ponownie za chwilę lub wybierz inny kanał.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":

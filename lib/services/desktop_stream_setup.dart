@@ -8,6 +8,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
+import '../models/stream_drm.dart';
 import 'desktop_audio.dart';
 import 'recording_service.dart';
 import 'live_stream_format.dart';
@@ -298,6 +299,16 @@ Future<void> setDesktopSubtitle(Player player, SubtitleTrack? track) {
 Future<void> openDesktopStream(Player player, Channel channel,
     {Duration? start, bool play = true}) async {
   final native = player.platform as NativePlayer;
+  // DRM (StreamDrm): only the Android player decrypts it. The bundled
+  // libmpv (FFmpeg 6.0) crashed in its DASH reader on these live manifests,
+  // with or without the key (2026-11-22, RTP / SIC from m3upt.com), so the
+  // stream is not opened at all.
+  if (StreamDrm.of(channel.httpHeaders) != null) {
+    debugPrint('DesktopPlayer: ${channel.name} is DRM-protected '
+        '(not opened: Android only)');
+    await player.stop();
+    return;
+  }
   // A download plays from its file (the network folder's through
   // Windows' own share path); anything else from the network first asks
   // a download on the same account to give its connection back.

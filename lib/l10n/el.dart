@@ -364,6 +364,10 @@ const Map<String, String> kEl = {
   "Technical details": "Τεχνικές λεπτομέρειες",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Αυτό το βίντεο είναι Dolby Vision και αυτή η συσκευή δεν μπορεί να παίξει αυτό το είδος Dolby Vision. Διάλεξε μια έκδοση χωρίς DV (HDR10 ή SDR) αν την προσφέρει η πηγή σου.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Αυτό το κανάλι είναι προστατευμένο (DRM) και δεν ήταν δυνατό να ξεκλειδωθεί. Τα κλειδιά στη λίστα σας μπορεί να είναι παλιά ή αυτή η συσκευή δεν υποστηρίζει αυτό το είδος προστασίας.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Ο διακομιστής έστειλε κενή απάντηση αντί για το βίντεο. Αυτό το κανάλι ίσως παίζει μόνο στη χώρα του.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Αυτή η ροή διακοπτόταν και ξεκινούσε ξανά συνεχώς, οπότε η αναπαραγωγή σταμάτησε. Δοκιμάστε ξανά το κανάλι σε λίγο ή επιλέξτε άλλο.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":

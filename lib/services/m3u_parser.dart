@@ -6,13 +6,17 @@ import 'package:http/http.dart' as http;
 
 import '../models/catchup.dart';
 import '../models/channel.dart';
+import '../models/stream_drm.dart';
 import '../l10n/l10n.dart';
 
 /// Parses M3U / M3U8 playlists into [Channel] objects.
 ///
 /// Supports the common extended attributes (`tvg-id`, `tvg-logo`,
-/// `group-title`), the `#EXTGRP:` fallback tag, and an optional external
-/// subtitle track via `#EXTVLCOPT:sub-file=`.
+/// `group-title`), the `#EXTGRP:` fallback tag, an optional external
+/// subtitle track via `#EXTVLCOPT:sub-file=`, per-entry stream headers
+/// (`#EXTVLCOPT:http-user-agent=` / `http-referrer=` / `http-origin=`,
+/// `#EXTHTTP:{json}`, Kodi `#KODIPROP:inputstream.adaptive.stream_headers=`)
+/// and Kodi `#KODIPROP` DRM ([StreamDrm]).
 class M3uParser {
   /// The same group classification used by the Movies/TV Shows catalogs.
   /// Series takes precedence over movie/VOD in combined group names.
@@ -406,6 +410,13 @@ class _ParseState {
   Map<String, String> _headerAttrs = const {};
   String? _pendingName;
   String? _pendingSubtitleUrl;
+
+  /// The entry's `#KODIPROP:inputstream.adaptive.*` values (names without
+  /// that prefix, lower-cased) and its stream headers. Kept until the URL
+  /// line, not cleared by `#EXTINF`: playlists put these lines before or
+  /// after it. Null until an entry has one (big lists have none).
+  Map<String, String>? _kodiProps;
+  Map<String, String>? _streamHeaders;
   int _autoId = 0;
 
   /// One String per distinct group title: every entry's title is its own
@@ -427,6 +438,12 @@ class _ParseState {
       _pendingSubtitleUrl = null;
     } else if (line.startsWith('#EXTVLCOPT:sub-file=')) {
       _pendingSubtitleUrl = line.split('=').skip(1).join('=').trim();
+    } else if (line.startsWith('#EXTVLCOPT:')) {
+      _noteVlcOption(line.substring('#EXTVLCOPT:'.length));
+    } else if (line.startsWith('#KODIPROP:')) {
+      _noteKodiProp(line.substring('#KODIPROP:'.length));
+    } else if (line.startsWith('#EXTHTTP:')) {
+      _noteHttpJson(line.substring('#EXTHTTP:'.length));
     } else if (line.startsWith('#EXTGRP:')) {
       _attrs['group-title'] = line.substring('#EXTGRP:'.length).trim();
     } else if (line.startsWith('#')) {
@@ -458,6 +475,7 @@ class _ParseState {
             url: line,
             logoUrl: _attrs['tvg-logo'],
             subtitleUrl: _pendingSubtitleUrl,
+            playlistHeaders: _entryHeaders(),
             catchupDays: catchup.days,
             catchupKind: catchup.kind,
             catchupSource: catchup.source);
@@ -466,8 +484,95 @@ class _ParseState {
       _pendingName = null;
       _attrs = {};
       _pendingSubtitleUrl = null;
+      _kodiProps = null;
+      _streamHeaders = null;
       return entry;
     }
     return null;
+  }
+
+  /// `http-user-agent="…"`, `http-referrer=…`, `http-origin=…`,
+  /// `http-cookie=…` (VLC's options; TiviMate and OTT Navigator read them
+  /// as the stream's headers). Other VLC options are ignored.
+  void _noteVlcOption(String option) {
+    final at = option.indexOf('=');
+    if (at <= 0) return;
+    final name = switch (option.substring(0, at).trim().toLowerCase()) {
+      'http-user-agent' => 'User-Agent',
+      'http-referrer' || 'http-referer' => 'Referer',
+      'http-origin' => 'Origin',
+      'http-cookie' => 'Cookie',
+      _ => null,
+    };
+    if (name == null) return;
+    final value = _unquote(option.substring(at + 1));
+    if (value.isNotEmpty) (_streamHeaders ??= {})[name] = value;
+  }
+
+  /// `inputstream.adaptive.<name>=<value>`: DRM ([StreamDrm.fromKodiProps])
+  /// and `stream_headers` / `manifest_headers` / `common_headers`
+  /// (`Name=value&…`, values URL-encoded).
+  void _noteKodiProp(String prop) {
+    final at = prop.indexOf('=');
+    if (at <= 0) return;
+    var name = prop.substring(0, at).trim().toLowerCase();
+    const prefix = 'inputstream.adaptive.';
+    if (!name.startsWith(prefix)) return;
+    name = name.substring(prefix.length);
+    final value = prop.substring(at + 1).trim();
+    if (name.endsWith('_headers')) {
+      final headers = StreamDrm.parseHeaderQuery(value);
+      for (final e in headers.entries) {
+        (_streamHeaders ??= {})[_headerName(e.key)] = e.value;
+      }
+      return;
+    }
+    (_kodiProps ??= {})[name] = value;
+  }
+
+  /// `#EXTHTTP:{"User-Agent":"…","Referer":"…","cookie":"…"}`.
+  void _noteHttpJson(String raw) {
+    Object? json;
+    try {
+      json = jsonDecode(raw.trim());
+    } catch (_) {
+      return;
+    }
+    if (json is! Map) return;
+    for (final e in json.entries) {
+      final value = e.value;
+      if (value is! String || value.isEmpty) continue;
+      (_streamHeaders ??= {})[_headerName('${e.key}')] = value;
+    }
+  }
+
+  /// The usual names in their usual spelling: the Android player reads the
+  /// user agent only from `User-Agent`.
+  static String _headerName(String name) => switch (name.trim().toLowerCase()) {
+        'user-agent' || 'useragent' => 'User-Agent',
+        'referer' || 'referrer' => 'Referer',
+        'origin' => 'Origin',
+        'cookie' => 'Cookie',
+        _ => name.trim(),
+      };
+
+  static String _unquote(String value) {
+    var v = value.trim();
+    if (v.length >= 2 &&
+        ((v.startsWith('"') && v.endsWith('"')) ||
+            (v.startsWith("'") && v.endsWith("'")))) {
+      v = v.substring(1, v.length - 1).trim();
+    }
+    return v;
+  }
+
+  /// The finished entry's headers, with its DRM under
+  /// [StreamDrm.headerKey]; const {} for the usual entry without any.
+  Map<String, String> _entryHeaders() {
+    final props = _kodiProps;
+    final drm = props == null ? null : StreamDrm.fromKodiProps(props);
+    final headers = _streamHeaders;
+    if (drm == null) return headers ?? const {};
+    return {...?headers, StreamDrm.headerKey: drm.encode()};
   }
 }

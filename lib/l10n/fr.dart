@@ -370,6 +370,10 @@ const Map<String, String> kFr = {
   'Technical details': "Détails techniques",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Cette vidéo est en Dolby Vision, et cet appareil ne peut pas lire ce type de Dolby Vision. Choisissez une version sans DV (HDR10 ou SDR) si votre source en propose une.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Cette chaîne est protégée (DRM) et n'a pas pu être déverrouillée. Les clés de votre liste de lecture sont peut-être périmées, ou cet appareil ne prend pas en charge ce type de protection.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Le serveur a renvoyé une réponse vide au lieu de la vidéo. Cette chaîne n'est peut-être disponible que dans son pays.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Ce flux n'arrêtait pas de se couper et de redémarrer, la lecture a donc été arrêtée. Réessayez la chaîne dans un instant ou choisissez-en une autre.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':

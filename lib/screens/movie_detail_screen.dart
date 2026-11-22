@@ -34,6 +34,7 @@ import '../services/vesper_ai/watch_list.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import '../utils/desktop_platform.dart';
+import '../models/stream_drm.dart';
 
 /// A movie's detail page, in the same visual language as
 /// `SeriesDetailScreen` (shared pieces in `widgets/detail_header.dart`):
@@ -221,7 +222,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       sourceId: movie.id,
       title: _title,
       url: movie.url,
-      headers: movie.httpHeaders,
+      headers: StreamDrm.withoutDrm(movie.httpHeaders),
       playlistId: movie.playlistId,
       maxConnections: profile?.maxConnections ?? 1,
       poster: _posterUrl,

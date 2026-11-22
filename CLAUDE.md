@@ -243,6 +243,10 @@ Unreleased (2026-11-21, +956): **`ReadAhead.java` + `ReadAheadDataSource.java`**
 connections when one is slower than the file, into a 64 MB memory ring (a 4 GB ring FILE was tried
 first: the Homatics read it back from flash at 6 MB/s); `HttpVideoAsset` wraps progressive files,
 `VideoPlayer` releases it. Details: `dev-notes/read-ahead.md`.
+Unreleased (2026-11-22, +958, `claude/drm-clearkey`): **`StreamDrm.java`** - M3U `#KODIPROP` DRM (ClearKey keys,
+Widevine / PlayReady / ClearKey license servers) arrives as the reserved header `X-VesperTV-DRM` (Dart
+`StreamDrm`); `HttpVideoAsset` removes it before any request, sets `MediaItem.DrmConfiguration` and a
+`DrmSessionManagerProvider` (`LocalMediaDrmCallback` for playlist keys). Details: `dev-notes/drm.md`.
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 

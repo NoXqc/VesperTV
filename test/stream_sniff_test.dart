@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nox_iptv/services/playback_service.dart';
+import 'package:nox_iptv/widgets/player_controls.dart';
 
 /// A link the player couldn't read (ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED)
 /// is sniffed: an HLS playlist gets retried as HLS, a source's error reply
@@ -26,6 +27,16 @@ void main() {
           headers: {'content-type': 'text/html'}),
       '/text' => http.Response('Max connections reached for this line', 200),
       '/strm' => http.Response('https://cdn.example/file.mkv?token=abc\n', 200),
+      // RTP outside Portugal (2026-11-22): 204, no body.
+      '/geo' => http.Response('', 204),
+      '/empty200' => http.Response('', 200),
+      '/empty404' => http.Response('', 404),
+      '/headers' => http.Response(
+          req.headers['User-Agent'] == 'UA' &&
+                  req.headers['Origin'] == 'https://o.example'
+              ? '#EXTM3U\n'
+              : '',
+          200),
       _ => http.Response.bytes(
           [0x1A, 0x45, 0xDF, 0xA3, 0xA3, 0x42, 0x86, 0x81, 0x01, 0x00, 0xFF],
           206),
@@ -68,5 +79,40 @@ void main() {
 
   test('real media bytes are binary', () async {
     expect((await sniff('/file.mkv'))!.kind, 'binary');
+  });
+
+  test('a success status with no body is empty, an error status is not',
+      () async {
+    final geo = (await sniff('/geo'))!;
+    expect(geo.kind, 'empty');
+    expect(geo.tag, '[SOURCE_REPLY:empty HTTP 204]');
+    expect((await sniff('/empty200'))!.kind, 'empty');
+    expect((await sniff('/empty404'))!.kind, isNot('empty'));
+    expect((await sniff('/text'))!.kind, 'text');
+  });
+
+  test("the player's headers go with the request", () async {
+    final s = await sniffStream('https://x.org/headers',
+        client: client,
+        headers: {'User-Agent': 'UA', 'Origin': 'https://o.example'});
+    expect(s!.kind, 'hls');
+    expect((await sniff('/headers'))!.kind, 'empty');
+  });
+
+  test('the error screen says empty only for an empty reply', () {
+    const empty = 'The server sent an empty answer instead of the video. '
+        'This channel may only play in its own country.';
+    expect(
+        friendlyPlaybackError('PlatformException(VideoError, Source error '
+            '[ERROR_CODE_PARSING_MANIFEST_MALFORMED])\n'
+            '[SOURCE_REPLY:empty HTTP 204]'),
+        empty);
+    expect(
+        friendlyPlaybackError(
+            'Source error [ERROR_CODE_PARSING_MANIFEST_MALFORMED]'),
+        isNot(empty));
+    expect(friendlyPlaybackError('x\n[SOURCE_REPLY:binary]'), isNot(empty));
+    expect(friendlyPlaybackError('x\n[SOURCE_REPLY:text] Max connections'),
+        isNot(empty));
   });
 }
