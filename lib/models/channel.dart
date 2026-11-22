@@ -23,7 +23,8 @@ class Channel {
     String? logoUrl,
     this.subtitleUrl,
     this.subtitles = const [],
-    this.httpHeaders = const {},
+    Map<String, String> httpHeaders = const {},
+    this.playlistHeaders = const {},
     this.isFavorite = false,
     this.rating,
     this.addedAt,
@@ -47,7 +48,12 @@ class Channel {
     this.streamId,
     this.imdbId,
   })  : sourceName = name,
-        sourceLogoUrl = logoUrl;
+        sourceLogoUrl = logoUrl,
+        httpHeaders = playlistHeaders.isEmpty
+            ? httpHeaders
+            : httpHeaders.isEmpty
+                ? playlistHeaders
+                : {...playlistHeaders, ...httpHeaders};
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
   /// programmes), otherwise a generated fallback. Already prefixed with
@@ -103,6 +109,7 @@ class Channel {
   /// Playlist B's groups), and to scope Group Management/favorites-group
   /// lookups.
   final String playlistId;
+
   /// The provider's own name. Matching (Sports, quality copies, EPG by
   /// name) uses this; [name] is what the viewer sees.
   final String sourceName;
@@ -143,7 +150,18 @@ class Channel {
 
   /// Per-file add-on data; never persisted in channel history.
   final List<MediaSubtitle> subtitles;
+
+  /// Every header the stream is opened with: [playlistHeaders] plus any the
+  /// app adds (a Dispatcharr pick's X-API-Key, an add-on's proxy headers).
+  /// Only [playlistHeaders] is saved.
   final Map<String, String> httpHeaders;
+
+  /// What the M3U entry itself declares (`M3uParser`): `#EXTVLCOPT:http-*`,
+  /// `#EXTHTTP`, Kodi `#KODIPROP` stream headers, and its DRM under
+  /// `StreamDrm.headerKey`. Saved with the channel (playlist caches, history,
+  /// so Continue Watching plays it too). [httpHeaders] is not saved:
+  /// history syncs through the relay, and app-added headers can be secrets.
+  final Map<String, String> playlistHeaders;
   bool isFavorite;
 
   /// Provider-supplied rating (e.g. Xtream's `rating` field on VOD items).
@@ -333,7 +351,13 @@ class Channel {
         logoUrl: sourceLogoUrl,
         subtitleUrl: subtitleUrl,
         subtitles: subtitles,
-        httpHeaders: httpHeaders ?? this.httpHeaders,
+        // A given map is the whole set (another copy's stream, with its own
+        // DRM): this entry's playlist headers must not leak into it.
+        httpHeaders: httpHeaders ??
+            (identical(this.httpHeaders, playlistHeaders)
+                ? const {}
+                : this.httpHeaders),
+        playlistHeaders: httpHeaders == null ? playlistHeaders : const {},
         isFavorite: isFavorite ?? this.isFavorite,
         rating: rating,
         addedAt: addedAt,
@@ -369,6 +393,7 @@ class Channel {
         'url': url,
         'logoUrl': sourceLogoUrl,
         'subtitleUrl': subtitleUrl,
+        if (playlistHeaders.isNotEmpty) 'headers': playlistHeaders,
         'isFavorite': isFavorite,
         'rating': rating,
         'addedAt': addedAt?.millisecondsSinceEpoch,
@@ -406,6 +431,12 @@ class Channel {
         url: json['url'] as String,
         logoUrl: json['logoUrl'] as String?,
         subtitleUrl: json['subtitleUrl'] as String?,
+        playlistHeaders: json['headers'] is Map
+            ? {
+                for (final e in (json['headers'] as Map).entries)
+                  '${e.key}': '${e.value}'
+              }
+            : const {},
         isFavorite: json['isFavorite'] as bool? ?? false,
         rating: json['rating'] as String?,
         addedAt: json['addedAt'] is int

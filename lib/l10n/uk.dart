@@ -347,6 +347,10 @@ const Map<String, String> kUk = {
   "Technical details": "Технічні подробиці",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Це відео Dolby Vision, а цей пристрій не може відтворити такий тип Dolby Vision. Виберіть версію без DV (HDR10 або SDR), якщо вона є у вашому джерелі.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Цей канал захищений (DRM), і його не вдалося розблокувати. Ключі у вашому плейлисті можуть бути застарілими, або цей пристрій не підтримує такий тип захисту.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Сервер надіслав порожню відповідь замість відео. Можливо, цей канал працює лише у своїй країні.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Цей потік постійно обривався й перезапускався, тому відтворення зупинено. Спробуйте канал ще раз трохи згодом або виберіть інший.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":

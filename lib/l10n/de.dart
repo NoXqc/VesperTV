@@ -350,6 +350,10 @@ const Map<String, String> kDe = {
   "Technical details": "Technische Details",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Dies ist ein Dolby-Vision-Video, und dieses Gerät kann diese Art von Dolby Vision nicht abspielen. Wähle eine Version ohne DV (HDR10 oder SDR), falls deine Quelle eine hat.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Dieser Sender ist geschützt (DRM) und konnte nicht entsperrt werden. Die Schlüssel in deiner Playlist sind vielleicht veraltet, oder dieses Gerät unterstützt diese Art von Schutz nicht.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Der Server hat statt des Videos eine leere Antwort geschickt. Dieser Sender läuft vielleicht nur in seinem eigenen Land.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Dieser Stream brach immer wieder ab und startete neu, daher wurde die Wiedergabe gestoppt. Versuche den Sender gleich noch einmal oder wähle einen anderen.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":

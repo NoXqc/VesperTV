@@ -64,6 +64,7 @@ import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
 import 'desktop_multiview_screen.dart';
 import '../services/ci_tour.dart';
+import '../models/stream_drm.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -906,7 +907,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       live: live,
       position: position.inMilliseconds / 1000,
       // A source's own headers (Media Hub) win over our User-Agent.
-      headers: {'User-Agent': kDesktopStreamUserAgent, ...channel.httpHeaders},
+      headers: {
+        'User-Agent': kDesktopStreamUserAgent,
+        ...StreamDrm.withoutDrm(channel.httpHeaders),
+      },
     );
     if (!mounted) return;
     if (error == null) {
@@ -1283,8 +1287,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// Trakt/Simkl: report mpv's exact position independently of saved progress.
   void _reportStopped() {
     // A Silo server's play ends here (a no-op for any other stream).
-    SiloSessions.instance
-        .stopped(_currentChannel.url, _player.state.position);
+    SiloSessions.instance.stopped(_currentChannel.url, _player.state.position);
     if (_currentChannel.transientPlayback) return;
     final state = _player.state;
     // A Media Hub source's "being downloaded" clip isn't the title.

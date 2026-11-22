@@ -369,6 +369,10 @@ const Map<String, String> kIt = {
   'Technical details': "Dettagli tecnici",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Questo video è in Dolby Vision e questo dispositivo non può riprodurre questo tipo di Dolby Vision. Scegli una versione senza DV (HDR10 o SDR) se la tua fonte ne offre una.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Questo canale è protetto (DRM) e non è stato possibile sbloccarlo. Le chiavi della tua playlist potrebbero essere scadute, oppure questo dispositivo non supporta questo tipo di protezione.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Il server ha inviato una risposta vuota invece del video. Questo canale potrebbe essere visibile solo nel suo paese.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Questo flusso continuava a interrompersi e a ripartire, quindi la riproduzione è stata fermata. Riprova il canale tra poco o scegline un altro.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':

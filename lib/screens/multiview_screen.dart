@@ -1124,6 +1124,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // the video decode/rendering path itself.
     final newController = streamController(
       channel.url,
+      // The playlist's headers + DRM (StreamDrm), a Dispatcharr key.
+      httpHeaders: channel.httpHeaders,
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
     // Send log: how long a screen takes to show (AMD, 2026-11-17: slower
