@@ -498,6 +498,21 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-22 - release 1.0.73 (beta), +963 (latest): the first Sunday weekly stable** (owner: "/cutr").
+  Android + Windows + Linux (Flatpak + tarball via CI, release_tag). The `stable` branch was created on the release
+  commit. Since 1.0.72:
+  - weekly stable + test builds (Update channel), version + build in Settings > Help, Send log in Help;
+  - PR #12 Fire OS 6 passthrough in Compatibility video;
+  - read-ahead for big movie files;
+  - M3U DRM (ClearKey / license servers / stream headers);
+  - 4K Reload, Dispatcharr reconnect after the switch;
+  - guide whole rows + 7 days ahead, programme steps, OK on a group, wider logos;
+  - player options row order + transparency, Left = Back to the guide;
+  - Sports Trak matching + launcher Live now row, Silo, editor Duplicates sort;
+  - TV focus + baked backdrops.
+  Apple TV work rides along in the shared code. NOT in it: the Apple TV text-field fix `claude/appletv-search-focus`
+  10e5528 (TestFlight 962 only), arrow holds (`claude/arrow-holds`, uncommitted). Analyze 16, 2382 tests. Notes:
+  dev-notes/releases/1.0.73.md. `main` moved to 1.0.74 after the cut. Next build > 963.
 - **Claude, 2026-11-21 - guide rows + reach, Apple TV remote (merged into main for Sunday's 1.0.73, owner: "Yes"):**
   Unbeaten82 (Apple TV, full-video guide, Compact UI): (1) the bottom channel was always cut off: a focused block off the
   view sideways called `Scrollable.ensureVisible`, which also scrolled the rows to the block's top, 4 px inside its row;
