@@ -1387,6 +1387,10 @@ class StorageService {
   Future<void> setLiveBufferMs(int ms) =>
       _prefs.setInt(AppConstants.keyLiveBufferMs, ms);
 
+  bool getReadAhead() => _prefs.getBool(AppConstants.keyReadAhead) ?? true;
+  Future<void> setReadAhead(bool on) =>
+      _prefs.setBool(AppConstants.keyReadAhead, on);
+
   bool getMergePlaylists() =>
       _prefs.getBool(AppConstants.keyMergePlaylists) ?? false;
   Future<void> setMergePlaylists(bool value) =>
@@ -1907,10 +1911,12 @@ class StorageService {
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';
 
   /// Device-only but kept by a backup (it goes back onto the same device):
-  /// the remote's buttons differ from one device to the next.
+  /// the remote's buttons differ from one device to the next, and so does
+  /// the network the faster downloads were tried on.
   static const _transferOnlySkipPrefixes = [
     AppConstants.keyRemoteButtons,
     AppConstants.keyPlayerArrows,
+    AppConstants.keyReadAhead,
   ];
 
   static bool _transferable(String key) =>

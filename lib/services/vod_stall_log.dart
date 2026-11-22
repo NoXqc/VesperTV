@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import 'subtitle_tracks.dart';
+import 'vod_buffering.dart';
 
 /// Puts movie / episode buffering in Send log.
 ///
@@ -23,6 +24,7 @@ class VodStallLog {
   final VideoPlayerHdrController? Function() _current;
   final _tracker = VodStallTracker();
   Timer? _timer;
+  int? _readAheadAsked;
 
   void start() {
     // The real OS, not defaultTargetPlatform: widget tests run as Android.
@@ -33,6 +35,28 @@ class VodStallLog {
   void dispose() {
     _timer?.cancel();
     _timer = null;
+  }
+
+  /// Big files (a 4K remux) download over up to 3 connections when one is
+  /// slower than the file (ReadAhead), once per player as soon as the
+  /// file's average bitrate is known. Owner's Homatics, 2026-11-21: one
+  /// TorBox connection gave 41-65 Mbit/s for an 80 Mbit/s file, three gave
+  /// 114. (A 4 GB ring on storage was tried first: the box read it back
+  /// from flash at 6 MB/s and froze.)
+  Future<void> _readAhead(int id) async {
+    final mbps = _tracker.fileMbps;
+    if (mbps == null || _readAheadAsked == id) return;
+    _readAheadAsked = id;
+    if (mbps < VodStallTracker.readAheadMbps) return;
+    if (!VodBuffering.readAhead) {
+      debugPrint('VodBuffer: read-ahead off (Settings)');
+      return;
+    }
+    final r = await _stats.invokeMapMethod<Object?, Object?>(
+        'setReadAhead', {'playerId': id, 'on': true, 'fileMbps': mbps});
+    debugPrint(r?['on'] == true
+        ? 'VodBuffer: read-ahead on, up to ${r?['windowMb']} MB in memory'
+        : 'VodBuffer: read-ahead not used: ${r?['reason'] ?? '?'}');
   }
 
   Future<void> _poll() async {
@@ -48,6 +72,7 @@ class VodStallLog {
           duration: v.duration, position: v.position, playing: v.isPlaying)) {
         debugPrint(line);
       }
+      await _readAhead(id);
     } on MissingPluginException {
       dispose();
     } on PlatformException {
@@ -67,6 +92,13 @@ class VodStallLog {
 class VodStallTracker {
   static const every = Duration(seconds: 5);
 
+  /// Files at least this big a bitrate (average, Mbit/s) may download over
+  /// several connections: 4K remuxes; a 4K WEB-DL (~15-25) keeps up on one.
+  static const readAheadMbps = 40.0;
+
+  /// The file's average bitrate once known (size over duration).
+  double? get fileMbps => _fileMbps;
+
   int? _player;
   final _samples = <(int, int)>[]; // (nowMs, network bytes)
   int _stalls = 0;
@@ -79,6 +111,7 @@ class VodStallTracker {
   double? _fileMbps;
   int _lastUnderrunLineMs = -1 << 40;
   int _lastDropLineMs = -1 << 40;
+  String? _readAheadNote;
 
   List<String> add(int player, Map<Object?, Object?> m,
       {required Duration duration,
@@ -95,12 +128,25 @@ class VodStallTracker {
       _polls = 0;
       _headerDone = false;
       _fileMbps = null;
+      _readAheadNote = null;
     }
     _polls++;
     _samples
       ..add((now, n('bytes')))
       ..removeWhere((s) => s.$1 < now - 70000);
     final buffered = _secs(n('bufferedMs'));
+    // Read-ahead (several connections, a memory ring): how long its part plays.
+    final fileMbps = _fileMbps;
+    final conns = n('readAheadConnections');
+    final stored = m['readAheadOn'] == true && fileMbps != null && fileMbps > 0
+        ? ' + ${_clock(Duration(seconds: (n('readAheadMb') * 8.388608 / fileMbps).round()))} read ahead'
+            '${conns > 1 ? ' ($conns connections)' : ''}'
+        : '';
+    final note = m['readAheadNote'] as String?;
+    if (note != null && note != _readAheadNote) {
+      lines.add('VodBuffer: read-ahead $note');
+    }
+    _readAheadNote = note;
 
     final size = n('fileSizeBytes');
     if (!_headerDone &&
@@ -138,7 +184,7 @@ class VodStallTracker {
       lines.add(
           'VodBuffer: freeze ${stalls - _stalls > 1 ? '+${stalls - _stalls} ' : ''}'
           '(#$stalls, ${_secs(n('lastStallMs'))} s) at ${_clock(Duration(milliseconds: n('lastStallPosMs')))}, '
-          '${_secs(ahead)} s buffered when it began; $speed${why == null ? '' : ' -> $why'}');
+          '${_secs(ahead)} s buffered when it began$stored; $speed${why == null ? '' : ' -> $why'}');
       _stalls = stalls;
     }
 
@@ -175,10 +221,10 @@ class VodStallTracker {
     _dropped = dropped;
 
     if (playing && _polls % 60 == 0) {
-      lines
-          .add('VodBuffer: at ${_clock(position)}, $speed, buffer $buffered s, '
-              'freezes $stalls, seek waits $seekWaits, dropped $dropped, '
-              'audio ran dry $underruns, load errors $loadErrors');
+      lines.add(
+          'VodBuffer: at ${_clock(position)}, $speed, buffer $buffered s$stored, '
+          'freezes $stalls, seek waits $seekWaits, dropped $dropped, '
+          'audio ran dry $underruns, load errors $loadErrors');
     }
     return lines;
   }

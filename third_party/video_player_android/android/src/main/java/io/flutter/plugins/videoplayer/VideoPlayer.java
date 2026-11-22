@@ -249,6 +249,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   /** A live zap keeps the same ExoPlayer and output; no detach/release/placeholder. */
   void replaceNativeStream(@NonNull Context context, @NonNull VideoAsset asset) {
     setOnDemandBuffering(false);
+    releaseReadAhead();
     if (exoPlayerEventListener != null) exoPlayerEventListener.resetForNewSource();
     if (trackSelector != null) {
       trackSelector.setParameters(trackSelector.buildUponParameters()
@@ -354,6 +355,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   /** Called by the plugin after creation (and by replaceNativeStream). */
   void attachStreamStats(@Nullable StreamStats stats) {
+    if (stats != streamStats) releaseReadAhead();
     streamStats = stats;
     if (stats != null) stats.allowReconnect = reconnectLiveStreams();
   }
@@ -519,6 +521,36 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     if (exoPlayerEventListener != null) exoPlayerEventListener.setOnDemand(on);
     if (streamStats != null) streamStats.onDemand = on;
     if (on) dropLiveCopies();
+    if (!on) releaseReadAhead();
+  }
+
+  /**
+   * Movie / episode download over several connections (ReadAhead). Null when on, else why not.
+   * Dart asks only for big files; never for live.
+   */
+  @Nullable
+  String setReadAhead(boolean on, double fileMbps) {
+    StreamStats stats = streamStats;
+    ReadAhead readAhead = stats == null ? null : stats.readAhead;
+    if (readAhead == null) return "not a single file";
+    if (!on) {
+      readAhead.release();
+      return "switched off";
+    }
+    if (!stats.onDemand) return "not a movie or episode";
+    readAhead.setNeededMbps(fileMbps);
+    return readAhead.arm();
+  }
+
+  @Nullable
+  ReadAhead readAhead() {
+    StreamStats stats = streamStats;
+    return stats == null ? null : stats.readAhead;
+  }
+
+  private void releaseReadAhead() {
+    ReadAhead readAhead = readAhead();
+    if (readAhead != null) readAhead.release();
   }
 
   @NonNull
@@ -857,5 +889,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
       exoPlayerEventListener = null;
     }
     exoPlayer.release();
+    // After release: no loader reads the ring any more; the file is deleted.
+    releaseReadAhead();
   }
 }

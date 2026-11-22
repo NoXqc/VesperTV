@@ -198,6 +198,9 @@ const Map<String, String> kIt = {
       "Scegli il file di dimensione nota maggiore all’avvio. La ripresa mantiene il flusso selezionato.",
   "IPTV copies in Sources":
       "Copie IPTV nelle Fonti",
+  "Faster downloads for big files": "Download più veloce dei file grandi",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "I file di film grandi (remux 4K) si scaricano su fino a 3 connessioni insieme quando una sola è più lenta di quanto serve al film, così un server lento non blocca l'immagine.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Quando avvii un film o un episodio di Media Hub, l'elenco Fonti offre anche lo stesso titolo dalle tue playlist IPTV (abbinato per nome e anno, o per id TMDB). Disattivato per impostazione predefinita.",
   "Prefer highest quality": "Preferisci la qualità più alta",

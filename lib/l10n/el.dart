@@ -199,6 +199,9 @@ const Map<String, String> kEl = {
       "Επιλέγει το μεγαλύτερο γνωστό αρχείο στην έναρξη. Η συνέχιση διατηρεί την επιλεγμένη ροή.",
   "IPTV copies in Sources":
       "Αντίγραφα IPTV στις Πηγές",
+  "Faster downloads for big files": "Ταχύτερη λήψη μεγάλων αρχείων",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Τα μεγάλα αρχεία ταινιών (4K remux) κατεβαίνουν από έως 3 συνδέσεις μαζί όταν μία είναι πιο αργή από όσο χρειάζεται η ταινία, ώστε ένας αργός διακομιστής να μην παγώνει την εικόνα.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Όταν ξεκινάς μια ταινία ή ένα επεισόδιο του Media Hub, η λίστα Πηγών προσφέρει και τον ίδιο τίτλο από τις λίστες IPTV σου (ταίριασμα με όνομα και έτος ή TMDB id). Απενεργοποιημένο από προεπιλογή.",
   "Prefer highest quality": "Προτίμηση υψηλότερης ποιότητας",

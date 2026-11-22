@@ -85,6 +85,7 @@ class PlaybackService extends ChangeNotifier {
   PlaybackService(this._storage, this._playlistManager) {
     try {
       unawaited(VodBuffering.setLiveBufferDefault(_storage.getLiveBufferMs()));
+      VodBuffering.readAhead = _storage.getReadAhead();
     } catch (_) {
       // Storage not initialised (tests): the 500 ms default stays.
     }

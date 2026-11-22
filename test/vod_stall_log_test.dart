@@ -125,4 +125,60 @@ void main() {
           'audio ran dry 0, load errors 0',
     ]);
   });
+
+  // Owner's Homatics, 2026-11-21: a 65 Mbit/s remux froze when its source
+  // slowed for minutes; big files now read ahead onto storage.
+  test('read-ahead: big files qualify, the log says how long it covers', () {
+    final t = VodStallTracker();
+    expect(t.fileMbps, isNull);
+    final first = t.add(
+        1, {...stats(0, 0), 'readAheadOn': true, 'readAheadMb': 0},
+        duration: movie);
+    expect(first.single, startsWith('VodBuffer: file 97 Mbit/s'));
+    expect(t.fileMbps!, greaterThan(VodStallTracker.readAheadMbps));
+    var lines = <String>[];
+    for (var i = 1; i < 60; i++) {
+      lines = t.add(
+          1,
+          {
+            ...stats(i * 5000, i * 62500000),
+            'readAheadOn': true,
+            // 3840 MB of a 97.4 Mbit/s file = 5:31 of it.
+            'readAheadMb': 3840,
+            if (i >= 30) 'readAheadNote': 'HTTP 503, retry 1 in 1 s',
+          },
+          duration: movie,
+          position: Duration(seconds: i * 5));
+      if (i == 30) {
+        expect(lines, ['VodBuffer: read-ahead HTTP 503, retry 1 in 1 s']);
+      }
+    }
+    expect(lines, [
+      'VodBuffer: at 4:55, download 100 Mbit/s last 10 s, 100 last 60 s, '
+          'file 97, buffer 0.0 s + 5:31 read ahead, freezes 0, seek waits 0, '
+          'dropped 0, audio ran dry 0, load errors 0',
+    ]);
+  });
+
+  test('read-ahead over more connections says how many', () {
+    final t = VodStallTracker();
+    t.add(1, stats(0, 0), duration: movie);
+    final lines = t.add(
+        1,
+        {
+          ...stats(5000, 31250000,
+              stalls: 1, lastStallMs: 4000, lastStallPosMs: 60000),
+          'readAheadOn': true,
+          'readAheadMb': 0,
+          'readAheadConnections': 2,
+          'readAheadNote': '45 Mbit/s, the file needs 97: adding connection 2',
+        },
+        duration: movie);
+    expect(lines, [
+      'VodBuffer: read-ahead 45 Mbit/s, the file needs 97: adding connection 2',
+      'VodBuffer: freeze (#1, 4.0 s) at 1:00, 0.0 s buffered when it began + 0:00 '
+          'read ahead (2 connections); download 50 Mbit/s last 10 s, 50 last 60 s, '
+          'file 97 -> download slower than the file: source or network',
+    ]);
+  });
 }

@@ -143,6 +143,11 @@ class AppConstants {
   /// LOG-5DRCGF: the stream stalled every 2-5 minutes).
   static const String keyLiveBufferMs = 'vesper_live_buffer_ms';
 
+  /// Device-only, on by default: big movie files (40 Mbit/s+ average, 4K
+  /// remuxes) download over up to 3 connections when one is slower than the
+  /// file (ReadAhead in the vendored player; owner's Homatics, 2026-11-21).
+  static const String keyReadAhead = 'vesper_read_ahead';
+
   /// Device-only, off by default: the TV tab's "Recently added" group.
   static const String keyRecentChannelsGroup = 'vesper_recent_channels_group';
 

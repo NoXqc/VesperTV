@@ -45,8 +45,10 @@ when the delegate stopped on its own byte cap. Live, catch-up, Multiview / textu
 unchanged. Send log's first `VodBuffer:` line names the cap and the heap.
 Test: `OnDemandLoadControlTest.moviesKeepLoadingPastTheDelegatesByteCapUpToTheirOwn`.
 
-Not done (they cost something; owner to decide): disk read-ahead (~45 GB/hour written to the
-box's flash at 100 Mbit/s), starting H.264 live channels on any keyframe
+Not done (they cost something; owner to decide): starting H.264 live channels on any keyframe
 (`FLAG_ALLOW_NON_IDR_KEYFRAMES`: faster starts on some channels, a few garbled frames possible,
 risky on boxes with zap-frame quirks), rebasing live timestamp jumps the way VLC resyncs (A/V sync
 risk, needs a stream that does it).
+
+Disk read-ahead: done 2026-11-21 for files of 40 Mbit/s+ (owner's remux froze when its source
+slowed for 3 minutes): `dev-notes/read-ahead.md`.

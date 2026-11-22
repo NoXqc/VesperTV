@@ -238,6 +238,11 @@ channels), PGS and VobSub tracks are listed (`image`) and their bitmap cues go t
 `application/x-media3-cues` with the real format in `codecs`. (Automatic subtitles from the sound, on-device
 sherpa-onnx through an `AudioTap` processor, were tried in +740 and scrapped by the owner the same day: too
 inaccurate. Recoverable from commit c18de49.)
+Unreleased (2026-11-21, +956): **`ReadAhead.java` + `ReadAheadDataSource.java`** - big movie files
+(40 Mbit/s+, armed from Dart `VodStallLog` via StatsBridge `setReadAhead`) download over up to 3
+connections when one is slower than the file, into a 64 MB memory ring (a 4 GB ring FILE was tried
+first: the Homatics read it back from flash at 6 MB/s); `HttpVideoAsset` wraps progressive files,
+`VideoPlayer` releases it. Details: `dev-notes/read-ahead.md`.
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 

@@ -198,6 +198,9 @@ const Map<String, String> kFr = {
       "Choisir le plus gros fichier connu au démarrage. La reprise conserve le flux sélectionné.",
   "IPTV copies in Sources":
       "Copies IPTV dans les sources",
+  "Faster downloads for big files": "Téléchargement plus rapide des gros fichiers",
+  "Big movie files (4K remuxes) download over up to 3 connections at once when one connection is slower than the movie needs, so a slow server doesn't freeze the picture.":
+      "Les gros fichiers de film (remux 4K) se téléchargent sur jusqu'à 3 connexions à la fois quand une seule est plus lente que ce que le film demande, pour qu'un serveur lent ne fige pas l'image.",
   "When you start a Media Hub movie or episode, its Sources list also offers the same title from your IPTV playlists (matched by name and year, or TMDB id). Off by default.":
       "Quand vous lancez un film ou un épisode du Media Hub, sa liste de sources propose aussi le même titre depuis vos listes IPTV (associé par nom et année, ou par id TMDB). Désactivé par défaut.",
   "Prefer highest quality": "Préférer la meilleure qualité",
