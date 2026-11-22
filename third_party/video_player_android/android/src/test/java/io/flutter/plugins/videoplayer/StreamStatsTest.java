@@ -102,14 +102,14 @@ public class StreamStatsTest {
     }
   }
   private static void assertExcluded(String url, VideoAsset.StreamingFormat format) {
-    StreamStats stats = new HttpVideoAsset(url, format, Map.of(), null).streamStats();
+    StreamStats stats = new HttpVideoAsset(url, format, new HashMap<>(), null).streamStats();
     DataSource source = mock(DataSource.class);
     when(source.getResponseHeaders()).thenReturn(headers("Content-Length", "4096"));
     stats.onTransferStart(source, new DataSpec(Uri.parse(url)), true);
     assertEquals(-1, stats.fileSizeBytes.get());
   }
   @Test public void ordinaryProgressiveAssetReportsSize() {
-    StreamStats stats = new HttpVideoAsset(FILE.toString(), VideoAsset.StreamingFormat.UNKNOWN, Map.of(), null).streamStats();
+    StreamStats stats = new HttpVideoAsset(FILE.toString(), VideoAsset.StreamingFormat.UNKNOWN, new HashMap<>(), null).streamStats();
     DataSource source = mock(DataSource.class);
     when(source.getResponseHeaders()).thenReturn(headers("Content-Length", "9000000000"));
     stats.onTransferStart(source, new DataSpec(FILE), true);
