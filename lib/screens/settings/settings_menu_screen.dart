@@ -903,6 +903,16 @@ class _SettingsCategoryScreenState extends State<SettingsCategoryScreen> {
   }
 }
 
+/// "1.0.73 (961)": the version plus the build number, written the way
+/// TestFlight lists builds. Every test build and TestFlight upload of a week
+/// shares one version, so the version alone can't tell them apart (owner,
+/// 2026-11-22: "Especially iOS, they're all on 0.73"). A platform that
+/// reports no build number shows the version alone.
+String fullVersion(PackageInfo info) {
+  final build = info.buildNumber.trim();
+  return build.isEmpty ? info.version : '${info.version} ($build)';
+}
+
 /// Version, bug-report address and the TMDB / Trakt / Simkl / sports
 /// data credits.
 class SettingsFooter extends StatelessWidget {
@@ -923,11 +933,11 @@ class SettingsFooter extends StatelessWidget {
           child: FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
-              final version = snapshot.data?.version;
+              final info = snapshot.data;
               return Text(
-                version == null
+                info == null
                     ? tr('Version —')
-                    : tr('Version {version}', {'version': version}),
+                    : tr('Version {version}', {'version': fullVersion(info)}),
                 style: small,
               );
             },
