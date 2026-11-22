@@ -18,7 +18,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// uzumaki (Fire TV, Discord 2026-11-21): "When I select a group, no channel
 /// is selected". OK on a group must land on the new group's first channel
-/// whatever the old list looked like.
+/// whatever the old list looked like, in the list guide and the Timeline,
+/// and never pass through the old group's rows on the way (on the Homatics
+/// the old list's row 0 took focus and the new group opened with nothing
+/// focused: owner photo, same day).
 class _Groups extends PlaylistManager {
   _Groups(StorageService storage) : super(storage, CatalogDatabase());
 
@@ -66,7 +69,8 @@ void main() {
             (_) async => const StandardMessageCodec().encodeMessage([null]));
   });
 
-  Future<(PlaybackService, _Groups)> pumpHome(WidgetTester tester) async {
+  Future<(PlaybackService, _Groups)> pumpHome(WidgetTester tester,
+      {bool keepOpen = true, String mode = 'live'}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -76,8 +80,8 @@ void main() {
     final prefs = AppPreferences(storage);
     await prefs.init();
     prefs.isTelevision = true;
-    prefs.guideViewMode = 'live';
-    prefs.keepGroupsOpen = true;
+    prefs.guideViewMode = mode;
+    prefs.keepGroupsOpen = keepOpen;
     final playlist = _Groups(storage);
     final playback = PlaybackService(storage, playlist);
     final epg = _NoGuide(storage);
@@ -126,10 +130,16 @@ void main() {
     return texts.evaluate().map((e) => (e.widget as Text).data).join('|');
   }
 
-  Future<void> pickGroup(WidgetTester tester, String group) async {
+  /// Every row that had focus on the way, by its texts.
+  Future<List<String?>> pickGroup(WidgetTester tester, String group) async {
     await focusText(tester, group);
+    final path = <String?>[];
+    void note() => path.add(focusedRowText(tester));
+    FocusManager.instance.addListener(note);
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await settle(tester);
+    FocusManager.instance.removeListener(note);
+    return path;
   }
 
   testWidgets('OK on a group from an untouched list: its first channel',
@@ -163,5 +173,31 @@ void main() {
     await pickGroup(tester, 'Liga');
     await pickGroup(tester, 'Ligue');
     expect(focusedRowText(tester), startsWith('Ligue 1'));
+  });
+
+  testWidgets("groups that fold away: never the old group's rows on the way",
+      (tester) async {
+    await pumpHome(tester, keepOpen: false);
+    await pickGroup(tester, 'Liga');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle(tester);
+    final path = await pickGroup(tester, 'Ligue');
+    expect(path.where((t) => t != null && t.startsWith('Liga')), isEmpty,
+        reason: "the old list's row 0 took focus first: $path");
+    expect(focusedRowText(tester), startsWith('Ligue 1'));
+  });
+
+  testWidgets('Timeline guide: OK on a group goes to its first channel',
+      (tester) async {
+    await pumpHome(tester, keepOpen: false, mode: 'timeline');
+    await pickGroup(tester, 'Liga');
+    final primary = FocusManager.instance.primaryFocus;
+    expect(primary?.debugLabel, isNot('group-row'),
+        reason: 'focus stayed on the group');
+    // .last: the description above the guide names it too.
+    final row = tester.getRect(find.text('Liga 1').last);
+    expect(primary!.rect.top, lessThan(row.bottom));
+    expect(primary.rect.bottom, greaterThan(row.top),
+        reason: "not on the first channel's row");
   });
 }

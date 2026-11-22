@@ -183,9 +183,11 @@ void main() {
       Focus.of(tester.element(farGroup)).requestFocus();
       await tester.pumpAndSettle();
       await press(tester, LogicalKeyboardKey.select);
-      if (farGroup.evaluate().isEmpty) {
-        await press(tester, LogicalKeyboardKey.arrowLeft);
-      }
+      // OK went into the group's channels (both guides): Back to the
+      // groups, Left to the tabs.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'group-row');
       await press(tester, LogicalKeyboardKey.arrowLeft);
       await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();

@@ -202,10 +202,13 @@ void main() {
   }
 
   /// The programme grid's horizontal scroll (the one holding the blocks).
+  /// (The card above the guide names the focused programme too: the
+  /// first block inside a horizontal scroll.)
   double gridOffset(WidgetTester tester, String channelRawId) {
-    final block = find.textContaining('$channelRawId #').first;
     final scrollable = find
-        .ancestor(of: block, matching: find.byType(Scrollable))
+        .ancestor(
+            of: find.textContaining('$channelRawId #'),
+            matching: find.byType(Scrollable))
         .evaluate()
         .map((e) => (e as StatefulElement).state as ScrollableState)
         .firstWhere((s) => s.position.axis == Axis.horizontal);
