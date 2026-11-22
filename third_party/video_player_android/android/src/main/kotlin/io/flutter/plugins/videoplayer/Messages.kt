@@ -514,7 +514,8 @@ data class CreationOptions (
   val formatHint: PlatformVideoFormat? = null,
   val httpHeaders: Map<String, String>,
   val userAgent: String? = null,
-  val backBufferDurationMs: Long? = null
+  val backBufferDurationMs: Long? = null,
+  val allowEncodedAudio: Boolean? = null
 )
  {
   companion object {
@@ -524,7 +525,8 @@ data class CreationOptions (
       val httpHeaders = pigeonVar_list[2] as Map<String, String>
       val userAgent = pigeonVar_list[3] as String?
       val backBufferDurationMs = pigeonVar_list[4] as Long?
-      return CreationOptions(uri, formatHint, httpHeaders, userAgent, backBufferDurationMs)
+      val allowEncodedAudio = pigeonVar_list[5] as Boolean?
+      return CreationOptions(uri, formatHint, httpHeaders, userAgent, backBufferDurationMs, allowEncodedAudio)
     }
   }
   fun toList(): List<Any?> {
@@ -534,6 +536,7 @@ data class CreationOptions (
       httpHeaders,
       userAgent,
       backBufferDurationMs,
+      allowEncodedAudio,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -544,7 +547,7 @@ data class CreationOptions (
       return true
     }
     val other = other as CreationOptions
-    return MessagesPigeonUtils.deepEquals(this.uri, other.uri) && MessagesPigeonUtils.deepEquals(this.formatHint, other.formatHint) && MessagesPigeonUtils.deepEquals(this.httpHeaders, other.httpHeaders) && MessagesPigeonUtils.deepEquals(this.userAgent, other.userAgent) && MessagesPigeonUtils.deepEquals(this.backBufferDurationMs, other.backBufferDurationMs)
+    return MessagesPigeonUtils.deepEquals(this.uri, other.uri) && MessagesPigeonUtils.deepEquals(this.formatHint, other.formatHint) && MessagesPigeonUtils.deepEquals(this.httpHeaders, other.httpHeaders) && MessagesPigeonUtils.deepEquals(this.userAgent, other.userAgent) && MessagesPigeonUtils.deepEquals(this.backBufferDurationMs, other.backBufferDurationMs) && MessagesPigeonUtils.deepEquals(this.allowEncodedAudio, other.allowEncodedAudio)
   }
 
   override fun hashCode(): Int {
@@ -554,10 +557,11 @@ data class CreationOptions (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.httpHeaders)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.userAgent)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.backBufferDurationMs)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.allowEncodedAudio)
     return result
   }
   override fun toString(): String {
-    return "CreationOptions(uri=$uri, formatHint=$formatHint, httpHeaders=$httpHeaders, userAgent=$userAgent, backBufferDurationMs=$backBufferDurationMs)"
+    return "CreationOptions(uri=$uri, formatHint=$formatHint, httpHeaders=$httpHeaders, userAgent=$userAgent, backBufferDurationMs=$backBufferDurationMs, allowEncodedAudio=$allowEncodedAudio)"
   }
 }
 
@@ -1109,6 +1113,7 @@ interface AndroidVideoPlayerApi {
   fun createForTextureView(options: CreationOptions): TexturePlayerIds
   fun dispose(playerId: Long)
   fun setMixWithOthers(mixWithOthers: Boolean)
+  fun isAudioPassthroughEnabled(playerId: Long): Boolean
   fun getLookupKeyForAsset(asset: String, packageName: String?): String
 
   companion object {
@@ -1197,6 +1202,23 @@ interface AndroidVideoPlayerApi {
             val wrapped: List<Any?> = try {
               api.setMixWithOthers(mixWithOthersArg)
               listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.video_player_android.AndroidVideoPlayerApi.isAudioPassthroughEnabled$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val playerIdArg = args[0] as Long
+            val wrapped: List<Any?> = try {
+              listOf(api.isAudioPassthroughEnabled(playerIdArg))
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
             }

@@ -1125,6 +1125,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     final newController = streamController(
       channel.url,
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      allowEncodedAudio: false,
     );
     // Send log: how long a screen takes to show (AMD, 2026-11-17: slower
     // than a channel change; it held 4 s of video before starting).

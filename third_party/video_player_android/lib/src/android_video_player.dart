@@ -10,6 +10,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 import 'messages.g.dart' hide videoEvents;
 import 'messages.g.dart' as pigeon show videoEvents;
 import 'platform_view_player.dart';
+import 'android_video_player_options.dart';
 
 /// The non-test implementation of `_apiProvider`.
 VideoPlayerInstanceApi _productionApiProvider(int playerId) {
@@ -48,6 +49,10 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
   _videoEventStreamProvider;
 
   final Map<int, _PlayerInstance> _players = <int, _PlayerInstance>{};
+
+  /// Whether this player's sink permits encoded output (and cannot reliably mute).
+  Future<bool> isAudioPassthroughEnabled(int playerId) =>
+      _api.isAudioPassthroughEnabled(playerId);
 
   /// Registers this class as the default instance of [PathProviderPlatform].
   static void registerWith() {
@@ -115,6 +120,10 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
       userAgent: userAgent,
       formatHint: formatHint,
       backBufferDurationMs: options.videoPlayerOptions?.backBufferDurationMs,
+      allowEncodedAudio: options.videoPlayerOptions is AndroidVideoPlayerOptions
+          ? (options.videoPlayerOptions! as AndroidVideoPlayerOptions)
+                .allowEncodedAudio
+          : false,
     );
 
     final int playerId;

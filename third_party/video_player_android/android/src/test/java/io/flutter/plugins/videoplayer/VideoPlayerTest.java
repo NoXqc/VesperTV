@@ -343,7 +343,7 @@ public final class VideoPlayerTest {
             .setLanguage("en")
             .setAverageBitrate(128000)
             .setSampleRate(48000)
-            .setChannelCount(2)
+            .setChannelCount(6)
             .setCodecs("mp4a.40.2")
             .build();
 
@@ -397,7 +397,7 @@ public final class VideoPlayerTest {
     assertTrue(track1.isSelected());
     assertEquals(Long.valueOf(128000), track1.getBitrate());
     assertEquals(Long.valueOf(48000), track1.getSampleRate());
-    assertEquals(Long.valueOf(2), track1.getChannelCount());
+    assertEquals(Long.valueOf(6), track1.getChannelCount());
     assertEquals("mp4a.40.2", track1.getCodec());
 
     // Verify second track

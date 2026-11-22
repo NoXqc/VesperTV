@@ -2,9 +2,9 @@
 // "vespertv/audio", Settings > Interface > Audio). Off by default: every player is built with a
 // context-less DefaultAudioSink, so Dolby audio is always decoded to PCM and setVolume() keeps
 // working (Multiview audio bleed, 2026-10-07; see PlatformViewVideoPlayer). On, the main
-// platform-view player's sink gets the Context, detects what the TV/receiver accepts over HDMI
+// player's sink gets the Context, detects what the TV/receiver accepts over HDMI
 // and sends AC3 / E-AC3 (incl. Dolby Atmos) / DTS untouched — the app's volume and mute then no
-// longer affect that audio. Texture players (Multiview, Compatibility video) never pass through.
+// longer affect that audio. Compatibility video opts in per player; Multiview stays PCM-only.
 // Read when a player is created, so it applies from the next channel.
 package io.flutter.plugins.videoplayer;
 
