@@ -500,7 +500,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 - **Claude, 2026-11-22 - M3U header guides + `.xz` guides (`claude/m3u-header-epg`, worktree `VesperTV-claude-m3uepg`,
-  from main 8f404e1, uncommitted):** a user's M3UPT list (m3upt.com/iptv, Portuguese public channels) showed no guide.
+  74de60a, merged into main + pushed for Sunday 2026-11-29's 1.0.74):** a user's M3UPT list (m3upt.com/iptv, Portuguese public channels) showed no guide.
   Its guides are named in the list's own header, `#EXTM3U url-tvg="…epg-m3upt.xml.xz,…epg-locomotion.xml.xz"`, which
   VesperTV read for catch-up only, and both are `.xz`, which it couldn't open (gzip only). Now: (1) `M3uParser.guideUrlsOf`
   (`url-tvg` / `x-tvg-url` / `tvg-url`, comma lists, web links only); every download reports them (`fetchAndParse
@@ -516,10 +516,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Real check: M3UPT's 1.7 MB guide = 39 MB XML, 91 of 157 channels filled, 3.5 s on the PC. `archive`'s own XZEncoder
   writes streams its decoder flags incomplete: tests use a real xz-utils fixture. `test/m3u_header_guides_test.dart`
   (16). Analyze 16, 2398 tests. Not box-tested. Same day: **`VesperTV-macos.dmg` attached to release 1.0.73** (CI run
-  45083800016 = the release commit 8260255, owner: "Just put it on GitHub"); the Mac app's updater still offers nothing
-  (`checkForUpdate` returns null on macOS) and `/cutr` doesn't attach it yet. Next build > 963.
+  45083800016 = the release commit 8260255, owner: "Just put it on GitHub"); from 1.0.74 every Sunday release gets it
+  through CI and the Mac app's Check for Updates (entry below). Next build > 963.
 - **Claude, 2026-11-22 - Mac in every Sunday release (`claude/mac-weekly`, worktree `VesperTV-claude-macweekly`, from
-  main 8f404e1, uncommitted; owner: "windows Linux Mac should all be part of sunday's updates"):** `macos-build.yml`
+  ca7b47c, merged into main + pushed for 1.0.74; owner: "windows Linux Mac should all be part of sunday's updates"):** `macos-build.yml`
   takes `release_tag` like the Linux workflows (build main, check tag = commit, upload `VesperTV-macos.dmg` with
   `--clobber`, delete older versioned DMGs); dev-notes/release.md §6 step 4b runs it with the Linux ones. Only the
   `.dmg` goes on a release, never the Mac `.zip` (old Windows updaters take the first `.zip`). App: macOS Check for
