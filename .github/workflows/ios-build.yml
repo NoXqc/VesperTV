@@ -82,13 +82,57 @@ jobs:
                 -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           # Flutter's generated settings + pod install, without building.
           flutter build ios --release --config-only --no-codesign 2>&1 | tee build-ios.log
+          # Archived UNSIGNED, like the Apple TV build (tvos-build.yml): an
+          # automatically signed archive made an Apple Development
+          # certificate on this throwaway runner every run, and the account
+          # hit Apple's certificate limit (TestFlight 969, 2026-11-23). The
+          # export signs for App Store Connect through the API key (cloud
+          # signing): no certificate here.
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             "${auth[@]}" archive 2>&1 | tee -a build-ios.log
+          [ -d "$RUNNER_TEMP/VesperTV.xcarchive" ] || { tail -60 build-ios.log; exit 1; }
+          # Entitlements live in the code signature, so an unsigned archive
+          # has none: sign it ad hoc with ios/Runner/Runner.entitlements
+          # (iCloud), inside out; the export re-signs and keeps them.
+          app="$RUNNER_TEMP/VesperTV.xcarchive/Products/Applications/Runner.app"
+          find "$app/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) \
+            -exec codesign --force --sign - --timestamp=none {} \;
+          for appex in "$app"/PlugIns/*.appex; do
+            [ -d "$appex" ] || continue
+            codesign --force --sign - --timestamp=none "$appex"
+          done
+          codesign --force --sign - --timestamp=none \
+            --entitlements ios/Runner/Runner.entitlements "$app"
+          check_entitlements() {
+            local bundle="$1" label="$2" got
+            got="$(codesign -d --entitlements - --xml "$bundle" 2>/dev/null || codesign -d --entitlements :- "$bundle" 2>/dev/null)"
+            for key in $(plutil -convert json -o - ios/Runner/Runner.entitlements | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)))'); do
+              if ! printf '%s' "$got" | grep -q "$key"; then
+                echo "::error::$label is missing $key"
+                return 1
+              fi
+            done
+            echo "$label: entitlements OK"
+          }
+          check_entitlements "$app" archive-app
           cp ios/ExportOptions.plist "$RUNNER_TEMP/ExportOptions.plist"
           plutil -replace teamID -string "$TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          # A local export first: stop before uploading a build whose
+          # signature lost iCloud.
+          cp "$RUNNER_TEMP/ExportOptions.plist" "$RUNNER_TEMP/ExportCheck.plist"
+          plutil -replace destination -string export "$RUNNER_TEMP/ExportCheck.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportCheck.plist" \
+            -exportPath "$RUNNER_TEMP/export-check" \
+            "${auth[@]}" >> build-ios.log 2>&1 || { tail -40 build-ios.log; exit 1; }
+          ipa="$(find "$RUNNER_TEMP/export-check" -name '*.ipa' | head -1)"
+          [ -n "$ipa" ] || { echo "::error::the check export made no .ipa"; tail -40 build-ios.log; exit 1; }
+          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa" && unzip -q "$ipa" -d "$RUNNER_TEMP/ipa"
+          check_entitlements "$(find "$RUNNER_TEMP/ipa/Payload" -maxdepth 1 -name '*.app' | head -1)" export-app
           # destination=upload: the export sends the build to App Store Connect.
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
