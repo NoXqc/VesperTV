@@ -3106,6 +3106,16 @@ class PlaylistManager extends ChangeNotifier {
           Object.hashAllUnordered(s.mergeHidden),
       ]),
       'favourites': _favoritesVersion,
+      // Move Up / Down on a channel: each step must redraw the list at once
+      // (owner, 2026-11-23: the moved channel only showed in its new place
+      // after OK). A group's order and the Favourites order + sort.
+      'channelOrder': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) s.channelOrderVersion,
+      ]),
+      'favouriteOrder': Object.hash(
+        Object.hashAll(_storage.getFavoriteLiveOrder()),
+        _storage.getFavoriteLiveSort(),
+      ),
       'guideLinks': Object.hashAll([
         for (final s in _enabledSessionsSortedFor('tv')) s.guideLinksVersion,
       ]),

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -51,9 +52,9 @@ void main() {
   setUp(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler(
-          'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
-          (_) async => const StandardMessageCodec().encodeMessage([null]),
-        );
+      'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+      (_) async => const StandardMessageCodec().encodeMessage([null]),
+    );
     SharedPreferences.setMockInitialValues({});
     final temp = await Directory.systemTemp.createTemp('vesper_editor_grp_');
     addTearDown(() => temp.delete(recursive: true));
@@ -143,13 +144,13 @@ void main() {
       .firstWhere((c) => c.name == name)
       .rawId;
   List<String> names(String playlist, String group) => [
-    for (final c in manager.visibleChannels(
-      playlistId: playlist,
-      groupTitle: group,
-      category: 'tv',
-    ))
-      c.name,
-  ];
+        for (final c in manager.visibleChannels(
+          playlistId: playlist,
+          groupTitle: group,
+          category: 'tv',
+        ))
+          c.name,
+      ];
 
   test('groups lists the countries of the shown groups', () async {
     final g = (await request('/api/groups?pl=q')).data;
@@ -257,6 +258,41 @@ void main() {
     expect(manager.liveViewSignature(), isNot(before));
   });
 
+  test('each Move Up / Down step redraws the TV guide', () async {
+    // The TV tab redraws only when liveViewSignature changes: a moved
+    // channel stayed in its old place until OK (owner, 2026-11-23).
+    Channel channel(String name) => manager
+        .visibleChannels(category: 'tv')
+        .firstWhere((c) => c.name == name);
+    var before = manager.liveViewSignature();
+    await manager.moveChannel(channel('BBC One'), 1, inGroup: 'UK');
+    expect(names('q', 'UK'), ['ITV', 'BBC One']);
+    expect(manager.liveViewSignature(), isNot(before),
+        reason: "a playlist group's order");
+
+    // The editor's Channel order too (same stored order).
+    before = manager.liveViewSignature();
+    await request('/api/order?pl=q', body: {
+      'g': 'UK',
+      'ids': [channel('BBC One').id, channel('ITV').id],
+    });
+    expect(names('q', 'UK'), ['BBC One', 'ITV']);
+    expect(manager.liveViewSignature(), isNot(before),
+        reason: "the editor's order");
+
+    // Favourites.
+    await manager.toggleFavorite(channel('CNN'));
+    await manager.toggleFavorite(channel('ITV'));
+    List<String> favourites() =>
+        [for (final c in manager.orderedFavoriteLiveChannels()) c.name];
+    final start = favourites();
+    before = manager.liveViewSignature();
+    await manager.moveFavoriteLiveChannel(channel(start.first), 1);
+    expect(favourites(), start.reversed.toList());
+    expect(manager.liveViewSignature(), isNot(before),
+        reason: 'the Favourites order');
+  });
+
   test('channel order: a playlist group and a custom group across playlists',
       () async {
     List<String> listed(Map data) =>
@@ -290,8 +326,8 @@ void main() {
     r = await request('/api/order?pl=p&g=Weekend');
     expect(r.data['own'], true);
     expect(listed(r.data).toSet(), {'RDS', 'ESPN'});
-    final other = (r.data['channels'] as List)
-        .firstWhere((c) => c['n'] == 'ESPN') as Map;
+    final other =
+        (r.data['channels'] as List).firstWhere((c) => c['n'] == 'ESPN') as Map;
     expect(other['p'], 'Other');
     r = await request('/api/order?pl=p', body: {
       'g': 'Weekend',
@@ -302,7 +338,10 @@ void main() {
       for (final c
           in manager.visibleChannels(groupTitle: 'Weekend', category: 'tv'))
         c.name
-    ], ['ESPN', 'RDS']);
+    ], [
+      'ESPN',
+      'RDS'
+    ]);
 
     r = await request('/api/order?pl=p', body: {'g': 'Nothing', 'ids': []});
     expect(r.status, isNot(200));

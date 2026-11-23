@@ -117,6 +117,12 @@ class PlaylistSession {
   /// [moveChannel]. Missing = provider order.
   Map<String, List<String>> channelOrder = {};
 
+  /// Bumped on every [channelOrder] change (a move, the editor's order, a
+  /// viewer's load): `PlaylistManager.liveViewSignature` reads it, or the TV
+  /// tab kept drawing the old order until something else rebuilt it (a
+  /// moved channel stayed in place until OK, owner 2026-11-23).
+  int channelOrderVersion = 0;
+
   /// Live TV only — see [AppConstants.keyHiddenChannels]'s doc comment
   /// for why this exists alongside whole-group hiding. Keyed by
   /// [Channel.rawId].
@@ -437,6 +443,7 @@ class PlaylistSession {
         type: storage.getGroupOrder(profile.id, type),
     };
     channelOrder = storage.getChannelOrder(profile.id);
+    channelOrderVersion++;
     hiddenChannels = storage.getHiddenChannels(profile.id);
     edits = PlaylistEdits.decode(storage.getPlaylistEditsJson(profile.id));
     applyEdits();
@@ -2187,6 +2194,7 @@ class PlaylistSession {
     final anchorIndex = all.indexOf(anchor);
     all.insert(delta < 0 ? anchorIndex : anchorIndex + 1, rawId);
     channelOrder[groupTitle] = all;
+    channelOrderVersion++;
     await storage.setChannelOrder(profile.id, channelOrder);
     onNotify();
     return to;
@@ -2211,6 +2219,7 @@ class PlaylistSession {
       ...first,
       ...current.where((id) => !firstSet.contains(id)),
     ];
+    channelOrderVersion++;
     await storage.setChannelOrder(profile.id, channelOrder);
     onNotify();
   }

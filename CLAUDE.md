@@ -351,7 +351,8 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   gradient. Result: 24 ms. Any new full-screen gradient behind a page: use BakedBackdrop.
   (18) **The TV screen does not watch PlaylistManager** (2026-11-18, +838..+847): it listens and rebuilds on the
   TV tab only when `PlaylistManager.liveViewSignature()` changes (live lists, hidden, edits, merges, own groups,
-  viewer, groups + order, playlists, favourites, error); the browse tabs rebuild on every change as before. The
+  viewer, groups + order, channel order (`PlaylistSession.channelOrderVersion`), playlists, favourites + their order
+  and sort, error); the browse tabs rebuild on every change as before. The
   Movies / TV Shows warm-up notified every few hundred ms for minutes on big playlists and each rebuild cost
   300-850 ms on the Homatics. **New PlaylistManager state shown on the TV tab must go into liveViewSignature** (or
   read with its own `context.select`, like `_TvTopBar`'s spinner), or the TV tab won't update. Group counts there
@@ -499,6 +500,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Move Up / Down redraw + double-Down wrap (`claude/channel-move-redraw`, worktree
+  `VesperTV-claude-moveredraw`):** owner (Homatics): moving a channel Up / Down showed nothing until OK, then it
+  appeared in its new place. Not the wrap (his guess): since the TV guide speed-up (10c94bb, 1.0.70) the TV tab
+  redraws only when `liveViewSignature` changes, and neither a group's channel order (`PlaylistSession.channelOrder`,
+  also the editor's Channel order) nor the Favourites order / sort was in it; OK's own setState redrew it.
+  Now `channelOrderVersion` (bumped on move, editor order, viewer load) + the stored Favourites order and sort are in
+  the signature (own groups were already in via `_myGroups`). Owner also asked that the Timeline guide's wrap (Down on
+  the last channel -> first, +950) take a **second Down**: the first stops, a new press within 2 s wraps; a held
+  Down's repeats never wrap (`_noteDownRelease` HardwareKeyboard watcher, armed row cleared in `_trackFocus`).
+  Tests: playlist_editor_groups_test (redraw: failed without the fix), guide_programme_steps_test (second Down, held
+  Down), guide_whole_rows_test. Analyze 16, 2402 tests. Test APK +965. Not box-tested.
 - **Claude, 2026-11-22 - M3U header guides + `.xz` guides (`claude/m3u-header-epg`, worktree `VesperTV-claude-m3uepg`,
   74de60a, merged into main + pushed for Sunday 2026-11-29's 1.0.74):** a user's M3UPT list (m3upt.com/iptv, Portuguese public channels) showed no guide.
   Its guides are named in the list's own header, `#EXTM3U url-tvg="…epg-m3upt.xml.xz,…epg-locomotion.xml.xz"`, which

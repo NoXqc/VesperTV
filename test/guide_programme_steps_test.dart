@@ -289,7 +289,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Down on the last channel goes back to the first',
+  testWidgets('a second Down on the last channel goes back to the first',
       (tester) async {
     await pumpHome(tester);
     await intoGuide(tester);
@@ -297,8 +297,38 @@ void main() {
     await key(tester, LogicalKeyboardKey.arrowDown);
     expect(focusedTitle(), startsWith('On now 2'));
     await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now 2'),
+        reason: 'one Down too many stays on the last channel (owner, '
+            '2026-11-23)');
+    await key(tester, LogicalKeyboardKey.arrowDown);
     expect(focusedTitle(), startsWith('On now,'),
-        reason: 'the last channel wraps to the first');
+        reason: 'the second Down wraps to the first');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('holding Down on the last channel never wraps', (tester) async {
+    await pumpHome(tester);
+    await intoGuide(tester);
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now 2'));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    expect(focusedTitle(), startsWith('On now 2'),
+        reason: "a held Down's repeats don't wrap");
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    // Up and back down: the stop starts over.
+    await key(tester, LogicalKeyboardKey.arrowUp);
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now 2'),
+        reason: 'back on the last channel, the first Down stops again');
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedTitle(), startsWith('On now,'));
     expect(tester.takeException(), isNull);
   });
 }

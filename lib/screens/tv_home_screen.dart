@@ -10385,6 +10385,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_noteDownRelease);
     final now = DateTime.now();
     final anchor = widget.anchor;
     if (anchor == null) {
@@ -10842,6 +10843,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_noteDownRelease);
     appRouteObserver.unsubscribe(this);
     _nowTimer?.cancel();
     _detailsTimer?.cancel();
@@ -11042,6 +11044,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   EpgProgram? _focusedProgram;
 
   void _trackFocus(int rowIndex, EpgProgram? program) {
+    if (rowIndex != _wrapArmedRow) _wrapArmedRow = null;
     _focusedRowIndex = rowIndex;
     _focusedProgram = program;
     _scheduleDetails(rowIndex, program);
@@ -11297,6 +11300,25 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     if (target != rowIndex) moveVertical(target - rowIndex);
   }
 
+  /// The double Down that wraps from the last channel to the first (see
+  /// [moveVertical]): the row it was armed on, when, and whether Down was
+  /// let go since (so a held Down can't wrap).
+  int? _wrapArmedRow;
+  DateTime? _wrapArmedAt;
+  bool _downReleasedSinceArmed = false;
+  static const _wrapWindow = Duration(seconds: 2);
+
+  /// HardwareKeyboard runs this before the shortcuts that call
+  /// [moveVertical]; it only watches, never handles.
+  bool _noteDownRelease(KeyEvent event) {
+    if (_wrapArmedRow != null &&
+        event is KeyUpEvent &&
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _downReleasedSinceArmed = true;
+    }
+    return false;
+  }
+
   void moveVertical(int delta) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return;
@@ -11310,6 +11332,21 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       // 2026-11-21). Up on the first still goes to the search button, and
       // a 10-row jump (jumpVertical) stops at the end.
       if (delta != 1 || widget.channels.length < 2) return;
+      // Only on a second Down there (owner, 2026-11-23: one press too many
+      // jumped to the top by mistake): the first one stops, a new press
+      // within [_wrapWindow] wraps. A held Down's repeats never do.
+      final armedAt = _wrapArmedAt;
+      final now = DateTime.now();
+      if (_wrapArmedRow != rowIndex ||
+          !_downReleasedSinceArmed ||
+          armedAt == null ||
+          now.difference(armedAt) > _wrapWindow) {
+        _wrapArmedRow = rowIndex;
+        _wrapArmedAt = now;
+        _downReleasedSinceArmed = false;
+        return;
+      }
+      _wrapArmedRow = null;
       targetRow = 0;
     }
     final time = _referenceTime(_focusedProgram);
