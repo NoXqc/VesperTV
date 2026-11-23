@@ -4103,4 +4103,52 @@ const Map<String, String> kDe = {
       "Weniger empfindlich",
   "Very sensitive":
       "Sehr empfindlich",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "Von einem anderen Gerät",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Du nutzt VesperTV schon auf einem anderen Gerät? Hol dir hier deine Playlists, Favoriten und Einstellungen.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Beide Geräte bleiben auf dem neuesten Stand. Auf dem anderen Gerät: Einstellungen > Sicherung & Geräte > Synchronisierung > Gerät verknüpfen, dann hier den Code eingeben.",
+  "Receive a transfer":
+      "Übertragung empfangen",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Kopiert alles einmalig. Auf dem anderen Gerät: Einstellungen > Sicherung & Geräte > Auf ein anderes Gerät übertragen > Von diesem Gerät senden.",
+  "Restore a backup":
+      "Sicherung wiederherstellen",
+  "From a backup file VesperTV saved":
+      "Aus einer von VesperTV gespeicherten Sicherungsdatei",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "diesem Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Melde dich in den Einstellungen dieses Geräts bei iCloud an, um Sicherungen in iCloud zu behalten.",
+  "iCloud is restricted on this device.":
+      "iCloud ist auf diesem Gerät eingeschränkt.",
+  "iCloud backups aren't available in this build yet.":
+      "iCloud-Sicherungen sind in dieser Version noch nicht verfügbar.",
+  "iCloud can't be reached right now. Try again later.":
+      "iCloud ist gerade nicht erreichbar. Versuche es später noch einmal.",
+  "Your iCloud storage is full.":
+      "Dein iCloud-Speicher ist voll.",
+  "Restore from iCloud":
+      "Aus iCloud wiederherstellen",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Sicherungen, die dein iPhone, iPad oder Apple TV mit dieser Apple-ID in iCloud gespeichert hat. Jedes Gerät behält dort seine neueste.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "Noch keine Sicherungen in iCloud. Auf dem anderen Gerät: Einstellungen > Sicherung & Geräte > Sichern und Wiederherstellen > Auch in iCloud sichern.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Sicherung unter {path} gespeichert, aber nicht in iCloud: {error}",
+  "Backup folder":
+      "Sicherungsordner",
+  "Backups now go to {name}.":
+      "Sicherungen landen jetzt in {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "Auf diesem Gerät. Wähle stattdessen iCloud Drive, OneDrive oder eine Netzwerkfreigabe in Dateien.",
+  "Also save to iCloud":
+      "Auch in iCloud sichern",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Jede Sicherung landet auch in deiner iCloud, damit deine anderen Apple-Geräte (auch Apple TV) sie wiederherstellen können. iCloud behält die neueste von diesem Gerät.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "Aus einer Sicherung, die dein iPhone, iPad oder Apple TV in iCloud gespeichert hat",
 };

@@ -4162,4 +4162,52 @@ const Map<String, String> kEl = {
       "Λιγότερο ευαίσθητη",
   "Very sensitive":
       "Πολύ ευαίσθητη",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "Από άλλη συσκευή",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Χρησιμοποιείτε ήδη το VesperTV σε άλλη συσκευή; Φέρτε εδώ τις λίστες, τα αγαπημένα και τις ρυθμίσεις σας.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Και οι δύο συσκευές μένουν ενημερωμένες. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Συγχρονισμός > Σύνδεση συσκευής και μετά εισαγάγετε τον κωδικό της εδώ.",
+  "Receive a transfer":
+      "Λήψη μεταφοράς",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Αντιγράφει τα πάντα μία φορά. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Μεταφορά σε άλλη συσκευή > Αποστολή από αυτή τη συσκευή.",
+  "Restore a backup":
+      "Επαναφορά αντιγράφου ασφαλείας",
+  "From a backup file VesperTV saved":
+      "Από αρχείο αντιγράφου ασφαλείας που αποθήκευσε το VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Συνδεθείτε στο iCloud από τις Ρυθμίσεις αυτής της συσκευής για να κρατάτε αντίγραφα ασφαλείας στο iCloud.",
+  "iCloud is restricted on this device.":
+      "Το iCloud είναι περιορισμένο σε αυτή τη συσκευή.",
+  "iCloud backups aren't available in this build yet.":
+      "Τα αντίγραφα ασφαλείας στο iCloud δεν είναι ακόμη διαθέσιμα σε αυτή την έκδοση.",
+  "iCloud can't be reached right now. Try again later.":
+      "Το iCloud δεν είναι προσβάσιμο αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα.",
+  "Your iCloud storage is full.":
+      "Ο αποθηκευτικός χώρος iCloud είναι γεμάτος.",
+  "Restore from iCloud":
+      "Επαναφορά από το iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Αντίγραφα ασφαλείας που αποθήκευσε το iPhone, το iPad ή το Apple TV σας στο iCloud με αυτό το Apple ID. Κάθε συσκευή κρατά εκεί το πιο πρόσφατο.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "Δεν υπάρχουν ακόμη αντίγραφα στο iCloud. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Αντίγραφα ασφαλείας και επαναφορά > Αποθήκευση και στο iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Το αντίγραφο αποθηκεύτηκε στο {path}, αλλά όχι στο iCloud: {error}",
+  "Backup folder":
+      "Φάκελος αντιγράφων",
+  "Backups now go to {name}.":
+      "Τα αντίγραφα πηγαίνουν τώρα στο {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "Σε αυτή τη συσκευή. Επιλέξτε αντί γι’ αυτό το iCloud Drive, το OneDrive ή έναν κοινόχρηστο φάκελο δικτύου στα Αρχεία.",
+  "Also save to iCloud":
+      "Αποθήκευση και στο iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Κάθε αντίγραφο πηγαίνει και στο iCloud σας, ώστε οι άλλες συσκευές Apple (και το Apple TV) να μπορούν να το επαναφέρουν. Το iCloud κρατά το πιο πρόσφατο από αυτή τη συσκευή.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "Από αντίγραφο που αποθήκευσε το iPhone, το iPad ή το Apple TV σας στο iCloud",
 };

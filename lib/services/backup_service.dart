@@ -8,6 +8,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'backup_folder.dart';
+import 'icloud_backups.dart';
 import 'storage_service.dart';
 import '../l10n/l10n.dart';
 import '../utils/desktop_platform.dart';
@@ -21,8 +23,8 @@ class BackupEntry {
     required this.size,
   });
 
-  /// A `content://` URI or a file path — whatever [BackupService] needs to
-  /// read or delete it again.
+  /// A `content://` URI, a file path or `folder:<name>` (iOS backup folder)
+  /// — whatever [BackupService] needs to read or delete it again.
   final String id;
   final String name;
   final DateTime modified;
@@ -42,10 +44,26 @@ class BackupEntry {
 /// older than the chosen interval ([intervalChoices], weekly by default;
 /// [maybeAutoBackup]); only the newest [keepAuto] of them are kept.
 /// Manual backups are never deleted by the app.
+///
+/// iPhone / iPad: backups go to the Files folder the viewer picked
+/// ([BackupFolder]: iCloud Drive, OneDrive, an SMB share…) when there is
+/// one. iPhone, iPad and Apple TV: with Also save to iCloud on, each backup
+/// (not the undo point a restore makes) also replaces this device's copy in
+/// iCloud ([ICloudBackups]).
 class BackupService {
-  BackupService(this._storage);
+  BackupService(this._storage, {BackupFolder? folder, ICloudBackups? icloud})
+      : _folder = folder ?? (BackupFolder.supported ? BackupFolder() : null),
+        _icloud = icloud ?? (ICloudBackups.supported ? ICloudBackups() : null);
 
   final StorageService _storage;
+  final BackupFolder? _folder;
+  final ICloudBackups? _icloud;
+
+  static const _folderId = 'folder:';
+
+  /// Why the last [create] couldn't also save to iCloud (the backup itself
+  /// was saved), or null.
+  Object? lastICloudError;
 
   static const _channel = MethodChannel('com.nox.nox_iptv/backup');
   static const manualPrefix = 'vespertv-backup-';
@@ -68,11 +86,26 @@ class BackupService {
           ? '~/Documents/VesperTV'
           : Platform.isMacOS
               ? tr('the app\'s own storage')
-              // iOS: Documents is shared with the Files app
-              // (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
-              : Platform.isIOS
-                  ? 'Files > On My iPhone > VesperTV > VesperTV'
-                  : 'Download/VesperTV';
+              : isAppleTv
+                  ? tr('this Apple TV')
+                  // iOS: Documents is shared with the Files app
+                  // (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
+                  : Platform.isIOS
+                      ? 'Files > On My iPhone > VesperTV > VesperTV'
+                      : 'Download/VesperTV';
+
+  /// The chosen backup folder's name (iPhone / iPad), or null for the
+  /// usual place ([locationLabel]).
+  Future<String?> folderName() async => await _folder?.name();
+
+  /// Where Back up now saves, as the viewer would look for it.
+  Future<String> location() async {
+    try {
+      return await folderName() ?? locationLabel;
+    } on PlatformException {
+      return locationLabel;
+    }
+  }
 
   static const _jsonFiles = XTypeGroup(
       label: 'VesperTV backup',
@@ -120,8 +153,11 @@ class BackupService {
     return true;
   }
 
-  /// Writes a backup of the current setup and returns it.
-  Future<BackupEntry> create({bool auto = false}) async {
+  /// Writes a backup of the current setup and returns it. [cloud]: also
+  /// replace this device's copy in iCloud when the viewer turned that on
+  /// (false for the undo point a restore makes); a failure there leaves the
+  /// backup saved and is kept in [lastICloudError].
+  Future<BackupEntry> create({bool auto = false, bool cloud = true}) async {
     final now = DateTime.now();
     final content = await _content(now);
     final name = '${auto ? autoPrefix : manualPrefix}${_stamp(now)}.json';
@@ -130,14 +166,35 @@ class BackupService {
       id = await _channel.invokeMethod<String>(
               'save', {'name': name, 'content': content}) ??
           '';
+    } else if (await folderName() != null) {
+      id = '$_folderId${await _folder!.write(name, content)}';
     } else {
       final file = File(p.join((await _windowsDir()).path, name));
       await file.writeAsString(content, flush: true);
       id = file.path;
     }
     if (auto) await _pruneAuto();
+    lastICloudError = null;
+    if (cloud && _storage.getBackupToICloud()) {
+      try {
+        await saveToICloud(content);
+      } catch (e) {
+        lastICloudError = e;
+        debugPrint('iCloud backup failed: $e');
+      }
+    }
     return BackupEntry(
         id: id, name: name, modified: now, size: utf8.encode(content).length);
+  }
+
+  /// Replaces this device's backup in iCloud: [content], or the current
+  /// setup.
+  Future<void> saveToICloud([String? content]) async {
+    final icloud = _icloud;
+    if (icloud == null) throw StateError('iCloud is not on this system');
+    final info = await PackageInfo.fromPlatform();
+    await icloud.save(content ?? await _content(DateTime.now()),
+        app: '${info.version}+${info.buildNumber}');
   }
 
   Future<String> _content(DateTime now) async {
@@ -155,7 +212,20 @@ class BackupService {
   /// Newest first.
   Future<List<BackupEntry>> list() async {
     final entries = <BackupEntry>[];
-    if (Platform.isAndroid) {
+    final folder = await folderName() == null ? null : _folder;
+    if (folder != null) {
+      for (final m in await folder.list()) {
+        final name = m['name'] as String;
+        if (!name.startsWith('vespertv-') || !name.endsWith('.json')) continue;
+        entries.add(BackupEntry(
+          id: '$_folderId${m['id']}',
+          name: name,
+          modified: DateTime.fromMillisecondsSinceEpoch(
+              ((m['modified'] as num?) ?? 0).toInt()),
+          size: ((m['size'] as num?) ?? 0).toInt(),
+        ));
+      }
+    } else if (Platform.isAndroid) {
       final raw = await _channel.invokeListMethod<Map>('list') ?? const [];
       for (final m in raw) {
         entries.add(BackupEntry(
@@ -186,11 +256,19 @@ class BackupService {
   /// The setup stored in [entry], ready for [StorageService.importForBackup].
   /// Throws [FormatException] for a file that isn't a VesperTV backup.
   Future<Map<String, Object?>> load(BackupEntry entry) async {
-    final raw = Platform.isAndroid
-        ? await _channel.invokeMethod<String>('read', {'id': entry.id}) ?? ''
-        : await File(entry.id).readAsString();
+    final raw = entry.id.startsWith(_folderId)
+        ? await _folder!.read(entry.id.substring(_folderId.length))
+        : Platform.isAndroid
+            ? await _channel.invokeMethod<String>('read', {'id': entry.id}) ??
+                ''
+            : await File(entry.id).readAsString();
     return decode(raw);
   }
+
+  /// A backup in iCloud ([ICloudBackups.list]), ready for
+  /// [StorageService.importForBackup].
+  Future<Map<String, Object?>> loadFromICloud(ICloudBackupEntry entry) async =>
+      decode(await _icloud!.read(entry.id));
 
   /// Android: a backup picked with the system file picker (after a
   /// reinstall on Android 11+, where [list] can't see the old files). Null
@@ -221,6 +299,9 @@ class BackupService {
   }
 
   Future<bool> delete(BackupEntry entry) async {
+    if (entry.id.startsWith(_folderId)) {
+      return _folder!.delete(entry.id.substring(_folderId.length));
+    }
     if (Platform.isAndroid) {
       return await _channel.invokeMethod<bool>('delete', {'id': entry.id}) ??
           false;
@@ -248,8 +329,8 @@ class BackupService {
     final last = _storage.getLastAutoBackup();
     // An hour of slack, so "every day" still runs when the box starts a
     // little earlier than yesterday.
-    final interval = Duration(days: _storage.getAutoBackupDays()) -
-        const Duration(hours: 1);
+    final interval =
+        Duration(days: _storage.getAutoBackupDays()) - const Duration(hours: 1);
     if (last != null && DateTime.now().difference(last) < interval) return;
     try {
       if (!await _hasPermission(write: true)) return;

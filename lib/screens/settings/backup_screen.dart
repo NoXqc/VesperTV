@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/backup_folder.dart';
 import '../../services/backup_service.dart';
+import '../../services/icloud_backups.dart';
 import '../../services/storage_service.dart';
+import '../../utils/desktop_platform.dart';
 import '../../utils/time_format.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/section_label.dart';
@@ -14,6 +17,7 @@ import '../../widgets/tv_dialog_option.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
+import 'icloud_backups_screen.dart';
 import 'replace_setup.dart';
 import 'storage_import_screen.dart';
 
@@ -33,8 +37,13 @@ class _BackupScreenState extends State<BackupScreen> {
   late final BackupService _backups = BackupService(_storage);
   late bool _auto = _storage.getAutoBackup();
   late int _autoDays = _storage.getAutoBackupDays();
+  late bool _cloud = _storage.getBackupToICloud();
   List<BackupEntry>? _entries;
   bool _busy = false;
+
+  /// iPhone / iPad: the Files folder backups go to, null = On My iPhone.
+  String? _folder;
+  String _location = BackupService.locationLabel;
 
   @override
   void initState() {
@@ -46,6 +55,19 @@ class _BackupScreenState extends State<BackupScreen> {
     try {
       // Android 10 only: reading backups a previous install left behind.
       await _backups.ensurePermission(write: false);
+      final location = await _backups.location();
+      String? folder;
+      try {
+        folder = await _backups.folderName();
+      } on PlatformException {
+        folder = location;
+      }
+      if (mounted) {
+        setState(() {
+          _location = location;
+          _folder = folder;
+        });
+      }
       final entries = await _backups.list();
       if (mounted) setState(() => _entries = entries);
     } catch (e) {
@@ -69,9 +91,15 @@ class _BackupScreenState extends State<BackupScreen> {
     setState(() => _busy = true);
     try {
       final entry = await _backups.create();
-      _toast(tr('Backup saved to {path}', {
-        'path': '${BackupService.locationLabel}/${entry.name}',
-      }));
+      final cloudError = _backups.lastICloudError;
+      _toast(cloudError != null
+          ? tr('Backup saved to {path}, but not to iCloud: {error}', {
+              'path': _location,
+              'error': ICloudBackups.errorMessage(cloudError),
+            })
+          : tr('Backup saved to {path}', {
+              'path': '$_location/${entry.name}',
+            }));
     } catch (e) {
       _toast(tr('Backup failed: {error}', {'error': '$e'}));
     } finally {
@@ -99,6 +127,65 @@ class _BackupScreenState extends State<BackupScreen> {
     }
     await _storage.setAutoBackup(value);
     if (mounted) setState(() => _auto = value);
+  }
+
+  /// Also save to iCloud: on = this device's newest backup is also kept in
+  /// iCloud ([ICloudBackups]); turning it on makes one right away. Off
+  /// leaves the copy already there.
+  Future<void> _setCloud(bool value) async {
+    if (_busy) return;
+    if (value) {
+      final status = await ICloudBackups().status();
+      if (status != 'available') {
+        _toast(ICloudBackups.statusMessage(status));
+        return;
+      }
+    }
+    await _storage.setBackupToICloud(value);
+    if (!mounted) return;
+    setState(() => _cloud = value);
+    if (value) await _backUpNow();
+  }
+
+  /// iPhone / iPad: pick a Files folder (iCloud Drive, OneDrive, an SMB
+  /// share…) or go back to On My iPhone.
+  Future<void> _pickFolder() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr('Backup folder')),
+        children: [
+          TvDialogOption(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop('choose'),
+            child: Text(tr('Choose a folder')),
+          ),
+          if (_folder != null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('device'),
+              child: Text(tr('On this device')),
+            ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final folder = BackupFolder();
+    try {
+      if (choice == 'choose') {
+        final name = await folder.choose();
+        if (name == null) return;
+        _toast(tr('Backups now go to {name}.', {'name': name}));
+      } else {
+        await folder.clear();
+      }
+    } on PlatformException catch (e) {
+      _toast(e.message ?? e.code);
+    }
+    await _refresh();
   }
 
   static String _daysLabel(int days) => switch (days) {
@@ -214,7 +301,7 @@ class _BackupScreenState extends State<BackupScreen> {
               title: tr('Back up now'),
               subtitle: tr(
                   'Playlists, favourites, profiles, progress and settings, saved to {path}',
-                  {'path': BackupService.locationLabel}),
+                  {'path': _location}),
               autofocus: true,
               enabled: !_busy,
               trailing: _busy
@@ -239,6 +326,33 @@ class _BackupScreenState extends State<BackupScreen> {
                 subtitle: _daysLabel(_autoDays),
                 onTap: _pickAutoDays,
               ),
+            if (BackupFolder.supported)
+              TvMenuTile(
+                icon: Icons.folder_outlined,
+                title: tr('Backup folder'),
+                subtitle: _folder ??
+                    tr('On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.'),
+                enabled: !_busy,
+                onTap: _pickFolder,
+              ),
+            if (ICloudBackups.supported) ...[
+              TvSwitchListTile(
+                title: Text(tr('Also save to iCloud')),
+                subtitle: Text(tr(
+                    'Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.')),
+                value: _cloud,
+                onChanged: _setCloud,
+              ),
+              TvMenuTile(
+                icon: Icons.cloud_download_outlined,
+                title: tr('Restore from iCloud'),
+                subtitle: tr(
+                    'From a backup your iPhone, iPad or Apple TV saved to iCloud'),
+                enabled: !_busy,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const ICloudBackupsScreen())),
+              ),
+            ],
             if (Platform.isMacOS)
               TvMenuTile(
                 icon: Icons.ios_share,
@@ -247,7 +361,11 @@ class _BackupScreenState extends State<BackupScreen> {
                 enabled: !_busy,
                 onTap: _exportToFile,
               ),
-            if (Platform.isAndroid || Platform.isMacOS || Platform.isIOS)
+            // Not on Apple TV: no Files app to pick from (Restore from
+            // iCloud above instead).
+            if (Platform.isAndroid ||
+                Platform.isMacOS ||
+                (Platform.isIOS && !isAppleTv))
               TvMenuTile(
                 icon: Icons.folder_open,
                 title: tr('Restore from a file'),
@@ -337,7 +455,9 @@ Future<void> restoreBackup(BuildContext context, Map<String, Object?> values,
   // Undo point; best effort (no storage access on Android 9- = no undo).
   try {
     if (await backups.ensurePermission(write: true)) {
-      await backups.create(auto: true);
+      // Not to iCloud: it would replace this device's good copy there
+      // with the setup being thrown away.
+      await backups.create(auto: true, cloud: false);
     }
   } catch (e) {
     debugPrint('Pre-restore backup failed: $e');

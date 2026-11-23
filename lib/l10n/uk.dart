@@ -3672,4 +3672,52 @@ const Map<String, String> kUk = {
       "Менш чутлива",
   "Very sensitive":
       "Дуже чутлива",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "З іншого пристрою",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Уже користуєтеся VesperTV на іншому пристрої? Перенесіть сюди свої плейлисти, обране та налаштування.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Обидва пристрої залишаються актуальними. На іншому пристрої: Налаштування > Резервні копії та пристрої > Синхронізація > Пов'язати пристрій, а потім введіть тут його код.",
+  "Receive a transfer":
+      "Отримати перенесення",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Копіює все один раз. На іншому пристрої: Налаштування > Резервні копії та пристрої > Перенесення на інший пристрій > Надіслати з цього пристрою.",
+  "Restore a backup":
+      "Відновити резервну копію",
+  "From a backup file VesperTV saved":
+      "З файлу резервної копії, збереженого VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "цьому Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Увійдіть в iCloud у Параметрах цього пристрою, щоб зберігати резервні копії в iCloud.",
+  "iCloud is restricted on this device.":
+      "iCloud обмежено на цьому пристрої.",
+  "iCloud backups aren't available in this build yet.":
+      "Резервні копії в iCloud ще недоступні в цій версії.",
+  "iCloud can't be reached right now. Try again later.":
+      "iCloud зараз недоступний. Спробуйте пізніше.",
+  "Your iCloud storage is full.":
+      "Ваше сховище iCloud заповнене.",
+  "Restore from iCloud":
+      "Відновити з iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Резервні копії, які ваш iPhone, iPad або Apple TV зберіг в iCloud з цим Apple ID. Кожен пристрій тримає там свою найновішу.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "В iCloud ще немає резервних копій. На іншому пристрої: Налаштування > Резервні копії та пристрої > Резервне копіювання та відновлення > Також зберігати в iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Резервну копію збережено в {path}, але не в iCloud: {error}",
+  "Backup folder":
+      "Папка резервних копій",
+  "Backups now go to {name}.":
+      "Тепер резервні копії зберігаються в {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "На цьому пристрої. Натомість виберіть iCloud Drive, OneDrive або мережеву папку у Файлах.",
+  "Also save to iCloud":
+      "Також зберігати в iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Кожна резервна копія також потрапляє у ваш iCloud, щоб інші пристрої Apple (і Apple TV) могли її відновити. iCloud зберігає найновішу з цього пристрою.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "З резервної копії, яку ваш iPhone, iPad або Apple TV зберіг в iCloud",
 };
