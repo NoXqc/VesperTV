@@ -188,3 +188,25 @@ TsExtractor ignores it.
   channel, hold / release / refusal / time limit, TS URL), `test/dispatcharr_switch_reconnect_test.dart`
   (order hold -> dispose old -> open new -> release, channel change, pause, hold refused, not playing).
   Not device-tested.
+
+## 2026-11-23: Redirect streams in Sources (cillfog, Discord, `claude/dispatcharr-redirect-sources`)
+"Live TV source changer seems to only work for proxied streams; redirects work as the primary channel stream but fail
+to play when chosen by source change." Reproduced on the PC's 0.34.1 test server (default stream profile set to
+Redirect, then restored):
+- `GET /proxy/ts/stream/<channel uuid>` = 302 to the provider (plays: the channel row).
+- `GET /proxy/ts/stream/<stream hash>` = 200 `video/mp2t`, 188 bytes, then nothing: `stream_ts` redirects only a
+  `Channel` on a Redirect profile; a `Stream` on one goes down the proxy path, which can't run a Redirect profile.
+- `...&skip_redirect=true` plays (proxied, through the locked Proxy profile), but only for a Standard / Admin user the
+  request identifies: with VesperTV's `X-API-Key` header yes, without it Dispatcharr ignores the flag (188 bytes).
+- Admins: `POST /proxy/ts/change_stream/<uuid>` on a Redirect channel = 404 "Channel not found" (nothing proxies it),
+  so VesperTV fell back to the stream address above.
+- A Standard user's `/api/channels/channels/{id}/streams/` and `/api/channels/streams/{id}/` leave `url` out; an
+  admin's include it. `/api/core/streamprofiles/` and `/api/core/settings/` are readable by any user level.
+- Dispatcharr's `is_redirect()` = `locked and name == "Redirect"`; a stream's profile = its own `stream_profile_id`,
+  else `stream_settings.default_stream_profile` (the channel's profile doesn't apply to one stream).
+
+Fix: `DispatcharrApi.streamProfiles` (Redirect ids + default, cached 10 min, unreadable = as before) ->
+`streamsFor(...).redirects`. In `liveSourceRows` a Redirect stream plays the provider's own address when the login is
+shown it (admins: what Dispatcharr's redirect hands out, without the M3U-profile URL rewriting; no `X-API-Key` to the
+provider), else `streamUrl(..., skipRedirect: true)` with the key. Streamer-level users: skip_redirect is ignored for
+them (no fix possible; they likely can't list streams either). `test/dispatcharr_redirect_test.dart`.

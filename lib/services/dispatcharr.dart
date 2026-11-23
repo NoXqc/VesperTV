@@ -83,12 +83,15 @@ class DispatcharrStream {
     this.videoCodec,
     this.fps,
     this.stale = false,
+    this.profileId,
+    this.url,
   });
 
   factory DispatcharrStream.fromJson(Map<String, dynamic> j) {
     final stats = j['stream_stats'];
     final s = stats is Map ? stats : const {};
     final fps = s['source_fps'];
+    final url = j['url'];
     return DispatcharrStream(
       id: (j['id'] as num).toInt(),
       name: (j['name'] as String? ?? '').trim(),
@@ -98,6 +101,8 @@ class DispatcharrStream {
       videoCodec: s['video_codec'] as String?,
       fps: fps is num ? fps.toDouble() : null,
       stale: j['is_stale'] == true,
+      profileId: (j['stream_profile_id'] as num?)?.toInt(),
+      url: url is String && url.isNotEmpty ? url : null,
     );
   }
 
@@ -105,6 +110,14 @@ class DispatcharrStream {
   final String name;
   final String hash;
   final int? accountId;
+
+  /// Its own stream profile; null = the server's default
+  /// (`Stream.get_stream_profile`).
+  final int? profileId;
+
+  /// The provider's address of the stream; only admins are shown it
+  /// (Dispatcharr 0.34.1 leaves `url` out for other users).
+  final String? url;
 
   /// From Dispatcharr's own probe (`stream_stats`), null until it has
   /// played the stream once: `1920x1080`, `h264`, 59.94.
@@ -305,9 +318,21 @@ class DispatcharrApi {
 
   /// The URL that plays one stream through Dispatcharr's proxy, in
   /// [format] ([dispatcharrOutputFormat]) when given.
-  static String streamUrl(String server, String hash, {String? format}) =>
-      '$server/proxy/ts/stream/$hash'
-      '${format == null ? '' : '?output_format=$format'}';
+  /// [skipRedirect]: the stream's profile is Redirect. Dispatcharr only
+  /// redirects whole channels: one stream on a Redirect profile starts a
+  /// proxy that never sends video (188 bytes, then nothing: cillfog,
+  /// Discord 2026-11-23, checked on 0.34.1). `skip_redirect=true` makes it
+  /// proxy that stream for a Standard or Admin user (the X-API-Key header
+  /// says who; without it Dispatcharr ignores the flag).
+  static String streamUrl(String server, String hash,
+      {String? format, bool skipRedirect = false}) {
+    final query = [
+      if (format != null) 'output_format=$format',
+      if (skipRedirect) 'skip_redirect=true',
+    ];
+    return '$server/proxy/ts/stream/$hash'
+        '${query.isEmpty ? '' : '?${query.join('&')}'}';
+  }
 
   static Map<String, String> _headers({String? apiKey, String? bearer}) => {
         'Accept': 'application/json',
@@ -507,6 +532,55 @@ class DispatcharrApi {
     return null;
   }
 
+  /// The server's Redirect stream profiles (Dispatcharr's `is_redirect`:
+  /// the locked profile named Redirect) and its default stream profile
+  /// (Settings > Stream Settings), or null when this user may not read
+  /// them. Any user level can, on 0.34.1.
+  Future<({Set<int> redirect, int? defaultId})?> streamProfiles(
+      DispatcharrLogin login) async {
+    try {
+      final profiles = await _get(login.server, '/api/core/streamprofiles/',
+          apiKey: login.apiKey);
+      final list = profiles is List
+          ? profiles
+          : (profiles is Map ? profiles['results'] : null);
+      if (list is! List) return null;
+      final redirect = <int>{
+        for (final p in list)
+          if (p is Map &&
+              p['id'] is num &&
+              p['locked'] == true &&
+              p['name'] == 'Redirect')
+            (p['id'] as num).toInt(),
+      };
+      int? defaultId;
+      final settings =
+          await _get(login.server, '/api/core/settings/', apiKey: login.apiKey);
+      final all = settings is List
+          ? settings
+          : (settings is Map ? settings['results'] : null);
+      if (all is List) {
+        for (final s in all) {
+          if (s is! Map || s['key'] != 'stream_settings') continue;
+          var value = s['value'];
+          if (value is String) {
+            try {
+              value = jsonDecode(value);
+            } catch (_) {
+              value = null;
+            }
+          }
+          final id = value is Map ? value['default_stream_profile'] : null;
+          defaultId =
+              id is num ? id.toInt() : (id is String ? int.tryParse(id) : null);
+        }
+      }
+      return (redirect: redirect, defaultId: defaultId);
+    } on DispatcharrException {
+      return null;
+    }
+  }
+
   /// Channel [channelId]'s streams, in the order Dispatcharr tries them.
   Future<List<DispatcharrStream>> channelStreams(
       DispatcharrLogin login, int channelId) async {
@@ -609,6 +683,7 @@ class Dispatcharr {
   final Map<int, ({DateTime at, List<DispatcharrStream> streams})> _streams =
       {};
   ({DateTime at, Map<int, String> names})? _names;
+  ({DateTime at, ({Set<int> redirect, int? defaultId})? profiles})? _profiles;
 
   /// See [DispatcharrSources].
   DispatcharrSources get sources =>
@@ -640,6 +715,7 @@ class Dispatcharr {
     _picks.clear();
     _streams.clear();
     _names = null;
+    _profiles = null;
     await _storage
         ?.setDispatcharr(value == null ? '' : jsonEncode(value.toJson()));
   }
@@ -653,10 +729,17 @@ class Dispatcharr {
   }
 
   /// Every stream behind [channel] on the connected Dispatcharr, with the
-  /// provider (M3U account) names when this user may read them. Null when
-  /// [channel] isn't one of its channels or the server doesn't answer
-  /// within [timeout] (the drawer then opens without them).
-  Future<({List<DispatcharrStream> streams, Map<int, String> accounts})?>
+  /// provider (M3U account) names when this user may read them and the
+  /// ids of the streams on a Redirect profile ([redirects]: their own
+  /// profile, else the server's default). Null when [channel] isn't one of
+  /// its channels or the server doesn't answer within [timeout] (the
+  /// drawer then opens without them).
+  Future<
+          ({
+            List<DispatcharrStream> streams,
+            Map<int, String> accounts,
+            Set<int> redirects,
+          })?>
       streamsFor(Channel channel,
           {Duration timeout = const Duration(seconds: 4)}) async {
     final l = login.value;
@@ -839,8 +922,12 @@ class Dispatcharr {
     }
   }
 
-  Future<({List<DispatcharrStream> streams, Map<int, String> accounts})?>
-      _streamsFor(DispatcharrLogin l, DispatcharrChannelRef ref) async {
+  Future<
+      ({
+        List<DispatcharrStream> streams,
+        Map<int, String> accounts,
+        Set<int> redirects,
+      })?> _streamsFor(DispatcharrLogin l, DispatcharrChannelRef ref) async {
     var id = ref.id;
     final uuid = ref.uuid;
     if (id == null && uuid != null) {
@@ -861,8 +948,28 @@ class Dispatcharr {
       names = (at: now, names: await api.accountNames(l));
       _names = names;
     }
+    var profiles = _profiles;
+    if (profiles == null || now.difference(profiles.at).inMinutes > 10) {
+      // Unknown profiles = every stream as before, never no list.
+      final read = await api.streamProfiles(l).catchError((Object e) {
+        debugPrint('Dispatcharr: stream profiles not read ($e)');
+        return null;
+      });
+      profiles = (at: now, profiles: read);
+      _profiles = profiles;
+    }
+    final known = profiles.profiles;
+    final redirects = <int>{
+      if (known != null)
+        for (final s in cached.streams)
+          if (known.redirect.contains(s.profileId ?? known.defaultId)) s.id,
+    };
     debugPrint('Dispatcharr: channel $id has ${cached.streams.length} '
-        'streams');
-    return (streams: cached.streams, accounts: names.names);
+        'streams${redirects.isEmpty ? '' : ', ${redirects.length} on Redirect'}');
+    return (
+      streams: cached.streams,
+      accounts: names.names,
+      redirects: redirects,
+    );
   }
 }

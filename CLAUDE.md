@@ -500,6 +500,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Dispatcharr Redirect streams in Sources (`claude/dispatcharr-redirect-sources`, worktree
+  `VesperTV-claude-dredirect`):** cillfog (Discord): streams on a Redirect stream profile played as the channel but not
+  when picked in the player's Sources. Dispatcharr 0.34.1 redirects only channels; one stream on Redirect gets 188 bytes
+  then nothing (reproduced on the PC's test server). A Redirect stream now plays the provider's address for an admin
+  login (shown `url`; no X-API-Key to the provider) or `skip_redirect=true` with the key for others (Dispatcharr proxies
+  it). Redirect = Dispatcharr's own rule (locked profile "Redirect"; stream profile else the default), read via
+  `DispatcharrApi.streamProfiles`. Analyze 16, 2442 tests. Details: dev-notes/dispatcharr.md (2026-11-23). Not box-tested.
 - **Claude, 2026-11-23 - "From another device" + iCloud backups + Apple TV parity (merged into main + pushed for
   Sunday 2026-11-29's 1.0.74; Apple TV part needs a test box):** (1) `claude/welcome-sync`: first launch gets a third
   button **From another device** (Sync code / Receive a transfer / Restore from iCloud / Restore a backup;

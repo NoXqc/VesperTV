@@ -73,7 +73,20 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
       onChannel ? await Dispatcharr.instance.activeStreamOf(own) : null;
   final streams = <LiveSourceRow>[];
   for (final s in merged.streams) {
-    final url = DispatcharrApi.streamUrl(server, s.hash, format: format);
+    // A stream on a Redirect profile (cillfog, Discord 2026-11-23: they
+    // play as the channel but not picked here). Dispatcharr redirects
+    // only channels, so a redirect = the provider's address itself when
+    // this login is shown it (admins), like Dispatcharr's own redirect;
+    // else Dispatcharr proxies it (skip_redirect).
+    final redirect = merged.redirects.contains(s.id);
+    final direct = redirect ? s.url : null;
+    final url = direct ??
+        DispatcharrApi.streamUrl(server, s.hash,
+            format: format, skipRedirect: redirect);
+    if (redirect) {
+      debugPrint('Dispatcharr: stream ${s.id} is on Redirect, plays '
+          '${direct != null ? 'from ${Dispatcharr.hostOf(direct)}' : 'proxied (skip_redirect)'}');
+    }
     Dispatcharr.instance.notePick(url, own, s.id);
     if (app.any((r) => r.$1.url == url)) continue;
     final c = Channel(
@@ -86,10 +99,10 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
       logoUrl: own.logoUrl,
       // Signed in, so Dispatcharr's Active Connections names the user
       // instead of Anonymous (AMD, 2026-11-18): the proxy reads the same
-      // X-API-Key header as its API.
+      // X-API-Key header as its API. Never to the provider (direct).
       httpHeaders: {
         ...own.httpHeaders,
-        if (key != null && key.isNotEmpty) 'X-API-Key': key,
+        if (direct == null && key != null && key.isNotEmpty) 'X-API-Key': key,
       },
     );
     streams.add((
