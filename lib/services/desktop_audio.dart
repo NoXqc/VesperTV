@@ -9,6 +9,7 @@ import '../widgets/data_pool_card.dart';
 import 'audio_track_preferences.dart';
 import 'storage_service.dart';
 import 'subtitle_tracks.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// Audio on Windows (media_kit / mpv), the same settings as Android's
 /// Settings > Playback > Audio: surround passthrough (`audio-spdif`: Dolby
@@ -44,7 +45,10 @@ class DesktopAudio {
   static Future<void> applyTo(Player player) async {
     final native = player.platform;
     if (native is! NativePlayer) return;
-    final spdif = passthrough && _multiview[player] != true;
+    // Apple TV: never. mpv's tvOS outputs (audiounit, avfoundation) take
+    // no bitstream (avfoundation refuses SPDIF, audiounit forces stereo),
+    // and a value saved on another device can come with a Transfer.
+    final spdif = passthrough && _multiview[player] != true && !isAppleTv;
     try {
       await native.setProperty('audio-spdif', spdif ? _spdifCodecs : '');
       await native.setProperty(

@@ -500,6 +500,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - "From another device" + iCloud backups + Apple TV parity (merged into main + pushed for
+  Sunday 2026-11-29's 1.0.74; Apple TV part needs a test box):** (1) `claude/welcome-sync`: first launch gets a third
+  button **From another device** (Sync code / Receive a transfer / Restore from iCloud / Restore a backup;
+  `FromAnotherDeviceScreen`, `WelcomeChoice`), iPhone / iPad Backup folder in Files (`BackupFolder`, Swift
+  `VesperBackupFolder`), iPhone / iPad / Apple TV **Also save to iCloud** + **Restore from iCloud** (CloudKit private DB
+  `iCloud.app.vespertv.player`, record `Backup` per device, Swift `VesperICloud` in both runners, entitlement-presence
+  guard): dev-notes/icloud-backups.md. (2) `claude/appletv-parity`: Apple TV match frame rate (tvOS 17+
+  `AVDisplayCriteria`, SDR only, `AppleTvDisplayMatch` + Swift `VesperDisplay`), 128 MiB player buffer, no passthrough
+  on tvOS + "Sound out" row, options row tile order, **Top Shelf** rows (TopShelf extension added in CI by
+  `tools/tvos/add_topshelf_target.rb`, App Group `group.app.vespertv.player`), and `tvos-build.yml` signs the archive
+  ad hoc with the entitlements (an unsigned archive lost iCloud / App Group): dev-notes/apple-tv-parity-plan.md.
+  Apple portal (container, App Group, both App IDs, `app.vespertv.player.TopShelf`) + CloudKit `Backup` schema
+  (deployed to Production) done 2026-11-23. Swift only compiled by CI. Analyze 16.
 - **Claude, 2026-11-23 - Move Up / Down redraw + double-Down wrap (`claude/channel-move-redraw`, worktree
   `VesperTV-claude-moveredraw`):** owner (Homatics): moving a channel Up / Down showed nothing until OK, then it
   appeared in its new place. Not the wrap (his guess): since the TV guide speed-up (10c94bb, 1.0.70) the TV tab

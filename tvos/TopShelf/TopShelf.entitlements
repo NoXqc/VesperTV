@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The App Group the app writes the Top Shelf rows into (VesperTopShelf in
+     ../Runner/AppDelegate.swift). Needs the App Group on both App IDs in the
+     Apple developer portal (dev-notes/apple-tv-parity-plan.md, owner steps for C). -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.app.vespertv.player</string>
+	</array>
+</dict>
+</plist>

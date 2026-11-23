@@ -3844,4 +3844,12 @@ const Map<String, String> kPl = {
       "Każda kopia trafia też do Twojego iCloud, aby inne urządzenia Apple (także Apple TV) mogły ją przywrócić. iCloud trzyma najnowszą z tego urządzenia.",
   "From a backup your iPhone, iPad or Apple TV saved to iCloud":
       "Z kopii zapasowej, którą Twój iPhone, iPad lub Apple TV zapisał w iCloud",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Przełącza telewizor na liczbę klatek filmu, gdy się zaczyna (50 Hz dla kanałów brytyjskich i europejskich, 24 Hz dla filmów), dla płynnego ruchu. Włącz też Dopasuj liczbę klatek w Ustawieniach Apple TV > Wideo i audio > Dopasuj zawartość (tvOS 17 lub nowszy). Ekran robi się czarny na sekundę lub dwie podczas przełączania; kanały o tej samej liczbie klatek nie przełączają się ponownie.",
+  "Frame rate":
+      "Liczba klatek",
+  "Sound out":
+      "Dźwięk wyjściowy",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Oglądaj dalej, nowe odcinki, Twoja lista do obejrzenia i ulubione kanały nad ekranem głównym Apple TV, gdy VesperTV jest w górnym rzędzie (Top Shelf).",
 };

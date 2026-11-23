@@ -4212,4 +4212,12 @@ const Map<String, String> kEl = {
       "Κάθε αντίγραφο πηγαίνει και στο iCloud σας, ώστε οι άλλες συσκευές Apple (και το Apple TV) να μπορούν να το επαναφέρουν. Το iCloud κρατά το πιο πρόσφατο από αυτή τη συσκευή.",
   "From a backup your iPhone, iPad or Apple TV saved to iCloud":
       "Από αντίγραφο που αποθήκευσε το iPhone, το iPad ή το Apple TV σας στο iCloud",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Αλλάζει την τηλεόραση στον ρυθμό καρέ του βίντεο μόλις ξεκινήσει (50 Hz για βρετανικά και ευρωπαϊκά κανάλια, 24 Hz για ταινίες), για ομαλή κίνηση. Ενεργοποιήστε επίσης το Ταίριασμα ρυθμού καρέ στις Ρυθμίσεις > Βίντεο και ήχος > Ταίριασμα περιεχομένου του Apple TV (tvOS 17 ή νεότερο). Η οθόνη μαυρίζει για ένα-δύο δευτερόλεπτα κατά την αλλαγή· κανάλια με τον ίδιο ρυθμό δεν αλλάζουν ξανά.",
+  "Frame rate":
+      "Ρυθμός καρέ",
+  "Sound out":
+      "Έξοδος ήχου",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Συνέχεια παρακολούθησης, νέα επεισόδια, η λίστα παρακολούθησής σας και τα αγαπημένα σας κανάλια πάνω από την αρχική οθόνη του Apple TV όταν το VesperTV είναι στην πάνω σειρά (Top Shelf).",
 };

@@ -23,6 +23,12 @@
 #   Distribution certificate from a keychain (ITMS-91065 without it:
 #   internal TestFlight only): the APPLE_DIST_CERT_P12 / _PASSWORD secrets,
 #   imported into a temporary keychain for the upload (2026-11-20).
+# - The Top Shelf extension target is added to the Xcode project before every
+#   build (tools/tvos/add_topshelf_target.rb): no Mac to add it in Xcode.
+# - The archive is built unsigned, then signed ad hoc WITH the entitlements
+#   files (iCloud, App Group): the export keeps the entitlements it finds in
+#   the archive's signature, and an unsigned archive has none. The step fails
+#   when the exported app lacks one (dev-notes/apple-tv-parity-plan.md, Phase 0).
 name: tvOS build
 
 on:
@@ -100,6 +106,16 @@ jobs:
           EOF
           done
 
+      # The TopShelf extension (tvos/TopShelf): added to the project here,
+      # every run (idempotent); the resulting project file is in the artifact.
+      - name: Add the Top Shelf extension target
+        shell: bash
+        run: |
+          set -o pipefail
+          ruby -e "require 'xcodeproj'" 2>/dev/null || gem install xcodeproj --no-document --user-install
+          ruby tools/tvos/add_topshelf_target.rb tvos/Runner.xcodeproj | tee out/topshelf-target.log
+          cp tvos/Runner.xcodeproj/project.pbxproj out/project-with-topshelf.pbxproj
+
       - name: Build the app for the Apple TV simulator
         if: ${{ !inputs.testflight }}
         shell: bash
@@ -110,6 +126,7 @@ jobs:
           # VESPER_CI_TOUR: the app walks its own screens (lib/services/ci_tour.dart).
           flutter-tvos build tvos --simulator --debug --dart-define=VESPER_CI_TOUR=true -v > out/build-simulator.log 2>&1 || rc=$?
           grep -E "error:|Mpv|Built |BUILD" out/build-simulator.log | tail -40
+          echo "TopShelf.appex in the build: $(find build tvos -name 'TopShelf.appex' -path '*PlugIns*' 2>/dev/null | head -3 | tr '\n' ' ')"
           exit $rc
 
       # Screenshots of the real screens (TV guide, a channel playing, full
@@ -209,8 +226,62 @@ jobs:
             "${auth[@]}" archive > out/archive.log 2>&1 || true
           grep -E "error:|ARCHIVE" out/archive.log || true
           [ -d "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" ] || { tail -60 out/archive.log; exit 1; }
+          # Phase 0 (dev-notes/apple-tv-parity-plan.md): entitlements live in
+          # the code signature, so the unsigned archive had none and the
+          # export signed the app without iCloud / the App Group. Sign it ad
+          # hoc with the entitlements files (inside out: frameworks, the
+          # extension, the app); the export re-signs for App Store Connect and
+          # keeps what it finds there.
+          app="$RUNNER_TEMP/VesperTV-tvOS.xcarchive/Products/Applications/Runner.app"
+          find "$app/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) \
+            -exec codesign --force --sign - --timestamp=none {} \;
+          for appex in "$app"/PlugIns/*.appex; do
+            [ -d "$appex" ] || continue
+            codesign --force --sign - --timestamp=none \
+              --entitlements tvos/TopShelf/TopShelf.entitlements "$appex"
+          done
+          codesign --force --sign - --timestamp=none \
+            --entitlements tvos/Runner/Runner.entitlements "$app"
+          # Every key of an entitlements file must be in the signature of
+          # [bundle]: else stop here (a build without them looks fine and
+          # silently has no iCloud backups / Top Shelf).
+          check_entitlements() {
+            local bundle="$1" file="$2" label="$3" got
+            got="$(codesign -d --entitlements - --xml "$bundle" 2>/dev/null || codesign -d --entitlements :- "$bundle" 2>/dev/null)"
+            printf '%s\n' "$got" > "out/entitlements-$label.plist"
+            for key in $(plutil -convert json -o - "$file" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)))'); do
+              if ! printf '%s' "$got" | grep -q "$key"; then
+                echo "::error::$label is missing $key (dev-notes/apple-tv-parity-plan.md, Phase 0)"
+                return 1
+              fi
+            done
+            echo "$label: entitlements OK"
+          }
+          check_entitlements "$app" tvos/Runner/Runner.entitlements archive-app
+          for appex in "$app"/PlugIns/*.appex; do
+            [ -d "$appex" ] || continue
+            check_entitlements "$appex" tvos/TopShelf/TopShelf.entitlements archive-topshelf
+          done
           cp tvos/ExportOptions.plist "$RUNNER_TEMP/ExportOptions.plist"
           plutil -replace teamID -string "$TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          # A local export first, to see what App Store Connect would get:
+          # stop before uploading a build whose signature lost an entitlement
+          # (the App ID lacks the capability: the owner steps in the plan).
+          cp "$RUNNER_TEMP/ExportOptions.plist" "$RUNNER_TEMP/ExportCheck.plist"
+          plutil -replace destination -string export "$RUNNER_TEMP/ExportCheck.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportCheck.plist" \
+            -exportPath "$RUNNER_TEMP/export-check" \
+            "${auth[@]}" > out/export-check.log 2>&1 || { tail -40 out/export-check.log; exit 1; }
+          ipa="$(find "$RUNNER_TEMP/export-check" -name '*.ipa' | head -1)"
+          [ -n "$ipa" ] || { echo "::error::the check export made no .ipa"; tail -40 out/export-check.log; exit 1; }
+          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa" && unzip -q "$ipa" -d "$RUNNER_TEMP/ipa"
+          exported="$(find "$RUNNER_TEMP/ipa/Payload" -maxdepth 1 -name '*.app' | head -1)"
+          check_entitlements "$exported" tvos/Runner/Runner.entitlements export-app
+          for appex in "$exported"/PlugIns/*.appex; do
+            [ -d "$appex" ] || continue
+            check_entitlements "$appex" tvos/TopShelf/TopShelf.entitlements export-topshelf
+          done
           # destination=upload: the export sends the build to App Store Connect.
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV-tvOS.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \

@@ -22,6 +22,7 @@ import 'playlist_manager.dart';
 import 'sports_follows.dart';
 import 'storage_service.dart';
 import 'vesper_ai/watch_list.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// One card on the TV launcher: what it shows ([toMap], read by
 /// LauncherChannels.kt) and what it opens (screens/launcher_open.dart):
@@ -186,8 +187,14 @@ class LauncherChannels {
   Timer? _liveTimer;
   bool _hidden = false;
 
+  /// Android TV launchers, and Apple TV's Top Shelf (the area above the
+  /// home screen's top row when VesperTV sits there; native side
+  /// `VesperTopShelf` in tvos/Runner/AppDelegate.swift + the TopShelf
+  /// extension, dev-notes/apple-tv-parity-plan.md point 5).
   bool get _supported =>
-      _storage != null && Platform.isAndroid && (_prefs?.isTelevision ?? false);
+      _storage != null &&
+      (Platform.isAndroid || isAppleTv) &&
+      (_prefs?.isTelevision ?? false);
 
   void attach({
     required StorageService storage,
@@ -269,11 +276,16 @@ class LauncherChannels {
   }
 
   /// The app went to the background: the launcher is about to show. A
-  /// moment later, so the player's last position is saved first.
+  /// moment later, so the player's last position is saved first (Apple TV:
+  /// sooner, tvOS suspends a hidden app within seconds).
   void appHidden() {
     if (!_supported) return;
     _hidden = true;
-    unawaited(Future<void>.delayed(const Duration(seconds: 2), publish));
+    unawaited(Future<void>.delayed(
+        isAppleTv
+            ? const Duration(milliseconds: 300)
+            : const Duration(seconds: 2),
+        publish));
   }
 
   /// The app is on screen again: the live row needn't follow the scores
@@ -292,7 +304,10 @@ class LauncherChannels {
     _publishing = true;
     try {
       final Map<String, Object?> payload;
-      final liveRow = storage.getLauncherRows() &&
+      // Not on Apple TV: Android re-sends the scores every few minutes
+      // with the app closed, which tvOS can't do (they'd go stale).
+      final liveRow = !isAppleTv &&
+          storage.getLauncherRows() &&
           storage.getLauncherLive() &&
           MultiviewSports.leagues(storage).isNotEmpty;
       if (!storage.getLauncherRows()) {
@@ -336,7 +351,22 @@ class LauncherChannels {
       }
       final sent = jsonEncode(payload);
       if (force || sent != _lastSent) {
-        final report = await _channel.invokeMethod<Map>('publish', payload);
+        final report = await _channel.invokeMethod<Map>(
+            'publish',
+            isAppleTv
+                ? topShelf(
+                    watchNext: [
+                      for (final c in (payload['watchNext'] as List))
+                        c as Map<String, Object?>
+                    ],
+                    favourites: [
+                      for (final row in (payload['channels'] as List))
+                        if ((row as Map)['id'] == 'favourites')
+                          for (final c in (row['items'] as List))
+                            c as Map<String, Object?>
+                    ],
+                  )
+                : payload);
         if (report?['error'] == null) _lastSent = sent;
         // Send log: counts only, never titles.
         debugPrint('Launcher: $report');
@@ -834,6 +864,58 @@ class LauncherChannels {
   }
 
   /// The favourite live channels in the app's order (Home's Favourites row).
+  /// Apple TV's Top Shelf rows from the launcher cards ([LauncherCard.toMap]):
+  /// Continue watching (in progress + next episodes), New episodes, Watch
+  /// list, Favourite channels; empty rows left out. Each item opens the app
+  /// on `vespertv://launcher?k=<key>` ([openPending] reads `k` like an
+  /// Android launcher link).
+  @visibleForTesting
+  static Map<String, Object?> topShelf({
+    required List<Map<String, Object?>> watchNext,
+    required List<Map<String, Object?>> favourites,
+  }) {
+    Map<String, Object?> item(Map<String, Object?> c) {
+      final season = c['season'] as int?, episode = c['episode'] as int?;
+      final position = c['position'] as int?, duration = c['duration'] as int?;
+      final image = c['image'] as String?;
+      return {
+        'id': c['key'],
+        'title': season != null && episode != null
+            ? '${c['title']} · S${season}E$episode'
+            : c['title'],
+        if (image != null && image.isNotEmpty) 'image': image,
+        'shape': c['type'] == 'channel'
+            ? 'square'
+            : c['aspect'] == 'poster'
+                ? 'poster'
+                : 'wide',
+        if (position != null && duration != null && duration > 0)
+          'progress': (position / duration).clamp(0.0, 1.0),
+        'link': Uri(
+            scheme: 'vespertv',
+            host: 'launcher',
+            queryParameters: {'k': '${c['key']}'}).toString(),
+      };
+    }
+
+    List<Map<String, Object?>> kinds(Set<String> wanted) => [
+          for (final c in watchNext)
+            if (wanted.contains(c['kind'])) item(c)
+        ];
+    final rows = [
+      (tr('Continue Watching'), kinds({'continue', 'next'})),
+      (tr('New episodes'), kinds({'new'})),
+      (tr('Watch list'), kinds({'watchlist'})),
+      (tr('Favourite channels'), [for (final c in favourites) item(c)]),
+    ];
+    return {
+      'rows': [
+        for (final (title, items) in rows)
+          if (items.isNotEmpty) {'title': title, 'items': items}
+      ],
+    };
+  }
+
   List<LauncherCard> favouriteCards() {
     final playlist = _playlist, prefs = _prefs;
     if (playlist == null || prefs == null) return [];

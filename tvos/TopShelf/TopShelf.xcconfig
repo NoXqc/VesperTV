@@ -1,0 +1,5 @@
+// The TopShelf extension's base configuration (tools/tvos/add_topshelf_target.rb).
+// Flutter's Generated.xcconfig (written by every flutter-tvos build) brings
+// FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER, so the extension's version and
+// build always match the app's. Optional: it doesn't exist on a fresh checkout.
+#include? "../Flutter/Generated.xcconfig"
