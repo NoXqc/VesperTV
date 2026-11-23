@@ -9,6 +9,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
 import '../models/stream_drm.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 import 'desktop_audio.dart';
 import 'recording_service.dart';
 import 'live_stream_format.dart';
@@ -17,6 +18,11 @@ import 'vod_buffering.dart';
 /// mpv's forward cache (`demuxer-max-bytes`) for the full-screen and mini
 /// players. See [newDesktopPlayer].
 const kDesktopMainCacheBytes = 256 * 1024 * 1024;
+
+/// Apple TV's full-screen / preview read-ahead: half a computer's, since
+/// tvOS ends apps that take too much memory (try 64 MiB if testers see the
+/// app restart during big movies).
+const kAppleTvMainCacheBytes = 128 * 1024 * 1024;
 
 /// Every media_kit player open in this process: full screen, the mini
 /// player, Multiview tiles, automatic trailers.
@@ -29,21 +35,27 @@ final Set<Player> _openPlayers = {};
 /// trailers) lifts mpv's read-ahead from media_kit's 32 MiB to
 /// [kDesktopMainCacheBytes]: 32 MiB is 3-6 s of a 40-80 Mbps 4K stream, so a
 /// Wi-Fi dip stalled it (Steam Deck user, "lots of buffering", 2026-11-12).
-/// Computers only: an iPhone could not spare it.
+/// Computers: [kDesktopMainCacheBytes]. Apple TV: [kAppleTvMainCacheBytes]
+/// (dev-notes/apple-tv-parity-plan.md point 3: media_kit's 32 MiB stalled
+/// 4K remuxes, and an Apple TV 4K has 3-4 GB of memory). An iPhone could
+/// not spare it.
 Player newDesktopPlayer({bool bigCache = false}) {
+  final appleTv = bigCache && isAppleTv;
   final big = bigCache && !Platform.isIOS && !Platform.isAndroid;
   final player = big
       ? Player(
           configuration:
               const PlayerConfiguration(bufferSize: kDesktopMainCacheBytes))
-      // iPhone: mpv's warnings too, for the HLS lines
+      // iPhone / Apple TV: mpv's warnings too, for the HLS lines
       // ([isHlsTroubleLog]); media_kit's default is errors only.
       : Platform.isIOS
           ? Player(
-              configuration:
-                  const PlayerConfiguration(logLevel: MPVLogLevel.warn))
+              configuration: PlayerConfiguration(
+                  logLevel: MPVLogLevel.warn,
+                  bufferSize:
+                      appleTv ? kAppleTvMainCacheBytes : 32 * 1024 * 1024))
           : Player();
-  if (big) {
+  if (big || appleTv) {
     // media_kit gives the rewind cache the same size; nothing here rewinds
     // far, so keep it at the old 32 MiB.
     unawaited((player.platform as NativePlayer)

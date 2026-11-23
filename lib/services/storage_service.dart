@@ -13,6 +13,7 @@ import 'local_playlist_files.dart';
 import 'sync_profile_match.dart' show syncProfileNameKey;
 import '../utils/app_store.dart';
 import '../utils/constants.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
 /// directory for larger cached payloads (parsed playlist/catalog JSON) —
@@ -845,8 +846,11 @@ class StorageService {
   Future<void> setUiTexture(bool value) =>
       _prefs.setBool(AppConstants.keyUiTexture, value);
 
+  /// Off by default on Android; on by default on Apple TV, where the
+  /// viewer's own Settings > Video and Audio > Match Content > Match Frame
+  /// Rate (off by default) decides whether the TV really switches.
   bool getMatchFrameRate() =>
-      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
+      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? isAppleTv;
   Future<void> setMatchFrameRate(bool value) =>
       _prefs.setBool(AppConstants.keyMatchFrameRate, value);
   bool getMatch5060Only() =>
@@ -1010,11 +1014,10 @@ class StorageService {
 
   /// Settings > Playback > Player bar / Options row transparency, percent;
   /// 15 = the player's menus as they were before the settings.
-  int _playerMenuPercent(String key) =>
-      (_prefs.getInt(_vk(key)) ??
-              _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
-              15)
-          .clamp(0, 100);
+  int _playerMenuPercent(String key) => (_prefs.getInt(_vk(key)) ??
+          _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
+          15)
+      .clamp(0, 100);
   int getPlayerBarTransparency() =>
       _playerMenuPercent(AppConstants.keyPlayerBarTransparency);
   Future<void> setPlayerBarTransparency(int value) => _prefs.setInt(
@@ -1028,8 +1031,7 @@ class StorageService {
   /// The TV player's options row order (tile ids, see
   /// `ReorderableOptionTiles`); empty = the default order.
   List<String> getPlayerOptionsOrder() =>
-      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ??
-      const [];
+      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ?? const [];
   Future<void> setPlayerOptionsOrder(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keyPlayerOptionsOrder), ids);
 

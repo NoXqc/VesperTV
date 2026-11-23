@@ -4209,4 +4209,12 @@ const Map<String, String> kIt = {
       "Meno sensibile",
   "Very sensitive":
       "Molto sensibile",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Porta il televisore alla frequenza fotogrammi del video quando inizia (50 Hz per i canali britannici ed europei, 24 Hz per i film), per un movimento fluido. Attiva anche Adatta frequenza fotogrammi in Impostazioni > Video e audio > Adatta contenuto dell’Apple TV (tvOS 17 o successivo). Lo schermo diventa nero per un secondo o due durante il cambio; i canali con la stessa frequenza non cambiano di nuovo.",
+  "Frame rate":
+      "Frequenza fotogrammi",
+  "Sound out":
+      "Audio in uscita",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Continua a guardare, nuovi episodi, la tua lista da guardare e i tuoi canali preferiti sopra la schermata Home dell’Apple TV quando VesperTV è nella riga in alto (Top Shelf).",
 };

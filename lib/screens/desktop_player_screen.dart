@@ -23,6 +23,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
+import '../services/apple_tv_display.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
@@ -39,6 +40,7 @@ import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
 import '../utils/channel_name_matching.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/player_options_order.dart';
 import '../widgets/player_overlays.dart';
 import '../widgets/desktop_video_status.dart';
 import '../utils/scrub_steps.dart';
@@ -815,6 +817,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       }
       _applySeriesSubtitles();
     }
+    // A stream taken from the guide's preview or a catch-up start never
+    // goes through _openMedia.
+    if (widget.existingPlayer != null || widget.catchupAt != null) {
+      _matchDisplay(_currentChannel);
+    }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
     // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
     if (!_currentChannel.transientPlayback) {
@@ -1219,6 +1226,21 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   /// Open at the saved time without briefly playing the beginning first.
   /// Explicit start is used when switching source files within one title.
+  /// Apple TV: the TV follows this stream's frame rate (Settings >
+  /// Playback > Frame rate, [AppleTvDisplayMatch]); a channel change or a
+  /// new open cancels the ask still waiting for the old stream.
+  void _matchDisplay(Channel channel) {
+    if (!isAppleTv) return;
+    final generation = _openGeneration;
+    bool current() =>
+        mounted &&
+        generation == _openGeneration &&
+        _currentChannel.id == channel.id;
+    unawaited(AppleTvDisplayMatch.start(
+        context.read<StorageService>(), _player, current));
+    unawaited(AppleTvDisplayMatch.logAudio(_player, current));
+  }
+
   Future<void> _openMedia(Channel channel,
       {Duration? start, bool play = true}) async {
     final generation = ++_openGeneration;
@@ -1230,6 +1252,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _openedAt = DateTime.now();
     _errorCheck?.cancel();
     if (_tvError != null) setState(() => _tvError = null);
+    _matchDisplay(channel);
     try {
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
@@ -1339,6 +1362,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.disposePlayer(_player);
+    // Apple TV: nothing plays on: the TV's own mode back (the preview
+    // that takes a live channel keeps the stream's mode).
+    if (!_handedOffToMiniPlayer) AppleTvDisplayMatch.reset();
     super.dispose();
   }
 
@@ -2389,54 +2415,100 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       title: OptionsTitleText(name: _currentChannel.name, programme: programme),
       sound: _TvSoundSummary(
           key: ValueKey('tv-sound-${_currentChannel.id}'), player: _player),
+      // One movable row in the viewer's order (hold OK on a tile), with
+      // Android's tile ids: an order saved on a box means the same here
+      // (it goes with Transfer and sync). Ids are saved: never rename one.
       tiles: [
-        if (_isLive) tile(Icons.list, tr('Channels'), _openPanel),
-        if (live) tile(Icons.swap_horiz, tr('Sources'), _openLiveSources),
-        if (prefs.dataPool)
-          tile(Icons.analytics_outlined, tr('Stream info'), _showTvDataPool),
-        if (live)
-          tile(Icons.history, tr('Recall — go back to a recent channel'),
-              _openRecallPicker,
-              shortLabel: tr('Recent')),
-        if (live && _currentChannel.hasCatchup)
-          tile(Icons.restart_alt, tr('Watch from the start'), _startOver,
-              shortLabel: tr('Start over')),
-        if (live)
-          tile(Icons.refresh, tr('Reload channel'), _reload,
-              shortLabel: tr('Reload')),
-        DesktopAudioButton(
-            key: ValueKey('tv-audio-${_currentChannel.id}'),
-            player: _player,
-            channel: _currentChannel,
-            tile: (open) => tile(
-                Icons.multitrack_audio, tr('Audio track'), open,
-                shortLabel: tr('Audio'))),
-        DesktopSubtitleButton(
-            key: ValueKey('tv-subs-${_currentChannel.id}'),
-            player: _player,
-            channel: _currentChannel,
-            tile: (open) => tile(Icons.subtitles, tr('Subtitles'), open)),
-        tile(Icons.av_timer, tr('Audio sync'),
-            () => showAudioDelayAdjuster(context),
-            detail: delay == 0
-                ? null
-                : '${delay > 0 ? '+' : '-'}${delay.abs()} ms'),
-        if (linked != null)
-          tile(
-              Icons.swap_horiz,
-              tr('Switch to {playlistName}: {name}', {
-                'playlistName': playlist.playlistNameFor(linked.playlistId),
-                'name': linked.name
-              }),
-              () => _switchTo(linked),
-              shortLabel: playlist.playlistNameFor(linked.playlistId)),
-        if (live && !prefs.hideMultiview)
-          tile(Icons.grid_view, tr('Open in Multiview'), _openMultiview,
-              shortLabel: tr('Multiview')),
-        if (widget.sources != null)
-          tile(Icons.swap_horiz, tr('Sources'), _openSources),
-        tile(prefs.videoFit.icon, tr(prefs.videoFit.label), _cycleFit),
-        tile(Icons.search, tr('Search'), _openTvSearch),
+        ReorderableOptionTiles(
+          active: _tvOptions,
+          onActivity: _armTvBarIdle,
+          tiles: [
+            if (_isLive)
+              ('channels', tile(Icons.list, tr('Channels'), _openPanel)),
+            if (live)
+              (
+                'live_sources',
+                tile(Icons.swap_horiz, tr('Sources'), _openLiveSources)
+              ),
+            if (prefs.dataPool)
+              (
+                'stream_info',
+                tile(Icons.analytics_outlined, tr('Stream info'),
+                    _showTvDataPool)
+              ),
+            if (live)
+              (
+                'recall',
+                tile(Icons.history, tr('Recall — go back to a recent channel'),
+                    _openRecallPicker,
+                    shortLabel: tr('Recent'))
+              ),
+            if (live && _currentChannel.hasCatchup)
+              (
+                'start_over',
+                tile(Icons.restart_alt, tr('Watch from the start'), _startOver,
+                    shortLabel: tr('Start over'))
+              ),
+            if (live)
+              (
+                'reload',
+                tile(Icons.refresh, tr('Reload channel'), _reload,
+                    shortLabel: tr('Reload'))
+              ),
+            (
+              'audio',
+              DesktopAudioButton(
+                  key: ValueKey('tv-audio-${_currentChannel.id}'),
+                  player: _player,
+                  channel: _currentChannel,
+                  tile: (open) => tile(
+                      Icons.multitrack_audio, tr('Audio track'), open,
+                      shortLabel: tr('Audio')))
+            ),
+            (
+              'subtitles',
+              DesktopSubtitleButton(
+                  key: ValueKey('tv-subs-${_currentChannel.id}'),
+                  player: _player,
+                  channel: _currentChannel,
+                  tile: (open) => tile(Icons.subtitles, tr('Subtitles'), open))
+            ),
+            (
+              'audio_sync',
+              tile(Icons.av_timer, tr('Audio sync'),
+                  () => showAudioDelayAdjuster(context),
+                  detail: delay == 0
+                      ? null
+                      : '${delay > 0 ? '+' : '-'}${delay.abs()} ms')
+            ),
+            if (linked != null)
+              (
+                'linked',
+                tile(
+                    Icons.swap_horiz,
+                    tr('Switch to {playlistName}: {name}', {
+                      'playlistName':
+                          playlist.playlistNameFor(linked.playlistId),
+                      'name': linked.name
+                    }),
+                    () => _switchTo(linked),
+                    shortLabel: playlist.playlistNameFor(linked.playlistId))
+              ),
+            if (live && !prefs.hideMultiview)
+              (
+                'multiview',
+                tile(Icons.grid_view, tr('Open in Multiview'), _openMultiview,
+                    shortLabel: tr('Multiview'))
+              ),
+            if (widget.sources != null)
+              ('sources', tile(Icons.swap_horiz, tr('Sources'), _openSources)),
+            (
+              'picture',
+              tile(prefs.videoFit.icon, tr(prefs.videoFit.label), _cycleFit)
+            ),
+            ('search', tile(Icons.search, tr('Search'), _openTvSearch)),
+          ],
+        ),
       ],
     );
   }
@@ -2775,6 +2847,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           _closeSchedule();
         } else if (_panelOpen) {
           _closePanel();
+        } else if (_tvRemote && _tvOptions && PlayerOptionsOrder.isMoving) {
+          // Back while a tile is being moved: done, the row stays.
+          PlayerOptionsOrder.endMove();
         } else if (_tvRemote && _tvOptions) {
           _closeTvOptions();
         } else if (_tvRemote && _scheduleChipFocus.hasFocus) {

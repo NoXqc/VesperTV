@@ -535,13 +535,17 @@ class SettingsCatalog {
               tr('Removes the Multiview row and the player\'s Open in Multiview button.'),
               !prefs.hideMultiview,
               (v) => prefs.setHideMultiview(!v)),
-          if (Platform.isAndroid && prefs.isTelevision)
+          // Apple TV: the Top Shelf (LauncherChannels.topShelf).
+          if ((Platform.isAndroid || isAppleTv) && prefs.isTelevision)
             SettingsToggle(
                 id: 'launcher_rows',
                 icon: Icons.home_outlined,
                 title: tr('Show on the TV home screen'),
-                help: tr(
-                    "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy."),
+                help: isAppleTv
+                    ? tr(
+                        "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).")
+                    : tr(
+                        "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy."),
                 value: prefs.launcherRows,
                 onChanged: (v) {
                   prefs.setLauncherRows(v);
@@ -817,8 +821,8 @@ class SettingsCatalog {
               ],
               selected: '${prefs.playerBarTransparency}',
               // Left/Right step by 5, between the menu's 10s.
-              valueText:
-                  tr('{percent}%', {'percent': '${prefs.playerBarTransparency}'}),
+              valueText: tr(
+                  '{percent}%', {'percent': '${prefs.playerBarTransparency}'}),
               onPick: (v) => prefs.setPlayerBarTransparency(int.parse(v)),
               onStep: (dir) => prefs.setPlayerBarTransparency(
                   (prefs.playerBarTransparency + 5 * dir).clamp(0, 100))),
@@ -834,8 +838,8 @@ class SettingsCatalog {
               ],
               selected: '${prefs.playerOptionsTransparency}',
               // Left/Right step by 5, between the menu's 10s.
-              valueText:
-                  tr('{percent}%', {'percent': '${prefs.playerOptionsTransparency}'}),
+              valueText: tr('{percent}%',
+                  {'percent': '${prefs.playerOptionsTransparency}'}),
               onPick: (v) => prefs.setPlayerOptionsTransparency(int.parse(v)),
               onStep: (dir) => prefs.setPlayerOptionsTransparency(
                   (prefs.playerOptionsTransparency + 5 * dir).clamp(0, 100))),
@@ -879,44 +883,57 @@ class SettingsCatalog {
                 help: tr(
                     'For sound that is ahead of or behind the picture. Also in the player: Audio sync.'),
                 run: showAudioDelayAdjuster),
-            SettingsToggle(
-                id: 'audio_passthrough',
-                icon: Icons.surround_sound_outlined,
-                title: tr('Surround passthrough (Dolby Atmos)'),
-                help: tr(
-                    'Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.'),
-                value: prefs.audioPassthrough,
-                onChanged: prefs.setAudioPassthrough),
-          ]),
-        // Android only (DisplayMatch); Windows follows the monitor.
-        if (Platform.isAndroid)
-          SettingsSection(title: tr('Frame rate & resolution'), [
-            SettingsToggle(
-                id: 'match_frame_rate',
-                icon: Icons.slow_motion_video,
-                title: tr('Match frame rate'),
-                help: tr(
-                    'Switches the TV to the video\'s frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don\'t switch again. Leaving the app gives the TV its own setting back.'),
-                value: prefs.matchFrameRate,
-                onChanged: prefs.setMatchFrameRate),
-            if (prefs.matchFrameRate)
+            // Apple TV: mpv's tvOS audio output can't pass a bitstream
+            // through (dev-notes/apple-tv-parity-plan.md point 4); 5.1 goes
+            // out as multichannel PCM.
+            if (!isAppleTv)
               SettingsToggle(
-                  id: 'match_50_60',
-                  icon: Icons.swap_vert,
-                  title: tr('Only switch between 50 and 60 Hz'),
+                  id: 'audio_passthrough',
+                  icon: Icons.surround_sound_outlined,
+                  title: tr('Surround passthrough (Dolby Atmos)'),
                   help: tr(
-                      'Films at 24 frames per second keep the current rate, so fewer switches.'),
-                  value: prefs.match5060Only,
-                  onChanged: prefs.setMatch5060Only),
-            SettingsToggle(
-                id: 'match_resolution',
-                icon: Icons.hd_outlined,
-                title: tr('Match resolution'),
-                help: tr(
-                    'Switches the TV to the video\'s resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.'),
-                value: prefs.matchResolution,
-                onChanged: prefs.setMatchResolution),
+                      'Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.'),
+                  value: prefs.audioPassthrough,
+                  onChanged: prefs.setAudioPassthrough),
           ]),
+        // Android (DisplayMatch) and Apple TV (AppleTvDisplayMatch, frame
+        // rate only); a computer follows its monitor.
+        if (Platform.isAndroid || isAppleTv)
+          SettingsSection(
+              title:
+                  isAppleTv ? tr('Frame rate') : tr('Frame rate & resolution'),
+              [
+                SettingsToggle(
+                    id: 'match_frame_rate',
+                    icon: Icons.slow_motion_video,
+                    title: tr('Match frame rate'),
+                    help: isAppleTv
+                        ? tr(
+                            'Switches the TV to the video\'s frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV\'s Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don\'t switch again.')
+                        : tr(
+                            'Switches the TV to the video\'s frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don\'t switch again. Leaving the app gives the TV its own setting back.'),
+                    value: prefs.matchFrameRate,
+                    onChanged: prefs.setMatchFrameRate),
+                if (prefs.matchFrameRate)
+                  SettingsToggle(
+                      id: 'match_50_60',
+                      icon: Icons.swap_vert,
+                      title: tr('Only switch between 50 and 60 Hz'),
+                      help: tr(
+                          'Films at 24 frames per second keep the current rate, so fewer switches.'),
+                      value: prefs.match5060Only,
+                      onChanged: prefs.setMatch5060Only),
+                // tvOS has no resolution matching: the Apple TV scales.
+                if (!isAppleTv)
+                  SettingsToggle(
+                      id: 'match_resolution',
+                      icon: Icons.hd_outlined,
+                      title: tr('Match resolution'),
+                      help: tr(
+                          'Switches the TV to the video\'s resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.'),
+                      value: prefs.matchResolution,
+                      onChanged: prefs.setMatchResolution),
+              ]),
         if (player)
           SettingsSection(title: tr('TV Shows'), [
             SettingsChoice(
