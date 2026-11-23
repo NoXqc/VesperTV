@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -271,7 +272,12 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              tr('Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.'),
+              // macOS gets the release's .dmg (since 1.0.73), Windows a zip.
+              defaultTargetPlatform == TargetPlatform.macOS
+                  ? tr(
+                      'Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.')
+                  : tr(
+                      'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else

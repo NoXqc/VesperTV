@@ -40,11 +40,12 @@ Grab the latest release from the [Releases](../../releases) page or
     Ubuntu 24.04 [distrobox](https://distrobox.it/).
 
   No automatic updates on Linux yet.
-- **macOS (community build, unsigned)**: built automatically from `main` by the
-  [macOS build](../../actions/workflows/macos-build.yml) workflow — open the latest
-  run and download `VesperTV-macos-dmg` (needs a GitHub sign-in). It is not signed
+- **macOS (beta, unsigned)**: [`VesperTV-macos.dmg`](https://github.com/NoXqc/VesperTV/releases/latest/download/VesperTV-macos.dmg)
+  on every weekly release: open it and drag VesperTV into Applications. It is not signed
   or notarized: after the first blocked launch, open System Settings > Privacy &
-  Security > Open Anyway.
+  Security > Open Anyway. Updates: Settings > Check for Updates opens the new DMG (from 1.0.74).
+  Builds of every `main` commit stay on the [macOS build](../../actions/workflows/macos-build.yml)
+  workflow's runs (GitHub sign-in needed).
 
 ## Screenshots
 

@@ -988,6 +988,8 @@ const Map<String, String> kPl = {
   "Open Download Page": "Otwórz stronę pobierania",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Otwiera się w przeglądarce — rozpakuj pobrany plik i uruchom VesperTV.exe, aby zaktualizować, zastępując stary folder.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Otwiera się w przeglądarce — otwórz pobrany plik i przeciągnij VesperTV do folderu Aplikacje, zastępując starą wersję.",
   "Download & Install": "Pobierz i zainstaluj",
   "Downloading update... {p}%": "Pobieranie aktualizacji... {p}%",
   "Download complete.": "Pobieranie zakończone.",

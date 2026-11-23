@@ -154,7 +154,8 @@ announced to testers via `DISCORD_TEST_WEBHOOK` when set). Hotfix = the only mid
 Weekly outline: `pubspec.yaml` `<ver>+N` (versionCode `+N` must always rise) → `flutter analyze` → build APK +
 verify signature (§5) → build Windows + zip → **commit & push first** → `gh release create <ver> --target <sha>
 --latest … app-release.apk VesperTV-windows-x64.zip` → make sure the tag equals HEAD → move `stable` to it →
-Linux: `gh workflow run linux-flatpak.yml` and `linux-build.yml` with `--ref main -f release_tag=<tag>` → verify
+Linux + Mac: `gh workflow run linux-flatpak.yml`, `linux-build.yml` and `macos-build.yml` with `--ref main -f
+release_tag=<tag>` → verify
 downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The Stable updater offers
 any *different* tag (`_isDifferent`) except to a test-build install (newer only); never leave two `.zip`/`.apk`
 assets on a release.
@@ -517,6 +518,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   (16). Analyze 16, 2398 tests. Not box-tested. Same day: **`VesperTV-macos.dmg` attached to release 1.0.73** (CI run
   45083800016 = the release commit 8260255, owner: "Just put it on GitHub"); the Mac app's updater still offers nothing
   (`checkForUpdate` returns null on macOS) and `/cutr` doesn't attach it yet. Next build > 963.
+- **Claude, 2026-11-22 - Mac in every Sunday release (`claude/mac-weekly`, worktree `VesperTV-claude-macweekly`, from
+  main 8f404e1, uncommitted; owner: "windows Linux Mac should all be part of sunday's updates"):** `macos-build.yml`
+  takes `release_tag` like the Linux workflows (build main, check tag = commit, upload `VesperTV-macos.dmg` with
+  `--clobber`, delete older versioned DMGs); dev-notes/release.md §6 step 4b runs it with the Linux ones. Only the
+  `.dmg` goes on a release, never the Mac `.zip` (old Windows updaters take the first `.zip`). App: macOS Check for
+  Updates now reads releases (`AppUpdateService`: only Linux returns null; `pickAsset('macos')` takes `.dmg` or
+  `-macos.zip`) and opens the DMG in the browser like Windows' zip, with its own hint (7 languages); test builds are
+  APK-only so a Mac never sees them. README + site: Mac card (#mac, macOS 12+, Open Anyway) and buttons; download
+  labels lost their version (they said 1.0.72 after 1.0.73: nothing in the Sunday steps updates them). 1.0.73
+  already has the DMG (attached by hand, run 45083800016); its Mac app can't check for updates yet (1.0.74 can).
+  Mac app not tested on a Mac (CI build only).
 - **Claude, 2026-11-22 - release 1.0.73 (beta), +963 (latest): the first Sunday weekly stable** (owner: "/cutr").
   Android + Windows + Linux (Flatpak + tarball via CI, release_tag). The `stable` branch was created on the release
   commit. Since 1.0.72:
