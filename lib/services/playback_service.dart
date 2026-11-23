@@ -27,6 +27,7 @@ import 'playlist_manager.dart';
 import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
+import 'tuliprox.dart';
 import 'audio_track_preferences.dart';
 import 'catchup_format.dart';
 import 'catchup_session.dart';
@@ -629,6 +630,18 @@ class PlaybackService extends ChangeNotifier {
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
 
+    // Leaving a Tuliprox stream: it ends on the server first, so the new
+    // channel finds a one-connection account free instead of waiting for
+    // Tuliprox to notice the closed connection (uzumaki, 2026-11-23). Only
+    // when its stream is known (player routes); at most 1.5 s.
+    final leaving = currentChannel;
+    if (leaving != null && leaving.url != channel.url) {
+      await Tuliprox.instance
+          .release(leaving)
+          .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      if (gen != _playGen) return;
+    }
+
     if (await _reuseNativeLive(channel, openUrl, recordHistory)) return;
     if (gen != _playGen) return;
 
@@ -649,6 +662,8 @@ class PlaybackService extends ChangeNotifier {
     final session = catchup;
     _watchCatchupStart(session);
     currentChannel = channel;
+    Tuliprox.instance.noteStarted(channel);
+    _checkTuliproxSlate(channel);
     error = null;
     reconnectStatus = null;
     _autoAdvanceDismissed = false;
@@ -803,6 +818,7 @@ class PlaybackService extends ChangeNotifier {
       if (await _retryOnBackupServers(channel, e)) return;
       if (_retryOnCopy(channel)) return;
       error = sniff == null ? e.toString() : '$e\n${sniff.tag}';
+      _noteTuliproxRefusal(channel, error!);
       notifyListeners();
     });
 
@@ -1371,6 +1387,8 @@ class PlaybackService extends ChangeNotifier {
     }
     final generation = ++_nativeZapGeneration;
     currentChannel = channel;
+    Tuliprox.instance.noteStarted(channel);
+    _checkTuliproxSlate(channel);
     error = null;
     reconnectStatus = null;
     notifyListeners();
@@ -1577,6 +1595,7 @@ class PlaybackService extends ChangeNotifier {
       error = sniff == null || sniff.kind == 'hls' || sniff.kind == 'link'
           ? e.toString()
           : '$e\n${sniff.tag}';
+      _noteTuliproxRefusal(channel, error!);
       notifyListeners();
     } finally {
       _reloadingCurrentChannel = false;
@@ -1848,6 +1867,55 @@ class PlaybackService extends ChangeNotifier {
     await _storage.setLastChannelId(channel.id);
   }
 
+  /// Tuliprox refused [channel] and said why (`[Tuliprox reason]` in the
+  /// error): the error screen words it, and when the account or provider is
+  /// full it also names channels already playing that can be joined (read
+  /// after, so the screen redraws then).
+  void _noteTuliproxRefusal(Channel channel, String raw) {
+    final reason = tuliproxReasonOf(raw);
+    if (reason == null) return;
+    unawaited(Tuliprox.instance.noteFallback(channel, reason).then((fresh) {
+      if (fresh && error != null && currentChannel?.url == channel.url) {
+        notifyListeners();
+      }
+    }));
+  }
+
+  /// What Tuliprox's answer for [channel] said, kept by the native
+  /// StreamStats: its stream uid (`X-Tuliprox-Stream-Uid`, read at 1.5 s:
+  /// the exact stream to end on leaving) and whether it is the busy video,
+  /// not the channel (`X-Tuliprox-Fallback` on a 200 answer, again at 4 s).
+  /// Android only (the computer player's mpv doesn't show headers).
+  void _checkTuliproxSlate(Channel channel) {
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (Tuliprox.instance.refOf(channel) == null) return;
+    _readTuliproxHeaders(channel, const Duration(milliseconds: 1500));
+    _readTuliproxHeaders(channel, const Duration(seconds: 4));
+  }
+
+  void _readTuliproxHeaders(Channel channel, Duration after) {
+    Future<void>.delayed(after, () async {
+      final c = controller;
+      if (c == null ||
+          currentChannel?.url != channel.url ||
+          !c.value.isInitialized) {
+        return;
+      }
+      try {
+        final m = await _statsChannel.invokeMapMethod<Object?, Object?>(
+            'getStats', {'playerId': SubtitleTracks.playerIdOf(c)});
+        if (currentChannel?.url != channel.url) return;
+        final uid = int.tryParse('${m?['streamUid'] ?? ''}');
+        if (uid != null) Tuliprox.instance.noteOwnUid(channel, uid);
+        final reason = m?['fallback'] as String?;
+        if (reason == null || reason.isEmpty) return;
+        await Tuliprox.instance.noteFallback(channel, reason);
+      } catch (_) {
+        // Player gone, or a build without the stats bridge.
+      }
+    });
+  }
+
   Future<void> stop() async {
     _nativeZapGeneration++;
     _playGen++;
@@ -1855,6 +1923,9 @@ class PlaybackService extends ChangeNotifier {
     catchup = null;
     _pendingCatchup = null;
     _cancelNativeSwitchHolds();
+    // Its Tuliprox stream ends on the server now ([Tuliprox.release]).
+    final leaving = currentChannel;
+    if (leaving != null) unawaited(Tuliprox.instance.release(leaving));
     await _teardown();
     // Nothing plays any more: the TV goes back to its own mode. A channel
     // change doesn't come here, so zapping keeps a matched mode.

@@ -73,6 +73,30 @@ public class StreamStatsTest {
     assertEquals(70000000000L, stats.fileSizeBytes.get());
     assertEquals(1024, stats.bytes.get());
   }
+  @Test public void keepsTuliproxFallbackReasonOfTheLatestAnswer() {
+    StreamStats stats = new StreamStats(FILE);
+    DataSource source = mock(DataSource.class);
+    when(source.getResponseHeaders())
+        .thenReturn(headers("x-tuliprox-fallback", "provider_connections_exhausted"));
+    stats.onTransferStart(source, spec(0, C.LENGTH_UNSET), true);
+    assertEquals("provider_connections_exhausted", stats.fallback);
+    when(source.getResponseHeaders()).thenReturn(headers("Content-Length", "4096"));
+    stats.onTransferStart(source, spec(0, C.LENGTH_UNSET), true);
+    assertEquals(null, stats.fallback);
+    assertEquals("user_connections_exhausted", StreamStats.headerValue(
+        headers("X-Tuliprox-Fallback", "user_connections_exhausted"), "x-tuliprox-fallback"));
+    assertEquals(null, StreamStats.headerValue(null, "x-tuliprox-fallback"));
+  }
+  @Test public void keepsTuliproxStreamUidOfTheLatestAnswer() {
+    StreamStats stats = new StreamStats(FILE);
+    DataSource source = mock(DataSource.class);
+    when(source.getResponseHeaders()).thenReturn(headers("X-Tuliprox-Stream-Uid", "114"));
+    stats.onTransferStart(source, spec(0, C.LENGTH_UNSET), true);
+    assertEquals("114", stats.streamUid);
+    when(source.getResponseHeaders()).thenReturn(headers("Content-Length", "4096"));
+    stats.onTransferStart(source, spec(0, C.LENGTH_UNSET), true);
+    assertEquals(null, stats.streamUid);
+  }
   @Test public void ignoresSideResourcesAndNonNetworkTransfers() {
     StreamStats stats = new StreamStats(FILE);
     DataSource source = mock(DataSource.class);

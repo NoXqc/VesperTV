@@ -4100,6 +4100,38 @@ const Map<String, String> kIt = {
       "Cambio fonte su {stream}…",
   "Source changed to {stream}.":
       "Fonte cambiata: {stream}.",
+  "Source {n}":
+      "Fonte {n}",
+  "Not working right now":
+      "Non funziona in questo momento",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Qualcun altro sta guardando questo canale sul server, quindi la sua fonte non può essere cambiata solo per te.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox sta già cambiando. Riprova tra un momento.",
+  "Wait a moment before switching again.":
+      "Aspetta un momento prima di cambiare di nuovo.",
+  "That source didn't start. Still on the one before.":
+      "Quella fonte non è partita. Resta quella di prima.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox non è riuscito ad avviare questo canale da nessuna delle sue fonti. Riprova più tardi o scegli un altro canale.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Il tuo account sta già guardando su tutti gli schermi consentiti. Fermane uno, oppure aspetta un momento e riprova.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Tutte le connessioni del provider del server sono in uso. Riprova più tardi o guarda un canale già in riproduzione.",
+  "A stream or recording with a higher priority took this connection.":
+      "Uno stream o una registrazione con priorità più alta ha preso questa connessione.",
+  "Your account on this server has expired.":
+      "Il tuo account su questo server è scaduto.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Il server sta ancora configurando questo account. Riprova tra qualche minuto.",
+  "The stream session ended. Start the channel again.":
+      "La sessione dello stream è terminata. Avvia di nuovo il canale.",
+  "This source is in maintenance. Try again later.":
+      "Questa fonte è in manutenzione. Riprova più tardi.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "In riproduzione sul server, pronti da raggiungere (in Fonti): {channels}",
+  "Playing now on the server":
+      "In riproduzione sul server",
   "Tuliprox didn't switch the source.":
       "Tuliprox non ha cambiato la fonte.",
   "Switch a channel's providers from the player's Sources":

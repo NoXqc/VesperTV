@@ -553,6 +553,9 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
             (HttpDataSource.InvalidResponseCodeException) t;
         String message = http.responseMessage == null ? "" : " " + http.responseMessage;
         out.append(" [HTTP ").append(http.responseCode).append(message).append("]");
+        // Tuliprox says why it refused (Player API, 2026-11-23): Dart turns it into words.
+        String fallback = StreamStats.headerValue(http.headerFields, "x-tuliprox-fallback");
+        if (fallback != null) out.append(" [Tuliprox ").append(fallback).append("]");
       }
       root = t;
       if (t.getCause() == t) break;

@@ -4054,6 +4054,38 @@ const Map<String, String> kEl = {
       "Αλλαγή πηγής σε {stream}…",
   "Source changed to {stream}.":
       "Η πηγή άλλαξε: {stream}.",
+  "Source {n}":
+      "Πηγή {n}",
+  "Not working right now":
+      "Δεν λειτουργεί αυτή τη στιγμή",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Κάποιος άλλος παρακολουθεί αυτό το κανάλι στον διακομιστή, οπότε η πηγή του δεν μπορεί να αλλάξει μόνο για εσάς.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Το Tuliprox ήδη αλλάζει πηγή. Δοκιμάστε ξανά σε λίγο.",
+  "Wait a moment before switching again.":
+      "Περιμένετε λίγο πριν αλλάξετε ξανά.",
+  "That source didn't start. Still on the one before.":
+      "Αυτή η πηγή δεν ξεκίνησε. Παραμένει η προηγούμενη.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Το Tuliprox δεν μπόρεσε να ξεκινήσει αυτό το κανάλι από καμία πηγή του. Δοκιμάστε αργότερα ή διαλέξτε άλλο κανάλι.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Ο λογαριασμός σας παίζει ήδη σε όλες τις οθόνες που επιτρέπει. Σταματήστε μία ή περιμένετε λίγο και δοκιμάστε ξανά.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Όλες οι συνδέσεις παρόχου του διακομιστή χρησιμοποιούνται. Δοκιμάστε αργότερα ή δείτε ένα κανάλι που ήδη παίζει.",
+  "A stream or recording with a higher priority took this connection.":
+      "Μια ροή ή εγγραφή με υψηλότερη προτεραιότητα πήρε αυτή τη σύνδεση.",
+  "Your account on this server has expired.":
+      "Ο λογαριασμός σας σε αυτόν τον διακομιστή έχει λήξει.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Ο διακομιστής ακόμη ρυθμίζει αυτόν τον λογαριασμό. Δοκιμάστε ξανά σε λίγα λεπτά.",
+  "The stream session ended. Start the channel again.":
+      "Η συνεδρία ροής έληξε. Ξεκινήστε ξανά το κανάλι.",
+  "This source is in maintenance. Try again later.":
+      "Αυτή η πηγή είναι σε συντήρηση. Δοκιμάστε αργότερα.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "Παίζουν τώρα στον διακομιστή, έτοιμα για συμμετοχή (στις Πηγές): {channels}",
+  "Playing now on the server":
+      "Παίζει τώρα στον διακομιστή",
   "Tuliprox didn't switch the source.":
       "Το Tuliprox δεν άλλαξε την πηγή.",
   "Switch a channel's providers from the player's Sources":

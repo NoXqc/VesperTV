@@ -108,6 +108,10 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       m.put("reconnects", stats.reconnects.get());
       String last = stats.lastReconnect;
       if (last != null) m.put("lastReconnect", last);
+      String fallback = stats.fallback;
+      if (fallback != null) m.put("fallback", fallback);
+      String streamUid = stats.streamUid;
+      if (streamUid != null) m.put("streamUid", streamUid);
     }
     // Live buffer diagnostics for Send log.
     m.put("bufferedMs", player.getExoPlayer().getTotalBufferedDuration());

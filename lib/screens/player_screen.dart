@@ -21,6 +21,8 @@ import '../services/live_sources.dart';
 import '../services/playlist_manager.dart';
 import '../services/skip_segments.dart';
 import '../services/storage_service.dart';
+import '../services/tuliprox.dart';
+import '../widgets/top_notice_overlay.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import '../utils/scrub_steps.dart';
@@ -577,6 +579,22 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
   }
 
+  /// The stream is Tuliprox's busy video, not the channel: say why, and
+  /// which channels already playing can be joined (in Sources). A refusal
+  /// shows the error screen instead.
+  void _onTuliproxFallback() {
+    final n = Tuliprox.instance.fallbackNotice.value;
+    if (n == null ||
+        !mounted ||
+        _playback.error != null ||
+        _playback.currentChannel?.url != n.url) {
+      return;
+    }
+    final text = tuliproxFallbackMessage(n.reason);
+    if (text == null) return;
+    TopNotice.show(text, duration: const Duration(seconds: 8));
+  }
+
   void _onWatchOfferChanged() {
     if (!mounted) return;
     _armWatchTimer();
@@ -818,8 +836,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       await _playback.replaceStream(selection.channel);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('Could not switch stream. Try another source.'))));
+        TopNotice.show(tr('Could not switch stream. Try another source.'));
       }
     } finally {
       if (mounted) {
@@ -834,8 +851,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   void _watchServerSwitch(String name) {
     unawaited(_playback.watchSourceSwitch().then((landed) {
       if (!landed || !mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(tr('Source changed to {stream}.', {'stream': name}))));
+      TopNotice.show(tr('Source changed to {stream}.', {'stream': name}));
     }));
   }
 
@@ -871,12 +887,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
               playing, sources[picked], _playback.playLiveSource,
+              playChannel: (c) => _playback.play(c),
               onServerSwitch: _watchServerSwitch,
               reconnect: _playback.reconnectAfterServerSwitch);
-          if (note != null && mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(note)));
-          }
+          if (note != null && mounted) TopNotice.show(note);
           return;
         }
         await manager.ensureLiveChannelsLoaded();
@@ -894,10 +908,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         if (!mounted || fallback == null) continue;
         final added = await manager.addLiveFallback(sources.first, fallback);
         if (!mounted) return;
-        if (!added) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(tr('That source is already on the list.'))));
-        }
+        if (!added) TopNotice.show(tr('That source is already on the list.'));
       }
     } finally {
       if (mounted) {
@@ -1009,6 +1020,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _bottomScope.addListener(_onBarFocusChange);
     _skip.addListener(_onSkipChanged);
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
+    Tuliprox.instance.fallbackNotice.addListener(_onTuliproxFallback);
     _armWatchTimer();
     _switchButtonFocus.addListener(_onBarFocusChange);
     _scheduleChipFocus.addListener(_onBarFocusChange);
@@ -1758,6 +1770,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _skip.dispose();
     _skipFocus.dispose();
     WatchGameOffer.current.removeListener(_onWatchOfferChanged);
+    Tuliprox.instance.fallbackNotice.removeListener(_onTuliproxFallback);
     _watchTimer?.cancel();
     _watchFocus.dispose();
     _fileInfoRequests.dispose();

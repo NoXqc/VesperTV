@@ -3568,6 +3568,38 @@ const Map<String, String> kUk = {
       "Ваш пароль надсилається лише на ваш сервер, один раз. VesperTV зберігає токен входу, а не пароль.",
   "Changing source to {stream}…": "Зміна джерела на {stream}…",
   "Source changed to {stream}.": "Джерело змінено на {stream}.",
+  "Source {n}":
+      "Джерело {n}",
+  "Not working right now":
+      "Зараз не працює",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Цей канал на сервері дивиться ще хтось, тому його джерело не можна змінити лише для вас.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox уже перемикає. Спробуйте ще раз за мить.",
+  "Wait a moment before switching again.":
+      "Зачекайте трохи, перш ніж перемикати знову.",
+  "That source didn't start. Still on the one before.":
+      "Це джерело не запустилося. Лишається попереднє.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox не зміг запустити цей канал із жодного джерела. Спробуйте пізніше або виберіть інший канал.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Ваш обліковий запис уже відтворює на всіх дозволених екранах. Зупиніть один із них або зачекайте й спробуйте знову.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Усі з'єднання провайдера на сервері зайняті. Спробуйте пізніше або дивіться канал, який уже відтворюється.",
+  "A stream or recording with a higher priority took this connection.":
+      "Потік або запис із вищим пріоритетом зайняв це з'єднання.",
+  "Your account on this server has expired.":
+      "Термін дії вашого облікового запису на цьому сервері закінчився.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Сервер ще налаштовує цей обліковий запис. Спробуйте за кілька хвилин.",
+  "The stream session ended. Start the channel again.":
+      "Сеанс потоку завершився. Запустіть канал знову.",
+  "This source is in maintenance. Try again later.":
+      "Це джерело на обслуговуванні. Спробуйте пізніше.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "Зараз відтворюються на сервері, можна приєднатися (у Джерелах): {channels}",
+  "Playing now on the server":
+      "Зараз відтворюється на сервері",
   "Tuliprox didn't switch the source.": "Tuliprox не перемкнув джерело.",
   "Switch a channel's providers from the player's Sources":
       "Перемикайте провайдерів каналу в «Джерелах» плеєра",

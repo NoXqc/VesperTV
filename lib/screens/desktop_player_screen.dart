@@ -62,6 +62,8 @@ import '../services/skip_segments.dart';
 import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
 import '../services/silo_api.dart';
+import '../services/tuliprox.dart';
+import '../widgets/top_notice_overlay.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
 import 'desktop_multiview_screen.dart';
@@ -625,8 +627,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       await _switchTo(selection.channel, start: position, play: playing);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('Could not switch stream. Try another source.'))));
+        TopNotice.show(tr('Could not switch stream. Try another source.'));
       }
     } finally {
       if (mounted) {
@@ -665,11 +666,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         if (!mounted || picked == null || _currentChannel.id != id) return;
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
-              playing, sources[picked], _playLiveSource);
-          if (note != null && mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(note)));
-          }
+              playing, sources[picked], _playLiveSource,
+              playChannel: (c) => _switchTo(c));
+          if (note != null && mounted) TopNotice.show(note);
           return;
         }
         await manager.ensureLiveChannelsLoaded();
@@ -687,10 +686,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         if (!mounted || fallback == null) continue;
         final added = await manager.addLiveFallback(sources.first, fallback);
         if (!mounted) return;
-        if (!added) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(tr('That source is already on the list.'))));
-        }
+        if (!added) TopNotice.show(tr('That source is already on the list.'));
       }
     } catch (_) {
       if (mounted) {
@@ -742,6 +738,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   Timer? _progressTimer;
   bool _progressReady = false;
   int _openGeneration = 0;
+
+  /// The live channel last opened here: a channel change ends its Tuliprox
+  /// stream on the server first ([Tuliprox.release]). Not on close: the
+  /// mini player may carry the stream on.
+  Channel? _tuliproxOpened;
 
   bool get _isLive => _currentChannel.isLive;
   List<Channel> get _queue => widget.queue ?? const [];
@@ -1254,10 +1255,19 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (_tvError != null) setState(() => _tvError = null);
     _matchDisplay(channel);
     try {
+      final leaving = _tuliproxOpened;
+      if (leaving != null && leaving.url != channel.url) {
+        await Tuliprox.instance
+            .release(leaving)
+            .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+        if (!current()) return;
+      }
+      _tuliproxOpened = channel;
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
       await openDesktopStream(_player, channel, start: resume, play: play);
       if (!current()) return;
+      if (channel.isLive) Tuliprox.instance.noteStarted(channel);
       DesktopLiveRecovery.of(_player).watch(channel);
       if (resume == null) {
         // Trakt/Simkl may only know a fraction until the stream opens.

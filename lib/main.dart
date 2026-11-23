@@ -82,6 +82,7 @@ import 'services/sports_phone_notifications.dart';
 import 'services/sports_goal_background.dart' show sportsGoalBackgroundMain;
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
+import 'widgets/top_notice_overlay.dart';
 import 'widgets/native_video_hole.dart';
 import 'services/viewer_profile_service.dart';
 import 'models/cyberpunk_palette.dart';
@@ -1971,6 +1972,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               const ProgrammeReminderOverlay(),
               const ProviderExpiryOverlay(),
               const GoalsAlertOverlay(),
+              const TopNoticeOverlay(),
               const VesperBubbleOverlay(),
             ],
           ),

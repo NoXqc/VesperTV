@@ -3686,6 +3686,38 @@ const Map<String, String> kPl = {
       "Zmiana źródła na {stream}…",
   "Source changed to {stream}.":
       "Źródło zmienione: {stream}.",
+  "Source {n}":
+      "Źródło {n}",
+  "Not working right now":
+      "Teraz nie działa",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Ktoś inny ogląda ten kanał na serwerze, więc jego źródła nie można zmienić tylko dla ciebie.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox już przełącza. Spróbuj ponownie za chwilę.",
+  "Wait a moment before switching again.":
+      "Odczekaj chwilę przed kolejną zmianą.",
+  "That source didn't start. Still on the one before.":
+      "To źródło nie wystartowało. Nadal działa poprzednie.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox nie uruchomił tego kanału z żadnego ze swoich źródeł. Spróbuj później albo wybierz inny kanał.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Twoje konto ogląda już na wszystkich dozwolonych ekranach. Zatrzymaj jeden z nich albo chwilę poczekaj i spróbuj ponownie.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Wszystkie połączenia dostawcy na serwerze są zajęte. Spróbuj później albo oglądaj kanał, który już jest odtwarzany.",
+  "A stream or recording with a higher priority took this connection.":
+      "Strumień lub nagranie o wyższym priorytecie zajęło to połączenie.",
+  "Your account on this server has expired.":
+      "Twoje konto na tym serwerze wygasło.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Serwer wciąż konfiguruje to konto. Spróbuj ponownie za kilka minut.",
+  "The stream session ended. Start the channel again.":
+      "Sesja strumienia się skończyła. Uruchom kanał ponownie.",
+  "This source is in maintenance. Try again later.":
+      "To źródło jest w trakcie konserwacji. Spróbuj później.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "Odtwarzane teraz na serwerze, gotowe do dołączenia (w Źródłach): {channels}",
+  "Playing now on the server":
+      "Odtwarzane teraz na serwerze",
   "Tuliprox didn't switch the source.":
       "Tuliprox nie zmienił źródła.",
   "Switch a channel's providers from the player's Sources":

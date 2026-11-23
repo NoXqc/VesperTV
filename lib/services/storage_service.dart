@@ -411,6 +411,15 @@ class StorageService {
       ? _prefs.remove(AppConstants.keyTuliprox)
       : _prefs.setString(AppConstants.keyTuliprox, json);
 
+  /// Tuliprox servers whose Player API a playlist's own login reaches,
+  /// found in `player_api.php` (`server_info.player_api_path`): JSON
+  /// `{host: base URL}`. Holds no login. Device-only.
+  String getTuliproxFound() =>
+      _prefs.getString(AppConstants.keyTuliproxFound) ?? '';
+  Future<void> setTuliproxFound(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyTuliproxFound)
+      : _prefs.setString(AppConstants.keyTuliproxFound, json);
+
   /// The day (YYYY-MM-DD) the "subscription ends soon" card last showed
   /// (`ProviderExpiryOverlay`): once a day at most. Device-only.
   String getProviderExpiryNoticeDay() =>

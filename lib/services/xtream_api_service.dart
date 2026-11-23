@@ -12,6 +12,7 @@ import '../models/xtream_series.dart';
 import '../models/vod_details.dart';
 import '../l10n/l10n.dart';
 import '../utils/xtream.dart';
+import 'tuliprox.dart';
 
 /// Talks to a real Xtream Codes ("XC API") panel via `player_api.php`.
 ///
@@ -143,6 +144,7 @@ class XtreamApiService {
         : null;
     final serverInfo = decoded['server_info'];
     if (serverInfo is Map) {
+      Tuliprox.instance.noteServer(server, serverInfo['player_api_path']);
       serverTimeZone = serverInfo['timezone']?.toString();
       serverTimeOffset = serverTimeOffsetFrom(serverInfo);
       if (serverTimeOffset != null) {

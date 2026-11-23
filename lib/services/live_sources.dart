@@ -21,6 +21,21 @@ typedef LiveSourceRow = (Channel, LiveSourceEntry);
 /// [canAdd]: "Add another source" is offered.
 Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
     PlaylistManager manager, Channel playing) async {
+  final list = await _liveSourceRows(manager, playing);
+  await Tuliprox.instance.joinableSettled(playing);
+  // Tuliprox is full (busy video or refused): channels already playing on
+  // the server come right under the channel, they join without a new
+  // connection (Player API joinable streams).
+  final joins = _tuliproxJoinRows(manager, playing);
+  if (joins.isEmpty || list.rows.isEmpty) return list;
+  return (
+    rows: [list.rows.first, ...joins, ...list.rows.skip(1)],
+    canAdd: list.canAdd
+  );
+}
+
+Future<({List<LiveSourceRow> rows, bool canAdd})> _liveSourceRows(
+    PlaylistManager manager, Channel playing) async {
   final sources = manager.liveSourcesFor(playing);
   final app = <LiveSourceRow>[
     for (final c in sources)
@@ -146,7 +161,7 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
 Future<List<LiveSourceRow>?> _tuliproxRows(
     List<LiveSourceRow> app, Channel playing, DispatcharrSources mode) async {
   final own = app.first.$1;
-  if (Tuliprox.instance.login.value == null || playing.url != own.url) {
+  if (Tuliprox.instance.refOf(own) == null || playing.url != own.url) {
     return null;
   }
   final group = await Tuliprox.instance.groupFor(own);
@@ -164,14 +179,16 @@ Future<List<LiveSourceRow>?> _tuliproxRows(
       )
     ),
   ];
+  var n = 0;
   for (final m in group.members) {
+    n++;
     final c = Channel(
       id: own.id,
       rawId: own.rawId,
       playlistId: own.playlistId,
       name: m.title.isEmpty ? own.name : m.title,
       group: own.group,
-      url: Tuliprox.instance.notePick(own, group.uid, m),
+      url: Tuliprox.instance.notePick(own, group.uid, m, player: group.player),
       logoUrl: own.logoUrl,
       httpHeaders: own.httpHeaders,
     );
@@ -179,14 +196,55 @@ Future<List<LiveSourceRow>?> _tuliproxRows(
       c,
       LiveSourceEntry(
         channel: c,
-        playlist: ['Tuliprox', if (m.input.isNotEmpty) m.input].join(' · '),
+        // The player routes never name the server's inputs: "Source 2".
+        playlist: [
+          'Tuliprox',
+          if (m.input.isNotEmpty)
+            m.input
+          else if (group.player != null)
+            tr('Source {n}', {'n': '$n'}),
+        ].join(' · '),
         current: m.vid == group.currentVid,
+        quality: m.failing ? tr('Not working right now') : m.quality,
       )
     ));
   }
   // rows = the channel itself, then the server's members.
   return arrangeDispatcharrSources(mode, [rows.first, ...app.skip(1)],
       rows.skip(1).toList(), (r) => r.$2.current);
+}
+
+/// The playlist's own channels for the streams Tuliprox says [playing]'s
+/// viewer can join ([Tuliprox.joinableFor]), at most 12, marked
+/// [Tuliprox.joinMark] (a channel change, not a source of [playing]).
+List<LiveSourceRow> _tuliproxJoinRows(
+    PlaylistManager manager, Channel playing) {
+  final joinable = Tuliprox.instance.joinableFor(playing);
+  final ref = Tuliprox.instance.refOf(playing);
+  if (joinable.isEmpty || ref == null) return const [];
+  final wanted = {for (final j in joinable) j.virtualId};
+  final seen = <int>{};
+  final rows = <LiveSourceRow>[];
+  for (final c in manager.visibleChannels(category: 'tv')) {
+    // The stream id is the URL's last part: a cheap look before parsing.
+    final last = c.url.substring(c.url.lastIndexOf('/') + 1);
+    final dot = last.indexOf('.');
+    final id = int.tryParse(dot < 0 ? last : last.substring(0, dot));
+    if (id == null || !wanted.contains(id) || c.url == playing.url) continue;
+    final r = Tuliprox.instance.refOf(c);
+    if (r == null || r.username != ref.username || !seen.add(r.id)) continue;
+    final row = c.copyWith(url: '${c.url}${Tuliprox.joinMark}');
+    rows.add((
+      row,
+      LiveSourceEntry(
+        channel: row,
+        playlist: ['Tuliprox', tr('Playing now on the server')].join(' · '),
+        current: false,
+      )
+    ));
+    if (rows.length >= 12) break;
+  }
+  return rows;
 }
 
 /// Plays [source], picked in the live Sources list while [playing] plays,
@@ -201,9 +259,16 @@ Future<List<LiveSourceRow>?> _tuliproxRows(
 /// message to show, or null.
 Future<String?> playPickedLiveSource(
     Channel playing, Channel source, Future<void> Function(Channel source) play,
-    {void Function(String name)? onServerSwitch,
+    {Future<void> Function(Channel channel)? playChannel,
+    void Function(String name)? onServerSwitch,
     Future<void> Function(Duration after, String name, ServerHold hold)?
         reconnect}) async {
+  // A channel already playing on the Tuliprox server: a channel change
+  // ([playChannel]), not a source of [playing].
+  if (Tuliprox.instance.isJoin(source)) {
+    await (playChannel ?? play)(Tuliprox.instance.joinTarget(source));
+    return null;
+  }
   // A Tuliprox source: the server splices it into the open stream, the
   // player keeps its connection (no play).
   if (Tuliprox.instance.isPick(source)) {
@@ -215,7 +280,7 @@ Future<String?> playPickedLiveSource(
       return tr('Changing source to {stream}…', {'stream': name});
     } catch (e) {
       debugPrint('Tuliprox: switch refused ($e)');
-      return tr("Tuliprox didn't switch the source.");
+      return tuliproxRefusalText(e);
     }
   }
   final channel = await Dispatcharr.instance.switchChannelTo(source);

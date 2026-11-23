@@ -21,6 +21,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/audio_track_preferences.dart';
 import '../services/catchup_session.dart';
+import '../services/tuliprox.dart';
 import '../services/vod_buffering.dart';
 import '../utils/time_format.dart';
 import '../utils/video_quality.dart';
@@ -372,6 +373,11 @@ class _SwitchToLinkedChannelButtonState
 /// code makes an incapable decoder chip decode 10-bit HDR. This just
 /// stops surfacing that as a raw stack-trace-shaped string.
 String friendlyPlaybackError(String raw) {
+  // Tuliprox said why it served no stream (X-Tuliprox-Fallback): its words,
+  // plus channels already playing on the server that can be joined.
+  final reason = tuliproxReasonOf(raw);
+  final said = reason == null ? null : tuliproxFallbackMessage(reason);
+  if (said != null) return said;
   // No decoder for the video at all (ExoPlayerEventListener's
   // [UNSUPPORTED_VIDEO: mime codecs size] tag). Dolby Vision profile 5/7 is
   // the usual one: profile 8 already plays as HDR10 on a plain HEVC decoder.

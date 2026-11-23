@@ -500,6 +500,21 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Tuliprox Player API (`claude/tuliprox-user-api`, worktree `VesperTV-claude-tpxuser`,
+  test +971):** Tuliprox's dev (uzumaki) added `/api/v1/me/*` (branch `feature/player_user_api`, on the owner's VPS).
+  VesperTV signs the playlist's own user in (user + password from the stream URL, memory only) for **Sources without
+  an admin login** (own stream's failover members with quality, switch with plain refusal words), **ends the previous
+  stream on a channel change / stop** (`DELETE /me/streams/{uid}`, uzumaki: "on channel switch, drop the previous";
+  Android `_playChannel` + `stop()`, computer player on channel change only), and words **`X-Tuliprox-Fallback`**
+  (native `StreamStats.fallback` + `[Tuliprox reason]` in HTTP errors) with channels already playing that can be
+  joined, listed in Sources. Old servers / no player features = the admin routes as before. Tuliprox e5704880
+  (VPS since 16:17): the Player API is found through `player_api.php` `server_info.player_api_path` (no Settings
+  sign-in needed, `vesper_tuliprox_found`) and Android takes the exact stream uid from `X-Tuliprox-Stream-Uid`.
+  The player's Sources / Tuliprox messages roll down from the top (`TopNotice`, `widgets/top_notice_overlay.dart`):
+  the bottom snackbar covered the options row and Sources. Owner-tested +971..+974 on the Homatics + phone: zaps
+  release the old stream, busy reasons in words, a full account joins a running channel (`free_shared_joins`).
+  Source switches still land 20-30 s late (the player sits ~20 s behind live: Tuliprox bursts; asked the dev).
+  Details: dev-notes/tuliprox-player-api.md. Analyze 16, 2468 tests + native StreamStats 15.
 - **Claude, 2026-11-23 - Rename a group on the TV + by voice (`claude/group-rename`, worktree
   `VesperTV-claude-grouprename`):** owner: groups could only be renamed in the playlist editor (or by Your AI's
   `rename_group`), and his voice try did nothing. Hold OK on a live group > **Rename…** / **Use the provider's name**,

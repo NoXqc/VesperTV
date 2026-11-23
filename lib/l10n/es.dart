@@ -4093,6 +4093,38 @@ const Map<String, String> kEs = {
       "Cambiando la fuente a {stream}…",
   "Source changed to {stream}.":
       "Fuente cambiada: {stream}.",
+  "Source {n}":
+      "Fuente {n}",
+  "Not working right now":
+      "No funciona ahora mismo",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Otra persona está viendo este canal en el servidor, así que su fuente no se puede cambiar solo para ti.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox ya está cambiando. Vuelve a intentarlo en un momento.",
+  "Wait a moment before switching again.":
+      "Espera un momento antes de volver a cambiar.",
+  "That source didn't start. Still on the one before.":
+      "Esa fuente no arrancó. Sigue la anterior.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox no pudo iniciar este canal desde ninguna de sus fuentes. Inténtalo más tarde o elige otro canal.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Tu cuenta ya se está viendo en todas las pantallas que permite. Detén una de ellas o espera un momento y vuelve a intentarlo.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Todas las conexiones del proveedor del servidor están en uso. Inténtalo más tarde o mira un canal que ya se esté reproduciendo.",
+  "A stream or recording with a higher priority took this connection.":
+      "Una emisión o grabación con mayor prioridad ocupó esta conexión.",
+  "Your account on this server has expired.":
+      "Tu cuenta en este servidor ha caducado.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "El servidor todavía está configurando esta cuenta. Inténtalo de nuevo en unos minutos.",
+  "The stream session ended. Start the channel again.":
+      "La sesión de la emisión terminó. Vuelve a iniciar el canal.",
+  "This source is in maintenance. Try again later.":
+      "Esta fuente está en mantenimiento. Inténtalo más tarde.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "En reproducción en el servidor, listos para unirse (en Fuentes): {channels}",
+  "Playing now on the server":
+      "En reproducción en el servidor",
   "Tuliprox didn't switch the source.":
       "Tuliprox no cambió la fuente.",
   "Switch a channel's providers from the player's Sources":
