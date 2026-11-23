@@ -19,6 +19,11 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  // Closed from the app switcher while running in the background: see VesperExit.
+  override func applicationWillTerminate(_ application: UIApplication) {
+    VesperExit.now()
+  }
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VesperPip") {
@@ -27,6 +32,22 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VesperVoice") {
       voice = VesperVoice(messenger: registrar.messenger())
     }
+  }
+}
+
+/// Swipe-closing VesperTV from the app switcher while it plays. Background
+/// audio keeps the app running, so iOS tells it instead of just killing it:
+/// the scene disconnects, then the app is told it will terminate. Flutter's
+/// own handler for both tears the engine down (`destroyContext`) while mpv's
+/// threads still run, and an iPhone tester on TestFlight 906 got TestFlight's
+/// crash prompt each time (2026-11-20; no crash report was shared, so this is
+/// the best guess). Nothing is left to save by then: settings are written as
+/// they change, the databases on every write, and the app already went
+/// through "paused". So VesperTV leaves at once, before that teardown.
+enum VesperExit {
+  static func now() {
+    UserDefaults.standard.synchronize()
+    _exit(0)
   }
 }
 

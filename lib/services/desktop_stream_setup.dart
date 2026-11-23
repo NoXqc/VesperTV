@@ -162,9 +162,21 @@ Future<void> disposeAllDesktopPlayers() async {
 /// panels' blocked list for live streams: a Windows user had black live TV
 /// (no picture, no sound, no error) while VOD, Media Hub and the same
 /// playlist on their phone all worked (LOG-HCLSJZ, 2026-11-02). Android's
-/// player identifies as Dalvik, which panels accept.
-const kDesktopStreamUserAgent =
-    'Dalvik/2.1.0 (Linux; U; Android 11; VesperTV Windows)';
+/// player identifies as Dalvik, which panels accept. The Dalvik part stays;
+/// the last word names the device (iPhones and Apple TVs said "Windows" in
+/// panel logs until 2026-11-22).
+final String kDesktopStreamUserAgent =
+    'Dalvik/2.1.0 (Linux; U; Android 11; VesperTV '
+    '${streamUserAgentDevice(Platform.operatingSystem)})';
+
+/// The device word at the end of [kDesktopStreamUserAgent].
+String streamUserAgentDevice(String os) => switch (os) {
+      'ios' => 'iOS',
+      'tvos' => 'Apple TV',
+      'macos' => 'macOS',
+      'linux' => 'Linux',
+      _ => 'Windows',
+    };
 
 /// The shared mpv setup for every Windows stream player (full screen, mini
 /// player, Multiview): reconnect tuning, the User-Agent above, mpv errors

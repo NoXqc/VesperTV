@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,4 +79,28 @@ void main() {
     expect(storage.getPlayerOptionsTransparency(), 20);
     expect(storage.getPlayerBarTransparency(), 15);
   });
+
+  // The iPhone / iPad player (and a computer's) draws its own bars: the two
+  // rows would change nothing there. The Apple TV look (TV) keeps them.
+  for (final tv in [false, true]) {
+    testWidgets('iPhone player: rows ${tv ? 'shown on a TV' : 'hidden'}',
+        (tester) async {
+      await start({});
+      prefs.isTelevision = tv;
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      tester.view.physicalSize = const Size(1280, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ChangeNotifierProvider.value(
+          value: prefs,
+          child: const MaterialApp(
+              home: SettingsCategoryScreen(categoryId: 'playback'))));
+      await tester.pumpAndSettle();
+      final rows = tv ? findsOneWidget : findsNothing;
+      expect(find.text('Player bar transparency'), rows);
+      expect(find.text('Options row transparency'), rows);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
 }

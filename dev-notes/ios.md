@@ -76,6 +76,29 @@ Owner: build 710 lacked the Settings revamp and the rest of Android since 1.0.64
   main's CRLF one + the iOS lines (clean next time); the player stays LF (main's 3 lines applied).
 - iOS app icons come from main's new gold logo (RGB, no alpha: App Store-safe).
 
+## TestFlight 964 = 1.0.73 + iPhone fixes (2026-11-22)
+
+The iPhone was on TestFlight 906 (1.0.71 + the live HLS fix). That build doesn't have 1.0.72's sync fix (6b1243b).
+With Fast startup on, such a phone never took in the held sync keys, and an edit on it could wipe favourites on the
+other devices (the suspected cause of Kal-El's sync trouble). Branch `claude/ios-testflight-1073` is the 1.0.73
+release commit (8260255) plus:
+
+- **Closing from the app switcher:** `VesperExit` (AppDelegate.swift) runs from `applicationWillTerminate` and
+  `SceneDelegate.sceneDidDisconnect`. It flushes UserDefaults, then calls `_exit(0)`, before Flutter's own handler
+  for those events (`appOrSceneWillTerminate` → `destroyContext`) tears the engine down under mpv's running threads.
+  A tester got TestFlight's crash prompt on every swipe-close of 906. Nobody shared a crash report, so the cause is a
+  best guess: if the prompt comes back, ask for a report (Settings > Privacy & Security > Analytics & Improvements >
+  Analytics Data > `Runner-…`). Dart has no `detached` work to skip. Single scene only, and Flutter ends the engine
+  on a disconnect anyway. One trade-off: if iOS ever disconnects the scene during PiP, the app now quits.
+- **Settings > Playback > Player** (bar / options row transparency) is hidden on the iPhone, iPad and computers.
+  Only Android's player and the Apple TV look draw the bars those settings change.
+- **The stream User-Agent names the device** (`streamUserAgentDevice`): `… VesperTV iOS)` / `Apple TV` / `macOS` /
+  `Linux`. It used to say `Windows` everywhere. The Dalvik start that panels accept stays.
+
+Not done: one-tap scan to link on the iPhone. It needs the Associated Domains capability on the App ID (developer
+portal), `apple-app-site-association` on the relay, and the link handled in AppDelegate. Today the camera opens
+`pair.vespertv.app/sync#code`, which shows the code to type in Settings > Backup & devices > Sync > I have a code.
+
 ## Install from Windows (free Apple ID)
 
 1. Install iTunes and iCloud from Apple's site (not the Microsoft Store versions), then

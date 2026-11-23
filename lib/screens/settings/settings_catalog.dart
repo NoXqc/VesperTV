@@ -804,42 +804,47 @@ class SettingsCatalog {
       description:
           tr('Video, audio, subtitles, trailers and player behaviour.'),
       sections: [
-        SettingsSection(title: tr('Player'), [
-          SettingsChoice(
-              id: 'player_bar_transparency',
-              icon: Icons.opacity,
-              title: tr('Player bar transparency'),
-              help: tr(
-                  "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear."),
-              options: [
-                for (var p = 0; p <= 100; p += 10)
-                  SettingsOption('$p', tr('{percent}%', {'percent': '$p'})),
-              ],
-              selected: '${prefs.playerBarTransparency}',
-              // Left/Right step by 5, between the menu's 10s.
-              valueText:
-                  tr('{percent}%', {'percent': '${prefs.playerBarTransparency}'}),
-              onPick: (v) => prefs.setPlayerBarTransparency(int.parse(v)),
-              onStep: (dir) => prefs.setPlayerBarTransparency(
-                  (prefs.playerBarTransparency + 5 * dir).clamp(0, 100))),
-          SettingsChoice(
-              id: 'player_options_transparency',
-              icon: Icons.opacity,
-              title: tr('Options row transparency'),
-              help: tr(
-                  "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear."),
-              options: [
-                for (var p = 0; p <= 100; p += 10)
-                  SettingsOption('$p', tr('{percent}%', {'percent': '$p'})),
-              ],
-              selected: '${prefs.playerOptionsTransparency}',
-              // Left/Right step by 5, between the menu's 10s.
-              valueText:
-                  tr('{percent}%', {'percent': '${prefs.playerOptionsTransparency}'}),
-              onPick: (v) => prefs.setPlayerOptionsTransparency(int.parse(v)),
-              onStep: (dir) => prefs.setPlayerOptionsTransparency(
-                  (prefs.playerOptionsTransparency + 5 * dir).clamp(0, 100))),
-        ]),
+        // The bars these change (LiveInfoBar, the options pill, Android's
+        // bar fade) are drawn by Android's player and by the mpv player's TV
+        // look (Apple TV) only: iPhone / iPad and computers draw their own
+        // bars, so there the two rows would change nothing.
+        if (!usesMediaKitTarget || prefs.isTelevision)
+          SettingsSection(title: tr('Player'), [
+            SettingsChoice(
+                id: 'player_bar_transparency',
+                icon: Icons.opacity,
+                title: tr('Player bar transparency'),
+                help: tr(
+                    "The channel info bar at the bottom and the movie / episode bar. 0% is solid, 15% as before, 100% is clear."),
+                options: [
+                  for (var p = 0; p <= 100; p += 10)
+                    SettingsOption('$p', tr('{percent}%', {'percent': '$p'})),
+                ],
+                selected: '${prefs.playerBarTransparency}',
+                // Left/Right step by 5, between the menu's 10s.
+                valueText: tr('{percent}%',
+                    {'percent': '${prefs.playerBarTransparency}'}),
+                onPick: (v) => prefs.setPlayerBarTransparency(int.parse(v)),
+                onStep: (dir) => prefs.setPlayerBarTransparency(
+                    (prefs.playerBarTransparency + 5 * dir).clamp(0, 100))),
+            SettingsChoice(
+                id: 'player_options_transparency',
+                icon: Icons.opacity,
+                title: tr('Options row transparency'),
+                help: tr(
+                    "The row of buttons you open with Down (Channels, Subtitles, Multiview...). 0% is solid, 15% as before, 100% is clear."),
+                options: [
+                  for (var p = 0; p <= 100; p += 10)
+                    SettingsOption('$p', tr('{percent}%', {'percent': '$p'})),
+                ],
+                selected: '${prefs.playerOptionsTransparency}',
+                // Left/Right step by 5, between the menu's 10s.
+                valueText: tr('{percent}%',
+                    {'percent': '${prefs.playerOptionsTransparency}'}),
+                onPick: (v) => prefs.setPlayerOptionsTransparency(int.parse(v)),
+                onStep: (dir) => prefs.setPlayerOptionsTransparency(
+                    (prefs.playerOptionsTransparency + 5 * dir).clamp(0, 100))),
+          ]),
         // Windows: the same settings through mpv (DesktopAudio).
         if (player)
           SettingsSection(title: tr('Audio & subtitles'), [
