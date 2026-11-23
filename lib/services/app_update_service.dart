@@ -109,8 +109,10 @@ class AppUpdateService {
   /// latest release only. Either way [shouldOffer] decides.
   Future<UpdateInfo?> checkForUpdate(
       {UpdateChannel channel = UpdateChannel.stable}) async {
-    // No macOS or Linux release asset yet: never offer the Windows .zip.
-    if (_os == 'macos' || _os == 'linux') return null;
+    // Linux: the release has its files, but nothing here tells a Flatpak
+    // from a tarball install yet. macOS takes the DMG every Sunday release
+    // carries since 1.0.73 (opened in the browser, like Windows' zip).
+    if (_os == 'linux') return null;
     final latest = await _getJson(_apiUrl);
     final candidates = <Map<String, dynamic>>[
       if (latest is Map<String, dynamic>) latest,
@@ -242,16 +244,18 @@ class AppUpdateService {
   /// The release asset for [os] (`Platform.operatingSystem`), or an empty
   /// map. Android takes the `.apk`. Windows has no package installer to
   /// hand an `.apk` to: its asset is a plain `.zip` of the built Release
-  /// folder, opened in a browser (see CheckUpdatesScreen). macOS takes only
-  /// a `-macos.zip`, and Windows never does, so a Mac build attached to a
-  /// release can't be offered to a PC (older Windows builds take the first
-  /// `.zip`: never attach a Mac zip until they've updated).
+  /// folder, opened in a browser (see CheckUpdatesScreen). macOS takes the
+  /// `.dmg` (`VesperTV-macos.dmg`, on every Sunday release since 1.0.73,
+  /// opened in the browser too) or a `-macos.zip`, and Windows never takes
+  /// either, so a Mac build attached to a release can't be offered to a PC
+  /// (older Windows builds take the first `.zip`: never attach a Mac zip
+  /// until they've updated; the `.dmg` is safe).
   @visibleForTesting
   static Map<String, dynamic> pickAsset(
       List<Map<String, dynamic>> assets, String os) {
     bool matches(String name) => switch (os) {
           'android' => name.endsWith('.apk'),
-          'macos' => name.endsWith('-macos.zip'),
+          'macos' => name.endsWith('.dmg') || name.endsWith('-macos.zip'),
           'windows' => name.endsWith('.zip') && !name.endsWith('-macos.zip'),
           _ => false,
         };

@@ -1022,6 +1022,8 @@ const Map<String, String> kFr = {
   'Open Download Page': "Ouvrir la page de téléchargement",
   'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
       "S'ouvre dans votre navigateur — décompressez le fichier et lancez VesperTV.exe pour mettre à jour, en remplaçant l'ancien dossier.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "S'ouvre dans votre navigateur — ouvrez le fichier téléchargé et glissez VesperTV dans Applications, en remplaçant l'ancienne version.",
   'Download & Install': "Télécharger et installer",
   'Downloading update... {p}%': "Téléchargement de la MAJ… {p} %",
   'Download complete.': "Téléchargement terminé.",

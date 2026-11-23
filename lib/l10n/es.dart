@@ -1019,6 +1019,8 @@ const Map<String, String> kEs = {
   'Open Download Page': "Abrir página de descarga",
   'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
       "Se abre en tu navegador: descomprime la descarga y ejecuta VesperTV.exe para actualizar, reemplazando la carpeta anterior.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Se abre en tu navegador: abre el archivo descargado y arrastra VesperTV a Aplicaciones, reemplazando la versión anterior.",
   'Download & Install': "Descargar e instalar",
   'Downloading update... {p}%': "Descargando actualización… {p} %",
   'Download complete.': "Descarga completa.",

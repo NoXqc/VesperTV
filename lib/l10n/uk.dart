@@ -984,6 +984,8 @@ const Map<String, String> kUk = {
   "Open Download Page": "Відкрити сторінку завантаження",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Відкривається в браузері — розпакуйте завантаження й запустіть VesperTV.exe, щоб оновити, замінивши стару папку.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Відкривається в браузері — відкрийте завантажений файл і перетягніть VesperTV до «Програм», замінивши стару версію.",
   "Download & Install": "Завантажити та встановити",
   "Downloading update... {p}%": "Завантаження оновлення... {p}%",
   "Download complete.": "Завантаження завершено.",

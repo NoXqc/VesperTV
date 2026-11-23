@@ -982,6 +982,8 @@ const Map<String, String> kDe = {
   "Open Download Page": "Download-Seite öffnen",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Öffnet sich im Browser – entpacke den Download und starte VesperTV.exe, um zu aktualisieren, und ersetze den alten Ordner.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Öffnet sich im Browser – öffne den Download und ziehe VesperTV in den Ordner „Programme“, um die alte Version zu ersetzen.",
   "Download & Install": "Herunterladen und installieren",
   "Downloading update... {p}%": "Update wird heruntergeladen… {p} %",
   "Download complete.": "Download abgeschlossen.",

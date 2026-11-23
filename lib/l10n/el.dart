@@ -999,6 +999,8 @@ const Map<String, String> kEl = {
   "Open Download Page": "Άνοιγμα σελίδας λήψης",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Ανοίγει στον browser — αποσυμπιέστε τη λήψη και εκτελέστε το VesperTV.exe για ενημέρωση, αντικαθιστώντας τον παλιό φάκελο.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Ανοίγει στον browser — ανοίξτε το αρχείο που κατεβάσατε και σύρετε το VesperTV στις Εφαρμογές, αντικαθιστώντας την παλιά έκδοση.",
   "Download & Install": "Λήψη και εγκατάσταση",
   "Downloading update... {p}%": "Λήψη ενημέρωσης… {p}%",
   "Download complete.": "Η λήψη ολοκληρώθηκε.",

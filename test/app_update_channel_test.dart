@@ -156,12 +156,44 @@ void main() {
           isNull);
     });
 
-    test('Linux and macOS: never asked', () async {
-      final mac = AppUpdateService(
-          operatingSystem: 'macos',
+    test('Linux: never asked', () async {
+      final linux = AppUpdateService(
+          operatingSystem: 'linux',
           installedVersion: () async => '1.0.71',
           apiClient: MockClient((r) async => throw StateError('asked')));
-      expect(await mac.checkForUpdate(channel: UpdateChannel.test), isNull);
+      expect(await linux.checkForUpdate(channel: UpdateChannel.test), isNull);
+    });
+
+    test("macOS: the Sunday release's DMG, never a test build", () async {
+      final latest = {
+        ...release('1.0.74'),
+        'assets': [
+          {
+            'name': 'app-release.apk',
+            'browser_download_url': 'https://example.com/app-release.apk',
+            'size': 1000,
+          },
+          {
+            'name': 'VesperTV-macos.dmg',
+            'browser_download_url': 'https://example.com/VesperTV-macos.dmg',
+            'size': 2000,
+          },
+        ],
+      };
+      // Test builds are Android only: no DMG, so never picked on a Mac.
+      final test = release('1.0.75-dev.970', pre: true);
+      final mac = AppUpdateService(
+          operatingSystem: 'macos',
+          installedVersion: () async => '1.0.73',
+          apiClient: MockClient((r) async => http.Response(
+              jsonEncode(
+                  r.url.path.endsWith('/latest') ? latest : [test, latest]),
+              200)));
+      for (final channel in UpdateChannel.values) {
+        final update = await mac.checkForUpdate(channel: channel);
+        expect(update?.version, '1.0.74', reason: '$channel');
+        expect(update?.downloadUrl, 'https://example.com/VesperTV-macos.dmg');
+      }
     });
   });
 

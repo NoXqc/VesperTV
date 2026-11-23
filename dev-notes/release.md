@@ -84,26 +84,31 @@ Sunday, ask first: test build, hotfix, or release anyway (§0)?
    Publishing announces it (step 8). Re-uploading the *same* version (a broken asset) is the only in-place edit:
    `gh release upload <tag> … --clobber` (`--notes` replaces the whole body — write self-contained notes).
    The notes cover everything since the previous stable, test builds included (not "see the test builds").
-   **Every weekly ships Android + Windows + Linux (4b):** a new release object starts empty, so the site /
-   README buttons (`releases/latest/download/VesperTV-windows-x64.zip`, the Linux files) 404 for an
-   Android-only week, and until the Linux CI runs finish (~15 min). Android-only = ask the owner first.
+   **Every weekly ships Android + Windows + Linux + Mac (4b; owner, 2026-11-22: "windows Linux Mac should all
+   be part of sunday's updates"):** a new release object starts empty, so the site / README buttons
+   (`releases/latest/download/VesperTV-windows-x64.zip`, the Linux files, `VesperTV-macos.dmg`) 404 for an
+   Android-only week, and until the CI runs finish (~15 min). Android-only = ask the owner first.
 4. **Gotcha:** `gh release edit --tag` leaves the old git tag behind and may put the new tag on a
    stale commit — confirm `git ls-remote --tags origin <ver>` equals `git rev-parse HEAD`. Repoint
    with `gh api -X PATCH repos/NoXqc/VesperTV/git/refs/tags/<tag> -f sha=<full-sha> -F force=true`.
    Then move `stable`: `git push origin <full-sha>:refs/heads/stable`, and bump `main` to the next
    version name (`1.0.74+N`).
-4b. **Linux (since 1.0.72):** once the tag is on HEAD (step 4), run
-   `gh workflow run linux-flatpak.yml --ref main -f release_tag=<ver>` and
-   `gh workflow run linux-build.yml --ref main -f release_tag=<ver>`. Each builds main's HEAD, stops if
-   the tag isn't that commit, uploads `VesperTV-linux-x86_64.flatpak` / `VesperTV-linux-x64.tar.gz`
-   with `--clobber` and deletes older versioned Linux files on the release (Flatpak ~10-15 min, tarball
-   ~4 min; the Flatpak job also installs it and runs it 20 s under Xvfb first). The names never change,
-   so the site / README link `releases/latest/download/<name>`. Announce (step 8) after both finish.
-   An Android-only release skips this (the Linux files stay those of the release they were built for).
+4b. **Linux (since 1.0.72) + Mac (since 1.0.73):** once the tag is on HEAD (step 4), run
+   `gh workflow run linux-flatpak.yml --ref main -f release_tag=<ver>`,
+   `gh workflow run linux-build.yml --ref main -f release_tag=<ver>` and
+   `gh workflow run macos-build.yml --ref main -f release_tag=<ver>`. Each builds main's HEAD, stops if
+   the tag isn't that commit, uploads `VesperTV-linux-x86_64.flatpak` / `VesperTV-linux-x64.tar.gz` /
+   `VesperTV-macos.dmg` with `--clobber` and deletes older versioned files of its kind on the release
+   (Flatpak ~10-15 min, tarball ~4 min, Mac ~7 min; the Flatpak job also installs it and runs it 20 s
+   under Xvfb first). The names never change, so the site / README link `releases/latest/download/<name>`.
+   Announce (step 8) after all three finish. The Mac app is unsigned (Open Anyway on first launch); only
+   the `.dmg` goes on a release, never the Mac `.zip` (old Windows updaters take the first `.zip`).
+   An Android-only release skips this (those files stay the ones of the release they were built for).
 5. Test builds: §6b. Never mark a test build Latest; promote nothing (the weekly is its own release).
 6. **Verify what users get:** download
    `https://github.com/NoXqc/VesperTV/releases/latest/download/app-release.apk` and
-   `.../VesperTV-windows-x64.zip`, `sha256sum` against the local files; also check the OLD
+   `.../VesperTV-windows-x64.zip`, `sha256sum` against the local files (the Linux and Mac files: HTTP 200
+   and the size the CI run listed); also check the OLD
    `https://github.com/NoXqc/NoXPlayer/releases/latest/download/app-release.apk` and
    `https://api.github.com/repos/NoXqc/NoXPlayer/releases/latest` still redirect to the new repo,
    and `curl -sL http://go.aftvnews.com/1760256 | grep -o 'https://github[^"'"'"' ]*'` resolves
@@ -117,7 +122,9 @@ Sunday, ask first: test build, hotfix, or release anyway (§0)?
    versioning restarted at 1.0.0, numerically lower than the old 3.x tags) — except on a test-build install,
    which only takes a newer version. On Test builds it also reads `/releases?per_page=20` and offers the
    highest version (`pickNewest`) when it is newer. Any Android asset ending `.apk` / Windows asset ending
-   `.zip` is picked by extension — never leave two `.zip` (or two `.apk`) assets on a release.
+   `.zip` / Mac asset ending `.dmg` is picked by extension — never leave two `.zip` (or two `.apk`, two
+   `.dmg`) assets on a release. A Mac offer opens the `.dmg` in the browser (since 1.0.74); Linux is
+   offered nothing yet. Test builds carry only the APK, so Mac / Windows never see them.
 8. **Announce on Discord** (after step 6 checks out): a newly published release announces itself; after an
    in-place edit run `gh workflow run discord-release.yml -f tag=<ver>`. Check the run succeeded.
 9. **Delete old local APKs, at release time only (owner, 2026-11-21):** when a release is cut

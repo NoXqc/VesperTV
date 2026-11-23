@@ -1018,6 +1018,8 @@ const Map<String, String> kIt = {
   'Open Download Page': "Apri pagina di download",
   'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
       "Si apre nel browser: estrai il file scaricato e avvia VesperTV.exe per aggiornare, sostituendo la cartella precedente.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Si apre nel browser: apri il file scaricato e trascina VesperTV in Applicazioni, sostituendo la versione precedente.",
   'Download & Install': "Scarica e installa",
   'Downloading update... {p}%': "Download aggiornamento… {p}%",
   'Download complete.': "Download completato.",
