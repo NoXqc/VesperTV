@@ -116,6 +116,56 @@ class M3uParser {
   static final RegExp _xcUrlPattern =
       RegExp(r'^https?://[^/]+/(live/)?[^/]+/[^/]+/\d+(\.(ts|m3u8))?$');
 
+  /// The TV guides an `#EXTM3U` line names ([attributesOf] of it):
+  /// `url-tvg` (Kodi, TiviMate), `x-tvg-url` or `tvg-url`, each one link or
+  /// several separated by commas (M3UPT: two `.xml.xz` guides). Web links
+  /// only, in order, without repeats.
+  static List<String> guideUrlsOf(Map<String, String> header) => {
+        for (final key in const ['url-tvg', 'x-tvg-url', 'tvg-url'])
+          for (final part in (header[key] ?? '').split(','))
+            if (part
+                .trim()
+                .startsWith(RegExp(r'https?://', caseSensitive: false)))
+              part.trim(),
+      }.toList();
+
+  /// The guides named in the `#EXTM3U` line of the list at [url], reading
+  /// only its first line: a playlist added before VesperTV kept them, read
+  /// once without downloading the whole list again.
+  static Future<List<String>> fetchHeaderGuideUrls(String url,
+      {Duration limit = const Duration(seconds: 30)}) async {
+    final client = http.Client();
+    try {
+      final Stream<List<int>> bytes;
+      if (Uri.tryParse(url)?.scheme == 'file') {
+        bytes = File.fromUri(Uri.parse(url)).openRead();
+      } else {
+        final response = await client
+            .send(http.Request('GET', Uri.parse(url)))
+            .timeout(limit);
+        if (response.statusCode != 200) {
+          throw M3uHttpError(Uri.parse(url).host, response.statusCode);
+        }
+        bytes = response.stream;
+      }
+      final lines = bytes
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter());
+      // The first line that isn't blank; leaving the loop cancels the rest
+      // of the download.
+      await for (final raw in lines.timeout(limit)) {
+        final line = raw.trim();
+        if (line.isEmpty) continue;
+        return line.startsWith('#EXTM3U')
+            ? guideUrlsOf(attributesOf(line))
+            : const <String>[];
+      }
+      return const <String>[];
+    } finally {
+      client.close();
+    }
+  }
+
   /// Catch-up of one entry from its `#EXTINF` attributes, falling back to
   /// the `#EXTM3U` header's (Kodi IPTV Simple conventions): `catchup` /
   /// `catchup-type`, `catchup-days` / `tvg-rec` / `timeshift`,
@@ -224,13 +274,17 @@ class M3uParser {
           Set<String> favorites,
           Map<String, String> epgOverrides) =>
       Isolate.run(() async {
+        var guides = const <String>[];
         final channels = Channel.withUniqueIds(await fetchAndParse(url,
-            playlistId: playlistId, saveTo: saveTo, onBytes: progress.send));
+            playlistId: playlistId,
+            saveTo: saveTo,
+            onBytes: progress.send,
+            onGuides: (urls) => guides = urls));
         for (final c in channels) {
           c.isFavorite = favorites.contains(c.id);
           c.epgIdOverride = epgOverrides[c.rawId];
         }
-        return M3uList(channels);
+        return M3uList(channels, guideUrls: guides);
       });
 
   /// How long the server may take to start answering: a provider builds a
@@ -258,12 +312,16 @@ class M3uParser {
   /// [onEntry]: gets each entry as it is read, instead of a returned list
   /// ([M3uImport] stores a 1.28M-entry list without holding it); a future
   /// it returns pauses the read until it completes.
+  ///
+  /// [onGuides]: the guides the `#EXTM3U` line names ([guideUrlsOf]), once
+  /// the whole list is read.
   static Future<List<Channel>> fetchAndParse(String url,
       {required String playlistId,
       String? saveTo,
       void Function(int bytes)? onBytes,
       Duration stall = stallLimit,
-      Future<void>? Function(Channel entry)? onEntry}) async {
+      Future<void>? Function(Channel entry)? onEntry,
+      void Function(List<String> urls)? onGuides}) async {
     final part = saveTo == null ? null : File('$saveTo.part');
     final sink = part?.openWrite();
     Future<List<Channel>> parse(Stream<List<int>> bytes) async {
@@ -296,6 +354,7 @@ class M3uParser {
         await sink.close();
         await part!.rename(saveTo!);
       }
+      onGuides?.call(guideUrlsOf(state._headerAttrs));
       return state.channels;
     }
 
@@ -352,7 +411,7 @@ class M3uHttpError implements Exception {
 /// groups. One pass, so it can be built on the background isolate with the
 /// parse.
 class M3uList {
-  M3uList(this.channels) {
+  M3uList(this.channels, {this.guideUrls = const []}) {
     final byTitle = <String, String>{};
     for (final c in channels) {
       byGroup.putIfAbsent(c.group, () => []).add(c);
@@ -364,6 +423,10 @@ class M3uList {
   }
 
   final List<Channel> channels;
+
+  /// The guides the list's `#EXTM3U` line names ([M3uParser.guideUrlsOf]);
+  /// empty when it wasn't read from the list itself (a saved catalog).
+  final List<String> guideUrls;
 
   /// Every entry by group title, whatever its tab.
   final Map<String, List<Channel>> byGroup = {};

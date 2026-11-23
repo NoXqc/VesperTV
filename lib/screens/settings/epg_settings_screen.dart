@@ -375,7 +375,9 @@ class _CustomEpgSectionState extends State<_CustomEpgSection> {
         content: Text(custom.isEmpty && url.isEmpty
             ? tr('Custom EPG URL cleared.')
             : tr('Custom EPG URL saved.'))));
-    if (url.isNotEmpty && p.enabled) {
+    // Cleared on an M3U whose list names guides: those load instead.
+    final listGuides = p.playlistEpgUrls?.isNotEmpty ?? false;
+    if ((url.isNotEmpty || listGuides) && p.enabled) {
       // refreshAll walks every enabled playlist's source, this one included.
       await epg.refreshAll();
     }
@@ -388,6 +390,14 @@ class _CustomEpgSectionState extends State<_CustomEpgSection> {
     for (final p in profiles) {
       if (p.id == _playlistId) selected = p;
     }
+    // Blank on an M3U = the guides its list names: shown greyed in the
+    // field, so a blank field doesn't read as "no guide".
+    final listGuides = selected == null || selected.isXtream
+        ? const <String>[]
+        : selected.playlistEpgUrls ?? const <String>[];
+    final hint = listGuides.isEmpty
+        ? null
+        : listGuides.map(_ExtraGuidesState._shortName).join(', ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -421,6 +431,9 @@ class _CustomEpgSectionState extends State<_CustomEpgSection> {
               readOnly: readOnly,
               decoration: InputDecoration(
                 labelText: tr('Custom EPG (XMLTV) URL — optional'),
+                hintText: hint,
+                floatingLabelBehavior:
+                    hint == null ? null : FloatingLabelBehavior.always,
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -494,7 +507,7 @@ class _ExtraGuidesState extends State<_ExtraGuides> {
       _say(tr('Enter a full http(s):// link to an XMLTV file.'));
       return;
     }
-    if (url == widget.profile.epgUrl || urls.contains(url)) {
+    if (widget.profile.mainEpgUrls.contains(url) || urls.contains(url)) {
       _say(tr('This guide is already in the list.'));
       return;
     }
@@ -533,8 +546,8 @@ class _ExtraGuidesState extends State<_ExtraGuides> {
   Widget build(BuildContext context) {
     final urls = widget.profile.extraEpgUrls;
     final text = Theme.of(context).textTheme;
-    // The playlist's own guide is 1 when it has one.
-    final first = (widget.profile.epgUrl?.isNotEmpty ?? false) ? 2 : 1;
+    // The playlist's own guides come first (typed, or named by its list).
+    final first = widget.profile.mainEpgUrls.length + 1;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

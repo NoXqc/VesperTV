@@ -2,19 +2,22 @@ import '../l10n/l10n.dart';
 import '../models/playlist_profile.dart';
 import 'epg_channel_info.dart';
 
-List<String> editorGuideUrls(PlaylistProfile profile) => {
-      if (profile.epgUrl?.isNotEmpty ?? false) profile.epgUrl!,
-      ...profile.extraEpgUrls,
-    }.toList();
+/// The playlist's own guides (typed, or named by its M3U), then its extra
+/// ones ([PlaylistProfile.guideUrls]).
+List<String> editorGuideUrls(PlaylistProfile profile) => profile.guideUrls;
 
 List<Map<String, String>> editorGuideSources(PlaylistProfile profile) {
   final urls = editorGuideUrls(profile);
+  final main = profile.mainEpgUrls;
   return [
     for (var i = 0; i < urls.length; i++)
       {
         'id': '$i',
-        'name': urls[i] == profile.epgUrl
-            ? tr('Main guide')
+        'name': main.contains(urls[i])
+            // An M3U can name two guides of its own: "Main guide 2".
+            ? main.length > 1 && main.indexOf(urls[i]) > 0
+                ? '${tr('Main guide')} ${main.indexOf(urls[i]) + 1}'
+                : tr('Main guide')
             : tr('Extra guide {number}',
                 {'number': '${profile.extraEpgUrls.indexOf(urls[i]) + 1}'}),
       }

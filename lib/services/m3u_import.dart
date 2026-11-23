@@ -101,10 +101,12 @@ class M3uImport {
     try {
       await db.bulkWrites(true);
       final store = _Store(job, db);
+      var guides = const <String>[];
       await M3uParser.fetchAndParse(job.url,
           playlistId: job.playlistId,
           onBytes: progress.send,
-          onEntry: store.add);
+          onEntry: store.add,
+          onGuides: (urls) => guides = urls);
       await store.flush();
       final read = total.elapsedMilliseconds;
       await db.finishM3uImport(job.playlistId, job.mark);
@@ -114,7 +116,7 @@ class M3uImport {
         c.epgIdOverride = job.epgOverrides[c.rawId];
       }
       final result = M3uImported(
-        live: M3uList(live),
+        live: M3uList(live, guideUrls: guides),
         vodGroups: store.vodGroups.toList(),
         seriesGroups: store.seriesGroups.toList(),
         counts: {

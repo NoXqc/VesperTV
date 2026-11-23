@@ -358,8 +358,8 @@ class PlaylistEditorServer extends ChangeNotifier {
           return null;
         }
         if (!ids.every((x) => x is String)) return null;
-        final ok =
-            await _playlists.setChannelOrder(s.profile.id, g, ids.cast<String>());
+        final ok = await _playlists.setChannelOrder(
+            s.profile.id, g, ids.cast<String>());
         if (!ok) return null;
         lastChange = s.profile.name;
         notifyListeners();
@@ -390,9 +390,8 @@ class PlaylistEditorServer extends ChangeNotifier {
                 v is String &&
                 v.trim().isNotEmpty &&
                 v.trim() != e.key) {
-              names[e.key as String] = v.trim().length > 120
-                  ? v.trim().substring(0, 120)
-                  : v.trim();
+              names[e.key as String] =
+                  v.trim().length > 120 ? v.trim().substring(0, 120) : v.trim();
             }
           }
         }
@@ -448,7 +447,7 @@ class PlaylistEditorServer extends ChangeNotifier {
         if (s == null) return null;
         return {
           'extra': s.profile.extraEpgUrls,
-          'hasMain': s.profile.epgUrl?.isNotEmpty ?? false,
+          'hasMain': s.profile.mainEpgUrls.isNotEmpty,
           'loading': guideLoading?.call() ?? false,
           'sources': editorGuideSources(s.profile),
         };
@@ -466,7 +465,9 @@ class PlaylistEditorServer extends ChangeNotifier {
             return {'error': 'Enter a full http(s):// link to an XMLTV file.'};
           }
           if (urls.length >= 5) return {'error': 'Five extra guides at most.'};
-          if (!urls.contains(add) && add != s.profile.epgUrl) urls.add(add);
+          if (!urls.contains(add) && !s.profile.mainEpgUrls.contains(add)) {
+            urls.add(add);
+          }
         }
         if (remove != null) urls.remove(remove);
         await _playlists.updatePlaylist(s.profile.copyWith(extraEpgUrls: urls));
@@ -536,10 +537,10 @@ class PlaylistEditorServer extends ChangeNotifier {
       id == null ? null : _playlists.editorSession(id);
 
   static Set<String> _stringSet(Object? list) => {
-    if (list is List)
-      for (final x in list)
-        if (x is String) x,
-  };
+        if (list is List)
+          for (final x in list)
+            if (x is String) x,
+      };
 
   /// Move / Copy to a group. Body: `ids` (rawIds of [s]), `mode`
   /// (`move` | `copy`) and `to`: `{own: title}`, `{newOwn: name}` or
@@ -598,13 +599,13 @@ class PlaylistEditorServer extends ChangeNotifier {
   /// rawId -> where the channel was moved (`mv`) / groups that also show
   /// it (`cp`), for the channels of [s] that were moved or copied.
   Map<String, Object?> _placementsJson(PlaylistSession s) => {
-    for (final c in s.allLiveChannels)
-      if (_playlists.placementOf(c) case final p?)
-        c.rawId: {
-          if (p.moved != null) 'mv': p.moved,
-          if (p.copies.isNotEmpty) 'cp': p.copies,
-        },
-  };
+        for (final c in s.allLiveChannels)
+          if (_playlists.placementOf(c) case final p?)
+            c.rawId: {
+              if (p.moved != null) 'mv': p.moved,
+              if (p.copies.isNotEmpty) 'cp': p.copies,
+            },
+      };
 
   Map<String, Object?> _channelsJson(PlaylistSession s) {
     final e = s.edits;

@@ -580,7 +580,10 @@ class PlaylistSession {
 
       final url = profile.m3uUrl;
       if (url == null || url.isEmpty) return;
-      if (await _restoreM3uCache()) return;
+      if (await _restoreM3uCache()) {
+        _readGuidesOnce(url);
+        return;
+      }
       await loadFromUrl(url);
     } finally {
       _loadViewerScopedState();
@@ -588,6 +591,23 @@ class PlaylistSession {
   }
 
   // --- M3U mode -----------------------------------------------------------
+
+  /// The guides the list's `#EXTM3U` line names, after each download
+  /// (`PlaylistManager` keeps them in [PlaylistProfile.playlistEpgUrls]).
+  void Function(List<String> urls)? onPlaylistGuides;
+
+  /// A playlist added before VesperTV kept its list's guides, started from
+  /// its saved copy: its first line read once, in the background. Not when
+  /// the user typed a guide (theirs is used instead).
+  void _readGuidesOnce(String url) {
+    if (profile.playlistEpgUrls != null || profile.mainEpgUrls.isNotEmpty) {
+      return;
+    }
+    final report = onPlaylistGuides;
+    if (report == null) return;
+    unawaited(M3uParser.fetchHeaderGuideUrls(url).then(report).catchError(
+        (Object e) => debugPrint('PlaylistGuides: first line not read ($e)')));
+  }
 
   /// The saved M3U text ([AppConstants.cacheFileM3uSource]); null when
   /// storage has no cache folder (tests).
@@ -835,6 +855,7 @@ class PlaylistSession {
       lastLoadSummary = counts;
       lastLoaded = DateTime.now();
       profile = profile.copyWith(m3uUrl: url);
+      onPlaylistGuides?.call(imported?.live.guideUrls ?? parsed!.guideUrls);
 
       loadingPhase = tr('Playlist added');
       onNotify();
