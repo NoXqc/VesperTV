@@ -335,6 +335,24 @@ touched (+739..+802):
   BuildContext; would need a VesperHost method), Multiview (recordings beside live, +794), Media Hub Sort / Filter
   and Expand collection (UI only). AI apps must reconnect the connector (with VesperTV open) to see the new actions.
 
+## Rename a group (Claude, 2026-11-23, branch `claude/group-rename`)
+Owner tried to rename a group by voice: nothing understood it. Without Your AI the built-in commands had no rename
+(the sentence fell through to "play <the whole sentence>" and failed); with Your AI only the playlist editor tool's
+`rename_group` could, for provider groups only.
+- `my_groups` gained `rename` (group = its name now, name = the new one; `playlist` narrows it): an own group first,
+  else a playlist's live group as the TV shows it (exact names before folded ones; every enabled playlist with that
+  group). Same code as the TV's hold OK > Rename… (`PlaylistManager.renameUserGroup` / `renameLiveGroup`); an AI app
+  is asked on the TV first.
+- Built-in phrases (`_renameGroupPatterns` in vesper_commands.dart, EN/FR/ES/IT/DE/EL): "rename the group X to Y",
+  "rename the X group to Y", "change the name of the group X to Y", "renomme le groupe X en Y", "renombra el grupo X
+  a Y", "rinomina il gruppo X in Y", "benenne die Gruppe X in Y um", "metonomase tin omada X se Y". The new name is
+  taken from the spoken text, not the folded one (`_asSpoken`: capitals and letters like ß kept; all-lowercase speech
+  gets a capital per word).
+- The playlist editor tool's `rename_group` now carries the group's order, star, channel order and placements to the
+  new title too (`PlaylistManager.carryLiveGroupRename`); its undo only reverts the name.
+- Replies: "{group} is now called {name}.", "I could not find the group "{title}".", "You already have a group named
+  {group}." Tests: `test/group_rename_test.dart`.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by

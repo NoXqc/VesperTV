@@ -4161,4 +4161,16 @@ const Map<String, String> kDe = {
       "Tonausgabe",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Weiterschauen, neue Folgen, deine Merkliste und deine Lieblingssender über dem Home-Bildschirm des Apple TV, wenn VesperTV in der obersten Reihe liegt (Top Shelf).",
+  "Rename group":
+      "Gruppe umbenennen",
+  "You already have a group named {group}.":
+      "Du hast schon eine Gruppe namens {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} enthält jetzt beide Gruppen. Halte OK darauf > Namen des Anbieters verwenden, um sie wieder zu trennen.",
+  "{group} is now called {name}.":
+      "{group} heißt jetzt {name}.",
+  "I could not find the group \"{title}\".":
+      "Ich habe die Gruppe „{title}“ nicht gefunden.",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Eine KI-App möchte deine Gruppe {group} in {name} umbenennen.",
 };

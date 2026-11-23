@@ -3852,4 +3852,16 @@ const Map<String, String> kPl = {
       "Dźwięk wyjściowy",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Oglądaj dalej, nowe odcinki, Twoja lista do obejrzenia i ulubione kanały nad ekranem głównym Apple TV, gdy VesperTV jest w górnym rzędzie (Top Shelf).",
+  "Rename group":
+      "Zmień nazwę grupy",
+  "You already have a group named {group}.":
+      "Masz już grupę o nazwie {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} zawiera teraz obie grupy. Przytrzymaj na niej OK > Użyj nazwy od dostawcy, aby je rozdzielić.",
+  "{group} is now called {name}.":
+      "{group} nazywa się teraz {name}.",
+  "I could not find the group \"{title}\".":
+      "Nie znalazłem grupy „{title}”.",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Aplikacja AI chce zmienić nazwę Twojej grupy {group} na {name}.",
 };

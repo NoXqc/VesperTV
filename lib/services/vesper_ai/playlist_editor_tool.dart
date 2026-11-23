@@ -589,6 +589,9 @@ Future<Map<String, Object?>> _runPlaylistEditor(
       final sessions = _editorSessions(box, playlist);
       final unknown = <String>[];
       final bySession = <PlaylistSession, Map<String, String>>{};
+      // Shown title before -> after, per playlist: the group's order, star
+      // and channel order follow it once saved.
+      final carried = <(PlaylistSession, String, String)>[];
       for (final (group, name) in renames) {
         var found = false;
         for (final s in sessions) {
@@ -612,13 +615,19 @@ Future<Map<String, Object?>> _runPlaylistEditor(
           for (final t in providers) {
             (bySession[s] ??= {})[t] = name;
           }
+          carried.add((
+            s,
+            s.edits.groupTitle(providers.first),
+            name.isEmpty ? providers.first : name,
+          ));
         }
         if (!found) unknown.add(group);
       }
       if (bySession.isEmpty) {
         throw VesperToolError('No live group named ${unknown.join(', ')}.');
       }
-      return _editorCommit(box, caller, bySession.keys.toList(),
+      final committed = await _editorCommit(
+          box, caller, bySession.keys.toList(),
           summary: 'rename ${renames.length} group(s)',
           preview: preview,
           notes: [
@@ -635,6 +644,12 @@ Future<Map<String, Object?>> _runPlaylistEditor(
         }
         return next;
       });
+      if (committed['changed'] == true) {
+        for (final (s, from, to) in carried) {
+          await box.playlist.carryLiveGroupRename(s.profile.id, from, to);
+        }
+      }
+      return committed;
     case 'add_fallback':
     case 'remove_fallback':
       final add = action == 'add_fallback';

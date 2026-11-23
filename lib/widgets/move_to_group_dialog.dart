@@ -107,19 +107,30 @@ Future<String?> askGroupName(BuildContext context) async {
       ],
     ),
   );
-  controller.dispose();
+  _disposeAfterClose(controller);
   final name = entered?.trim();
   return name == null || name.isEmpty ? null : name;
 }
 
 /// Hold OK on a channel > Rename… (playlist editor quick edit). Returns the
 /// new display name, '' to go back to the provider's name, or null.
-Future<String?> askChannelName(BuildContext context, String current) async {
+Future<String?> askChannelName(BuildContext context, String current) =>
+    _askNewName(context, current,
+        title: tr('Rename channel'), label: tr('Channel name'));
+
+/// Hold OK on a group > Rename…. Returns the new name ('' for a cleared
+/// field), or null.
+Future<String?> askGroupRename(BuildContext context, String current) =>
+    _askNewName(context, current,
+        title: tr('Rename group'), label: tr('Group name'));
+
+Future<String?> _askNewName(BuildContext context, String current,
+    {required String title, required String label}) async {
   final controller = TextEditingController(text: current);
   final entered = await showGlassMenu<String>(
     context: context,
     builder: (context) => GlassMenuDialog(
-      title: Text(tr('Rename channel')),
+      title: Text(title),
       content: FocusNodeOwner(
         builder: (context, node) => TvTextFieldGate(
           focusNode: node,
@@ -128,7 +139,7 @@ Future<String?> askChannelName(BuildContext context, String current) async {
             focusNode: node,
             readOnly: readOnly,
             autofocus: true,
-            decoration: InputDecoration(labelText: tr('Channel name')),
+            decoration: InputDecoration(labelText: label),
             onSubmitted: (value) => Navigator.of(context).pop(value),
           ),
         ),
@@ -147,6 +158,12 @@ Future<String?> askChannelName(BuildContext context, String current) async {
       ],
     ),
   );
-  controller.dispose();
+  _disposeAfterClose(controller);
   return entered?.trim();
 }
+
+/// The menu's closing animation still draws the field for a few frames
+/// after it returns: disposing at once was a use-after-dispose (debug
+/// assertion, caught by test/tv_group_rename_menu_test.dart).
+void _disposeAfterClose(TextEditingController controller) =>
+    Future.delayed(const Duration(seconds: 1), controller.dispose);

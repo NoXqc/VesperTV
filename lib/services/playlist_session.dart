@@ -278,6 +278,83 @@ class PlaylistSession {
     onNotify();
   }
 
+  /// Hold OK on a live group > Rename… (owner, 2026-11-23), and Vesper's
+  /// "rename the group X to Y": the editor's Groups-tab rename for one
+  /// group. Every provider group the TV lists as [shown] (a merged group
+  /// renames as one) is shown as [name]; '' = back to the provider's own
+  /// names (a merge splits again). A name another group of this playlist
+  /// has merges the two, as in the editor. Returns the group's title now,
+  /// or null when [shown] isn't one of this playlist's live groups.
+  Future<String?> renameLiveGroup(String shown, String name) async {
+    final providers = [
+      for (final t in sourceTvGroupTitles.toSet())
+        if (edits.groupTitle(t) == shown) t
+    ];
+    if (providers.isEmpty) return null;
+    var wanted = name.trim();
+    if (wanted.length > 120) wanted = wanted.substring(0, 120);
+    final to = wanted.isEmpty ? providers.first : wanted;
+    // A new object: the TV tab's signature reads the edits' identity.
+    final next = PlaylistEdits.fromJson(edits.toJson());
+    for (final t in providers) {
+      final target = wanted.isEmpty ? t : wanted;
+      if (target == t) {
+        next.groupNames.remove(t);
+      } else {
+        next.groupNames[t] = target;
+      }
+    }
+    await saveEdits(next);
+    await carryLiveGroupState(shown, to);
+    return to;
+  }
+
+  /// A renamed live group keeps what is stored under its title: its place
+  /// in the order, its star, hidden state and channel order (the editor's
+  /// Save groups sends order and hidden by the new titles itself). Into a
+  /// title that already has its own (a merge), that one's stay.
+  Future<void> carryLiveGroupState(String from, String to) async {
+    if (from == to) return;
+    final order = groupOrder['tv'];
+    if (order != null && order.contains(from)) {
+      final next = [...order];
+      final at = next.indexOf(from);
+      if (next.contains(to)) {
+        next.removeAt(at);
+      } else {
+        next[at] = to;
+      }
+      groupOrder['tv'] = next;
+      await storage.setGroupOrder(profile.id, 'tv', next);
+    }
+    // Shown or hidden as the renamed group was: merged into a hidden group,
+    // a shown one must not vanish. A kid profile's hidden set is the
+    // opposite of its allowlist: not rewritten from here (the TV offers no
+    // Rename… there).
+    if (!isRestrictedViewer()) {
+      final hidden = hiddenGroups.contains(from);
+      if (hidden || hiddenGroups.contains(to)) {
+        hiddenGroups = {...hiddenGroups}..remove(from);
+        if (hidden) {
+          hiddenGroups.add(to);
+        } else {
+          hiddenGroups.remove(to);
+        }
+        await storage.setHiddenGroups(profile.id, hiddenGroups);
+      }
+    }
+    if (favoritedGroups.remove(from)) {
+      favoritedGroups.add(to);
+      await storage.setFavoritedGroups(profile.id, favoritedGroups);
+    }
+    if (channelOrder.remove(from) case final ids?) {
+      channelOrder.putIfAbsent(to, () => ids);
+      channelOrderVersion++;
+      await storage.setChannelOrder(profile.id, channelOrder);
+    }
+    onNotify();
+  }
+
   Future<void> saveEdits(PlaylistEdits next) async {
     edits = next;
     applyEdits();

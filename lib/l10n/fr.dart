@@ -4271,4 +4271,16 @@ const Map<String, String> kFr = {
       "Son envoyé",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Reprendre l’écoute, les nouveaux épisodes, votre liste à regarder et vos chaînes favorites au-dessus de l’écran d’accueil de l’Apple TV quand VesperTV est dans la rangée du haut (Top Shelf).",
+  "Rename group":
+      "Renommer le groupe",
+  "You already have a group named {group}.":
+      "Vous avez déjà un groupe nommé {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} regroupe maintenant les deux groupes. Maintenez OK dessus > Utiliser le nom du fournisseur pour les séparer.",
+  "{group} is now called {name}.":
+      "{group} s’appelle maintenant {name}.",
+  "I could not find the group \"{title}\".":
+      "Je n’ai pas trouvé le groupe « {title} ».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Une app d’IA veut renommer votre groupe {group} en {name}.",
 };

@@ -3730,4 +3730,16 @@ const Map<String, String> kUk = {
       "Звук на виході",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Продовжити перегляд, нові епізоди, ваш список перегляду та улюблені канали над головним екраном Apple TV, коли VesperTV у верхньому ряду (Top Shelf).",
+  "Rename group":
+      "Перейменувати групу",
+  "You already have a group named {group}.":
+      "У вас уже є група з назвою {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} тепер містить обидві групи. Утримуйте на ній OK > Використовувати назву провайдера, щоб розділити їх.",
+  "{group} is now called {name}.":
+      "{group} тепер називається {name}.",
+  "I could not find the group \"{title}\".":
+      "Не вдалося знайти групу «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "AI-застосунок хоче перейменувати вашу групу {group} на {name}.",
 };

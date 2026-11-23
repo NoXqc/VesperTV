@@ -500,6 +500,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Rename a group on the TV + by voice (`claude/group-rename`, worktree
+  `VesperTV-claude-grouprename`):** owner: groups could only be renamed in the playlist editor (or by Your AI's
+  `rename_group`), and his voice try did nothing. Hold OK on a live group > **Rename…** / **Use the provider's name**,
+  on an own group > **Rename…** (`askGroupRename`; `PlaylistManager.renameLiveGroup` / `renameUserGroup`); the
+  group's order, star, hidden state, channel order and editor placements follow the new title
+  (`PlaylistSession.carryLiveGroupState`, `UserGroups.rename` / `renameRef`). Vesper: `my_groups` rename + built-in
+  "rename the group X to Y" in 6 languages (no AI key needed). Name dialogs dispose their controller after the close
+  animation (use-after-dispose assertion). Details: dev-notes/editor-group-move-copy.md, dev-notes/vesper-ai.md.
+  Tests: group_rename_test, tv_group_rename_menu_test. Not box-tested.
 - **Claude, 2026-11-23 - Dispatcharr Redirect streams in Sources (`claude/dispatcharr-redirect-sources`, worktree
   `VesperTV-claude-dredirect`):** cillfog (Discord): streams on a Redirect stream profile played as the channel but not
   when picked in the player's Sources. Dispatcharr 0.34.1 redirects only channels; one stream on Redirect gets 188 bytes

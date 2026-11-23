@@ -138,6 +138,37 @@ class UserGroups {
     }
   }
 
+  /// Own group [from] is now called [to] (hold OK > Rename…): its place,
+  /// channels, their order and the copies shown in it follow. The caller
+  /// checks [to] is free.
+  void rename(String from, String to) {
+    final at = groups.indexOf(from);
+    if (at < 0 || from == to) return;
+    groups = [...groups]..[at] = to;
+    moves.updateAll((_, g) => g == from ? to : g);
+    if (order.remove(from) case final ids?) order[to] = ids;
+    renameRef(GroupRef.own(from), GroupRef.own(to));
+  }
+
+  /// Every placement, copy and order naming group [from] now names [to]
+  /// (a group renamed on the TV). Into a group that already has its own
+  /// order (a merge), that one stays.
+  void renameRef(GroupRef from, GroupRef to) {
+    final a = from.encode(), b = to.encode();
+    if (a == b) return;
+    pmoves.updateAll((_, r) => r == a ? b : r);
+    for (final refs in copies.values) {
+      final at = refs.indexOf(a);
+      if (at < 0) continue;
+      if (refs.contains(b)) {
+        refs.removeAt(at);
+      } else {
+        refs[at] = b;
+      }
+    }
+    if (porder.remove(a) case final ids?) porder.putIfAbsent(b, () => ids);
+  }
+
   // --- Move / Copy into provider groups, and copies (playlist editor) ------
 
   /// The provider group [channelId] was moved into, if any.

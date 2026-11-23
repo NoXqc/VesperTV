@@ -669,6 +669,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             onPressed: () => Navigator.of(context).pop('move_top'),
             child: Text(tr('Move to Top')),
           ),
+          // Live groups only (the editor's group names are live ones); not
+          // on a kid profile: a rename is the playlist's, for every viewer.
+          if (category == null && !playlist.activeViewerRestricted) ...[
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('rename'),
+              child: Text(tr('Rename…')),
+            ),
+            if (playlist.isLiveGroupRenamed(playlistId, title))
+              TvDialogOption(
+                onPressed: () => Navigator.of(context).pop('rename_reset'),
+                child: Text(tr("Use the provider's name")),
+              ),
+          ],
           if (category == null)
             TvDialogOption(
               onPressed: () => Navigator.of(context).pop('new_group'),
@@ -722,11 +735,60 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _startPendingHide(playlistId, title);
       case 'cancel_hide':
         _cancelPendingHide(playlistId, title);
+      case 'rename':
+        final name = await askGroupRename(context, title);
+        if (name != null && mounted) {
+          await _renameLiveGroup(playlistId, title, name);
+        }
+      case 'rename_reset':
+        await _renameLiveGroup(playlistId, title, '');
       case 'new_group':
         await _createMyGroup();
       case 'settings':
         await _openSettings();
     }
+  }
+
+  /// Hold OK on a live group > Rename… / Use the provider's name ('').
+  /// Same as the playlist editor's Groups tab: a name another group of the
+  /// playlist has merges them; Use the provider's name splits them again.
+  Future<void> _renameLiveGroup(
+      String playlistId, String title, String name) async {
+    final playlist = context.read<PlaylistManager>();
+    final wanted = name.trim();
+    if (wanted == title) return;
+    if (playlist.isUserGroup(wanted)) {
+      _groupNameTaken(wanted);
+      return;
+    }
+    final merges = wanted.isNotEmpty &&
+        playlist.liveGroupTitles(playlistId).contains(wanted);
+    // A pending Hide would hide the old title 30 s from now.
+    if (_pendingHideGroups.contains(_groupKey(playlistId, title))) {
+      _cancelPendingHide(playlistId, title);
+    }
+    final to = await playlist.renameLiveGroup(playlistId, title, name);
+    if (to == null || !mounted) return;
+    setState(() {
+      if (_selectedGroup == title) _selectedGroup = to;
+      _focusGroupKeyOnBuild = _groupKey(playlistId, to);
+    });
+    if (merges) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            '{group} now holds both groups. Hold OK on it > Use the provider\'s name to split them.',
+            {'group': to})),
+        duration: const Duration(seconds: 5),
+      ));
+    }
+  }
+
+  void _groupNameTaken(String name) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:
+          Text(tr('You already have a group named {group}.', {'group': name})),
+      duration: const Duration(seconds: 4),
+    ));
   }
 
   /// Settings > Interface > Tabs > "Open groups as expanded catalog": a
@@ -799,6 +861,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             child: Text(tr('Move to Top')),
           ),
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('rename'),
+            child: Text(tr('Rename…')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('new_group'),
             child: Text(tr('New group…')),
           ),
@@ -831,6 +897,20 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         await playlist.moveUserGroup(title, -playlist.userGroups.length);
         if (!mounted) return;
         setState(() => _focusGroupKeyOnBuild = _groupKey(_myGroupsId, title));
+      case 'rename':
+        final name = await askGroupRename(context, title);
+        if (name == null || name.trim().isEmpty || !mounted) return;
+        if (name.trim() == title) return;
+        final to = await playlist.renameUserGroup(title, name);
+        if (!mounted) return;
+        if (to == null) {
+          _groupNameTaken(name.trim());
+          return;
+        }
+        setState(() {
+          if (_selectedGroup == title) _selectedGroup = to;
+          _focusGroupKeyOnBuild = _groupKey(_myGroupsId, to);
+        });
       case 'new_group':
         await _createMyGroup();
       case 'settings':

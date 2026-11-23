@@ -4265,4 +4265,16 @@ const Map<String, String> kIt = {
       "Audio in uscita",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Continua a guardare, nuovi episodi, la tua lista da guardare e i tuoi canali preferiti sopra la schermata Home dell’Apple TV quando VesperTV è nella riga in alto (Top Shelf).",
+  "Rename group":
+      "Rinomina gruppo",
+  "You already have a group named {group}.":
+      "Hai già un gruppo chiamato {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} ora contiene entrambi i gruppi. Tieni premuto OK su di esso > Usa il nome del provider per separarli.",
+  "{group} is now called {name}.":
+      "{group} ora si chiama {name}.",
+  "I could not find the group \"{title}\".":
+      "Non ho trovato il gruppo «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Un’app di IA vuole rinominare il tuo gruppo {group} in {name}.",
 };

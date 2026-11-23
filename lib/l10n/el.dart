@@ -4220,4 +4220,16 @@ const Map<String, String> kEl = {
       "Έξοδος ήχου",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Συνέχεια παρακολούθησης, νέα επεισόδια, η λίστα παρακολούθησής σας και τα αγαπημένα σας κανάλια πάνω από την αρχική οθόνη του Apple TV όταν το VesperTV είναι στην πάνω σειρά (Top Shelf).",
+  "Rename group":
+      "Μετονομασία ομάδας",
+  "You already have a group named {group}.":
+      "Έχετε ήδη μια ομάδα με το όνομα {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "Η ομάδα {group} περιέχει τώρα και τις δύο ομάδες. Κρατήστε πατημένο το OK πάνω της > Χρήση του ονόματος του παρόχου για να τις χωρίσετε.",
+  "{group} is now called {name}.":
+      "Η ομάδα {group} λέγεται τώρα {name}.",
+  "I could not find the group \"{title}\".":
+      "Δεν βρήκα την ομάδα «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Μια εφαρμογή AI θέλει να μετονομάσει την ομάδα σας {group} σε {name}.",
 };

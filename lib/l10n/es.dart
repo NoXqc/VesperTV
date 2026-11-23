@@ -4258,4 +4258,16 @@ const Map<String, String> kEs = {
       "Sonido de salida",
   "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
       "Seguir viendo, episodios nuevos, tu lista para ver y tus canales favoritos encima de la pantalla de inicio del Apple TV cuando VesperTV está en la fila superior (Top Shelf).",
+  "Rename group":
+      "Renombrar grupo",
+  "You already have a group named {group}.":
+      "Ya tienes un grupo llamado {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} reúne ahora los dos grupos. Mantén OK en él > Usar el nombre del proveedor para separarlos.",
+  "{group} is now called {name}.":
+      "{group} ahora se llama {name}.",
+  "I could not find the group \"{title}\".":
+      "No encontré el grupo «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Una app de IA quiere renombrar tu grupo {group} a {name}.",
 };

@@ -380,6 +380,11 @@ class VesperAi {
             ? tr('Added {title} to your watch list', {'title': s('title')})
             : tr('{title} is already on your watch list',
                 {'title': s('title')}));
+      case 'my_groups' when s('renamed') != null:
+        return VesperReply(
+            tr('{group} is now called {name}.',
+                {'group': s('renamed'), 'name': s('to')}),
+            acted: true);
       case 'sports_today':
         final list = (r['games'] as List?) ?? const [];
         if (list.isEmpty) return VesperReply(tr('No games today.'));
@@ -471,6 +476,13 @@ class VesperAi {
       'find_on_tv' => tr('That is not in the guide.'),
       'open' => tr('That section is hidden.'),
       'favorites' => tr('Nothing is playing.'),
+      'my_groups' when '$error'.contains('No group named') =>
+        tr('I could not find the group "{title}".', {'title': c.args['group']}),
+      'my_groups'
+          when '$error'.contains('already') ||
+              '$error'.contains('own groups') =>
+        tr('You already have a group named {group}.',
+            {'group': c.args['name']}),
       'watchlist' when name.isNotEmpty =>
         tr('I could not find "{title}" in your playlists.', {'title': name}),
       'watchlist' => tr('Nothing is playing.'),

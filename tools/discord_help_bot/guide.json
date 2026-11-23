@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, and New group… to start your own group.",
+    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -115,7 +115,7 @@
     "id": "2086cf69a409bc57",
     "category": "Live TV",
     "title": "Your group's menu",
-    "answer": "Move Up / Down, Move to Top, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
+    "answer": "Move Up / Down, Move to Top, Rename…, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
     "controls": "Hold OK on your own group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -885,6 +885,14 @@
     "title": "Change settings and clear history with an AI",
     "answer": "Your AI and linked AI apps can read and change many settings: playback (skip intro, Up Next, live buffer, audio delay, subtitle size and languages, frame rate and resolution matching), startup, language and theme, the guide, which tabs show, and Sports Trak options. Several can change at once with one OK on the TV. They can also clear recent searches and channels, Continue Watching and saved progress, Media Hub Recently watched or the watch list, and reload the TV guide. Ask on the TV first, AI keys, the PIN, profiles and playlists are never changed this way. Kids profiles can read settings but not change them. Some startup settings apply the next time the app starts.",
     "controls": "Ask your AI: turn off skip intro · hide the Movies tab · clear my watch history · update the guide",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "5eafa483c6868403",
+    "category": "Vesper AI",
+    "title": "Rename a group by voice",
+    "answer": "Built in, no AI key needed: \"rename the group Sports to My Sports\", \"renomme le groupe Sports en Mes sports\", \"renombra el grupo Deportes a Fútbol\", \"rinomina il gruppo Sport in Calcio\", \"benenne die Gruppe Sport in Fußball um\". It renames one of your own groups or a playlist's live group, the same as Hold OK on the group > Rename….",
+    "controls": "Say: rename the group Sports to My Sports",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

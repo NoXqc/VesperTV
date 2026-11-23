@@ -3263,6 +3263,70 @@ class PlaylistManager extends ChangeNotifier {
     return title;
   }
 
+  /// Whether [name] is free for a renamed group: not another own group
+  /// nor a live group of an enabled playlist (groups are picked by title;
+  /// [except] is the group being renamed).
+  bool groupNameTaken(String name, {String? except}) {
+    final n = name.trim();
+    if (n.isEmpty || n == except) return false;
+    return _myGroups.contains(n) || tvGroups.any((g) => g.title == n);
+  }
+
+  /// Hold OK on an own group > Rename…: the new title, or null when [name]
+  /// is empty or taken ([groupNameTaken]).
+  Future<String?> renameUserGroup(String title, String name) async {
+    final to = name.trim();
+    if (to.isEmpty || !_myGroups.contains(title)) return null;
+    if (to == title) return title;
+    if (groupNameTaken(to)) return null;
+    _myGroups.rename(title, to);
+    await _saveMyGroups();
+    return to;
+  }
+
+  /// Hold OK on a live group > Rename… ([PlaylistSession.renameLiveGroup]):
+  /// what the editor's Move / Copy put in it follows the new title. A name
+  /// of another group of the same playlist merges the two; null = not
+  /// renamed ([name] is one of the viewer's own groups, or no such group).
+  Future<String?> renameLiveGroup(
+      String playlistId, String shown, String name) async {
+    final s = _sessionFor(playlistId);
+    if (s == null || _myGroups.contains(name.trim())) return null;
+    final to = await s.renameLiveGroup(shown, name);
+    if (to == null || to == shown) return to;
+    _myGroups.renameRef(GroupRef.provider(playlistId, shown),
+        GroupRef.provider(playlistId, to));
+    await _saveMyGroups();
+    return to;
+  }
+
+  /// After a rename saved some other way (Vesper AI's playlist editor
+  /// `rename_group`): live group [from] of [playlistId], now [to], keeps
+  /// its order, star, channel order and what was placed in it.
+  Future<void> carryLiveGroupRename(
+      String playlistId, String from, String to) async {
+    final s = _sessionFor(playlistId);
+    if (s == null || from == to) return;
+    await s.carryLiveGroupState(from, to);
+    _myGroups.renameRef(
+        GroupRef.provider(playlistId, from), GroupRef.provider(playlistId, to));
+    await _saveMyGroups();
+  }
+
+  /// Whether live group [title] of [playlistId] is renamed (or merged) by
+  /// the playlist editor / Rename…: hold OK offers the provider's name.
+  bool isLiveGroupRenamed(String playlistId, String title) {
+    final s = _sessionFor(playlistId);
+    if (s == null) return false;
+    return s.edits.groupNames.entries
+        .any((e) => e.value == title && e.key != title);
+  }
+
+  /// Live groups of [playlistId] the TV lists right now, by shown title
+  /// (renames and merges applied).
+  List<String> liveGroupTitles(String playlistId) =>
+      [for (final g in _sessionFor(playlistId)?.tvGroups ?? const []) g.title];
+
   /// Deletes own group [title]; its channels go back to their groups.
   Future<void> deleteUserGroup(String title) {
     _myGroups.delete(title);
