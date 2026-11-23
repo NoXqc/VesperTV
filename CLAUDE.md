@@ -508,7 +508,16 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   (`PlaylistSession.carryLiveGroupState`, `UserGroups.rename` / `renameRef`). Vesper: `my_groups` rename + built-in
   "rename the group X to Y" in 6 languages (no AI key needed). Name dialogs dispose their controller after the close
   animation (use-after-dispose assertion). Details: dev-notes/editor-group-move-copy.md, dev-notes/vesper-ai.md.
-  Tests: group_rename_test, tv_group_rename_menu_test. Not box-tested.
+  Tests: group_rename_test, tv_group_rename_menu_test. +970 on the Homatics.
+- **Claude, 2026-11-23 - faster catalog saves (`claude/desktop-catalog-speed`, worktree `VesperTV-claude-catalogbench`):**
+  uzumaki (Tuliprox dev, Linux): Update Content / Add Playlist "extremely slow" (164k movies, 44k shows, `SlowDb:
+  upsertVod n=1610 541ms`). Xtream movie / show saves now use `_insertMany` (many rows per INSERT, like the M3U import)
+  and the four single-column category / playlist indexes are dropped (covered by `(playlist_id, category_name)`). On
+  Windows / Linux every sqflite database shares ONE `sqflite_common_ffi` isolate, so a long save also delays guide /
+  Movies reads. Measured in a CPU-capped Linux container (`tool/bench/`, image `vesper-bench`): database alone 2.4x
+  faster, the app's save path ~25-30% (0.2 CPU: 21.4 -> 15.8 s, worst read wait 408 -> 303 ms; the rest is handing
+  rows to that isolate). New Send log line `CatalogSync:` (downloads vs saves). Next steps + numbers:
+  dev-notes/catalog-save-speed.md. Analyze 16, 2445 tests. Test APK +967. Not box-tested.
 - **Claude, 2026-11-23 - Dispatcharr Redirect streams in Sources (`claude/dispatcharr-redirect-sources`, worktree
   `VesperTV-claude-dredirect`):** cillfog (Discord): streams on a Redirect stream profile played as the channel but not
   when picked in the player's Sources. Dispatcharr 0.34.1 redirects only channels; one stream on Redirect gets 188 bytes
