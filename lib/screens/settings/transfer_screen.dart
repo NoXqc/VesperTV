@@ -476,6 +476,10 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
 
 // ---------------------------------------------------------------- receive
 
+/// Receive on this device on its own (first launch > From another device).
+MaterialPageRoute<void> transferReceiveRoute() =>
+    MaterialPageRoute(builder: (_) => const _ReceiveScreen());
+
 class _ReceiveScreen extends StatefulWidget {
   const _ReceiveScreen();
 

@@ -26,6 +26,7 @@ import 'screens/home_screen.dart';
 import 'screens/archive_screen.dart';
 import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
+import 'screens/from_another_device_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/apple_tv_menu.dart';
@@ -474,25 +475,26 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// content lives behind Settings > Playlist Manager rather than just
   /// showing up on its own.
   bool _newUserPromptPending = false;
-  Completer<bool>? _newUserPromptCompleter;
+  Completer<WelcomeChoice>? _newUserPromptCompleter;
 
   /// Set from [WelcomeAddPlaylistScreen]'s answer, consumed once `_ready`
   /// flips true (see `_buildReadyContent`'s `build` doc comment below) —
-  /// can't just push [AddPlaylistScreen] directly from the prompt itself,
-  /// since the real `MaterialApp`/`Navigator` this screen's bootstrap gate
-  /// runs ahead of doesn't exist yet at that point.
-  bool _pendingAutoOpenAddPlaylist = false;
+  /// can't just push [AddPlaylistScreen] / [FromAnotherDeviceScreen]
+  /// directly from the prompt itself, since the real `MaterialApp`/
+  /// `Navigator` this screen's bootstrap gate runs ahead of doesn't exist
+  /// yet at that point.
+  WelcomeChoice _welcomeChoice = WelcomeChoice.skip;
 
-  Future<bool> _confirmNewUserWantsPlaylist() {
-    final completer = Completer<bool>();
+  Future<WelcomeChoice> _askNewUser() {
+    final completer = Completer<WelcomeChoice>();
     _newUserPromptCompleter = completer;
     if (mounted) setState(() => _newUserPromptPending = true);
     return completer.future;
   }
 
-  void _respondToNewUserPrompt(bool wantsToAddPlaylist) {
+  void _respondToNewUserPrompt(WelcomeChoice choice) {
     if (mounted) setState(() => _newUserPromptPending = false);
-    _newUserPromptCompleter?.complete(wantsToAddPlaylist);
+    _newUserPromptCompleter?.complete(choice);
     _newUserPromptCompleter = null;
   }
 
@@ -1073,7 +1075,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // with the join screen, the code filled in (it asks before joining).
       SyncLinks.instance
         ..arrived = (() {
-          if (_newUserPromptPending) _respondToNewUserPrompt(false);
+          if (_newUserPromptPending) {
+            _respondToNewUserPrompt(WelcomeChoice.skip);
+          }
         })
         ..canOpen = (() =>
             mounted &&
@@ -1129,7 +1133,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // phone is about to get its playlists from sync (SyncLinks).
       if (_playlistManager.profiles.isEmpty &&
           !await SyncLinks.instance.hasPending) {
-        _pendingAutoOpenAddPlaylist = await _confirmNewUserWantsPlaylist();
+        _welcomeChoice = await _askNewUser();
       }
 
       // TiviMate/MyTVOnline3-style: a full catalog sync (every non-hidden
@@ -1297,13 +1301,18 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         WidgetsBinding.instance
             .addPostFrameCallback((_) => _showToast(tr('Content updated')));
       }
-      if (_pendingAutoOpenAddPlaylist) {
+      final welcome = switch (_welcomeChoice) {
+        WelcomeChoice.addPlaylist => const AddPlaylistScreen(),
+        WelcomeChoice.fromAnotherDevice => const FromAnotherDeviceScreen(),
+        WelcomeChoice.skip => null,
+      };
+      if (welcome != null) {
         // Same reasoning as the toast above — the real Navigator this
         // pushes onto doesn't exist until this build lands.
-        _pendingAutoOpenAddPlaylist = false;
+        _welcomeChoice = WelcomeChoice.skip;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _navigatorKey.currentState?.push(
-              MaterialPageRoute(builder: (_) => const AddPlaylistScreen()));
+          _navigatorKey.currentState
+              ?.push(MaterialPageRoute(builder: (_) => welcome));
         });
       }
       // Profile selection waits for the application's first frame above. Any
@@ -1462,7 +1471,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// into [DesktopPlayerScreen] (not [PlaybackService]/[PlayerScreen] at
   /// all — Windows' own, wholly separate player, see that screen's own doc
   /// comment) via [_navigatorKey] directly, not through a postFrame-
-  /// callback the way [_pendingAutoOpenAddPlaylist] needs to: unlike that
+  /// callback the way [_welcomeChoice] needs to: unlike that
   /// flag (checked synchronously in the same frame `_ready` flips true),
   /// this runs after a real awaited disk read below, well after the real
   /// Navigator already exists — same reasoning [DesktopLiveResumeHint]

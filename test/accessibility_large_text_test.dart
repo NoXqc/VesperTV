@@ -18,7 +18,8 @@ Future<void> bigPhone(WidgetTester tester, {double scale = 2.0}) async {
 
 void main() {
   for (final scale in [1.3, 2.0]) {
-    testWidgets('welcome screen fits a big-text phone ($scale)', (tester) async {
+    testWidgets('welcome screen fits a big-text phone ($scale)',
+        (tester) async {
       await bigPhone(tester, scale: scale);
       SharedPreferences.setMockInitialValues({});
       final storage = StorageService();
@@ -26,7 +27,7 @@ void main() {
       final prefs = AppPreferences(storage);
       await prefs.init();
       final semantics = tester.ensureSemantics();
-      bool? answer;
+      WelcomeChoice? answer;
       await tester.pumpWidget(ChangeNotifierProvider.value(
           value: prefs,
           child: WelcomeAddPlaylistScreen(onRespond: (v) => answer = v)));
@@ -34,8 +35,11 @@ void main() {
       expect(tester.takeException(), isNull);
 
       await tester.scrollUntilVisible(find.text('Skip for now'), 100);
+      await tester.tap(find.text('From another device'));
+      expect(answer, WelcomeChoice.fromAnotherDevice);
+      await tester.scrollUntilVisible(find.text('Add Playlist'), -100);
       await tester.tap(find.text('Add Playlist'));
-      expect(answer, isTrue);
+      expect(answer, WelcomeChoice.addPlaylist);
 
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));

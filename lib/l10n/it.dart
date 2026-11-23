@@ -4209,4 +4209,52 @@ const Map<String, String> kIt = {
       "Meno sensibile",
   "Very sensitive":
       "Molto sensibile",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "Da un altro dispositivo",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Usi già VesperTV su un altro dispositivo? Porta qui le tue liste, i preferiti e le impostazioni.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Entrambi i dispositivi restano aggiornati. Sull’altro dispositivo: Impostazioni > Backup e dispositivi > Sincronizzazione > Collega un dispositivo, poi inserisci qui il suo codice.",
+  "Receive a transfer":
+      "Ricevi un trasferimento",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Copia tutto una volta sola. Sull’altro dispositivo: Impostazioni > Backup e dispositivi > Trasferisci su un altro dispositivo > Invia da questo dispositivo.",
+  "Restore a backup":
+      "Ripristina un backup",
+  "From a backup file VesperTV saved":
+      "Da un file di backup salvato da VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "questa Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Accedi a iCloud nelle Impostazioni di questo dispositivo per tenere i backup in iCloud.",
+  "iCloud is restricted on this device.":
+      "iCloud è limitato su questo dispositivo.",
+  "iCloud backups aren't available in this build yet.":
+      "I backup su iCloud non sono ancora disponibili in questa versione.",
+  "iCloud can't be reached right now. Try again later.":
+      "iCloud non è raggiungibile al momento. Riprova più tardi.",
+  "Your iCloud storage is full.":
+      "Lo spazio di iCloud è pieno.",
+  "Restore from iCloud":
+      "Ripristina da iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "I backup che il tuo iPhone, iPad o Apple TV ha salvato su iCloud con questo ID Apple. Ogni dispositivo vi tiene il più recente.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "Ancora nessun backup su iCloud. Sull’altro dispositivo: Impostazioni > Backup e dispositivi > Backup e ripristino > Salva anche su iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Backup salvato in {path}, ma non su iCloud: {error}",
+  "Backup folder":
+      "Cartella dei backup",
+  "Backups now go to {name}.":
+      "Ora i backup vanno in {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "Su questo dispositivo. Scegli invece iCloud Drive, OneDrive o una condivisione di rete in File.",
+  "Also save to iCloud":
+      "Salva anche su iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Ogni backup va anche sul tuo iCloud, così gli altri dispositivi Apple (anche Apple TV) possono ripristinarlo. iCloud tiene il più recente di questo dispositivo.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "Da un backup che il tuo iPhone, iPad o Apple TV ha salvato su iCloud",
 };

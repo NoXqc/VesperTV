@@ -354,6 +354,11 @@ class AppConstants {
   /// switch.
   static const String keyAutoBackupDays = 'vesper_auto_backup_days';
 
+  /// iPhone / iPad / Apple TV, Settings > Backup & restore > Also save to
+  /// iCloud: each backup also replaces this device's copy in iCloud (off by
+  /// default; never synced, like the switch above).
+  static const String keyBackupICloud = 'vesper_backup_icloud';
+
   /// Settings > General > Background video: hide the live picture (not
   /// the stream) while Sports Trak, Settings or Search is open — opt-in
   /// workaround for Fire TV sticks that keep drawing it on top.

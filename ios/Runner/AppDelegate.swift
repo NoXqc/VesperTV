@@ -1,13 +1,17 @@
 import AVFoundation
 import AVKit
+import CloudKit
 import Flutter
 import Speech
 import UIKit
+import UniformTypeIdentifiers
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pip: VesperPip?
   private var voice: VesperVoice?
+  private var backupFolder: VesperBackupFolder?
+  private var icloud: VesperICloud?
 
   override func application(
     _ application: UIApplication,
@@ -26,6 +30,12 @@ import UIKit
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VesperVoice") {
       voice = VesperVoice(messenger: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VesperBackupFolder") {
+      backupFolder = VesperBackupFolder(messenger: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VesperICloud") {
+      icloud = VesperICloud(messenger: registrar.messenger())
     }
   }
 }
@@ -496,5 +506,517 @@ final class VesperVoice: NSObject, FlutterStreamHandler {
     let utterance = AVSpeechUtterance(string: text)
     utterance.voice = AVSpeechSynthesisVoice(language: lang)
     synth.speak(utterance)
+  }
+}
+
+/// Settings > Backup & restore > Backup folder (`vespertv/backup_folder`, Dart
+/// `BackupFolder`): a folder picked once in Files (iCloud Drive, OneDrive, an SMB
+/// server added to Files...) where backups are saved, listed and read instead of
+/// On My iPhone. Access is kept as a bookmark in UserDefaults (not a Flutter pref,
+/// so it never travels in a backup); each write / read / delete is coordinated with
+/// the Files provider, and a coordinated read downloads an iCloud file that is only
+/// a placeholder on this device.
+final class VesperBackupFolder: NSObject, UIDocumentPickerDelegate {
+  private static let key = "vesper_backup_folder_bookmark"
+  private let channel: FlutterMethodChannel
+  private let queue = DispatchQueue(label: "vespertv.backup-folder", qos: .userInitiated)
+  private var pending: FlutterResult?
+
+  init(messenger: FlutterBinaryMessenger) {
+    channel = FlutterMethodChannel(name: "vespertv/backup_folder", binaryMessenger: messenger)
+    super.init()
+    channel.setMethodCallHandler { [weak self] call, result in
+      self?.handle(call, result: result)
+    }
+  }
+
+  private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any] ?? [:]
+    switch call.method {
+    case "choose":
+      choose(result)
+    case "clear":
+      UserDefaults.standard.removeObject(forKey: Self.key)
+      result(nil)
+    case "name":
+      guard UserDefaults.standard.data(forKey: Self.key) != nil else {
+        result(nil)
+        return
+      }
+      guard let url = Self.folder() else {
+        result(Self.unreachable)
+        return
+      }
+      result(url.lastPathComponent)
+    case "write":
+      guard let name = args["name"] as? String, let content = args["content"] as? String
+      else {
+        result(Self.badArguments)
+        return
+      }
+      run(result) { dir in
+        let target = dir.appendingPathComponent(Self.fileName(name))
+        try Self.coordinate(writing: target, options: .forReplacing) { url in
+          try content.write(to: url, atomically: true, encoding: .utf8)
+        }
+        return target.lastPathComponent
+      }
+    case "list":
+      run(result) { dir in try Self.list(dir) }
+    case "read":
+      guard let id = args["id"] as? String else {
+        result(Self.badArguments)
+        return
+      }
+      run(result) { dir in
+        let target = dir.appendingPathComponent(Self.fileName(id))
+        var text = ""
+        var coordinationError: NSError?
+        var readError: Error?
+        NSFileCoordinator().coordinate(
+          readingItemAt: target, options: [], error: &coordinationError
+        ) { url in
+          do {
+            text = try String(contentsOf: url, encoding: .utf8)
+          } catch {
+            readError = error
+          }
+        }
+        if let error = coordinationError { throw error }
+        if let error = readError { throw error }
+        return text
+      }
+    case "delete":
+      guard let id = args["id"] as? String else {
+        result(Self.badArguments)
+        return
+      }
+      run(result) { dir in
+        let target = dir.appendingPathComponent(Self.fileName(id))
+        try Self.coordinate(writing: target, options: .forDeleting) { url in
+          try FileManager.default.removeItem(at: url)
+        }
+        return true
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private static let badArguments = FlutterError(
+    code: "BAD_ARGS", message: "Missing arguments", details: nil)
+  private static let unreachable = FlutterError(
+    code: "UNREACHABLE",
+    message: "The backup folder can't be opened. Choose it again in Backup & restore.",
+    details: nil)
+
+  /// A plain file name: never a path out of the folder.
+  private static func fileName(_ name: String) -> String {
+    (name as NSString).lastPathComponent
+  }
+
+  /// The chosen folder, from its bookmark (renewed when iOS says it went stale).
+  private static func folder() -> URL? {
+    guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+    var stale = false
+    guard
+      let url = try? URL(
+        resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
+    else { return nil }
+    if stale {
+      let scoped = url.startAccessingSecurityScopedResource()
+      defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+      if let fresh = try? url.bookmarkData(
+        options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
+      {
+        UserDefaults.standard.set(fresh, forKey: key)
+      }
+    }
+    return url
+  }
+
+  /// [body] on a background queue with the folder opened; its answer (or the
+  /// error) back to Dart on the main thread.
+  private func run(_ result: @escaping FlutterResult, _ body: @escaping (URL) throws -> Any?) {
+    queue.async {
+      guard let dir = Self.folder() else {
+        DispatchQueue.main.async { result(Self.unreachable) }
+        return
+      }
+      let scoped = dir.startAccessingSecurityScopedResource()
+      defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
+      do {
+        let value = try body(dir)
+        DispatchQueue.main.async { result(value) }
+      } catch {
+        DispatchQueue.main.async {
+          result(
+            FlutterError(code: "FOLDER", message: error.localizedDescription, details: nil))
+        }
+      }
+    }
+  }
+
+  private static func coordinate(
+    writing url: URL, options: NSFileCoordinator.WritingOptions,
+    _ body: (URL) throws -> Void
+  ) throws {
+    var coordinationError: NSError?
+    var bodyError: Error?
+    NSFileCoordinator().coordinate(
+      writingItemAt: url, options: options, error: &coordinationError
+    ) { target in
+      do {
+        try body(target)
+      } catch {
+        bodyError = error
+      }
+    }
+    if let error = coordinationError { throw error }
+    if let error = bodyError { throw error }
+  }
+
+  /// The folder's VesperTV backups. iCloud Drive shows a file that isn't
+  /// downloaded on this device as ".name.icloud": listed under its real name
+  /// (reading it downloads it).
+  private static func list(_ dir: URL) throws -> [[String: Any]] {
+    let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey]
+    let items = try FileManager.default.contentsOfDirectory(
+      at: dir, includingPropertiesForKeys: keys, options: [])
+    var out: [[String: Any]] = []
+    for item in items {
+      var name = item.lastPathComponent
+      var placeholder = false
+      if name.hasPrefix("."), name.hasSuffix(".icloud") {
+        name = String(name.dropFirst().dropLast(".icloud".count))
+        placeholder = true
+      }
+      guard name.hasPrefix("vespertv-"), name.hasSuffix(".json") else { continue }
+      let values = try? item.resourceValues(forKeys: Set(keys))
+      let modified = values?.contentModificationDate ?? Date()
+      out.append([
+        "id": name,
+        "name": name,
+        "modified": Int64(modified.timeIntervalSince1970 * 1000),
+        "size": placeholder ? 0 : (values?.fileSize ?? 0),
+      ])
+    }
+    return out
+  }
+
+  private func choose(_ result: @escaping FlutterResult) {
+    guard pending == nil else {
+      result(FlutterError(code: "BUSY", message: "The folder picker is already open", details: nil))
+      return
+    }
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let windows = scenes.flatMap { $0.windows }
+    var top = (windows.first { $0.isKeyWindow } ?? windows.first)?.rootViewController
+    while let presented = top?.presentedViewController { top = presented }
+    guard let presenter = top else {
+      result(FlutterError(code: "NO_WINDOW", message: "No window to show Files in", details: nil))
+      return
+    }
+    let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+    picker.delegate = self
+    picker.allowsMultipleSelection = false
+    pending = result
+    presenter.present(picker, animated: true)
+  }
+
+  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL])
+  {
+    guard let result = pending else { return }
+    pending = nil
+    guard let url = urls.first else {
+      result(nil)
+      return
+    }
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    do {
+      let data = try url.bookmarkData(
+        options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
+      UserDefaults.standard.set(data, forKey: Self.key)
+      result(url.lastPathComponent)
+    } catch {
+      result(FlutterError(code: "FOLDER", message: error.localizedDescription, details: nil))
+    }
+  }
+
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    pending?(nil)
+    pending = nil
+  }
+}
+
+/// Backups in the viewer's own iCloud (`vespertv/icloud`, Dart `ICloudBackups`,
+/// dev-notes/icloud-backups.md): CloudKit's private database of the container
+/// iCloud.app.vespertv.player, record type `Backup` in the zone `Backups`, one
+/// record per device (`device-<identifierForVendor>`) replaced by its next backup.
+/// The backup is the record's `file` asset; `device`, `app` and `size` list without
+/// downloading it. Nothing to sign in to: the device's own Apple ID.
+/// The same class is in ios/Runner/AppDelegate.swift and tvos/Runner/AppDelegate.swift:
+/// change both.
+final class VesperICloud {
+  static let containerId = "iCloud.app.vespertv.player"
+  private static let recordType = "Backup"
+  private let channel: FlutterMethodChannel
+  private let zoneID = CKRecordZone.ID(zoneName: "Backups", ownerName: CKCurrentUserDefaultName)
+  private var zoneReady = false
+  private lazy var database: CKDatabase? =
+    VesperICloud.entitled
+    ? CKContainer(identifier: VesperICloud.containerId).privateCloudDatabase : nil
+
+  /// CKContainer stops the app when the build lacks the iCloud entitlement (before
+  /// the Apple developer portal step, or an export that dropped it), so look for it
+  /// in our own code signature first; without it every call answers NOT_SET_UP. The
+  /// key is spelled backwards so this code itself doesn't contain it.
+  static let entitled: Bool = {
+    guard let path = Bundle.main.executablePath,
+      let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe)
+    else { return false }
+    let key = String("secivres-duolci.repoleved.elppa.moc".reversed())
+    return data.range(of: Data(key.utf8)) != nil
+  }()
+
+  init(messenger: FlutterBinaryMessenger) {
+    channel = FlutterMethodChannel(name: "vespertv/icloud", binaryMessenger: messenger)
+    channel.setMethodCallHandler { [weak self] call, result in
+      self?.handle(call, result: result)
+    }
+  }
+
+  private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let db = database else {
+      result(
+        FlutterError(
+          code: "NOT_SET_UP", message: "iCloud is not enabled in this build", details: nil))
+      return
+    }
+    let args = call.arguments as? [String: Any] ?? [:]
+    let reply: (Any?) -> Void = { value in DispatchQueue.main.async { result(value) } }
+    switch call.method {
+    case "status":
+      CKContainer(identifier: Self.containerId).accountStatus { status, _ in
+        switch status {
+        case .available: reply("available")
+        case .noAccount: reply("noAccount")
+        case .restricted: reply("restricted")
+        default: reply("unavailable")
+        }
+      }
+    case "save":
+      guard let content = args["content"] as? String else {
+        result(Self.badArguments)
+        return
+      }
+      save(db, content: content, app: args["app"] as? String ?? "", reply: reply)
+    case "list":
+      list(db, reply: reply)
+    case "read":
+      guard let id = args["id"] as? String else {
+        result(Self.badArguments)
+        return
+      }
+      read(db, id: id, reply: reply)
+    case "delete":
+      guard let id = args["id"] as? String else {
+        result(Self.badArguments)
+        return
+      }
+      let op = CKModifyRecordsOperation(
+        recordsToSave: nil, recordIDsToDelete: [CKRecord.ID(recordName: id, zoneID: zoneID)])
+      op.qualityOfService = .userInitiated
+      op.modifyRecordsResultBlock = { outcome in
+        switch outcome {
+        case .success: reply(nil)
+        case .failure(let error): reply(Self.flutterError(error))
+        }
+      }
+      db.add(op)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// What CloudKit's callbacks (other threads, one after another) fill in.
+  private final class Box<T> {
+    var value: T
+    init(_ value: T) { self.value = value }
+  }
+
+  private static let badArguments = FlutterError(
+    code: "BAD_ARGS", message: "Missing arguments", details: nil)
+
+  /// This device's record: replaced by each of its backups.
+  private var deviceRecordID: CKRecord.ID {
+    let key = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    return CKRecord.ID(recordName: "device-" + key, zoneID: zoneID)
+  }
+
+  /// The `Backups` zone, made once (saving an existing zone changes nothing).
+  private func withZone(_ db: CKDatabase, _ next: @escaping (Error?) -> Void) {
+    if zoneReady {
+      next(nil)
+      return
+    }
+    let op = CKModifyRecordZonesOperation(
+      recordZonesToSave: [CKRecordZone(zoneID: zoneID)], recordZoneIDsToDelete: nil)
+    op.qualityOfService = .userInitiated
+    op.modifyRecordZonesResultBlock = { [weak self] outcome in
+      switch outcome {
+      case .success:
+        self?.zoneReady = true
+        next(nil)
+      case .failure(let error):
+        next(error)
+      }
+    }
+    db.add(op)
+  }
+
+  private func save(
+    _ db: CKDatabase, content: String, app: String, reply: @escaping (Any?) -> Void
+  ) {
+    let data = Data(content.utf8)
+    let file = FileManager.default.temporaryDirectory
+      .appendingPathComponent("vespertv-icloud-\(UUID().uuidString).json")
+    do {
+      try data.write(to: file)
+    } catch {
+      reply(Self.flutterError(error))
+      return
+    }
+    // UIKit on the main thread (this call's), not in CloudKit's callbacks.
+    let recordID = deviceRecordID
+    let deviceName = UIDevice.current.name
+    withZone(db) { error in
+      if let error = error {
+        try? FileManager.default.removeItem(at: file)
+        reply(Self.flutterError(error))
+        return
+      }
+      let record = CKRecord(recordType: Self.recordType, recordID: recordID)
+      record["file"] = CKAsset(fileURL: file)
+      record["device"] = deviceName
+      record["app"] = app
+      record["size"] = Int64(data.count)
+      let op = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
+      // Replaces whatever this device saved before, without fetching it first.
+      op.savePolicy = .allKeys
+      op.qualityOfService = .userInitiated
+      let failure = Box<Error?>(nil)
+      op.perRecordSaveBlock = { _, outcome in
+        if case .failure(let error) = outcome { failure.value = error }
+      }
+      op.modifyRecordsResultBlock = { outcome in
+        try? FileManager.default.removeItem(at: file)
+        if case .failure(let error) = outcome, failure.value == nil { failure.value = error }
+        if let error = failure.value {
+          reply(Self.flutterError(error))
+        } else {
+          reply(nil)
+        }
+      }
+      db.add(op)
+    }
+  }
+
+  /// Every device's backup (no files downloaded). An account that never saved one
+  /// has no zone yet: an empty list.
+  private func list(_ db: CKDatabase, reply: @escaping (Any?) -> Void) {
+    let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+    config.desiredKeys = ["device", "app", "size"]
+    let op = CKFetchRecordZoneChangesOperation(
+      recordZoneIDs: [zoneID], configurationsByRecordZoneID: [zoneID: config])
+    op.qualityOfService = .userInitiated
+    let mine = deviceRecordID.recordName
+    let out = Box<[[String: Any]]>([])
+    op.recordWasChangedBlock = { id, outcome in
+      guard case .success(let record) = outcome else { return }
+      let modified = record.modificationDate ?? Date()
+      out.value.append([
+        "id": id.recordName,
+        "device": record["device"] as? String ?? "",
+        "app": record["app"] as? String ?? "",
+        "size": (record["size"] as? NSNumber)?.int64Value ?? 0,
+        "modified": Int64(modified.timeIntervalSince1970 * 1000),
+        "mine": id.recordName == mine,
+      ])
+    }
+    op.fetchRecordZoneChangesResultBlock = { outcome in
+      switch outcome {
+      case .success:
+        reply(out.value)
+      case .failure(let error):
+        if Self.missingZone(error) {
+          reply(out.value)
+        } else {
+          reply(Self.flutterError(error))
+        }
+      }
+    }
+    db.add(op)
+  }
+
+  private func read(_ db: CKDatabase, id: String, reply: @escaping (Any?) -> Void) {
+    let op = CKFetchRecordsOperation(recordIDs: [CKRecord.ID(recordName: id, zoneID: zoneID)])
+    op.desiredKeys = ["file"]
+    op.qualityOfService = .userInitiated
+    let text = Box<String?>(nil)
+    let failure = Box<Error?>(nil)
+    op.perRecordResultBlock = { _, outcome in
+      switch outcome {
+      case .success(let record):
+        // The asset's file is only kept for a while: read it now.
+        if let url = (record["file"] as? CKAsset)?.fileURL {
+          text.value = try? String(contentsOf: url, encoding: .utf8)
+        }
+      case .failure(let error):
+        failure.value = error
+      }
+    }
+    op.fetchRecordsResultBlock = { outcome in
+      if case .failure(let error) = outcome, failure.value == nil { failure.value = error }
+      if let value = text.value {
+        reply(value)
+      } else if let error = failure.value {
+        reply(Self.flutterError(error))
+      } else {
+        reply(FlutterError(code: "CLOUDKIT", message: "This backup has no file", details: nil))
+      }
+    }
+    db.add(op)
+  }
+
+  private static func missingZone(_ error: Error) -> Bool {
+    guard let ck = error as? CKError else { return false }
+    if ck.code == .zoneNotFound || ck.code == .userDeletedZone { return true }
+    if ck.code == .partialFailure, let parts = ck.partialErrorsByItemID, !parts.isEmpty {
+      return parts.values.allSatisfy {
+        let code = ($0 as? CKError)?.code
+        return code == .zoneNotFound || code == .userDeletedZone
+      }
+    }
+    return false
+  }
+
+  /// Codes Dart turns into words (ICloudBackups.errorMessage).
+  private static func flutterError(_ error: Error) -> FlutterError {
+    var code = "CLOUDKIT"
+    if let ck = error as? CKError {
+      switch ck.code {
+      case .notAuthenticated: code = "NO_ACCOUNT"
+      case .quotaExceeded: code = "QUOTA"
+      case .networkUnavailable, .networkFailure, .serviceUnavailable, .requestRateLimited,
+        .zoneBusy:
+        code = "NETWORK"
+      case .permissionFailure, .managedAccountRestricted: code = "RESTRICTED"
+      case .badContainer, .missingEntitlement: code = "NOT_SET_UP"
+      default: break
+      }
+    }
+    return FlutterError(code: code, message: error.localizedDescription, details: nil)
   }
 }

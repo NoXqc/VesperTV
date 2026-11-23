@@ -1010,11 +1010,10 @@ class StorageService {
 
   /// Settings > Playback > Player bar / Options row transparency, percent;
   /// 15 = the player's menus as they were before the settings.
-  int _playerMenuPercent(String key) =>
-      (_prefs.getInt(_vk(key)) ??
-              _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
-              15)
-          .clamp(0, 100);
+  int _playerMenuPercent(String key) => (_prefs.getInt(_vk(key)) ??
+          _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
+          15)
+      .clamp(0, 100);
   int getPlayerBarTransparency() =>
       _playerMenuPercent(AppConstants.keyPlayerBarTransparency);
   Future<void> setPlayerBarTransparency(int value) => _prefs.setInt(
@@ -1028,8 +1027,7 @@ class StorageService {
   /// The TV player's options row order (tile ids, see
   /// `ReorderableOptionTiles`); empty = the default order.
   List<String> getPlayerOptionsOrder() =>
-      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ??
-      const [];
+      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ?? const [];
   Future<void> setPlayerOptionsOrder(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keyPlayerOptionsOrder), ids);
 
@@ -2066,6 +2064,12 @@ class StorageService {
 
   Future<void> setAutoBackupDays(int days) =>
       _prefs.setInt(AppConstants.keyAutoBackupDays, days);
+
+  /// Also save to iCloud (Apple devices; off by default, never synced).
+  bool getBackupToICloud() =>
+      _prefs.getBool(AppConstants.keyBackupICloud) ?? false;
+  Future<void> setBackupToICloud(bool value) =>
+      _prefs.setBool(AppConstants.keyBackupICloud, value);
   DateTime? getLastAutoBackup() {
     final ms = _prefs.getInt(AppConstants.keyLastAutoBackup);
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
@@ -2128,6 +2132,7 @@ class StorageService {
     AppConstants.keyAutoBackup,
     AppConstants.keyAutoBackupDays,
     AppConstants.keyLastAutoBackup,
+    AppConstants.keyBackupICloud,
     AppConstants.keyVideoFill,
     AppConstants.keyVideoFit,
     AppConstants.keyAutoTrailers,
