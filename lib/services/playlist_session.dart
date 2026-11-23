@@ -1631,13 +1631,18 @@ class PlaylistSession {
     }
     loadingCategoryNames.add(key);
     try {
+      final fetch = Stopwatch()..start();
       final items = await api.getVodStreams(cat.id, cat.name);
+      _syncFetchMs += fetch.elapsedMilliseconds;
+      _syncItems += items.length;
       _noteFetch(null);
       for (final channel in items) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
       }
+      final save = Stopwatch()..start();
       await _persistVodCategory(cat.name, items);
+      _syncSaveMs += save.elapsedMilliseconds;
       vodByCategoryName[cat.name] = sortCatalogChannels(items, _rowSort('vod'))
           .take(_maxItemsPerCategory)
           .toList();
@@ -1663,12 +1668,17 @@ class PlaylistSession {
     }
     loadingCategoryNames.add(key);
     try {
+      final fetch = Stopwatch()..start();
       final items = await api.getSeriesForCategory(cat.id);
+      _syncFetchMs += fetch.elapsedMilliseconds;
+      _syncItems += items.length;
       _noteFetch(null);
       for (final series in items) {
         series.isFavorite = favoriteSeriesIds().contains(series.id);
       }
+      final save = Stopwatch()..start();
       await _persistSeriesCategory(cat.name, items);
+      _syncSaveMs += save.elapsedMilliseconds;
       seriesByCategoryName[cat.name] =
           sortCatalogSeries(items, _rowSort('series'))
               .take(_maxItemsPerCategory)
@@ -1782,6 +1792,14 @@ class PlaylistSession {
     return refreshAllCategories(stop: stop);
   }
 
+  /// Update Content / Add Playlist's movie + show pass, for Send log
+  /// (`CatalogSync:`): time downloading vs saving, summed over the
+  /// categories loading side by side (uzumaki, Linux, 2026-11-22: "loading
+  /// is extremely slow"; which half was it?).
+  int _syncFetchMs = 0;
+  int _syncSaveMs = 0;
+  int _syncItems = 0;
+
   Future<bool> _warmCategories(
       {required bool force, bool Function()? stop}) async {
     if (isWarmingCatalog) return false;
@@ -1807,6 +1825,10 @@ class PlaylistSession {
               !hiddenGroups.contains(c.name))
           .toList();
       final total = vodTodo.length + seriesTodo.length;
+      final pass = Stopwatch()..start();
+      _syncFetchMs = 0;
+      _syncSaveMs = 0;
+      _syncItems = 0;
       if (total > 0) {
         isWarmingCatalog = true;
         warmCatalogDone = 0;
@@ -1850,6 +1872,12 @@ class PlaylistSession {
                   : maxConcurrent.clamp(1, seriesTodo.length),
               (_) => seriesWorker()),
         ]);
+        debugPrint('CatalogSync: $warmCatalogDone/$total categories, '
+            '$_syncItems titles in ${(pass.elapsedMilliseconds / 1000).toStringAsFixed(1)} s '
+            '(${maxConcurrent.clamp(1, 3)} at a time; downloads '
+            '${(_syncFetchMs / 1000).toStringAsFixed(1)} s, saves '
+            '${(_syncSaveMs / 1000).toStringAsFixed(1)} s, summed)'
+            '${serverDown ? ' server down' : ''}${stopped() ? ' stopped' : ''}');
       }
       // Not a full sync when the server was down or it was stopped: try
       // again next launch.
