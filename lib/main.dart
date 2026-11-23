@@ -863,6 +863,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ..nameEventsProvider = _playlistManager.channelNameEventsByEpgId
         ..idleEventIdsProvider = _playlistManager.idleEventChannelEpgIds
         ..beforeRefresh = _playlistManager.ensureLiveChannelsLoaded;
+      // An M3U's own guides (`#EXTM3U url-tvg`), found at a download or the
+      // first launch after an update: loaded at once.
+      _playlistManager.onGuidesFound =
+          (sources) => unawaited(_epgService.loadAdded(sources));
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
       // rows, SQLite on its own thread), so it doesn't compete with the

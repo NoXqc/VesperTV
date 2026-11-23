@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
+import 'package:archive/archive_io.dart'
+    show InputFileStream, OutputFileStream, XZDecoder;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml_events.dart';
@@ -474,7 +477,19 @@ class EpgService extends ChangeNotifier {
     return lastUpdated != before;
   }
 
-  Future<void> _runRefresh(List<EpgSource> sources) async {
+  /// Guides that just became a playlist's own (its M3U names them:
+  /// `PlaylistManager.onGuidesFound`), loaded now or right after the update
+  /// already running. Not a guide update: [lastUpdated] and the retry timer
+  /// stay as they are, so the other guides still update when they're due.
+  Future<void> loadAdded(List<EpgSource> sources) async {
+    while (isLoading) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    await _runRefresh(sources, countsAsUpdate: false);
+  }
+
+  Future<void> _runRefresh(List<EpgSource> sources,
+      {bool countsAsUpdate = true}) async {
     isLoading = true;
     notifyListeners();
     try {
@@ -511,7 +526,9 @@ class EpgService extends ChangeNotifier {
             knownChannelIds: entry.value ?? const <String>{}, covered: covered);
         if (count != null) anySucceeded = true;
       }
-      _scheduleRetry(failed: !anySucceeded && sources.isNotEmpty);
+      if (countsAsUpdate) {
+        _scheduleRetry(failed: !anySucceeded && sources.isNotEmpty);
+      }
       if (anySucceeded) {
         final now = DateTime.now();
         await _db.deleteEndedBefore(
@@ -519,8 +536,10 @@ class EpgService extends ChangeNotifier {
             keep: {
               for (final id in _catchupDays.keys) id: _minStopMsFor(id, now)
             });
-        lastUpdated = DateTime.now();
-        await _storage.setEpgLastUpdated(lastUpdated!);
+        if (countsAsUpdate) {
+          lastUpdated = DateTime.now();
+          await _storage.setEpgLastUpdated(lastUpdated!);
+        }
       }
       await _reloadCaches();
     } finally {
@@ -586,7 +605,7 @@ class EpgService extends ChangeNotifier {
       // [EpgDatabase.deleteStaleFromSource].
       final gen = DateTime.now().millisecondsSinceEpoch;
       final result = await _parseXmltvStream(
-        await _autoGunzip(streamedResponse.stream),
+        await _autoDecompress(streamedResponse.stream),
         knownChannelIds: effectiveFilter,
         skipChannelIds: covered == null || covered.isEmpty ? null : covered,
         onRows: (rows) {
@@ -649,7 +668,10 @@ class EpgService extends ChangeNotifier {
   /// this never buffers the whole (routinely much larger, decompressed)
   /// file in memory, matching [_parseXmltvStream]'s own reason for
   /// avoiding a full DOM parse.
-  Future<Stream<List<int>>> _autoGunzip(Stream<List<int>> input) async {
+  ///
+  /// XZ too (`.xml.xz`, magic `FD 37 7A 58 5A 00`): M3UPT's playlist names
+  /// only .xz guides and VesperTV showed none (2026-11-22). See [_unxz].
+  Future<Stream<List<int>>> _autoDecompress(Stream<List<int>> input) async {
     final it = StreamIterator(input);
     if (!await it.moveNext()) return const Stream.empty();
     final first = it.current;
@@ -661,7 +683,53 @@ class EpgService extends ChangeNotifier {
     }
 
     final isGzip = first.length >= 2 && first[0] == 0x1F && first[1] == 0x8B;
-    return isGzip ? rebuilt().transform(gzip.decoder) : rebuilt();
+    if (isGzip) return rebuilt().transform(gzip.decoder);
+    if (isXz(first)) return _unxz(rebuilt());
+    return rebuilt();
+  }
+
+  /// The XZ stream header's magic bytes.
+  @visibleForTesting
+  static bool isXz(List<int> head) =>
+      head.length >= 6 &&
+      head[0] == 0xFD &&
+      head[1] == 0x37 &&
+      head[2] == 0x7A &&
+      head[3] == 0x58 &&
+      head[4] == 0x5A &&
+      head[5] == 0x00;
+
+  /// Its own function so the isolate's closure only captures the two paths
+  /// (one made inside [_unxz] would carry its stream along: not sendable).
+  static Future<bool> _unxzInBackground(String from, String to) =>
+      Isolate.run(() => _unxzFile(from, to));
+
+  /// An `.xz` guide, unpacked. There is no streaming XZ decoder in Dart:
+  /// the download goes to a temporary file, `package:archive` unpacks it
+  /// file to file on a background isolate (M3UPT's 1.7 MB file is 39 MB of
+  /// XML; never all in memory, never on the UI isolate), and the XML is
+  /// read back as a stream like any other guide. Both files are deleted
+  /// when the read ends, fails or is cancelled.
+  Stream<List<int>> _unxz(Stream<List<int>> compressed) async* {
+    final dir = await Directory.systemTemp.createTemp('vesper_epg_');
+    try {
+      final packed = '${dir.path}${Platform.pathSeparator}guide.xz';
+      final xml = '${dir.path}${Platform.pathSeparator}guide.xml';
+      final sink = File(packed).openWrite();
+      try {
+        await sink.addStream(compressed);
+      } finally {
+        await sink.close();
+      }
+      if (!await _unxzInBackground(packed, xml)) {
+        throw const FormatException('Damaged .xz guide');
+      }
+      yield* File(xml).openRead();
+    } finally {
+      try {
+        await dir.delete(recursive: true);
+      } catch (_) {}
+    }
   }
 
   /// Parses XMLTV as a stream of events rather than building a full DOM —
@@ -1108,5 +1176,21 @@ class EpgService extends ChangeNotifier {
     _soonTimer?.cancel();
     guideRowsLoaded.dispose();
     super.dispose();
+  }
+}
+
+/// [EpgService._unxz]'s unpacking, file to file (runs on a background
+/// isolate). False when the file isn't a whole XZ stream: the decoder says
+/// so, or (a cut download) reads past the end and throws a RangeError.
+bool _unxzFile(String from, String to) {
+  final input = InputFileStream(from);
+  final output = OutputFileStream(to);
+  try {
+    return XZDecoder().decodeStream(input, output);
+  } catch (_) {
+    return false;
+  } finally {
+    output.closeSync();
+    input.closeSync();
   }
 }

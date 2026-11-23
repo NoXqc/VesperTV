@@ -36,6 +36,9 @@ dependencies:
   # for ParentalPin's own PIN hashing rather than relying on an undeclared
   # transitive API surface (same reasoning as flutter_cache_manager above).
   crypto: ^3.0.3
+  # Already pulled in transitively — added explicitly for `.xml.xz` TV
+  # guides (EpgService._unxz: M3UPT names only .xz guides).
+  archive: ^4.2.0
   # Windows/Linux desktop only — plain sqflite has no implementation for
   # either (Android/iOS/macOS keep using its native one, untouched). See
   # main.dart's `databaseFactory` setup.

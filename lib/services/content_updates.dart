@@ -135,9 +135,8 @@ class ContentDue {
 
   /// When the guide is next due; null when no enabled playlist has one.
   static DateTime? guide(StorageService storage) {
-    final hasGuide = storage.getPlaylists().any((p) =>
-        p.enabled &&
-        ((p.epgUrl?.isNotEmpty ?? false) || p.extraEpgUrls.isNotEmpty));
+    final hasGuide =
+        storage.getPlaylists().any((p) => p.enabled && p.guideUrls.isNotEmpty);
     if (!hasGuide) return null;
     final last = storage.getEpgLastUpdated();
     return last == null

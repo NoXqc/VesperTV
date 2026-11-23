@@ -498,6 +498,25 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-22 - M3U header guides + `.xz` guides (`claude/m3u-header-epg`, worktree `VesperTV-claude-m3uepg`,
+  from main 8f404e1, uncommitted):** a user's M3UPT list (m3upt.com/iptv, Portuguese public channels) showed no guide.
+  Its guides are named in the list's own header, `#EXTM3U url-tvg="…epg-m3upt.xml.xz,…epg-locomotion.xml.xz"`, which
+  VesperTV read for catch-up only, and both are `.xz`, which it couldn't open (gzip only). Now: (1) `M3uParser.guideUrlsOf`
+  (`url-tvg` / `x-tvg-url` / `tvg-url`, comma lists, web links only); every download reports them (`fetchAndParse
+  onGuides` -> `M3uList.guideUrls`, both the isolate parse and `M3uImport`); `PlaylistManager._keepPlaylistGuides` saves
+  them as `PlaylistProfile.playlistEpgUrls` (null = never read) and hands new ones in use to `onGuidesFound` -> main.dart
+  `EpgService.loadAdded` (loads at once, not a guide update: `lastUpdated` / retry untouched). A playlist added before this
+  build reads its list's first line once at start (`M3uParser.fetchHeaderGuideUrls`, `PlaylistSession._readGuidesOnce`).
+  **A blank EPG URL on an M3U = its list's guides** (`PlaylistProfile.mainEpgUrls` / `guideUrls`, like an Xtream panel's
+  own xmltv.php); a typed one wins. Used by `epgSources`, the playlist editor (Main guide, Main guide 2), Vesper AI
+  `epg_matching`, `ContentDue`, Send-log redaction; EPG settings shows them as the blank field's hint. (2) `.xz` guides:
+  `EpgService._autoDecompress` sniffs the XZ magic, `_unxz` writes the download to a temp file and unpacks it file to
+  file on a background isolate (`package:archive` 4.2.0, now a direct dependency); a cut file = "Damaged .xz guide".
+  Real check: M3UPT's 1.7 MB guide = 39 MB XML, 91 of 157 channels filled, 3.5 s on the PC. `archive`'s own XZEncoder
+  writes streams its decoder flags incomplete: tests use a real xz-utils fixture. `test/m3u_header_guides_test.dart`
+  (16). Analyze 16, 2398 tests. Not box-tested. Same day: **`VesperTV-macos.dmg` attached to release 1.0.73** (CI run
+  45083800016 = the release commit 8260255, owner: "Just put it on GitHub"); the Mac app's updater still offers nothing
+  (`checkForUpdate` returns null on macOS) and `/cutr` doesn't attach it yet. Next build > 963.
 - **Claude, 2026-11-22 - release 1.0.73 (beta), +963 (latest): the first Sunday weekly stable** (owner: "/cutr").
   Android + Windows + Linux (Flatpak + tarball via CI, release_tag). The `stable` branch was created on the release
   commit. Since 1.0.72:
