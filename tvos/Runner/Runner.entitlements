@@ -11,6 +11,11 @@
      tvos-build.yml's ad-hoc archive signature (Phase 0 in the plan). -->
 <plist version="1.0">
 <dict>
+	<!-- tvOS: App Store Connect refuses CloudKit (icloud-services) without this
+	     (ITMS 90575, TestFlight 967, 2026-11-23); nothing sends notifications.
+	     Push Notifications is on for app.vespertv.player in the portal. -->
+	<key>aps-environment</key>
+	<string>production</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
 		<string>iCloud.app.vespertv.player</string>
