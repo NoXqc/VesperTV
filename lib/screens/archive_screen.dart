@@ -31,6 +31,7 @@ import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
 import '../services/app_preferences.dart';
 import '../services/storage_service.dart';
+import '../services/viewer_profile_service.dart';
 import 'archive_live_tv_screen.dart';
 import 'archive_watch_list_screen.dart';
 import 'archive_catalog_screen.dart';
@@ -1102,15 +1103,18 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     _refreshHistoryProgress();
   }
 
-  void _openSources() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ArchiveSourcesScreen()));
-  }
+  /// A kids profile opens the sources (or adds a server) with the PIN:
+  /// they decide what it can watch, like Settings.
+  Future<void> _openSources() => _openWithPin(const ArchiveSourcesScreen());
 
   /// Sign in to a Jellyfin/Emby server; its libraries become rows.
-  void _connectMediaServer() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const MediaServerScreen()));
+  Future<void> _connectMediaServer() => _openWithPin(const MediaServerScreen());
+
+  Future<void> _openWithPin(Widget page) async {
+    final viewers = context.read<ViewerProfileService?>();
+    if (viewers != null && !await viewers.requireUnlock(context)) return;
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
   }
 
   @override

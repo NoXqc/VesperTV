@@ -511,6 +511,7 @@ class PlaylistManager extends ChangeNotifier {
       onNotify: notifyListeners,
       myGroupOf: _myGroupOf,
     )
+      ..isOwnGroup = ((title) => _myGroups.contains(title))
       ..liveGroupsToken = _liveCountsSignature
       ..onEditsApplied = () {
         recomputeMerge();

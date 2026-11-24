@@ -500,6 +500,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - kids profile search leak (`claude/kids-search`, worktree `VesperTV-claude-kidssearch`; merged into main, test build 1.0.74-dev.979):**
+  Discord (wile.e.coyote): adult group hidden, kids profile + PIN, a quick search still showed adult content and
+  played it. A kids profile's hidden groups were "groups the playlist lists minus the allowlist", so anything unlisted
+  counted as shown: catalog movies under a category the provider renamed / dropped (never pruned from the DB),
+  Xtream channels in an unlisted category (Uncategorized), editor renames, and every group before the list loaded.
+  Now `_KidsHiddenGroups`: hidden unless allowed (allowlist title or its editor name; own groups and NUL move titles
+  pass). Media Hub (owner: "Add the media hub safeguard" + PIN on its sources): on a kids profile every source is
+  off until turned on for it (`ArchiveService.isKidsProfile`, a source with no saved Enabled = off; one added there
+  is on there), and Media Hub > Sources / Servers ask the PIN (`_openWithPin`; Settings already did). Details:
+  dev-notes/features.md (viewer profiles), remote.html "What a Kids profile can see". Tests: kids_search_test (3 of
+  4 failed before the fix), kids_media_hub_test.
 - **Claude, 2026-11-23 - Tuliprox Player API (`claude/tuliprox-user-api`, worktree `VesperTV-claude-tpxuser`,
   test +971):** Tuliprox's dev (uzumaki) added `/api/v1/me/*` (branch `feature/player_user_api`, on the owner's VPS).
   VesperTV signs the playlist's own user in (user + password from the stream URL, memory only) for **Sources without

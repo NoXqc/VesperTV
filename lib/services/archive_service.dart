@@ -302,6 +302,7 @@ class ArchiveService extends ChangeNotifier {
   List<ArchiveSource> get sources {
     _ensureViewerState();
     final prefs = _sourcePrefs();
+    final kids = isKidsProfile;
     return [
       for (final s in _storedSources)
         // App Store build: media servers and Trakt / Simkl only.
@@ -309,12 +310,34 @@ class ArchiveService extends ChangeNotifier {
           ...const <ArchiveSource>[]
         else if (prefs[s.manifestUrl] case final p?)
           s.copyWith(
-              enabled: p['enabled'] is bool ? p['enabled'] as bool : null,
+              enabled: p['enabled'] is bool
+                  ? p['enabled'] as bool
+                  : (kids ? false : null),
               otherChoice: p['other'] is bool ? p['other'] as bool : null)
+        else if (kids)
+          s.copyWith(enabled: false)
         else
           s,
     ];
   }
+
+  /// A kids profile: every source is off until a parent turns it on for
+  /// that profile (Media Hub sources, behind the PIN). Its search, rows and
+  /// Vesper only reach what was turned on (Discord, 2026-11-23: a kids
+  /// profile's search showed adult titles).
+  bool get isKidsProfile {
+    final generation = _storage.viewerGeneration;
+    if (_kidsState != generation) {
+      _kidsState = generation;
+      final id = _storage.getActiveViewerId();
+      _kids =
+          _storage.getViewerProfiles().any((p) => p.id == id && p.isRestricted);
+    }
+    return _kids;
+  }
+
+  int _kidsState = -1;
+  bool _kids = false;
 
   /// This profile's choices, by manifest URL.
   Map<String, Map<String, dynamic>> _sourcePrefs() {
@@ -465,8 +488,23 @@ class ArchiveService extends ChangeNotifier {
   }
 
   Future<void> _saveSources(List<ArchiveSource> list) async {
+    // Added on a kids profile (its sources page asks the PIN): on for it,
+    // as a parent adding it there means it.
+    final added = isKidsProfile
+        ? {for (final s in list) s.manifestUrl}
+            .difference({for (final s in _storedSources) s.manifestUrl})
+        : const <String>{};
     await _storage
         .setArchiveSourcesJson(jsonEncode([for (final s in list) s.toJson()]));
+    if (added.isNotEmpty) {
+      final prefs = {
+        for (final e in _sourcePrefs().entries) e.key: {...e.value},
+      };
+      for (final url in added) {
+        (prefs[url] ??= {})['enabled'] = true;
+      }
+      await _storage.setArchiveSourcePrefsJson(jsonEncode(prefs));
+    }
     _notify();
   }
 
