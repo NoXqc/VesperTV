@@ -4364,4 +4364,6 @@ const Map<String, String> kIt = {
   "Always hidden on a Kids profile": "Sempre nascosto in un profilo bambini",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "I gruppi chiamati XXX, Adult, Porn o 18+ sono sempre nascosti in un profilo bambini.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Spento, disattiva tutte le funzioni sport su questo dispositivo: la scheda, la Modalità Sport, le partite nella Home e nella schermata iniziale della TV, gli avvisi gol, i promemoria delle partite e le schede partita del player. Leghe, squadre e scelte restano salvate. Per nascondere solo la scheda, usa Impostazioni > Interfaccia > Schede.",
 };

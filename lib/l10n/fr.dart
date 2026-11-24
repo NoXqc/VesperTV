@@ -4370,4 +4370,6 @@ const Map<String, String> kFr = {
   "Always hidden on a Kids profile": "Toujours masqué sur un profil enfant",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "Les groupes nommés XXX, Adult, Porn ou 18+ sont toujours masqués sur un profil enfant.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Désactivé, toutes les fonctions sport sont coupées sur cet appareil : l’onglet, le Mode Sports, les matchs sur l’Accueil et sur l’écran d’accueil de la TV, les alertes de buts, les rappels de matchs et les onglets de match du lecteur. Vos ligues, équipes et choix sont conservés. Pour masquer seulement l’onglet, utilisez Paramètres > Interface > Onglets.",
 };

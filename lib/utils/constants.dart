@@ -319,6 +319,12 @@ class AppConstants {
   static const String keyHideShows = 'vesper_hide_shows';
   static const String keyHideLiveTv = 'vesper_hide_live_tv';
   static const String keyHideSportsTrak = 'vesper_hide_sports_trak';
+
+  /// Settings > Sports Trak > Sports Trak off: every sports feature off on
+  /// this device (tab, Sports Mode, Home games row, launcher live row, goal
+  /// alerts, game reminders, the player's This game). Hiding only the tab
+  /// ([keyHideSportsTrak]) keeps the rest (owner, 2026-11-24, issue #15).
+  static const String keySportsOff = 'vesper_sports_off';
   static const String keyHideWhatsNew = 'vesper_hide_whats_new';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideRecordings = 'vesper_hide_recordings';

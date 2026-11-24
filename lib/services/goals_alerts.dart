@@ -277,6 +277,8 @@ class GoalsAlerts extends ChangeNotifier {
   Future<List<GoalAlertNotice>> poll() async {
     if (_disposed || (canPoll != null && !await canPoll!())) return const [];
     if (persistSamples) await storage.reloadPreferences();
+    // Sports Trak off: no goal alerts, in the app or from the phone job.
+    if (storage.getSportsOff()) return const [];
     final expected = storage.getGoalPhoneCheckpoint();
     final scope = _scope();
     final viewer = storage.getActiveViewerId();

@@ -4260,4 +4260,6 @@ const Map<String, String> kDe = {
   "Always hidden on a Kids profile": "Im Kinderprofil immer ausgeblendet",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "Gruppen mit XXX, Adult, Porn oder 18+ im Namen sind im Kinderprofil immer ausgeblendet.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Aus schaltet alle Sportfunktionen auf diesem Gerät ab: den Tab, den Sports-Modus, die Spiele auf der Startseite und auf dem TV-Startbildschirm, Torbenachrichtigungen, Spielerinnerungen und die Spiel-Tabs im Player. Deine Ligen, Teams und Auswahlen bleiben gespeichert. Um nur den Tab auszublenden, nutze Einstellungen > Oberfläche > Tabs.",
 };

@@ -216,7 +216,9 @@ class SportsPhoneNotifications with WidgetsBindingObserver {
         .whereType<Map>()
         .toList();
     final plans = <Map<String, Object>>[];
-    for (final viewer in storage.getViewerProfiles()) {
+    // Sports Trak off: no plans, so every scheduled one is cancelled.
+    for (final viewer
+        in storage.getSportsOff() ? const [] : storage.getViewerProfiles()) {
       final scoped = StorageService();
       await scoped.init(viewerId: viewer.id, migrate: false);
       scoped.persistGameReminders =

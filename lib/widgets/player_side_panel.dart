@@ -168,9 +168,11 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
   List<_PanelTab> get _tabs => [
         if (_playing != null) _PanelTab.game,
         _PanelTab.recent,
-        _PanelTab.teams,
-        _PanelTab.live,
+        // Sports Trak off: Last channels only.
+        if (!_sportsOff) ...[_PanelTab.teams, _PanelTab.live],
       ];
+
+  bool get _sportsOff => context.read<StorageService>().getSportsOff();
 
   /// The tab drawn: This game falls back to Last channels without a game.
   _PanelTab get _shown =>
@@ -216,6 +218,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
 
   Future<void> _loadSports() async {
     final storage = context.read<StorageService>();
+    if (storage.getSportsOff()) return;
     final follows = SportsFollows.load(storage);
     final saved = savedSportsLeagues(storage);
     final leagues = <String, SportsLeague>{

@@ -3829,4 +3829,6 @@ const Map<String, String> kUk = {
   "Always hidden on a Kids profile": "Завжди приховано в дитячому профілі",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "Групи з назвами XXX, Adult, Porn або 18+ завжди приховані в дитячому профілі.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Вимкнення вимикає всі спортивні функції на цьому пристрої: вкладку, Спортивний режим, матчі на Головній і на головному екрані ТВ, сповіщення про голи, нагадування про матчі та вкладки матчу в плеєрі. Ваші ліги, команди та вибір зберігаються. Щоб приховати лише вкладку, скористайтеся Налаштування > Інтерфейс > Вкладки.",
 };

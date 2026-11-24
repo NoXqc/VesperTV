@@ -3951,4 +3951,6 @@ const Map<String, String> kPl = {
   "Always hidden on a Kids profile": "Zawsze ukryte w profilu dziecka",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "Grupy o nazwach XXX, Adult, Porn lub 18+ są zawsze ukryte w profilu dziecka.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Wyłączone wyłącza wszystkie funkcje sportowe na tym urządzeniu: kartę, Tryb sportowy, mecze na stronie głównej i na ekranie głównym TV, powiadomienia o golach, przypomnienia o meczach i karty meczu w odtwarzaczu. Twoje ligi, drużyny i wybory zostają zachowane. Aby ukryć tylko kartę, użyj Ustawienia > Interfejs > Karty.",
 };

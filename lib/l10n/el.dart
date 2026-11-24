@@ -4319,4 +4319,6 @@ const Map<String, String> kEl = {
   "Always hidden on a Kids profile": "Πάντα κρυφό σε παιδικό προφίλ",
   "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
       "Οι ομάδες με όνομα XXX, Adult, Porn ή 18+ είναι πάντα κρυφές σε παιδικό προφίλ.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Όταν είναι απενεργοποιημένο, κλείνουν όλες οι λειτουργίες αθλημάτων σε αυτή τη συσκευή: η καρτέλα, η Λειτουργία αθλητικών, οι αγώνες στην Αρχική και στην αρχική οθόνη της TV, οι ειδοποιήσεις γκολ, οι υπενθυμίσεις αγώνων και οι καρτέλες αγώνα του player. Οι λίγκες, οι ομάδες και οι επιλογές σας διατηρούνται. Για να κρύψετε μόνο την καρτέλα, πηγαίνετε στις Ρυθμίσεις > Διεπαφή > Καρτέλες.",
 };
