@@ -44,6 +44,21 @@ the section sits in **Backup & devices** (owner: a remote is a device), not Play
   Without a hold, the arrow acts on key down as before (a held Up / Down still zaps fast).
   Tests: `test/remote_buttons_test.dart` (storage), `test/player_arrow_remap_test.dart` (quick Left
   = guide, held Left = drawer).
+- **Options-row tiles as arrow actions** (owner, 2026-11-23: "assign them to an option in the option
+  bar like sources - audio track - subtitles", hold Right = Sources for him): `PlayerArrow.actions`
+  gained `opt:<tile id>` (Sources = `live_sources`, `audio`, `subtitles`, `audio_sync`, `recall`,
+  `start_over`, `reload`, `buffer`, `stream_info`, `picture`, `multiview`, `search`), for a press and a
+  hold alike. `_runArrowAction` -> `PlayerOptionsOrder.activate(id)`: the options row (always built,
+  hidden = ExcludeFocus + opacity 0) finds the tile by its `GlobalKey` and invokes the first
+  `Actions`' `ActivateIntent` inside it (the tile's InkWell), like OK on it, without showing the row.
+  A tile the channel doesn't have (Start over without catch-up, Audio track with one track) does
+  nothing. Tile ids are saved: never rename them. Test: holding Right presses Audio sync.
+- **The rest of the press stays in the player** (owner, +983, 2026-11-24: hold Left = Back to the guide put the
+  guide hours back in catch-up, drawn only at the release): a hold runs while the arrow is still down, so its repeats
+  went to the guide (one programme back each). `HeldKeySwallow.restOfPress` (`services/held_key_swallow.dart`, an
+  early FocusManager handler: a HardwareKeyboard handler can't keep keys from the focused widget) takes the arrow's
+  repeats + release once a hold ran, and after a non-zap press action (Back, drawer, bar, tiles; a held Up / Down
+  still zaps on). 5 s safety. Test: player_arrow_remap_test "keeps the rest of its press" (hold + long press).
 - Android player only; Windows' `DesktopPlayerScreen` arrows are unchanged.
 
 ## Not verified

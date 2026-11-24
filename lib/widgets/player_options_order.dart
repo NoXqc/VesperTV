@@ -20,6 +20,19 @@ class PlayerOptionsOrder {
 
   static void endMove() => moving.value = null;
 
+  static final _rows = <_ReorderableOptionTilesState>[];
+
+  /// Presses the options-row tile [id] as OK on it would, even while the
+  /// row is hidden (Remote buttons: an arrow or a held arrow = Sources,
+  /// Audio track, Subtitles...; owner, 2026-11-23). False when no row has
+  /// that tile now (not on this channel, or an audio button with one track).
+  static bool activate(String id) {
+    for (final row in _rows.reversed.toList()) {
+      if (row._activate(id)) return true;
+    }
+    return false;
+  }
+
   /// [items] in the [saved] order. Ids the order doesn't know yet (a new
   /// button, one that only shows on some channels) keep their place after
   /// the item that comes before them by default.
@@ -107,6 +120,7 @@ class _ReorderableOptionTilesState extends State<ReorderableOptionTiles> {
     }
     _order = _storage?.getPlayerOptionsOrder() ?? const [];
     PlayerOptionsOrder.moving.addListener(_changed);
+    PlayerOptionsOrder._rows.add(this);
   }
 
   @override
@@ -121,6 +135,7 @@ class _ReorderableOptionTilesState extends State<ReorderableOptionTiles> {
 
   @override
   void dispose() {
+    PlayerOptionsOrder._rows.remove(this);
     PlayerOptionsOrder.moving.removeListener(_changed);
     if (PlayerOptionsOrder.isMoving) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -178,6 +193,36 @@ class _ReorderableOptionTilesState extends State<ReorderableOptionTiles> {
     return KeyEventResult.handled;
   }
 
+  /// Each tile's subtree, to press it by id ([PlayerOptionsOrder.activate]).
+  final _tileKeys = <String, GlobalKey>{};
+
+  /// The tile's button action (the first [Actions] inside it, its
+  /// InkWell's), run like OK on it. Actions don't need focus: the row can
+  /// stay hidden.
+  bool _activate(String id) {
+    final tile = _tileKeys[id]?.currentContext;
+    if (tile == null) return false;
+    BuildContext? target;
+    void find(Element e) {
+      if (target != null) return;
+      if (e.widget is Actions) {
+        e.visitChildren((child) => target ??= child);
+        return;
+      }
+      e.visitChildren(find);
+    }
+
+    (tile as Element).visitChildren(find);
+    final at = target;
+    if (at == null) return false;
+    final action = Actions.maybeFind<ActivateIntent>(at);
+    if (action == null || !action.isEnabled(const ActivateIntent())) {
+      return false;
+    }
+    Actions.invoke(at, const ActivateIntent());
+    return true;
+  }
+
   /// A short OK: the tile's own action (the held-OK wrapper took the key).
   static void _activateFocused() {
     final ctx = FocusManager.instance.primaryFocus?.context;
@@ -211,7 +256,11 @@ class _ReorderableOptionTilesState extends State<ReorderableOptionTiles> {
                   widget.onActivity?.call();
                   PlayerOptionsOrder.moving.value = id;
                 },
-                child: _MoveFrame(moving: moving == id, child: tile),
+                child: _MoveFrame(
+                    moving: moving == id,
+                    child: KeyedSubtree(
+                        key: _tileKeys.putIfAbsent(id, GlobalKey.new),
+                        child: tile)),
               ),
             ),
         ],

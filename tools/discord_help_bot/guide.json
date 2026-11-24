@@ -264,6 +264,14 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
+    "id": "781cd08e30d0c973",
+    "category": "Full screen",
+    "title": "Choose what the arrows do in the player",
+    "answer": "Left, Right, Up and Down in the full-screen live player, with nothing on screen, can each do something else: side drawer, last channel, channel up / down, player bar, back to the guide, or one of the options row's buttons (Sources, Audio track, Subtitles, Audio sync, Recall, Watch from the start, Reload channel, Live buffer, Stream info, Picture, Multiview, Search). Each arrow can also get a second action when you hold it for half a second, for example Right = last channel and hold Right = Sources. A button the channel doesn't have (Watch from the start without catch-up) does nothing.",
+    "controls": "Settings › Backup & devices › Remote LIVE · TV",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
     "id": "92145e3cf74489fc",
     "category": "Full screen",
     "title": "Channel schedule",

@@ -14,6 +14,7 @@ import '../widgets/live_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
+import '../services/held_key_swallow.dart';
 import '../services/remote_buttons.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
@@ -1537,7 +1538,14 @@ class _PlayerScreenState extends State<PlayerScreen>
       if (_heldArrow != arrow) _startArrowHold(arrow);
       return;
     }
-    _runArrowAction(buttons.arrowAction(arrow));
+    final action = buttons.arrowAction(arrow);
+    // Runs on the key-down: a press held a little longer must not repeat
+    // into what it opened (Back to the guide stepped into catch-up). A
+    // zap keeps its repeats: a held Up / Down zaps on.
+    if (action != 'channel_up' && action != 'channel_down') {
+      HeldKeySwallow.restOfPress(_arrowKey(arrow));
+    }
+    _runArrowAction(action);
   }
 
   /// Remote buttons > Hold Left / Right / Up / Down in the player (owner,
@@ -1558,20 +1566,24 @@ class _PlayerScreenState extends State<PlayerScreen>
     _arrowHoldTimer = Timer(_arrowHoldTime, () {
       if (!mounted || _heldArrow != arrow) return;
       _arrowHoldRan = true;
+      // The arrow is still down: its repeats and release must not reach
+      // what the hold opens (the guide stepped hours back into catch-up).
+      HeldKeySwallow.restOfPress(_arrowKey(arrow));
       _runArrowAction(RemoteButtons.instance.arrowHold(arrow));
     });
   }
 
+  static LogicalKeyboardKey _arrowKey(PlayerArrow arrow) => switch (arrow) {
+        PlayerArrow.left => LogicalKeyboardKey.arrowLeft,
+        PlayerArrow.right => LogicalKeyboardKey.arrowRight,
+        PlayerArrow.up => LogicalKeyboardKey.arrowUp,
+        PlayerArrow.down => LogicalKeyboardKey.arrowDown,
+      };
+
   bool _onArrowHoldKey(KeyEvent event) {
     final arrow = _heldArrow;
     if (arrow == null || event is! KeyUpEvent) return false;
-    final key = switch (arrow) {
-      PlayerArrow.left => LogicalKeyboardKey.arrowLeft,
-      PlayerArrow.right => LogicalKeyboardKey.arrowRight,
-      PlayerArrow.up => LogicalKeyboardKey.arrowUp,
-      PlayerArrow.down => LogicalKeyboardKey.arrowDown,
-    };
-    if (event.logicalKey != key) return false;
+    if (event.logicalKey != _arrowKey(arrow)) return false;
     final held = _arrowHoldRan;
     _endArrowHold();
     if (!held && mounted) {
@@ -1604,6 +1616,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     _arrowAt = now;
     if (last != null &&
         now.difference(last) < const Duration(milliseconds: 400)) {
+      return;
+    }
+    if (PlayerArrow.optionTileOf(action) case final tile?) {
+      // The options row's own tile, as if OK was pressed on it (the row
+      // stays hidden; its sheet / drawer opens over the video).
+      PlayerOptionsOrder.activate(tile);
       return;
     }
     switch (action) {

@@ -500,6 +500,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - player arrows: holds + options-row tiles (`claude/arrow-holds`, worktree `VesperTV-claude-tvhold`, merged
+  with main 625e6f7):** the 2026-11-21 arrow holds (Hold Left / Right / Up / Down in the player, 550 ms) were never committed;
+  committed 10e67f4 + main merged. Owner: let an arrow (or a held one) be any options-row button, e.g. hold Right = Sources.
+  `PlayerArrow.actions` + `opt:<tile id>` (Sources, Audio track, Subtitles, Audio sync, Recall, Start over, Reload, Live
+  buffer, Stream info, Picture, Multiview, Search); `PlayerOptionsOrder.activate` presses the hidden row's tile through its
+  InkWell's ActivateIntent. Owner box test +983: hold Left = Back to the guide sent the arrow's repeats into the guide
+  (hours back in catch-up): `HeldKeySwallow` keeps the rest of a press (hold or non-zap press) from what it opened.
+  Details: dev-notes/remote-buttons.md; remote.html "Choose what the arrows do in the player".
 - **Claude, 2026-11-23 - Debrid accounts page wording (`claude/debrid-help`, worktree `VesperTV-claude-debridhelp`):** owner:
   many users think Settings > Advanced > Debrid accounts is where their debrid add-ons go. The page now opens with a box
   "This page doesn't add movies or shows" + where content comes from (a Media Hub source such as Torrentio / AIOStreams

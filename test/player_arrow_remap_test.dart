@@ -7,6 +7,7 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/screens/player_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/epg_service.dart';
+import 'package:nox_iptv/services/held_key_swallow.dart';
 import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/remote_buttons.dart';
@@ -43,7 +44,8 @@ void main() {
       {required Map<PlayerArrow, String> arrows,
       required Future<void> Function(PlaybackService playback) check,
       Map<PlayerArrow, String> holds = const {},
-      bool overGuide = false}) async {
+      bool overGuide = false,
+      Widget guide = const Scaffold(body: Text('The guide'))}) async {
     final navigator = GlobalKey<NavigatorState>();
     final previousPlatform = VideoPlayerPlatform.instance;
     VideoPlayerPlatform.instance = _VideoPlatform();
@@ -92,9 +94,7 @@ void main() {
         child: MaterialApp(
             navigatorKey: navigator,
             navigatorObservers: [appRouteObserver],
-            home: overGuide
-                ? const Scaffold(body: Text('The guide'))
-                : PlayerScreen(channel: channel))));
+            home: overGuide ? guide : PlayerScreen(channel: channel))));
     await tester.pumpAndSettle();
     if (overGuide) {
       unawaited(navigator.currentState!.push(MaterialPageRoute<void>(
@@ -186,4 +186,90 @@ void main() {
           reason: 'the release after a hold does not go back too');
     });
   });
+
+  // Owner, 2026-11-23: an arrow (or a held one) can press an options-row
+  // tile (Sources, Audio track, Subtitles...) without opening the row.
+  testWidgets('holding Right presses an options-row tile', (tester) async {
+    await open(tester,
+        arrows: const {},
+        holds: {PlayerArrow.right: 'opt:audio_sync'}, check: (_) async {
+      expect(find.byType(Dialog), findsNothing);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowRight);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget,
+          reason: 'the Audio sync tile opened its dialog');
+      Navigator.of(tester.element(find.byType(Dialog))).pop();
+      await tester.pumpAndSettle();
+    });
+  });
+
+  // Owner, 2026-11-24: hold Left = Back to the guide, and the arrow's
+  // repeats went on into the guide: hours back into catch-up by the release.
+  for (final hold in [true, false]) {
+    testWidgets(
+        'a ${hold ? 'hold' : 'long press'} that closes the player keeps the '
+        'rest of its press', (tester) async {
+      final seen = <String>[];
+      await open(tester,
+          overGuide: true,
+          guide: _LeftKeyLog(seen),
+          arrows: hold ? const {} : {PlayerArrow.left: 'back'},
+          holds: hold ? {PlayerArrow.left: 'back'} : const {},
+          check: (_) async {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+        for (var i = 0; i < 15; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
+        }
+        await tester.pumpAndSettle();
+        expect(find.byType(PlayerScreen), findsNothing,
+            reason: 'it went back to the guide');
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pumpAndSettle();
+        expect(seen, isEmpty,
+            reason: 'none of the held press reached the guide');
+        expect(HeldKeySwallow.active, isFalse);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        expect(seen, ['down', 'up'], reason: 'a new press goes to the guide');
+      });
+    });
+  }
+
+  testWidgets('a tile the channel does not have does nothing', (tester) async {
+    await open(tester, arrows: {PlayerArrow.right: 'opt:start_over'},
+        check: (_) async {
+      // TSN 1 here has no catch-up: no Start over tile.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.byType(PlayerSidePanel), findsNothing);
+    });
+  });
+}
+
+/// Stands in for the guide: records the Left keys it gets.
+class _LeftKeyLog extends StatelessWidget {
+  const _LeftKeyLog(this.seen);
+  final List<String> seen;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      body: Focus(
+          autofocus: true,
+          onKeyEvent: (_, event) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              seen.add(switch (event) {
+                KeyDownEvent() => 'down',
+                KeyRepeatEvent() => 'repeat',
+                _ => 'up',
+              });
+            }
+            return KeyEventResult.ignored;
+          },
+          child: const Text('The guide')));
 }

@@ -161,8 +161,28 @@ enum PlayerArrow {
     // What Back does: the guide, then Left / Back again = the groups, the
     // tabs (uzumaki, Fire TV, Discord 2026-11-21).
     ('back', 'Back to the guide'),
+    // A tile of the player's options row, pressed as OK on it would
+    // (owner, 2026-11-23: hold Right = Sources). `opt:` + the tile's id
+    // (player_controls.dart / player_screen.dart: ids are saved, never
+    // rename). A tile the channel doesn't have does nothing.
+    ('opt:live_sources', 'Sources'),
+    ('opt:audio', 'Audio track'),
+    ('opt:subtitles', 'Subtitles'),
+    ('opt:audio_sync', 'Audio sync'),
+    ('opt:recall', 'Recall — go back to a recent channel'),
+    ('opt:start_over', 'Watch from the start'),
+    ('opt:reload', 'Reload channel'),
+    ('opt:buffer', 'Live buffer'),
+    ('opt:stream_info', 'Stream info'),
+    ('opt:picture', 'Picture'),
+    ('opt:multiview', 'Open in Multiview'),
+    ('opt:search', 'Search'),
     ('none', 'Nothing'),
   ];
+
+  /// The options-row tile [action] presses (`opt:<id>`), or null.
+  static String? optionTileOf(String action) =>
+      action.startsWith('opt:') ? action.substring(4) : null;
 }
 
 /// The full-screen player while it is open ([RemoteButtons.player]): the
