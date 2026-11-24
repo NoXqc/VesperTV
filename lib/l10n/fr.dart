@@ -2002,12 +2002,18 @@ const Map<String, String> kFr = {
   "Saved, but {service} rejected the key — double-check it":
       "Enregistré, mais {service} a refusé la clé — vérifiez-la",
   "Debrid accounts": "Comptes debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Clés optionnelles pour l'étiquette « Prêt »",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Certaines sources du Media Hub répondent à Lecture par une courte vidéo « en cours de téléchargement » pendant qu'elles récupèrent un titre dans votre compte debrid. VesperTV revérifie alors chaque minute et ajoute une étiquette « Prêt » sur l'affiche du titre dès qu'il est là.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Optionnel : avec votre propre clé, votre compte le confirme directement. Sans clé, VesperTV redemande à la source jusqu'à ce que le fichier complet réponde.",
+  "This page doesn't add movies or shows":
+      "Cette page n'ajoute pas de films ni de séries",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Pour regarder avec votre compte Real-Debrid ou TorBox, ajoutez une source Media Hub qui l'utilise, comme Torrentio ou AIOStreams configuré avec votre clé debrid. Ses films et séries apparaissent alors dans le Media Hub.",
+  "Open Media Hub sources":
+      "Ouvrir les sources Media Hub",
+  "What these keys do":
+      "À quoi servent ces clés",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Optionnel. Certaines sources debrid répondent à Lecture par une courte vidéo « en cours de téléchargement » pendant que votre compte récupère le titre. Avec votre clé ici, VesperTV interroge directement votre compte et ajoute l'étiquette « Prêt » sur l'affiche dès que le titre est là. Sans clé, ça fonctionne aussi : VesperTV redemande à la source chaque minute.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Seulement pour l'étiquette « Prêt ». Le contenu s'ajoute dans Sources Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid : real-debrid.com/apitoken. TorBox : torbox.app/settings (clé API). Conservée dans VesperTV et utilisée seulement pour lire votre liste de téléchargements.",
   "Real-Debrid API token": "Jeton API Real-Debrid",

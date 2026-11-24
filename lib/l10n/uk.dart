@@ -1905,12 +1905,18 @@ const Map<String, String> kUk = {
   "Saved, but {service} rejected the key — double-check it":
       "Збережено, але {service} відхилив ключ — перевірте його",
   "Debrid accounts": "Облікові записи debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Необов'язкові ключі для позначки «Готово»",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Деякі джерела Media Hub відповідають на «Відтворити» коротким відео «завантажується», поки отримують назву у ваш обліковий запис debrid. Тоді VesperTV перевіряє щохвилини й ставить позначку «Готово» на постер назви, щойно вона там.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Необов'язково: з власним ключем ваш обліковий запис підтверджує це напряму. Без ключа VesperTV знову запитує джерело, доки не відповість повний файл.",
+  "This page doesn't add movies or shows":
+      "Ця сторінка не додає фільми чи серіали",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Щоб дивитися з вашим обліковим записом Real-Debrid або TorBox, додайте джерело Media Hub, яке його використовує, наприклад Torrentio або AIOStreams, налаштований з вашим ключем debrid. Його фільми й серіали тоді з'являться в Media Hub.",
+  "Open Media Hub sources":
+      "Відкрити джерела Media Hub",
+  "What these keys do":
+      "Для чого ці ключі",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Необов'язково. Деякі джерела debrid відповідають на «Відтворити» коротким відео «завантажується», поки ваш обліковий запис отримує назву. З вашим ключем тут VesperTV питає ваш обліковий запис напряму й ставить позначку «Готово» на постер, щойно назва там. Без ключа теж працює: VesperTV питає джерело знову щохвилини.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Лише для позначки «Готово». Вміст додається в Джерелах Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Зберігається у VesperTV і використовується лише для читання списку ваших завантажень.",
   "Real-Debrid API token": "Токен API Real-Debrid",

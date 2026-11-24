@@ -456,6 +456,14 @@
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
+    "id": "5af6f645926e8d53",
+    "category": "Media Hub",
+    "title": "Watch with Real-Debrid or TorBox",
+    "answer": "Debrid accounts does not add movies or shows. To watch with your debrid account, add a Media Hub source that uses it (such as Torrentio or AIOStreams set up with your debrid key) in Settings › Playlists & sources › Media Hub sources › Add a source, or press Open Media Hub sources on the Debrid accounts page. The keys on that page are optional: they only let VesperTV ask your account directly when a title is still downloading, to put a \"Ready\" tag on its poster sooner.",
+    "controls": "Settings › Advanced › Debrid accounts",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
     "id": "023592f47e1d1ea5",
     "category": "Media Hub",
     "title": "Collections: tiles that open a page of catalogs",

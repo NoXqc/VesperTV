@@ -1999,12 +1999,18 @@ const Map<String, String> kIt = {
   "Saved, but {service} rejected the key — double-check it":
       "Salvato, ma {service} ha rifiutato la chiave — controllala",
   "Debrid accounts": "Account debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Chiavi facoltative per l'etichetta «Pronto»",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Alcune sorgenti del Media Hub rispondono a Riproduci con un breve video «in download» mentre portano un titolo nel tuo account debrid. VesperTV ricontrolla ogni minuto e mette un'etichetta «Pronto» sulla locandina del titolo appena è disponibile.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Facoltativo: con la tua chiave, è il tuo account a confermarlo direttamente. Senza, VesperTV richiede alla sorgente finché non risponde il file completo.",
+  "This page doesn't add movies or shows":
+      "Questa pagina non aggiunge film o serie",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Per guardare con il tuo account Real-Debrid o TorBox, aggiungi una fonte Media Hub che lo usi, come Torrentio o AIOStreams configurato con la tua chiave debrid. I suoi film e serie compariranno poi nel Media Hub.",
+  "Open Media Hub sources":
+      "Apri le fonti Media Hub",
+  "What these keys do":
+      "A cosa servono queste chiavi",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Facoltativo. Alcune fonti debrid rispondono a Riproduci con un breve video «in download» mentre il tuo account recupera il titolo. Con la tua chiave qui, VesperTV chiede direttamente al tuo account e mette l'etichetta «Pronto» sulla locandina appena il titolo è disponibile. Senza chiave funziona lo stesso: VesperTV richiede alla fonte ogni minuto.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Solo per l'etichetta «Pronto». I contenuti si aggiungono in Fonti Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (chiave API). Conservata in VesperTV e usata solo per leggere l'elenco dei tuoi download.",
   "Real-Debrid API token": "Token API Real-Debrid",

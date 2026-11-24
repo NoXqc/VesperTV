@@ -477,7 +477,7 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   are skipped). Debrid-backed add-ons (Torrentio + Real-Debrid/TorBox etc.) are fine and supported —
   owner, 2026-10-21: users are worldwide, don't judge their sources. Their uncached streams
   (`[TB download]`, `[RD download]`…) 302 to a ~0.1 MB "being downloaded" clip; see
-  `ArchiveReadyWatch` (Ready tag) and `DebridApi` (Settings > Media Hub > Debrid accounts).
+  `ArchiveReadyWatch` (Ready tag) and `DebridApi` (Settings > Advanced > Debrid accounts: keys for the Ready tag only, never a way to add content; the page says so and opens Media Hub sources).
   Two kinds of add-on source: a **stream-only** add-on on IMDb ids gets its grids/metas from
   Cinemeta (`ArchiveCatalogProvider`) and only `/stream/` goes to the add-on; an add-on with **its
   own catalogs** (any type, any id scheme — since 1.0.24) is browsed and played entirely from its
@@ -500,6 +500,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Debrid accounts page wording (`claude/debrid-help`, worktree `VesperTV-claude-debridhelp`):** owner:
+  many users think Settings > Advanced > Debrid accounts is where their debrid add-ons go. The page now opens with a box
+  "This page doesn't add movies or shows" + where content comes from (a Media Hub source such as Torrentio / AIOStreams
+  set up with the debrid key) + **Open Media Hub sources** (focused first on TV); the key text below is shorter; the
+  Settings row subtitle says "Only for the Ready tag. Add content in Media Hub sources". 7 languages; remote.html "Watch
+  with Real-Debrid or TorBox" + guide.json. test/debrid_page_test.dart.
 - **Claude, 2026-11-23 - Profile lock (`claude/profile-lock`, worktree `VesperTV-claude-profilelock`; merged into main, test build 1.0.74-dev.980):** users (via the
   owner): a kid leaving the app or starting it in the morning landed in Main. Settings > Profiles > a profile > **Lock
   with PIN** (any non-kids profile, `ViewerProfile.isLocked`; on/off asks the PIN): opening it asks the household PIN

@@ -1945,12 +1945,18 @@ const Map<String, String> kEl = {
   "Saved, but {service} rejected the key — double-check it":
       "Αποθηκεύτηκε, αλλά το {service} απέρριψε το κλειδί — ελέγξτε το",
   "Debrid accounts": "Λογαριασμοί debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Προαιρετικά κλειδιά για την ετικέτα «Έτοιμο»",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Ορισμένες πηγές του Media Hub απαντούν στην Αναπαραγωγή με ένα σύντομο βίντεο «γίνεται λήψη» ενώ φέρνουν έναν τίτλο στον λογαριασμό σας debrid. Το VesperTV ελέγχει ξανά κάθε λεπτό και βάζει την ετικέτα «Έτοιμο» στην αφίσα του τίτλου μόλις είναι διαθέσιμος.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Προαιρετικό: με το δικό σας κλειδί, ο λογαριασμός σας το επιβεβαιώνει απευθείας. Χωρίς κλειδί, το VesperTV ρωτά ξανά την πηγή μέχρι να απαντήσει το πλήρες αρχείο.",
+  "This page doesn't add movies or shows":
+      "Αυτή η σελίδα δεν προσθέτει ταινίες ή σειρές",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Για να βλέπετε με τον λογαριασμό σας Real-Debrid ή TorBox, προσθέστε μια πηγή Media Hub που τον χρησιμοποιεί, όπως το Torrentio ή το AIOStreams ρυθμισμένο με το κλειδί debrid σας. Οι ταινίες και οι σειρές της εμφανίζονται τότε στο Media Hub.",
+  "Open Media Hub sources":
+      "Άνοιγμα πηγών Media Hub",
+  "What these keys do":
+      "Τι κάνουν αυτά τα κλειδιά",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Προαιρετικό. Ορισμένες πηγές debrid απαντούν στην Αναπαραγωγή με ένα σύντομο βίντεο «γίνεται λήψη» ενώ ο λογαριασμός σας φέρνει τον τίτλο. Με το κλειδί σας εδώ, το VesperTV ρωτά απευθείας τον λογαριασμό σας και βάζει την ετικέτα «Έτοιμο» στην αφίσα μόλις ο τίτλος είναι εκεί. Χωρίς κλειδί λειτουργεί επίσης: το VesperTV ρωτά ξανά την πηγή κάθε λεπτό.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Μόνο για την ετικέτα «Έτοιμο». Περιεχόμενο προσθέτετε στις Πηγές Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (κλειδί API). Φυλάσσεται στο VesperTV και χρησιμοποιείται μόνο για την ανάγνωση της λίστας λήψεών σας.",
   "Real-Debrid API token": "Διακριτικό API Real-Debrid",

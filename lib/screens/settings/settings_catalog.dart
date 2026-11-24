@@ -1989,7 +1989,8 @@ class SettingsCatalog {
                   floating: true,
                   icon: Icons.cloud_done_outlined,
                   title: tr('Debrid accounts'),
-                  subtitle: tr('Optional keys for the "Ready" tag'),
+                  subtitle: tr(
+                      'Only for the "Ready" tag. Add content in Media Hub sources'),
                   page: (_) => const DebridSettingsScreen()),
             SettingsLink(
                 id: 'custom_posters',
