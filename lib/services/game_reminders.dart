@@ -176,6 +176,7 @@ class GameReminders extends ChangeNotifier {
 
   Future<void> refreshSchedules({bool force = false}) async {
     loadViewer();
+    if (_storage.getSportsOff()) return;
     if (!hasTeamReminders ||
         (!force &&
             _lastSync != null &&
@@ -444,6 +445,8 @@ class GameReminders extends ChangeNotifier {
 
   List<GameReminderNotice> poll() {
     loadViewer();
+    // Sports Trak off: reminders stay saved but never pop up.
+    if (_storage.getSportsOff()) return const [];
     final time = now().toUtc();
     final notices = <GameReminderNotice>[];
     var changed = false;

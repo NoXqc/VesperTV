@@ -39,10 +39,11 @@ void main() {
       final entry =
           find.widgetWithText(SettingRow, 'Preferred channel countries');
       if (size.width >= 700) {
-        // Sports Mode, then the four Games rows, then countries.
+        // The Sports Trak switch, Sports Mode, then the four Games rows,
+        // then countries.
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; i < 6; i++) {
           await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
           await tester.pumpAndSettle();
         }

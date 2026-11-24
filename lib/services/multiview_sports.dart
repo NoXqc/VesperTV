@@ -137,6 +137,8 @@ class MultiviewSports {
 
   /// The viewer's Sports Trak leagues + their followed teams' leagues.
   static List<SportsLeague> leagues(StorageService storage) {
+    // Sports Trak off: no games anywhere (Home row, launcher, Multiview).
+    if (storage.getSportsOff()) return const [];
     final follows = SportsFollows.load(storage);
     return <String, SportsLeague>{
       for (final l in savedSportsLeagues(storage)) l.id: l,

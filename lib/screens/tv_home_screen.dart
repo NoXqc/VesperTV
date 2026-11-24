@@ -242,7 +242,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             builder: (_) => ArchiveScreen(initialQuery: query)));
         return true;
       case 'sports':
-        if (prefs.hideSportsTrak) return false;
+        if (prefs.sportsTabHidden) return false;
         unawaited(_openSports());
         return true;
       case 'group':
@@ -3924,7 +3924,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   Future<void> _openSports() {
-    if (context.read<AppPreferences>().hideSportsTrak) return Future.value();
+    if (context.read<AppPreferences>().sportsTabHidden) return Future.value();
     if (context.read<AppPreferences>().sportsMode) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       return Future.value();
@@ -5146,7 +5146,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ArchiveScreen()));
             }),
-      if (!prefs.hideSportsTrak)
+      if (!prefs.sportsTabHidden)
         PhonePillItem(
             icon: Icons.sports_hockey,
             label: AppConstants.sportsTabName,
@@ -5338,7 +5338,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // column model.
         // Portrait phone: these live in the bottom tab bar instead.
         if (!_compact) ...[
-          if (!context.watch<AppPreferences>().hideSportsTrak)
+          if (!context.watch<AppPreferences>().sportsTabHidden)
             _SelectableRow(
               icon: Icons.sports_hockey,
               label: AppConstants.sportsTabName,

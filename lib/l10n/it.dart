@@ -4333,4 +4333,6 @@ const Map<String, String> kIt = {
       "Non ho trovato il gruppo «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "Un’app di IA vuole rinominare il tuo gruppo {group} in {name}.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Spento, disattiva tutte le funzioni sport su questo dispositivo: la scheda, la Modalità Sport, le partite nella Home e nella schermata iniziale della TV, gli avvisi gol, i promemoria delle partite e le schede partita del player. Leghe, squadre e scelte restano salvate. Per nascondere solo la scheda, usa Impostazioni > Interfaccia > Schede.",
 };

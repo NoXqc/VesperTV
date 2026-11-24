@@ -258,9 +258,12 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
       expect(storage.getSportsPreferredPlaylist(), 'a');
-      expect(
-          find.descendant(of: entry, matching: find.text('Provider a')),
+      expect(find.descendant(of: entry, matching: find.text('Provider a')),
           findsOneWidget);
+      // The Sports Trak switch above it (2026-11-24) puts the row at the
+      // bottom edge at 720 p.
+      await tester.ensureVisible(entry);
+      await tester.pumpAndSettle();
       await tester.tap(entry);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);

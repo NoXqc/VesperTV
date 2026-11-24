@@ -4288,4 +4288,6 @@ const Map<String, String> kEl = {
       "Δεν βρήκα την ομάδα «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "Μια εφαρμογή AI θέλει να μετονομάσει την ομάδα σας {group} σε {name}.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Όταν είναι απενεργοποιημένο, κλείνουν όλες οι λειτουργίες αθλημάτων σε αυτή τη συσκευή: η καρτέλα, η Λειτουργία αθλητικών, οι αγώνες στην Αρχική και στην αρχική οθόνη της TV, οι ειδοποιήσεις γκολ, οι υπενθυμίσεις αγώνων και οι καρτέλες αγώνα του player. Οι λίγκες, οι ομάδες και οι επιλογές σας διατηρούνται. Για να κρύψετε μόνο την καρτέλα, πηγαίνετε στις Ρυθμίσεις > Διεπαφή > Καρτέλες.",
 };

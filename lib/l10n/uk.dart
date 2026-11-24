@@ -3798,4 +3798,6 @@ const Map<String, String> kUk = {
       "Не вдалося знайти групу «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "AI-застосунок хоче перейменувати вашу групу {group} на {name}.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Вимкнення вимикає всі спортивні функції на цьому пристрої: вкладку, Спортивний режим, матчі на Головній і на головному екрані ТВ, сповіщення про голи, нагадування про матчі та вкладки матчу в плеєрі. Ваші ліги, команди та вибір зберігаються. Щоб приховати лише вкладку, скористайтеся Налаштування > Інтерфейс > Вкладки.",
 };

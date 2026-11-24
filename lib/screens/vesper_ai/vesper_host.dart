@@ -80,7 +80,7 @@ class AppVesperHost implements VesperHost {
     Widget? page = switch (section) {
       'home' => const HomeScreen(),
       'hub' when !prefs.hideArchive => ArchiveScreen(initialQuery: query),
-      'sports' when !prefs.hideSportsTrak => const SportsScreen(),
+      'sports' when !prefs.sportsTabHidden => const SportsScreen(),
       'search' => SearchScreen(initialScope: 'TV', initialQuery: query),
       'settings' => const SettingsMenuScreen(),
       _ => null,

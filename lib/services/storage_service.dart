@@ -628,6 +628,12 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideSportsTrak) ?? false;
   Future<void> setHideSportsTrak(bool value) =>
       _prefs.setBool(AppConstants.keyHideSportsTrak, value);
+  bool getSportsOff() => _prefs.getBool(AppConstants.keySportsOff) ?? false;
+  Future<void> setSportsOff(bool value) async {
+    await _prefs.setBool(AppConstants.keySportsOff, value);
+    onSportsNotificationsChanged?.call();
+  }
+
   bool getHideWhatsNew() =>
       _prefs.getBool(AppConstants.keyHideWhatsNew) ?? false;
   Future<void> setHideWhatsNew(bool value) =>

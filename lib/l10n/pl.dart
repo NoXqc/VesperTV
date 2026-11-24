@@ -3920,4 +3920,6 @@ const Map<String, String> kPl = {
       "Nie znalazłem grupy „{title}”.",
   "An AI app wants to rename your group {group} to {name}.":
       "Aplikacja AI chce zmienić nazwę Twojej grupy {group} na {name}.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Wyłączone wyłącza wszystkie funkcje sportowe na tym urządzeniu: kartę, Tryb sportowy, mecze na stronie głównej i na ekranie głównym TV, powiadomienia o golach, przypomnienia o meczach i karty meczu w odtwarzaczu. Twoje ligi, drużyny i wybory zostają zachowane. Aby ukryć tylko kartę, użyj Ustawienia > Interfejs > Karty.",
 };

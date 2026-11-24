@@ -4229,4 +4229,6 @@ const Map<String, String> kDe = {
       "Ich habe die Gruppe „{title}“ nicht gefunden.",
   "An AI app wants to rename your group {group} to {name}.":
       "Eine KI-App möchte deine Gruppe {group} in {name} umbenennen.",
+  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
+      "Aus schaltet alle Sportfunktionen auf diesem Gerät ab: den Tab, den Sports-Modus, die Spiele auf der Startseite und auf dem TV-Startbildschirm, Torbenachrichtigungen, Spielerinnerungen und die Spiel-Tabs im Player. Deine Ligen, Teams und Auswahlen bleiben gespeichert. Um nur den Tab auszublenden, nutze Einstellungen > Oberfläche > Tabs.",
 };

@@ -502,13 +502,14 @@ class SettingsCatalog {
               tr("Removes What's New from Movies and TV Shows: they open on All."),
               !prefs.hideWhatsNew,
               (v) => prefs.setHideWhatsNew(!v)),
-          _tab(
-              'tab_sports',
-              Icons.sports_outlined,
-              AppConstants.sportsTabName,
-              tr('Removes Sports Trak from navigation and turns off Sports Mode.'),
-              !prefs.hideSportsTrak,
-              (v) => prefs.setHideSportsTrak(!v)),
+          if (!prefs.sportsOff)
+            _tab(
+                'tab_sports',
+                Icons.sports_outlined,
+                AppConstants.sportsTabName,
+                tr('Removes Sports Trak from navigation and turns off Sports Mode.'),
+                !prefs.hideSportsTrak,
+                (v) => prefs.setHideSportsTrak(!v)),
           _tab(
               'tab_hub',
               Icons.local_movies_outlined,
@@ -551,7 +552,10 @@ class SettingsCatalog {
                   prefs.setLauncherRows(v);
                   unawaited(LauncherChannels.instance.publish(force: true));
                 }),
-          if (Platform.isAndroid && prefs.isTelevision && prefs.launcherRows)
+          if (Platform.isAndroid &&
+              prefs.isTelevision &&
+              prefs.launcherRows &&
+              !prefs.sportsOff)
             SettingsToggle(
                 id: 'launcher_live',
                 icon: Icons.sports_score_outlined,
@@ -1077,205 +1081,220 @@ class SettingsCatalog {
       sections: [
         SettingsSection([
           SettingsToggle(
-              id: 'sports_mode',
-              icon: Icons.sports,
-              title: tr('Sports Mode'),
+              id: 'sports_on',
+              icon: Icons.sports_outlined,
+              title: AppConstants.sportsTabName,
               help: tr(
-                  'Make Sports Trak your home, with your top five leagues at the side.'),
-              value: prefs.sportsMode,
-              onChanged: _setSportsMode),
+                  "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs."),
+              value: !prefs.sportsOff,
+              onChanged: (v) => prefs.setSportsOff(!v)),
         ]),
-        SettingsSection(title: tr('Games'), [
-          SettingsChoice(
-              id: 'sports_layout',
-              icon: Icons.view_list,
-              title: tr('Games layout'),
-              help: tr(
-                  'Guide lists the day\'s games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.'),
-              options: [
-                SettingsOption('cards', tr('Cards'),
-                    subtitle: tr('Game cards in rows')),
-                SettingsOption('guide', tr('Guide'),
-                    subtitle: tr('A TV guide-style list, one game per row')),
-              ],
-              selected: _storage.getSportsLayout(),
-              onPick: (v) => _saveViewer(() => _storage.setSportsLayout(v))),
-          SettingsChoice(
-              id: 'sports_card_size',
-              icon: Icons.photo_size_select_large,
-              title: tr('Game card size'),
-              help: tr(
-                  'Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.',
-                  {'tab': AppConstants.sportsTabName}),
-              options: [
-                SettingsOption('large', tr('Large'),
-                    subtitle: tr(
-                        'The original size, for watching from across the room')),
-                SettingsOption('medium', tr('Medium'),
-                    subtitle: tr('Smaller cards, more games on screen')),
-                SettingsOption('small', tr('Small'),
-                    subtitle: tr(
-                        'The most games on screen, for sitting close to the TV')),
-              ],
-              selected: _storage.getSportsCardSize(),
-              onPick: (v) => _saveViewer(() => _storage.setSportsCardSize(v))),
-          SettingsToggle(
-              id: 'sports_hide_empty',
-              icon: Icons.filter_list,
-              title: tr('Hide leagues with no games'),
-              help: tr(
-                  'Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.'),
-              value: _storage.getSportsHideEmptyLeagues(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsHideEmptyLeagues(v))),
-          // App Store rules: no gambling content.
-          if (!appStoreBuild)
+        if (!prefs.sportsOff) ...[
+          SettingsSection([
             SettingsToggle(
-                id: 'sports_odds',
-                icon: Icons.trending_up,
-                title: tr('Show betting odds'),
+                id: 'sports_mode',
+                icon: Icons.sports,
+                title: tr('Sports Mode'),
                 help: tr(
-                    'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
+                    'Make Sports Trak your home, with your top five leagues at the side.'),
+                value: prefs.sportsMode,
+                onChanged: _setSportsMode),
+          ]),
+          SettingsSection(title: tr('Games'), [
+            SettingsChoice(
+                id: 'sports_layout',
+                icon: Icons.view_list,
+                title: tr('Games layout'),
+                help: tr(
+                    'Guide lists the day\'s games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.'),
+                options: [
+                  SettingsOption('cards', tr('Cards'),
+                      subtitle: tr('Game cards in rows')),
+                  SettingsOption('guide', tr('Guide'),
+                      subtitle: tr('A TV guide-style list, one game per row')),
+                ],
+                selected: _storage.getSportsLayout(),
+                onPick: (v) => _saveViewer(() => _storage.setSportsLayout(v))),
+            SettingsChoice(
+                id: 'sports_card_size',
+                icon: Icons.photo_size_select_large,
+                title: tr('Game card size'),
+                help: tr(
+                    'Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.',
+                    {
+                      'tab': AppConstants.sportsTabName
+                    }),
+                options: [
+                  SettingsOption('large', tr('Large'),
+                      subtitle: tr(
+                          'The original size, for watching from across the room')),
+                  SettingsOption('medium', tr('Medium'),
+                      subtitle: tr('Smaller cards, more games on screen')),
+                  SettingsOption('small', tr('Small'),
+                      subtitle: tr(
+                          'The most games on screen, for sitting close to the TV')),
+                ],
+                selected: _storage.getSportsCardSize(),
+                onPick: (v) =>
+                    _saveViewer(() => _storage.setSportsCardSize(v))),
+            SettingsToggle(
+                id: 'sports_hide_empty',
+                icon: Icons.filter_list,
+                title: tr('Hide leagues with no games'),
+                help: tr(
+                    'Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.'),
+                value: _storage.getSportsHideEmptyLeagues(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsHideEmptyLeagues(v))),
+            // App Store rules: no gambling content.
+            if (!appStoreBuild)
+              SettingsToggle(
+                  id: 'sports_odds',
+                  icon: Icons.trending_up,
+                  title: tr('Show betting odds'),
+                  help: tr(
+                      'Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.',
+                      {
+                        'app': AppConstants.appName
+                      }),
+                  value: _storage.getSportsShowOdds(),
+                  onChanged: (v) =>
+                      _saveViewer(() => _storage.setSportsShowOdds(v))),
+          ]),
+          SettingsSection(title: tr('Channels'), [
+            SettingsLink(
+                id: 'sports_countries',
+                floating: true,
+                icon: Icons.flag_outlined,
+                title: tr('Preferred channel countries'),
+                subtitle: tr(
+                    'Prefer local channels while keeping other matches available'),
+                help: tr(
+                    'Prefer these countries among channels that match the game. Other countries remain available. Your game and team channel choices still come first.'),
+                value: countries.isEmpty ? null : countries.join(', '),
+                page: (_) => const SportsCountrySettingsScreen()),
+            SettingsChoice(
+                id: 'sports_playlist',
+                icon: Icons.playlist_play,
+                title: tr('Preferred playlist'),
+                help: preferredGone
+                    ? tr(
+                        'Your preferred playlist is unavailable or disabled. Other matching playlists will be used.')
+                    : tr(
+                        'Among comparable game matches, prefer this playlist, then your preferred countries, then video quality. Your game and team channel choices still come first. Other playlists remain available.'),
+                options: [
+                  SettingsOption('', tr('No playlist preference')),
+                  // A disabled playlist can't be picked; the saved one still
+                  // shows (dimmed) so the viewer sees why it is not used.
+                  for (final p in playlists)
+                    if (p.enabled || p.id == preferred)
+                      SettingsOption(p.id, p.name,
+                          subtitle: p.enabled ? null : tr('Disabled'),
+                          dimmed: !p.enabled),
+                ],
+                valueText: preferredGone
+                    ? playlists
+                        .where((p) => p.id == preferred)
+                        .map((p) => '${p.name} · ${tr('Disabled')}')
+                        .firstOrNull
+                    : null,
+                selected: preferred ?? '',
+                onPick: (v) => _saveViewer(() =>
+                    _storage.setSportsPreferredPlaylist(v.isEmpty ? null : v))),
+            SettingsToggle(
+                id: 'sports_quality',
+                icon: Icons.high_quality_outlined,
+                title: tr('Prefer highest quality'),
+                help: tr('Prefer higher-quality channels among game matches'),
+                value: _storage.getSportsPreferQuality(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsPreferQuality(v))),
+            SettingsToggle(
+                id: 'sports_redzone',
+                icon: Icons.sports_football,
+                title: tr('NFL RedZone button'),
+                help: tr(
+                    'The RedZone button beside Standings, shown when a playlist has an NFL RedZone channel. Saved for this viewer.'),
+                value: !_storage.getSportsHideRedZone(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsHideRedZone(!v))),
+          ]),
+          SettingsSection(title: tr('Goals alert'), [
+            if (defaultTargetPlatform == TargetPlatform.android &&
+                prefs.isTelevision)
+              SettingsCustom(
+                  id: 'goal_overlay_probe',
+                  builder: (_) => const GoalOverlayProbeSettings()),
+            SettingsToggle(
+                id: 'goals_alert',
+                icon: Icons.sports_score,
+                title: tr('Goals alert'),
+                help: tr(
+                    'Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.'),
+                value: prefs.goalsAlert,
+                onChanged: prefs.setGoalsAlert),
+            SettingsChoice(
+                id: 'goal_alert_delay',
+                icon: Icons.timer_outlined,
+                title: tr('Goals alert delay'),
+                help: tr(
+                    'Wait before showing a goal, so the popup doesn\'t come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.'),
+                options: [
+                  SettingsOption('0', tr('No delay')),
+                  for (final s in const [15, 30, 60])
+                    SettingsOption('$s', tr('{n} seconds', {'n': '$s'})),
+                ],
+                selected: '${_storage.getGoalAlertDelay()}',
+                onPick: (v) => _saveViewer(
+                    () => _storage.setGoalAlertDelay(int.tryParse(v) ?? 0))),
+            SettingsToggle(
+                id: 'transparent_popups',
+                icon: Icons.blur_on,
+                title: tr('Transparent popups'),
+                help: tr(
+                    'Reminders and goal alerts lose their background and outline, keeping only the logo and text.'),
+                value: prefs.transparentPopups,
+                onChanged: prefs.setTransparentPopups),
+            SettingsAction(
+                id: 'test_popup',
+                icon: Icons.visibility_outlined,
+                title: tr('Show a test popup'),
+                help: tr('A sample goal alert for 8 seconds.'),
+                run: (_) async => GoalsAlertOverlay.previewRequests.value++),
+            SettingsToggle(
+                id: 'sports_auto_play',
+                icon: Icons.play_circle_outline,
+                title: tr('Watch game button'),
+                help: tr(
+                    'When a reminded game is about to start, a Watch game button shows in the player for 10 minutes. Press Up from the player bar to reach it, then OK to switch to the game on its best channel. Set a reminder with a hold on the game. {app} must be open. Saved for this viewer.',
                     {
                       'app': AppConstants.appName
                     }),
-                value: _storage.getSportsShowOdds(),
+                value: _storage.getSportsAutoPlay(),
                 onChanged: (v) =>
-                    _saveViewer(() => _storage.setSportsShowOdds(v))),
-        ]),
-        SettingsSection(title: tr('Channels'), [
-          SettingsLink(
-              id: 'sports_countries',
-              floating: true,
-              icon: Icons.flag_outlined,
-              title: tr('Preferred channel countries'),
-              subtitle: tr(
-                  'Prefer local channels while keeping other matches available'),
-              help: tr(
-                  'Prefer these countries among channels that match the game. Other countries remain available. Your game and team channel choices still come first.'),
-              value: countries.isEmpty ? null : countries.join(', '),
-              page: (_) => const SportsCountrySettingsScreen()),
-          SettingsChoice(
-              id: 'sports_playlist',
-              icon: Icons.playlist_play,
-              title: tr('Preferred playlist'),
-              help: preferredGone
-                  ? tr(
-                      'Your preferred playlist is unavailable or disabled. Other matching playlists will be used.')
-                  : tr(
-                      'Among comparable game matches, prefer this playlist, then your preferred countries, then video quality. Your game and team channel choices still come first. Other playlists remain available.'),
-              options: [
-                SettingsOption('', tr('No playlist preference')),
-                // A disabled playlist can't be picked; the saved one still
-                // shows (dimmed) so the viewer sees why it is not used.
-                for (final p in playlists)
-                  if (p.enabled || p.id == preferred)
-                    SettingsOption(p.id, p.name,
-                        subtitle: p.enabled ? null : tr('Disabled'),
-                        dimmed: !p.enabled),
-              ],
-              valueText: preferredGone
-                  ? playlists
-                      .where((p) => p.id == preferred)
-                      .map((p) => '${p.name} · ${tr('Disabled')}')
-                      .firstOrNull
-                  : null,
-              selected: preferred ?? '',
-              onPick: (v) => _saveViewer(() =>
-                  _storage.setSportsPreferredPlaylist(v.isEmpty ? null : v))),
-          SettingsToggle(
-              id: 'sports_quality',
-              icon: Icons.high_quality_outlined,
-              title: tr('Prefer highest quality'),
-              help: tr('Prefer higher-quality channels among game matches'),
-              value: _storage.getSportsPreferQuality(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsPreferQuality(v))),
-          SettingsToggle(
-              id: 'sports_redzone',
-              icon: Icons.sports_football,
-              title: tr('NFL RedZone button'),
-              help: tr(
-                  'The RedZone button beside Standings, shown when a playlist has an NFL RedZone channel. Saved for this viewer.'),
-              value: !_storage.getSportsHideRedZone(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsHideRedZone(!v))),
-        ]),
-        SettingsSection(title: tr('Goals alert'), [
-          if (defaultTargetPlatform == TargetPlatform.android &&
-              prefs.isTelevision)
-            SettingsCustom(
-                id: 'goal_overlay_probe',
-                builder: (_) => const GoalOverlayProbeSettings()),
-          SettingsToggle(
-              id: 'goals_alert',
-              icon: Icons.sports_score,
-              title: tr('Goals alert'),
-              help: tr(
-                  'Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.'),
-              value: prefs.goalsAlert,
-              onChanged: prefs.setGoalsAlert),
-          SettingsChoice(
-              id: 'goal_alert_delay',
-              icon: Icons.timer_outlined,
-              title: tr('Goals alert delay'),
-              help: tr(
-                  'Wait before showing a goal, so the popup doesn\'t come before you see it. Streams in HLS often run 20 to 30 seconds behind. Saved for this viewer.'),
-              options: [
-                SettingsOption('0', tr('No delay')),
-                for (final s in const [15, 30, 60])
-                  SettingsOption('$s', tr('{n} seconds', {'n': '$s'})),
-              ],
-              selected: '${_storage.getGoalAlertDelay()}',
-              onPick: (v) => _saveViewer(
-                  () => _storage.setGoalAlertDelay(int.tryParse(v) ?? 0))),
-          SettingsToggle(
-              id: 'transparent_popups',
-              icon: Icons.blur_on,
-              title: tr('Transparent popups'),
-              help: tr(
-                  'Reminders and goal alerts lose their background and outline, keeping only the logo and text.'),
-              value: prefs.transparentPopups,
-              onChanged: prefs.setTransparentPopups),
-          SettingsAction(
-              id: 'test_popup',
-              icon: Icons.visibility_outlined,
-              title: tr('Show a test popup'),
-              help: tr('A sample goal alert for 8 seconds.'),
-              run: (_) async => GoalsAlertOverlay.previewRequests.value++),
-          SettingsToggle(
-              id: 'sports_auto_play',
-              icon: Icons.play_circle_outline,
-              title: tr('Watch game button'),
-              help: tr(
-                  'When a reminded game is about to start, a Watch game button shows in the player for 10 minutes. Press Up from the player bar to reach it, then OK to switch to the game on its best channel. Set a reminder with a hold on the game. {app} must be open. Saved for this viewer.',
-                  {
-                    'app': AppConstants.appName
-                  }),
-              value: _storage.getSportsAutoPlay(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setSportsAutoPlay(v))),
-        ]),
-        SettingsSection(title: tr('Phone notifications'), [
-          SettingsToggle(
-              id: 'phone_reminders',
-              icon: Icons.notifications_outlined,
-              title: tr('Game reminders'),
-              help: tr(
-                  'Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.'),
-              value: _storage.getPhoneGameReminders(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setPhoneGameReminders(v))),
-          SettingsToggle(
-              id: 'phone_goals',
-              icon: Icons.notifications_active_outlined,
-              title: tr('Goal alerts'),
-              help: tr(
-                  'Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.'),
-              value: _storage.getPhoneGoalAlerts(),
-              onChanged: (v) =>
-                  _saveViewer(() => _storage.setPhoneGoalAlerts(v))),
-        ]),
+                    _saveViewer(() => _storage.setSportsAutoPlay(v))),
+          ]),
+          SettingsSection(title: tr('Phone notifications'), [
+            SettingsToggle(
+                id: 'phone_reminders',
+                icon: Icons.notifications_outlined,
+                title: tr('Game reminders'),
+                help: tr(
+                    'Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.'),
+                value: _storage.getPhoneGameReminders(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setPhoneGameReminders(v))),
+            SettingsToggle(
+                id: 'phone_goals',
+                icon: Icons.notifications_active_outlined,
+                title: tr('Goal alerts'),
+                help: tr(
+                    'Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.'),
+                value: _storage.getPhoneGoalAlerts(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setPhoneGoalAlerts(v))),
+          ]),
+        ],
       ],
     );
   }

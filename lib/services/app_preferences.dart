@@ -84,6 +84,12 @@ class AppPreferences extends ChangeNotifier {
   late bool hideLiveTv;
   late bool hideSportsTrak;
 
+  /// Sports Trak off on this device ([AppConstants.keySportsOff]).
+  late bool sportsOff;
+
+  /// No Sports Trak tab: hidden by its tab switch or Sports Trak off.
+  bool get sportsTabHidden => hideSportsTrak || sportsOff;
+
   /// Movies / TV Shows without their What's New carousel and row: they open
   /// on All (Settings > Appearance > Tabs, owner 2026-11-17).
   late bool hideWhatsNew;
@@ -374,7 +380,7 @@ class AppPreferences extends ChangeNotifier {
         'movies' when hideMovies => fallbackStartSection,
         'series' when hideShows => fallbackStartSection,
         'hub' when hideArchive => fallbackStartSection,
-        'sports' when hideSportsTrak => fallbackStartSection,
+        'sports' when sportsTabHidden => fallbackStartSection,
         final s => s,
       };
 
@@ -403,11 +409,15 @@ class AppPreferences extends ChangeNotifier {
       .reduce((a, b) => (a.$1 - scale).abs() <= (b.$1 - scale).abs() ? a : b)
       .$2;
 
-  bool get sportsMode => !hideSportsTrak && _storage.getSportsMode();
+  bool get sportsMode => !sportsTabHidden && _storage.getSportsMode();
   Future<void> setSportsMode(bool value) async {
     if (value && hideSportsTrak) {
       hideSportsTrak = false;
       await _storage.setHideSportsTrak(false);
+    }
+    if (value && sportsOff) {
+      sportsOff = false;
+      await _storage.setSportsOff(false);
     }
     await _storage.setSportsMode(value);
     notifyListeners();
@@ -528,6 +538,7 @@ class AppPreferences extends ChangeNotifier {
     hideShows = _storage.getHideShows();
     hideLiveTv = _storage.getHideLiveTv();
     hideSportsTrak = _storage.getHideSportsTrak();
+    sportsOff = _storage.getSportsOff();
     hideWhatsNew = _storage.getHideWhatsNew();
     hideArchive = _storage.getHideArchive();
     hideRecordings = _storage.getHideRecordings();
@@ -737,6 +748,13 @@ class AppPreferences extends ChangeNotifier {
   void setHideLiveTv(bool value) {
     hideLiveTv = value;
     _storage.setHideLiveTv(value);
+    notifyListeners();
+  }
+
+  void setSportsOff(bool value) {
+    sportsOff = value;
+    _storage.setSportsOff(value);
+    if (value) _storage.setSportsMode(false);
     notifyListeners();
   }
 

@@ -237,10 +237,18 @@ class VesperToolbox {
 
   /// Runs [name] with [args]. Never throws: errors come back as
   /// `{"error": "..."}` so a model can read them and try again.
+  static const _sportsTools = {'sports_today', 'play_game', 'game_channel'};
+
   Future<Map<String, Object?>> call(String name, Map<String, Object?> args,
       {VesperCaller caller = VesperCaller.viewer}) async {
     final t = tool(name);
     if (t == null) return {'error': 'Unknown tool $name.'};
+    if (_sportsTools.contains(name) && storage.getSportsOff()) {
+      return {
+        'error': 'Sports Trak is turned off on this device '
+            '(Settings > Sports Trak). It must be turned on first.'
+      };
+    }
     try {
       return await t.run(this, args, caller);
     } on VesperToolError catch (e) {
