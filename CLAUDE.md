@@ -500,13 +500,24 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-23 - Profile lock (`claude/profile-lock`, worktree `VesperTV-claude-profilelock`):** users (via the
+- **Claude, 2026-11-23 - Profile lock (`claude/profile-lock`, worktree `VesperTV-claude-profilelock`; merged into main, test build 1.0.74-dev.980):** users (via the
   owner): a kid leaving the app or starting it in the morning landed in Main. Settings > Profiles > a profile > **Lock
   with PIN** (any non-kids profile, `ViewerProfile.isLocked`; on/off asks the PIN): opening it asks the household PIN
   everywhere (Who is watching?, Home cards, profile page, Vesper `profiles`), a start with it in use shows Who is
   watching?, and so does coming back after **Lock profiles again** (Every time VesperTV is left / 1 / 5 / 15 / 30 min /
   1 h, default 5, device-only; main.dart `_lockLifecycle` + `_relockIfDue`, `profileRelockDue`). Kids cards show a
-  child icon now, the padlock = locked. Details: dev-notes/profile-lock.md. Not box-tested.
+  child icon now, the padlock = locked. Details: dev-notes/profile-lock.md. Not box-tested before test build 980.
+- **Claude, 2026-11-23 - kids profile search leak (`claude/kids-search`, worktree `VesperTV-claude-kidssearch`; merged into main, test build 1.0.74-dev.979):**
+  Discord (wile.e.coyote): adult group hidden, kids profile + PIN, a quick search still showed adult content and
+  played it. A kids profile's hidden groups were "groups the playlist lists minus the allowlist", so anything unlisted
+  counted as shown: catalog movies under a category the provider renamed / dropped (never pruned from the DB),
+  Xtream channels in an unlisted category (Uncategorized), editor renames, and every group before the list loaded.
+  Now `_KidsHiddenGroups`: hidden unless allowed (allowlist title or its editor name; own groups and NUL move titles
+  pass). Media Hub (owner: "Add the media hub safeguard" + PIN on its sources): on a kids profile every source is
+  off until turned on for it (`ArchiveService.isKidsProfile`, a source with no saved Enabled = off; one added there
+  is on there), and Media Hub > Sources / Servers ask the PIN (`_openWithPin`; Settings already did). Details:
+  dev-notes/features.md (viewer profiles), remote.html "What a Kids profile can see". Tests: kids_search_test (3 of
+  4 failed before the fix), kids_media_hub_test.
 - **Claude, 2026-11-23 - Tuliprox Player API (`claude/tuliprox-user-api`, worktree `VesperTV-claude-tpxuser`,
   test +971):** Tuliprox's dev (uzumaki) added `/api/v1/me/*` (branch `feature/player_user_api`, on the owner's VPS).
   VesperTV signs the playlist's own user in (user + password from the stream URL, memory only) for **Sources without

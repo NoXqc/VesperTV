@@ -90,7 +90,16 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   after the prefix, so `clearCache()`'s `startsWith` sweep still catches every viewer's). A
   restricted ("kid") viewer uses a *shown-groups allowlist* (`keyShownGroups`), not the blocklist
   every other viewer uses — see `PlaylistSession._loadViewerScopedState`'s doc comment for why a
-  new category must default to hidden for them, not visible. `CatalogDatabase`'s own `is_favorite`
+  new category must default to hidden for them, not visible. Since 2026-11-23 that set is
+  `_KidsHiddenGroups` (playlist_session.dart): hidden = not on the allowlist, *whether or not the
+  playlist lists the group*. The old "listed groups minus allowed" let a kid's global search find
+  movies left in the catalog under a renamed / dropped category, Uncategorized channels, editor
+  renames and every group before the list loaded (Discord report; `test/kids_search_test.dart`).
+  Allowed = an allowlist title or its editor name; own groups / NUL move titles pass (the manager
+  only gives them for a channel from an allowed group). Media Hub on a kids profile: every source
+  is off until turned on for that profile (`ArchiveService.isKidsProfile`: no saved per-profile
+  Enabled = off; a source added while it is in use is turned on for it), and the Media Hub's own
+  Sources / Servers buttons ask the PIN (`ArchiveScreen._openWithPin`). `CatalogDatabase`'s own `is_favorite`
   column stopped being the favorite source of truth — `PlaylistManager` injects a live callback
   (`isVodFavorite`/`isSeriesFavorite`) instead; only write that column while Main is active.
   `ViewerProfileService.requireUnlock` is the single PIN choke point for *opening Settings at all*

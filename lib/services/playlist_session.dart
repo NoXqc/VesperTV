@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -45,11 +46,20 @@ class PlaylistSession {
     required this.isRestrictedViewer,
     required this.onNotify,
     this.myGroupOf,
-  });
+  }) {
+    // A kids profile is closed from the start: before the list loads, an
+    // empty "known minus allowed" set showed it every group.
+    if (isRestrictedViewer()) hiddenGroups = _kidsHidden();
+  }
 
   /// The viewer's own group a live channel was moved into (see
   /// `UserGroups`, owned by `PlaylistManager`), or null.
   final String? Function(Channel)? myGroupOf;
+
+  /// Whether [title] is one of the viewer's own groups (set by the
+  /// manager): a kids profile lists one only from groups it may see
+  /// (`PlaylistManager._myGroupOf`), so its title needs no allowing.
+  bool Function(String title)? isOwnGroup;
 
   PlaylistProfile profile;
   final StorageService storage;
@@ -525,8 +535,7 @@ class PlaylistSession {
     edits = PlaylistEdits.decode(storage.getPlaylistEditsJson(profile.id));
     applyEdits();
     if (isRestrictedViewer()) {
-      hiddenGroups =
-          _allKnownGroupTitles().difference(storage.getShownGroups(profile.id));
+      hiddenGroups = _kidsHidden();
     } else {
       hiddenGroups = storage.getHiddenGroups(profile.id);
     }
@@ -546,6 +555,11 @@ class PlaylistSession {
           ...seriesCategories.map((c) => c.name),
         }
       : channels.map((c) => c.group).toSet();
+
+  /// A kids profile's hidden groups: everything not on its allowlist
+  /// ([shown], else the stored one). See [_KidsHiddenGroups].
+  Set<String> _kidsHidden([Set<String>? shown]) =>
+      _KidsHiddenGroups(this, shown ?? storage.getShownGroups(profile.id));
 
   /// Called by `PlaylistManager.applyActiveViewer` whenever the active
   /// viewer changes — reloads this playlist's favorited/hidden-groups/
@@ -601,7 +615,7 @@ class PlaylistSession {
         }
       }
       await storage.setShownGroups(profile.id, shown);
-      hiddenGroups = _allKnownGroupTitles().difference(shown);
+      hiddenGroups = _kidsHidden(shown);
     } else {
       for (final title in titles) {
         if (hidden) {
@@ -2678,4 +2692,80 @@ bool _isAccountRejection(Object error) {
   final text = error.toString().toLowerCase();
   return text.contains('invalid xtream username') ||
       text.contains('account is not active');
+}
+
+/// A kids profile's hidden groups: every group its allowlist doesn't
+/// name, whether or not this playlist lists that group. It used to be
+/// "the groups this playlist lists, minus the allowed ones", so anything
+/// unlisted counted as shown: movies left in the catalog under a category
+/// the provider renamed or dropped, channels whose category the provider
+/// doesn't list (Uncategorized), a group renamed in the editor, and every
+/// group before the list had loaded. Global search found them on a kids
+/// profile (Discord, 2026-11-23). Iterating gives the listed groups that
+/// are hidden (signatures, counts); add / remove go through the allowlist
+/// ([PlaylistSession._applyGroupHiddenChange]), never here.
+class _KidsHiddenGroups extends SetBase<String> {
+  _KidsHiddenGroups(this._session, this._allowed) {
+    _known = _session._allKnownGroupTitles();
+    _hidden = {
+      for (final t in _known)
+        if (contains(t)) t
+    };
+  }
+
+  final PlaylistSession _session;
+  final Set<String> _allowed;
+  late final Set<String> _known;
+  late final Set<String> _hidden;
+
+  PlaylistEdits? _editsSeen;
+  Set<String> _allowedRenamed = const {};
+
+  /// An allowed group shown under its editor name (the TV and search use
+  /// that title). A save replaces [PlaylistSession.edits].
+  bool _allowedUnderEditorName(String title) {
+    final edits = _session.edits;
+    if (!identical(edits, _editsSeen)) {
+      _editsSeen = edits;
+      _allowedRenamed = edits.groupNames.isEmpty
+          ? const {}
+          : {for (final g in _allowed) edits.groupTitle(g)};
+    }
+    return _allowedRenamed.contains(title);
+  }
+
+  @override
+  bool contains(Object? element) {
+    if (element is! String) return false;
+    if (_allowed.contains(element) || _allowedUnderEditorName(element)) {
+      return false;
+    }
+    // Own groups and editor moves into another playlist's group (NUL
+    // title): PlaylistManager._myGroupOf gives them only for a channel
+    // from an allowed group. Never a group this playlist lists itself.
+    if (_known.contains(element)) return true;
+    if (element.startsWith('\u0000')) return false;
+    return !(_session.isOwnGroup?.call(element) ?? false);
+  }
+
+  @override
+  Iterator<String> get iterator => _hidden.iterator;
+
+  @override
+  int get length => _hidden.length;
+
+  @override
+  String? lookup(Object? element) =>
+      contains(element) ? element as String : null;
+
+  @override
+  bool add(String value) =>
+      throw UnsupportedError('A kids profile hides groups by its allowlist');
+
+  @override
+  bool remove(Object? value) =>
+      throw UnsupportedError('A kids profile hides groups by its allowlist');
+
+  @override
+  Set<String> toSet() => {..._hidden};
 }
