@@ -4354,4 +4354,10 @@ const Map<String, String> kEs = {
       "Añadido, desactivado en este perfil",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} ya estaba añadido para otros perfiles. Ahora está activado para los perfiles elegidos.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Permite que {app} instale aplicaciones en la siguiente pantalla, luego vuelve y pulsa aquí otra vez.",
+  "Downloading…":
+      "Descargando…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Para usar botones como TV, YouTube o Prime, añade el complemento gratuito «{name}», una pequeña app aparte. Pulsa OK para descargarlo e instalarlo.",
 };

@@ -4257,4 +4257,10 @@ const Map<String, String> kDe = {
       "Hinzugefügt, für dieses Profil aus",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} war schon für andere Profile hinzugefügt. Jetzt ist es für die gewählten Profile an.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Erlaube {app} auf dem nächsten Bildschirm, Apps zu installieren, komm dann zurück und drücke hier noch einmal.",
+  "Downloading…":
+      "Wird heruntergeladen…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Um Tasten wie TV, YouTube oder Prime zu nutzen, füge das kostenlose Add-on „{name}“ hinzu, eine kleine separate App. Drücke OK, um es herunterzuladen und zu installieren.",
 };

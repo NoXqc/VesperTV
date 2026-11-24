@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Only apps signed with VesperTV's key may bind LinkService (VesperTV declares it too). -->
+    <permission
+        android:name="com.nox.nox_iptv.permission.REMOTE_KEYS"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.nox.nox_iptv.permission.REMOTE_KEYS"/>
+
+    <uses-feature android:name="android.software.leanback" android:required="false"/>
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+
+    <application
+        android:label="@string/remote_keys_label"
+        android:icon="@mipmap/vespertv_launcher"
+        android:allowBackup="false">
+        <service
+            android:name=".RemoteKeyService"
+            android:exported="true"
+            android:label="@string/remote_keys_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/remote_keys_service"/>
+        </service>
+        <service
+            android:name=".LinkService"
+            android:exported="true"
+            android:permission="com.nox.nox_iptv.permission.REMOTE_KEYS"/>
+    </application>
+</manifest>

@@ -18,7 +18,6 @@ import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
-import java.lang.ref.WeakReference
 
 /**
  * Exposes ActivityManager's real device memory info to Dart — Flutter has
@@ -151,12 +150,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        RemoteKeyService.onScreen = WeakReference(this)
+        RemoteKeysLink.onResume(this)
         semanticsGate.schedule()
     }
 
     override fun onPause() {
-        if (RemoteKeyService.onScreen?.get() === this) RemoteKeyService.onScreen = null
+        RemoteKeysLink.onPause(this)
         super.onPause()
     }
 
@@ -252,9 +251,9 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
             .setMethodCallHandler(overlayProbe::handle)
 
-        // Settings > Remote buttons: buttons the box keeps — see RemoteKeyService.
+        // Settings > Remote buttons: buttons the box keeps — see RemoteKeysLink (the add-on).
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/remote_keys")
-            .setMethodCallHandler { call, result -> RemoteKeyService.handle(this, call, result) }
+            .setMethodCallHandler { call, result -> RemoteKeysLink.handle(this, call, result) }
 
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)

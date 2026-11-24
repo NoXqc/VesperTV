@@ -3948,4 +3948,10 @@ const Map<String, String> kPl = {
       "Dodane, wyłączone dla tego profilu",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} było już dodane dla innych profili. Teraz jest włączone dla wybranych profili.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Pozwól {app} instalować aplikacje na następnym ekranie, potem wróć i naciśnij tu ponownie.",
+  "Downloading…":
+      "Pobieranie…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Aby używać przycisków takich jak TV, YouTube czy Prime, dodaj darmowy dodatek „{name}”, małą osobną aplikację. Naciśnij OK, aby go pobrać i zainstalować.",
 };

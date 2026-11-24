@@ -4367,4 +4367,10 @@ const Map<String, String> kFr = {
       "Ajouté, désactivé pour ce profil",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} était déjà ajouté pour d’autres profils. Il est maintenant activé pour les profils choisis.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Autorisez {app} à installer des applications sur l’écran suivant, puis revenez et appuyez de nouveau ici.",
+  "Downloading…":
+      "Téléchargement…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Pour utiliser des boutons comme TV, YouTube ou Prime, ajoutez le module gratuit « {name} », une petite application à part. Appuyez sur OK pour le télécharger et l’installer.",
 };

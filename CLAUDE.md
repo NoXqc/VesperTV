@@ -360,6 +360,9 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   `PlaylistSession._liveChannelsOfGroup` indexes live channels by group (a group change scanned ~27k channels per
   playlist), Favourites uses it too. Send log: `Frames: ... parts(max/total ms)` names the slow part (`TimedSubtree`,
   `PerfDiagnostics.part`), `LiveView: changed [...]` says what rebuilt the TV tab. Details: dev-notes/tv-guide-speed.md.
+- **Never declare an accessibility service in VesperTV itself (2026-11-24):** Play Protect blocks such a sideloaded APK
+  outright (no Install anyway). The service lives in the "VesperTV remote buttons" add-on (`android/remotebuttons`,
+  `RemoteKeysLink.kt`; dev-notes/remote-buttons.md). Same for SMS / notification-listener permissions.
 - **Buttons the box keeps (2026-11-12, +751/+752).** Firmware can take remote buttons as Android "global
   keys" before any app: on the Homatics TV (KEYCODE_GUIDE 172), YouTube / Prime / app button
   (KEYCODE_NES_SHORTCUT_04/02/08 = 5118/5116/5122) and Settings (176) go to `com.nes.tvglobalkeyhandler`;

@@ -4361,4 +4361,10 @@ const Map<String, String> kIt = {
       "Aggiunto, disattivato per questo profilo",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} era già aggiunto per altri profili. Ora è attivo per i profili scelti.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Consenti a {app} di installare app nella schermata successiva, poi torna qui e premi di nuovo.",
+  "Downloading…":
+      "Download in corso…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Per usare tasti come TV, YouTube o Prime, aggiungi il componente gratuito “{name}”, una piccola app separata. Premi OK per scaricarlo e installarlo.",
 };

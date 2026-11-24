@@ -4316,4 +4316,10 @@ const Map<String, String> kEl = {
       "Προστέθηκε, ανενεργό για αυτό το προφίλ",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "Το {name} είχε ήδη προστεθεί για άλλα προφίλ. Τώρα είναι ενεργό για τα προφίλ που επιλέξατε.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Επιτρέψτε στο {app} να εγκαθιστά εφαρμογές στην επόμενη οθόνη, μετά επιστρέψτε και πατήστε ξανά εδώ.",
+  "Downloading…":
+      "Λήψη…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Για να χρησιμοποιήσετε κουμπιά όπως TV, YouTube ή Prime, προσθέστε το δωρεάν πρόσθετο «{name}», μια μικρή ξεχωριστή εφαρμογή. Πατήστε OK για λήψη και εγκατάσταση.",
 };

@@ -72,3 +72,27 @@ Tests: `test/remote_buttons_test.dart`, `test/player_arrow_remap_test.dart`.
 - Bookmark set to Play/Pause only paused the Home mini player. Fixed: Home registers
   `RemoteButtons.home`; a mapped Play/Pause or Stop with no full-screen player open goes through
   Home's own `_onPlayKey` (turns the mini player off / plays the focused live card when off).
+
+## The add-on (2026-11-24)
+Play Protect blocks a sideloaded APK that declares an accessibility service: "App blocked to protect your
+device ... can request access to sensitive data", only "Got it", no Install anyway; turning Play Protect off
+isn't enough (See61 on Reddit, Homatics R Plus with Android TV certification; true for every install since
++752). So the service moved out of VesperTV into **"VesperTV remote buttons"** (`android/remotebuttons`,
+package `com.nox.nox_iptv.remotebuttons`, ~73 KB, signed with VesperTV's key):
+- `RemoteKeyService` (same logic as before) + `LinkService` (Messenger, exported behind the signature
+  permission `com.nox.nox_iptv.permission.REMOTE_KEYS`, declared by both apps).
+- VesperTV `RemoteKeysLink.kt` binds it on every resume (when installed), sends HELLO (its Messenger), STATE
+  (on screen, learning, taken key codes) on resume / pause / setTaken / setLearning; the add-on sends KEY
+  (the KeyEvent) and STATUS (accessibility service running). Keys go to `MainActivity.dispatchKeyEvent`.
+- Settings > Remote buttons: add-on missing = **Buttons your box keeps** downloads
+  `https://vespertv.app/addons/VesperTV-remote-buttons.apk` (`RemoteKeys.addonUrl`, docs/addons, size from a
+  HEAD) and hands it to Android's installer through `AppUpdateService`. Never attach it to a GitHub release:
+  the updater installs a release's first `.apk`.
+- Build: `flutter build apk --config-only` once (for gradlew), then from `android/`:
+  `./gradlew :remotebuttons:assembleRelease` -> `build/remotebuttons/outputs/apk/release/`; verify the
+  signature, copy to `docs/addons/VesperTV-remote-buttons.apk`, bump `versionCode` in its build.gradle.kts on
+  any change.
+- Viewers who had it on lose it after updating until they install the add-on (the row says so).
+- Unknown: whether Play Protect also blocks the add-on when VesperTV installs it (it is a sideloaded app with an
+  accessibility service). If so, those viewers need the Play Store workaround or adb for that one small app;
+  VesperTV itself installs normally either way.

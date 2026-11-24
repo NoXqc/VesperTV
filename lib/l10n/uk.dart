@@ -3826,4 +3826,10 @@ const Map<String, String> kUk = {
       "Додано, вимкнено для цього профілю",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} уже було додано для інших профілів. Тепер його увімкнено для вибраних профілів.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Дозвольте {app} встановлювати застосунки на наступному екрані, потім поверніться й натисніть тут ще раз.",
+  "Downloading…":
+      "Завантаження…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Щоб користуватися кнопками TV, YouTube чи Prime, додайте безкоштовний додаток «{name}» — невеликий окремий застосунок. Натисніть OK, щоб завантажити й установити його.",
 };

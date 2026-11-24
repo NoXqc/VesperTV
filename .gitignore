@@ -49,6 +49,9 @@ app.*.map.json
 
 # Distributed via GitHub Releases, not tracked in source control
 *.apk
+# Except the small remote buttons add-on the app downloads from the site
+# (RemoteKeys.addonUrl; never on a release: the updater takes its first .apk).
+!docs/addons/*.apk
 
 # Ad-hoc debug screenshots pulled from devices during development
 /nox_*.png
