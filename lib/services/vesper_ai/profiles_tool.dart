@@ -257,7 +257,8 @@ final _parentalTool = VesperTool(
                 'allowed_groups': [
                   for (final pl in box.playlist.profiles)
                     for (final g in box.storage.getShownGroupsFor(v.id, pl.id))
-                      box._manyPlaylists ? '$g (${pl.name})' : g
+                      if (!isAdultGroupName(g))
+                        box._manyPlaylists ? '$g (${pl.name})' : g
                 ].take(80).toList(),
               }
           ],
@@ -278,22 +279,34 @@ final _parentalTool = VesperTool(
         if (words.isEmpty) throw VesperToolError('Say which groups.');
         await box.playlist.ensureLiveChannelsLoaded();
         final found = _groupsNamed(box, words, _str(args, 'tab').toLowerCase());
+        // Adult-named groups stay hidden on a kids profile whatever its
+        // allowlist says (PlaylistSession's _KidsHiddenGroups).
+        final adult = [
+          if (allow)
+            for (final (_, title) in found)
+              if (isAdultGroupName(title)) title
+        ];
         final changes = [
           for (final (pl, title) in found)
-            if (box.storage.getShownGroupsFor(target.id, pl).contains(title) !=
-                allow)
+            if (!(allow && isAdultGroupName(title)) &&
+                box.storage.getShownGroupsFor(target.id, pl).contains(title) !=
+                    allow)
               (pl, title)
         ];
         final names = [for (final (_, t) in changes) t];
         if (found.isEmpty) {
           throw VesperToolError('No group matches "$words".');
         }
+        const adultNote = 'Groups named XXX, Adult, Porn or 18+ are always '
+            'hidden on a kids profile.';
         if (changes.isEmpty) {
           return {
             'changed': 0,
-            'note': allow
-                ? 'Those groups are already allowed.'
-                : 'Those groups are already blocked.',
+            'note': adult.isNotEmpty
+                ? adultNote
+                : allow
+                    ? 'Those groups are already allowed.'
+                    : 'Those groups are already blocked.',
           };
         }
         if (changes.length > 300) {
@@ -334,6 +347,10 @@ final _parentalTool = VesperTool(
         return {
           allow ? 'allowed' : 'blocked': names.take(60).toList(),
           'changed': names.length,
+          if (adult.isNotEmpty) ...{
+            'still_hidden': adult.take(60).toList(),
+            'note': adultNote,
+          },
         };
       case 'change_pin':
         await _confirmRemote(box, caller,

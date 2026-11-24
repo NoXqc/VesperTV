@@ -4367,4 +4367,7 @@ const Map<String, String> kFr = {
       "Ajouté, désactivé pour ce profil",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} était déjà ajouté pour d’autres profils. Il est maintenant activé pour les profils choisis.",
+  "Always hidden on a Kids profile": "Toujours masqué sur un profil enfant",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Les groupes nommés XXX, Adult, Porn ou 18+ sont toujours masqués sur un profil enfant.",
 };

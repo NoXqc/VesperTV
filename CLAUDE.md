@@ -500,6 +500,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-24 - kids adult groups, profile switch speed, Search typing (`claude/kids-adult-speed`, worktree
+  `VesperTV-claude-kidsadult`, from main b05fd52):** wile.e.coyote's log LOG-GT8TZG (Onn 4K, 1.0.74-dev.980, 277k movies,
+  68k channels; saved in Logs/). (1) Kids search still found adult movies: the profile allowed almost everything (Show
+  All, then only the TV tab's adult group hidden). Owner OK'd a safeguard: groups named XXX / Adult / Porn / 18+ / +18
+  (`utils/adult_groups.dart`, also What's New's SQL list) are always hidden on a kids profile, never saved as allowed,
+  padlock on the Groups page, Vesper `allow_groups` skips them. (2) Profile switches waited 30-64 s on Home's Recently
+  added (one IN query sorted every row): one query per playlist on `(playlist_id, added_at)`
+  (`CatalogDatabase._newestRows`). (3) Search froze ~3 s per letter: 68k names overflowed the 60k fold caches;
+  `TitleSearch.prepare` / `rankFolded` + an Expando per channel, folded while the keyboard opens. Details:
+  dev-notes/bugs-and-fixes.md (3 rows), features.md (viewer profiles), remote.html "What a Kids profile can see".
 - **Claude, 2026-11-24 - Media Hub sources per profile (`claude/source-profiles`, worktree `VesperTV-claude-sourceprofiles`,
   from main d5aa980):** owner: users want different sources / Stremio imports per profile ("for this profile or a drop
   down to select which profiles gets it"). **Profiles** row (2+ profiles only) on Add a source, Import from Stremio and

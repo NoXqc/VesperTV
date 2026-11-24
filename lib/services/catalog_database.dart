@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
+import '../utils/adult_groups.dart';
 import '../utils/title_search.dart';
 import 'perf_diagnostics.dart';
 
@@ -328,8 +329,10 @@ class CatalogDatabase {
     // scanned that category in every playlist (13 playlists, ~1.2M rows,
     // LOG-6LYY3R).
     for (final (table, index, columns) in [
-      ('vod_channels', 'idx_vod_added', 'added_at'),
-      ('series_items', 'idx_series_added', 'added_at'),
+      // Recently added reads one playlist at a time, newest first (see
+      // `_newestRows`); a date-only index made SQLite sort every row.
+      ('vod_channels', 'idx_vod_playlist_added', 'playlist_id, added_at'),
+      ('series_items', 'idx_series_playlist_added', 'playlist_id, added_at'),
       ('vod_channels', 'idx_vod_playlist_cat', 'playlist_id, category_name'),
       ('series_items', 'idx_series_playlist_cat', 'playlist_id, category_name'),
       ('m3u_episodes', 'idx_m3u_episodes_show', 'playlist_id, series_id'),
@@ -348,7 +351,8 @@ class CatalogDatabase {
     // The single-column category / playlist indexes: every query filters by
     // playlist + category or by playlist (the indexes above cover both), so
     // they only made each saved row cost two more index updates. Dropped
-    // only once the covering index is there.
+    // only once the covering index is there. Same for the date-only index,
+    // replaced by playlist + date (LOG-GT8TZG).
     for (final (table, cover, drop) in [
       (
         'vod_channels',
@@ -360,6 +364,8 @@ class CatalogDatabase {
         'idx_series_playlist_cat',
         ['idx_series_category', 'idx_series_playlist']
       ),
+      ('vod_channels', 'idx_vod_playlist_added', ['idx_vod_added']),
+      ('series_items', 'idx_series_playlist_added', ['idx_series_added']),
     ]) {
       try {
         final has = await db.rawQuery(
@@ -819,15 +825,41 @@ class CatalogDatabase {
   /// hide the category itself (see `PlaylistSession.hiddenGroups` for
   /// that, a separate, deliberate per-category opt-out) — it just keeps
   /// this one uninvited surface from dipping into it. SQLite's `LIKE` is
-  /// already case-insensitive for plain ASCII text like these.
-  static const _adultCategoryKeywords = ['XXX', 'ADULT', 'PORN', '18+'];
-
-  static String _excludeAdultCategoriesClause() => _adultCategoryKeywords
-      .map((_) => 'category_name NOT LIKE ?')
-      .join(' AND ');
+  /// already case-insensitive for plain ASCII text like these. The same
+  /// words a Kids profile always hides ([adultGroupWords]).
+  static String _excludeAdultCategoriesClause() =>
+      adultGroupWords.map((_) => 'category_name NOT LIKE ?').join(' AND ');
 
   static List<String> _excludeAdultCategoriesArgs() =>
-      _adultCategoryKeywords.map((k) => '%$k%').toList();
+      adultGroupWords.map((k) => '%$k%').toList();
+
+  /// The newest [limit] rows of [table] across [playlistIds], adult
+  /// categories left out. One query per playlist, each reading the
+  /// playlist + added-date index backwards and stopping at [limit], then
+  /// merged: a single `playlist_id IN (...)` query made SQLite read and sort
+  /// every row of those playlists (277k movies: 3-4.5 s per query on an Onn
+  /// box, queued 3-4 deep after every profile switch, rows and search
+  /// waiting up to a minute; LOG-GT8TZG).
+  Future<List<Map<String, Object?>>> _newestRows(
+      String table, List<String> playlistIds, int limit) async {
+    final db = await _database;
+    final rows = <Map<String, Object?>>[];
+    for (final id in playlistIds.toSet()) {
+      rows.addAll(await db.query(
+        table,
+        where: 'playlist_id = ? AND added_at IS NOT NULL'
+            ' AND ${_excludeAdultCategoriesClause()}',
+        whereArgs: [id, ..._excludeAdultCategoriesArgs()],
+        orderBy: 'added_at DESC',
+        limit: limit,
+      ));
+    }
+    if (rows.length > 1) {
+      rows.sort(
+          (a, b) => (b['added_at'] as int).compareTo(a['added_at'] as int));
+    }
+    return rows.length > limit ? rows.sublist(0, limit) : rows;
+  }
 
   /// The newest movies the provider has, newest first — what the TV
   /// layout's "What's New" carousel shows. Scoped to [playlistIds] (the
@@ -843,16 +875,7 @@ class CatalogDatabase {
   Future<List<Channel>> _getRecentlyAddedVod(List<String> playlistIds,
       {int limit = 5}) async {
     if (playlistIds.isEmpty) return [];
-    final db = await _database;
-    final placeholders = List.filled(playlistIds.length, '?').join(', ');
-    final rows = await db.query(
-      'vod_channels',
-      where: 'playlist_id IN ($placeholders) AND added_at IS NOT NULL'
-          ' AND ${_excludeAdultCategoriesClause()}',
-      whereArgs: [...playlistIds, ..._excludeAdultCategoriesArgs()],
-      orderBy: 'added_at DESC',
-      limit: limit,
-    );
+    final rows = await _newestRows('vod_channels', playlistIds, limit);
     return rows.map(_rowToChannel).toList();
   }
 
@@ -928,16 +951,7 @@ class CatalogDatabase {
   Future<List<XtreamSeries>> _getRecentlyAddedSeries(List<String> playlistIds,
       {int limit = 5}) async {
     if (playlistIds.isEmpty) return [];
-    final db = await _database;
-    final placeholders = List.filled(playlistIds.length, '?').join(', ');
-    final rows = await db.query(
-      'series_items',
-      where: 'playlist_id IN ($placeholders) AND added_at IS NOT NULL'
-          ' AND ${_excludeAdultCategoriesClause()}',
-      whereArgs: [...playlistIds, ..._excludeAdultCategoriesArgs()],
-      orderBy: 'added_at DESC',
-      limit: limit,
-    );
+    final rows = await _newestRows('series_items', playlistIds, limit);
     return rows.map(_rowToSeries).toList();
   }
 

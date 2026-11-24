@@ -79,4 +79,35 @@ void main() {
         ArchiveService.rankSearch('spider homecoming', items).map((m) => m.id),
         ['3']);
   });
+
+  // LOG-GT8TZG: Search ranks every live channel on each letter; prepared
+  // names give the same ranks without folding again.
+  test('a prepared title ranks like the plain one', () {
+    const titles = [
+      '|EN| TSN 1 HD',
+      'TSN1',
+      'Sportsnet One',
+      'Télé-Québec',
+      'CANAL+ Sport',
+      'ΕΡΤ Σπορ',
+      'Straße 7',
+      'Unrelated',
+    ];
+    for (final q in [
+      'tsn',
+      'tsn 1',
+      'sport',
+      'tele quebec',
+      'strasse',
+      'ερτ',
+      'one sports',
+      ''
+    ]) {
+      final search = TitleSearch(q);
+      for (final t in titles) {
+        expect(search.rankFolded(TitleSearch.prepare(t)), search.rank(t),
+            reason: '"$q" on "$t"');
+      }
+    }
+  });
 }

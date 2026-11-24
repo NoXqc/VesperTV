@@ -11,6 +11,7 @@ import '../models/profile_copy.dart';
 import 'profile_photos.dart';
 import 'local_playlist_files.dart';
 import 'sync_profile_match.dart' show syncProfileNameKey;
+import '../utils/adult_groups.dart';
 import '../utils/app_store.dart';
 import '../utils/constants.dart';
 import '../utils/desktop_platform.dart' show isAppleTv;
@@ -162,12 +163,15 @@ class StorageService {
     }
   }
 
+  /// [allowed]: a kids profile's allowlist, without adult-named groups
+  /// (always hidden there, `isAdultGroupName`).
   int viewerGroupCount(String playlistId, String viewerId,
           {bool allowed = false}) =>
       (_prefs.getStringList(_vk(
                   '${allowed ? AppConstants.keyShownGroups : AppConstants.keyHiddenGroups}_$playlistId',
                   viewerId: viewerId)) ??
               [])
+          .where((g) => !allowed || !isAdultGroupName(g))
           .length;
   int viewerHiddenChannelCount(String playlistId, String viewerId) =>
       (_prefs.getStringList(_vk('${AppConstants.keyHiddenChannels}_$playlistId',

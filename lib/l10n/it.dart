@@ -4361,4 +4361,7 @@ const Map<String, String> kIt = {
       "Aggiunto, disattivato per questo profilo",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} era già aggiunto per altri profili. Ora è attivo per i profili scelti.",
+  "Always hidden on a Kids profile": "Sempre nascosto in un profilo bambini",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "I gruppi chiamati XXX, Adult, Porn o 18+ sono sempre nascosti in un profilo bambini.",
 };

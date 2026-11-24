@@ -13,6 +13,7 @@ import '../models/series_details.dart';
 import '../models/vod_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
+import '../utils/adult_groups.dart';
 import '../utils/catalog_sort.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
@@ -610,7 +611,8 @@ class PlaylistSession {
       for (final title in titles) {
         if (hidden) {
           shown.remove(title);
-        } else {
+        } else if (!isAdultGroupName(title)) {
+          // Never allowed on a kids profile (see [_KidsHiddenGroups]).
           shown.add(title);
         }
       }
@@ -2704,8 +2706,17 @@ bool _isAccountRejection(Object error) {
 /// profile (Discord, 2026-11-23). Iterating gives the listed groups that
 /// are hidden (signatures, counts); add / remove go through the allowlist
 /// ([PlaylistSession._applyGroupHiddenChange]), never here.
+///
+/// A group named as adult ([isAdultGroupName]: XXX, Adult, Porn, 18+) stays
+/// hidden even when allowed: a parent pressed Show All, hid the adult group
+/// on the TV tab, and search still found the adult movies, which sit in
+/// their own Movies / TV Shows groups (Discord, LOG-GT8TZG, 2026-11-24).
 class _KidsHiddenGroups extends SetBase<String> {
-  _KidsHiddenGroups(this._session, this._allowed) {
+  _KidsHiddenGroups(this._session, Set<String> allowed)
+      : _allowed = {
+          for (final g in allowed)
+            if (!isAdultGroupName(g)) g
+        } {
     _known = _session._allKnownGroupTitles();
     _hidden = {
       for (final t in _known)
@@ -2737,6 +2748,7 @@ class _KidsHiddenGroups extends SetBase<String> {
   @override
   bool contains(Object? element) {
     if (element is! String) return false;
+    if (isAdultGroupName(element)) return true;
     if (_allowed.contains(element) || _allowedUnderEditorName(element)) {
       return false;
     }

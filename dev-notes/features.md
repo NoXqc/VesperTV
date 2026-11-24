@@ -96,7 +96,14 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   movies left in the catalog under a renamed / dropped category, Uncategorized channels, editor
   renames and every group before the list loaded (Discord report; `test/kids_search_test.dart`).
   Allowed = an allowlist title or its editor name; own groups / NUL move titles pass (the manager
-  only gives them for a channel from an allowed group). Media Hub on a kids profile: every source
+  only gives them for a channel from an allowed group). **Adult-named groups (2026-11-24, LOG-GT8TZG):**
+  `utils/adult_groups.dart` `isAdultGroupName` (XXX, ADULT, PORN, 18+, +18, any case; the same words
+  What's New skips in SQL) = always hidden on a kids profile, even on its allowlist (Show All, an
+  allowlist from before, Vesper AI `allow_groups`, the editor name of such a group). A parent had
+  pressed Show All and hidden only the TV tab's adult group; the adult movies sat in their own Movies /
+  TV Shows groups. Showing one never saves it (`_applyGroupHiddenChange`), the allowed count leaves
+  them out, the Groups page shows a padlock + "Always hidden on a Kids profile" (tap = why). Regular
+  profiles are unchanged. Media Hub on a kids profile: every source
   is off until turned on for that profile (`ArchiveService.isKidsProfile`: no saved per-profile
   Enabled = off; a source added while it is in use is turned on for it), and the Media Hub's own
   Sources / Servers buttons ask the PIN (`ArchiveScreen._openWithPin`).

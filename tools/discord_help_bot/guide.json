@@ -379,7 +379,7 @@
     "id": "2ded955f883833a2",
     "category": "Home",
     "title": "What a Kids profile can see",
-    "answer": "A Kids profile only sees the playlist groups a parent allows: Settings > Profiles > the Kids profile > What this profile can see > a playlist > Groups, and turn on the groups it may watch. Everything else stays hidden in Live TV, Movies, TV Shows, Search and Multiview, including groups the provider adds later. Media Hub sources start off on a Kids profile: open Media Hub > Sources (PIN) and turn on the ones it may use. Leaving the profile, opening Settings and opening the Media Hub sources all ask for the PIN.",
+    "answer": "A Kids profile only sees the playlist groups a parent allows: Settings > Profiles > the Kids profile > What this profile can see > a playlist > Groups, and turn on the groups it may watch. Everything else stays hidden in Live TV, Movies, TV Shows, Search and Multiview, including groups the provider adds later. The Groups page has three tabs, TV, Movies and TV Shows: check all three, adult movies and shows have their own groups. Groups named XXX, Adult, Porn or 18+ always stay hidden on a Kids profile, even after Show All; a padlock marks them. Media Hub sources start off on a Kids profile: open Media Hub > Sources (PIN) and turn on the ones it may use. Leaving the profile, opening Settings and opening the Media Hub sources all ask for the PIN.",
     "controls": "Settings > Profiles > Add profile > Kids profile",
     "url": "https://vespertv.app/remote.html#Home"
   },

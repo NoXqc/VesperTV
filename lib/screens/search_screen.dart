@@ -150,6 +150,22 @@ class _SearchScreenState extends State<SearchScreen> {
   GlobalKey _rowKey(String id) => _rowKeys.putIfAbsent(id, GlobalKey.new);
   FocusNode _rowNode(String id) => _rowNodes.putIfAbsent(id, FocusNode.new);
 
+  /// Channel names folded once while this page is open
+  /// ([TitleSearch.prepare]), kept with each channel object: a rebuilt
+  /// visible list keeps the same channels. The name is kept beside it (an
+  /// editor rename shows a new one). Gone with the page: 350k channels'
+  /// names would be ~35 MB kept for nothing.
+  final _foldedNames = Expando<(String, FoldedTitle)>('search names');
+
+  FoldedTitle _foldedName(Channel c) {
+    final name = c.name;
+    final hit = _foldedNames[c];
+    if (hit != null && identical(hit.$1, name)) return hit.$2;
+    final folded = TitleSearch.prepare(name);
+    _foldedNames[c] = (name, folded);
+    return folded;
+  }
+
   /// Local matches of the last query per category, reused while neither the
   /// query nor the channel list changed (Media Hub replies rebuild the page).
   final Map<String, (Object, List<Channel>)> _localMatches = {};
@@ -169,7 +185,7 @@ class _SearchScreenState extends State<SearchScreen> {
     // voice search report, 2026-11-06).
     final ranked = <(int, int, Channel)>[
       for (final (i, c) in all.indexed)
-        if (search.rank(c.name) case final r?) (r, i, c)
+        if (search.rankFolded(_foldedName(c)) case final r?) (r, i, c)
     ]..sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
     final found = [for (final r in ranked) r.$3];
     _localMatches[category] = (signature, found);
@@ -191,12 +207,30 @@ class _SearchScreenState extends State<SearchScreen> {
     _recentSearches = context.read<StorageService>().getRecentSearches();
     // Needed for a live-channel search to find anything at all — see
     // PlaylistManager.ensureLiveChannelsLoaded's doc comment.
-    unawaited(context.read<PlaylistManager>().ensureLiveChannelsLoaded());
+    final playlist = context.read<PlaylistManager>();
+    unawaited(playlist
+        .ensureLiveChannelsLoaded()
+        .then((_) => _foldLiveNames(playlist)));
     final initial = widget.initialQuery?.trim() ?? '';
     if (initial.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _runSearch(initial);
       });
+    }
+  }
+
+  /// Folds the live channel names while the keyboard opens, a slice per
+  /// event-loop turn so frames keep drawing; a letter typed sooner folds
+  /// the rest itself ([_foldedName]). 68k names: ~150 ms on a PC.
+  Future<void> _foldLiveNames(PlaylistManager playlist) async {
+    if (!mounted) return;
+    final all = playlist.visibleChannels(category: 'tv');
+    for (var i = 0; i < all.length; i++) {
+      _foldedName(all[i]);
+      if (i % 2000 == 1999) {
+        await Future<void>.delayed(Duration.zero);
+        if (!mounted) return;
+      }
     }
   }
 

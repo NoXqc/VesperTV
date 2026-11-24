@@ -3948,4 +3948,7 @@ const Map<String, String> kPl = {
       "Dodane, wyłączone dla tego profilu",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} było już dodane dla innych profili. Teraz jest włączone dla wybranych profili.",
+  "Always hidden on a Kids profile": "Zawsze ukryte w profilu dziecka",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Grupy o nazwach XXX, Adult, Porn lub 18+ są zawsze ukryte w profilu dziecka.",
 };

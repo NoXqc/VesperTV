@@ -4257,4 +4257,7 @@ const Map<String, String> kDe = {
       "Hinzugefügt, für dieses Profil aus",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} war schon für andere Profile hinzugefügt. Jetzt ist es für die gewählten Profile an.",
+  "Always hidden on a Kids profile": "Im Kinderprofil immer ausgeblendet",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Gruppen mit XXX, Adult, Porn oder 18+ im Namen sind im Kinderprofil immer ausgeblendet.",
 };

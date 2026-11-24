@@ -126,6 +126,73 @@ void main() {
     expect(again.firstWhere((s) => s.seriesId == 7).rating, '6.7');
   });
 
+  // LOG-GT8TZG (Onn box, 277k movies): every profile switch's "Recently
+  // added" read and sorted every row of the enabled playlists (3-4.5 s each,
+  // queued 3-4 deep: rows and search waited up to a minute).
+  test('recently added reads each playlist newest first, no full sort',
+      () async {
+    Channel film(String playlist, int n, String group) => Channel(
+        id: '$playlist::$n',
+        rawId: '$n',
+        playlistId: playlist,
+        name: 'Film $playlist$n',
+        group: group,
+        url: 'https://example.test/$playlist/$n',
+        onDemand: true,
+        addedAt: DateTime(2026, 1, 1).add(Duration(minutes: n)));
+    await catalog.upsertVodCategory('a', 'Action',
+        [for (var i = 0; i < 30; i++) film('a', i * 2, 'Action')]);
+    await catalog.upsertVodCategory('b', 'Drama',
+        [for (var i = 0; i < 30; i++) film('b', i * 2 + 1, 'Drama')]);
+    await catalog
+        .upsertVodCategory('b', 'XXX Night', [film('b', 999, 'XXX Night')]);
+    await catalog.upsertVodCategory('c', 'Off', [film('c', 500, 'Off')]);
+
+    final newest = await catalog.getRecentlyAddedVod(['a', 'b'], limit: 5);
+    expect([for (final c in newest) c.id],
+        ['b::59', 'a::58', 'b::57', 'a::56', 'b::55'],
+        reason: 'both playlists merged by date; the adult category and the '
+            'playlist not asked for left out');
+
+    await catalog.upsertSeriesCategory('a', 'Kids', [
+      for (var i = 0; i < 4; i++)
+        XtreamSeries(
+            seriesId: i,
+            playlistId: 'a',
+            name: 'Show $i',
+            categoryId: 'Kids',
+            addedAt: DateTime(2026, 2, i + 1)),
+    ]);
+    expect([
+      for (final s in await catalog.getRecentlyAddedSeries(['a'])) s.seriesId
+    ], [
+      3,
+      2,
+      1,
+      0
+    ]);
+
+    final db = await databaseFactoryFfi.openDatabase('${temp.path}/catalog.db');
+    try {
+      for (final (table, index) in [
+        ('vod_channels', 'idx_vod_playlist_added'),
+        ('series_items', 'idx_series_playlist_added'),
+      ]) {
+        final plan = (await db.rawQuery(
+                'EXPLAIN QUERY PLAN SELECT * FROM $table WHERE playlist_id = ? '
+                "AND added_at IS NOT NULL AND category_name NOT LIKE '%XXX%' "
+                'ORDER BY added_at DESC LIMIT 800',
+                ['a']))
+            .map((r) => r['detail'])
+            .join(' ');
+        expect(plan, contains(index));
+        expect(plan, isNot(contains('TEMP B-TREE')));
+      }
+    } finally {
+      await db.close();
+    }
+  });
+
   test('the single-column indexes are gone, also from an older database',
       () async {
     await catalog.getVodCategoryCount('p', 'x');
@@ -136,6 +203,7 @@ void main() {
         'CREATE INDEX idx_vod_category ON vod_channels(category_name)');
     await db.execute(
         'CREATE INDEX idx_series_playlist ON series_items(playlist_id)');
+    await db.execute('CREATE INDEX idx_vod_added ON vod_channels(added_at)');
     await db.close();
 
     catalog = CatalogDatabase(databasePath: '${temp.path}/catalog.db');
@@ -156,14 +224,18 @@ void main() {
               contains('idx_vod_category'),
               contains('idx_vod_playlist'),
               contains('idx_series_category'),
-              contains('idx_series_playlist'))));
-      // Playlist-only reads still use an index (the covering one's prefix).
+              contains('idx_series_playlist'),
+              contains('idx_vod_added'),
+              contains('idx_series_added'))));
+      expect(names,
+          containsAll(['idx_vod_playlist_added', 'idx_series_playlist_added']));
+      // Playlist-only reads still use an index (a covering one's prefix).
       final plan = (await db.rawQuery(
               'EXPLAIN QUERY PLAN SELECT playlist_id, COUNT(*) FROM vod_channels '
               'GROUP BY playlist_id'))
           .map((r) => r['detail'])
           .join(' ');
-      expect(plan, contains('idx_vod_playlist_cat'));
+      expect(plan, matches(RegExp('idx_vod_playlist_(cat|added)')));
     } finally {
       await db.close();
     }

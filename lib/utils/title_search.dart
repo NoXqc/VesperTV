@@ -1,14 +1,20 @@
+/// A title folded once for [TitleSearch.rankFolded]: [spaced] is the
+/// folded name after a space, [joined] the same without spaces.
+typedef FoldedTitle = ({String spaced, String joined});
+
 /// Shared title matching for local catalogs and Media Hub search.
 /// Keep Unicode letters; punctuation and word spacing are interchangeable.
 class TitleSearch {
   TitleSearch(String query)
       : folded = fold(query),
         compact = key(query),
+        _spacedQuery = ' ${fold(query)}',
         terms =
             fold(query).split(' ').where((s) => s.isNotEmpty).toSet().toList();
 
   final String folded;
   final String compact;
+  final String _spacedQuery;
   final List<String> terms;
   bool get isEmpty => compact.isEmpty;
 
@@ -107,7 +113,28 @@ class TitleSearch {
     final name = fold(title);
     final joined = _joinedFold(title);
     if (joined.startsWith(compact)) return 0;
-    if (' $name'.contains(' $folded')) return 1;
+    if (' $name'.contains(_spacedQuery)) return 1;
+    if (joined.contains(compact)) return 2;
+    if (terms.every(joined.contains)) return 3;
+    return null;
+  }
+
+  /// [title] folded for [rankFolded], outside the fold caches. For a list
+  /// ranked again on every keystroke (Search's live channels): two big
+  /// playlists had 68k channel names, more than the caches keep (60k), so
+  /// each letter emptied them and folded every name again, ~3 s per letter
+  /// on an Onn box (LOG-GT8TZG).
+  static FoldedTitle prepare(String title) {
+    final name = _fold(title);
+    return (spaced: ' $name', joined: name.replaceAll(' ', ''));
+  }
+
+  /// [rank] for a title already [prepare]d: no folding, no allocation.
+  int? rankFolded(FoldedTitle title) {
+    if (isEmpty) return null;
+    final joined = title.joined;
+    if (joined.startsWith(compact)) return 0;
+    if (title.spaced.contains(_spacedQuery)) return 1;
     if (joined.contains(compact)) return 2;
     if (terms.every(joined.contains)) return 3;
     return null;

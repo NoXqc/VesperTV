@@ -4316,4 +4316,7 @@ const Map<String, String> kEl = {
       "Προστέθηκε, ανενεργό για αυτό το προφίλ",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "Το {name} είχε ήδη προστεθεί για άλλα προφίλ. Τώρα είναι ενεργό για τα προφίλ που επιλέξατε.",
+  "Always hidden on a Kids profile": "Πάντα κρυφό σε παιδικό προφίλ",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Οι ομάδες με όνομα XXX, Adult, Porn ή 18+ είναι πάντα κρυφές σε παιδικό προφίλ.",
 };

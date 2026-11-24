@@ -3826,4 +3826,7 @@ const Map<String, String> kUk = {
       "Додано, вимкнено для цього профілю",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} уже було додано для інших профілів. Тепер його увімкнено для вибраних профілів.",
+  "Always hidden on a Kids profile": "Завжди приховано в дитячому профілі",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Групи з назвами XXX, Adult, Porn або 18+ завжди приховані в дитячому профілі.",
 };

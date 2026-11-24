@@ -4354,4 +4354,7 @@ const Map<String, String> kEs = {
       "Añadido, desactivado en este perfil",
   "{name} was already added for other profiles. It is on for the profiles you picked now.":
       "{name} ya estaba añadido para otros perfiles. Ahora está activado para los perfiles elegidos.",
+  "Always hidden on a Kids profile": "Siempre oculto en un perfil infantil",
+  "Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.":
+      "Los grupos llamados XXX, Adult, Porn o 18+ siempre están ocultos en un perfil infantil.",
 };

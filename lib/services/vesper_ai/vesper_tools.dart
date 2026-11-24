@@ -48,6 +48,7 @@ import '../subtitle_tracks.dart';
 import '../user_groups.dart';
 import '../vod_buffering.dart';
 import 'watch_list.dart';
+import '../../utils/adult_groups.dart';
 import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';

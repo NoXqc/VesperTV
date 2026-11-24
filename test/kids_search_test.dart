@@ -80,13 +80,13 @@ void main() {
     await manager.loadPlaylist('p');
     // Movies the catalog still holds under a category the list no longer
     // has (the provider renamed or dropped it).
-    await catalog.upsertVodCategory('p', 'XXX | OLD', [
+    await catalog.upsertVodCategory('p', 'LATE | OLD', [
       Channel(
           id: 'p::m1',
           rawId: 'm1',
           playlistId: 'p',
           name: 'Hot Movie',
-          group: 'XXX | OLD',
+          group: 'LATE | OLD',
           url: 'http://x/m1.mp4',
           onDemand: true),
     ]);
@@ -125,7 +125,7 @@ void main() {
     expect(await movies('hot'), isEmpty,
         reason: 'a category the kid was never allowed');
 
-    await storage.setShownGroups('p', {'SPORTS', 'XXX | OLD'});
+    await storage.setShownGroups('p', {'SPORTS', 'LATE | OLD'});
     manager.applyActiveViewer();
     expect(await movies('hot'), ['Hot Movie'], reason: 'allowed by a parent');
   });
@@ -160,6 +160,56 @@ void main() {
       'TSN 1'
     ]);
     expect(live(), ['TSN 1']);
+  });
+
+  // Discord, LOG-GT8TZG (2026-11-24): Show All, then only the TV tab's
+  // adult group hidden; search still found the adult movies.
+  group('adult-named groups on a kids profile', () {
+    setUp(() async {
+      await catalog.upsertVodCategory('p', '|EN| ADULT 18+', [
+        Channel(
+            id: 'p::m2',
+            rawId: 'm2',
+            playlistId: 'p',
+            name: 'Hot Night',
+            group: '|EN| ADULT 18+',
+            url: 'http://x/m2.mp4',
+            onDemand: true),
+      ]);
+    });
+
+    test('stay hidden after Show All', () async {
+      expect(await movies('hot night'), ['Hot Night'], reason: 'Main');
+      await asKid({});
+      await manager.setGroupsHidden('p',
+          ['SPORTS', 'NEWS', 'XXX', 'LATE | OLD', '|EN| ADULT 18+'], false);
+      expect(live(), ['TSN 1', 'CNN']);
+      expect(await movies('hot'), ['Hot Movie']);
+      expect(await movies('hot night'), isEmpty);
+      expect(storage.getShownGroups('p'), isNot(contains('XXX')),
+          reason: 'never saved as allowed');
+      expect(storage.getShownGroups('p'), contains('NEWS'));
+    });
+
+    test('an allowlist saved before this build still hides them', () async {
+      await asKid({'SPORTS', 'XXX', '|EN| ADULT 18+'});
+      expect(live(), ['TSN 1']);
+      expect(await movies('hot night'), isEmpty);
+      expect(storage.viewerGroupCount('p', 'kid', allowed: true), 1);
+    });
+
+    test('renamed in the editor, still hidden', () async {
+      await asKid({'SPORTS', 'XXX'});
+      expect(await manager.renameLiveGroup('p', 'XXX', 'Late night'),
+          'Late night');
+      manager.applyActiveViewer();
+      expect(live(), ['TSN 1']);
+    });
+
+    test('a regular profile keeps its own choice', () async {
+      expect(live(), ['TSN 1', 'CNN', 'Hot TV']);
+      expect(await movies('hot night'), ['Hot Night']);
+    });
   });
 
   test('a kids profile is closed before its list has loaded', () async {

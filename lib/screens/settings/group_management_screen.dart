@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/m3u_group.dart';
 import '../../services/playlist_manager.dart';
+import '../../utils/adult_groups.dart';
 import '../../utils/group_regions.dart';
 import '../../utils/title_search.dart';
 import '../../utils/tv_theme.dart';
@@ -535,6 +536,7 @@ class _GroupListState extends State<_GroupList> {
     final playlist = widget.playlist;
     final playlistId = widget.playlistId;
     final deferLoading = widget.deferLoading;
+    final kidsProfile = playlist.activeViewerRestricted;
     if (groups.isEmpty) {
       return Center(
           child: Text(tr('No categories yet — load a playlist first.')));
@@ -751,6 +753,9 @@ class _GroupListState extends State<_GroupList> {
                     // after that change, so the `RepaintBoundary` above is
                     // likely no longer doing any real work — left in place
                     // anyway since it's strictly safe and costs nothing.
+                    // A kids profile never shows an adult-named group,
+                    // whatever its allowlist says (LOG-GT8TZG).
+                    final locked = kidsProfile && isAdultGroupName(group.title);
                     return GlassFocusFrame(
                         key: ValueKey(group.title),
                         child: ListTile(
@@ -760,23 +765,34 @@ class _GroupListState extends State<_GroupList> {
                               style: group.isHidden
                                   ? const TextStyle(color: Colors.white54)
                                   : null),
+                          subtitle: locked
+                              ? Text(tr('Always hidden on a Kids profile'))
+                              : null,
                           trailing: RepaintBoundary(
                             key: ValueKey(group.isHidden),
                             child: Icon(
-                              group.isHidden
-                                  ? Icons.circle_outlined
-                                  : Icons.check_circle,
+                              locked
+                                  ? Icons.lock_outline
+                                  : group.isHidden
+                                      ? Icons.circle_outlined
+                                      : Icons.check_circle,
                               color: group.isHidden
                                   ? Colors.white54
                                   : Theme.of(context).colorScheme.primary,
                             ),
                           ),
-                          onTap: () => playlist.setGroupHidden(
-                            playlistId,
-                            group.title,
-                            !group.isHidden,
-                            loadImmediately: !deferLoading,
-                          ),
+                          onTap: locked
+                              ? () => ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                    content: Text(tr(
+                                        'Groups named XXX, Adult, Porn or 18+ are always hidden on a Kids profile.'))))
+                              : () => playlist.setGroupHidden(
+                                    playlistId,
+                                    group.title,
+                                    !group.isHidden,
+                                    loadImmediately: !deferLoading,
+                                  ),
                         ));
                   },
                 ),
