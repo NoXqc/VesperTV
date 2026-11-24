@@ -1325,6 +1325,21 @@ class SettingsCatalog {
                   'Choose a profile after the splash, before the app opens. Applies from the next start.'),
               value: prefs.launchWithProfiles,
               onChanged: prefs.setLaunchWithProfiles),
+          SettingsChoice(
+              id: 'profile_relock',
+              icon: Icons.lock_clock_outlined,
+              title: tr('Lock profiles again'),
+              help: tr(
+                  'For profiles with Lock with PIN on: how long VesperTV can be left before it shows "Who is watching?" again.'),
+              options: [
+                SettingsOption('0', tr('Every time VesperTV is left')),
+                SettingsOption('1', tr('After 1 minute')),
+                for (final m in const [5, 15, 30])
+                  SettingsOption('$m', tr('After {n} minutes', {'n': '$m'})),
+                SettingsOption('60', tr('After 1 hour')),
+              ],
+              selected: '${prefs.profileRelockMinutes}',
+              onPick: (v) => prefs.setProfileRelockMinutes(int.parse(v))),
         ]),
         SettingsSection(title: tr('Startup'), [
           SettingsChoice(

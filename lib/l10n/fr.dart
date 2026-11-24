@@ -151,6 +151,24 @@ const Map<String, String> kFr = {
       "S'affiche quand votre profil est sélectionné. Nécessite Lancer avec le sélecteur de profils (Paramètres > Profils et démarrage).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Choisissez un profil après l’écran de démarrage, avant l’ouverture de l’application. S’applique au prochain démarrage.",
+  "Lock":
+      "Verrouillage",
+  "Lock with PIN":
+      "Verrouiller avec le NIP",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Ouvrir ce profil demande le NIP parental. Quand VesperTV démarre ou a été quitté un moment, il affiche plutôt « Qui regarde? ».",
+  "Lock profiles again":
+      "Reverrouiller les profils",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Pour les profils avec « Verrouiller avec le NIP » : combien de temps VesperTV peut être quitté avant de réafficher « Qui regarde? ».",
+  "Every time VesperTV is left":
+      "Chaque fois qu'on quitte VesperTV",
+  "After 1 minute":
+      "Après 1 minute",
+  "After {n} minutes":
+      "Après {n} minutes",
+  "After 1 hour":
+      "Après 1 heure",
   "Who is watching?": "Qui regarde?",
   "Choose your profile to get started.":
       "Choisissez votre profil pour commencer.",

@@ -152,6 +152,24 @@ const Map<String, String> kIt = {
       'Appare quando il tuo profilo è evidenziato. Richiede Avvia con il selettore dei profili (Impostazioni > Profili e avvio).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Scegli un profilo dopo la schermata iniziale, prima di aprire l’app. Si applica dal prossimo avvio.",
+  "Lock":
+      "Blocco",
+  "Lock with PIN":
+      "Blocca con PIN",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Aprire questo profilo richiede il PIN parentale. Quando VesperTV si avvia o è stato lasciato per un po', mostra invece «Chi sta guardando?».",
+  "Lock profiles again":
+      "Blocca di nuovo i profili",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Per i profili con «Blocca con PIN»: quanto tempo VesperTV può restare lasciato prima di mostrare di nuovo «Chi sta guardando?».",
+  "Every time VesperTV is left":
+      "Ogni volta che si esce da VesperTV",
+  "After 1 minute":
+      "Dopo 1 minuto",
+  "After {n} minutes":
+      "Dopo {n} minuti",
+  "After 1 hour":
+      "Dopo 1 ora",
   "Who is watching?": "Chi sta guardando?",
   "Choose your profile to get started.": "Scegli il tuo profilo per iniziare.",
   "Welcome, {name}": "Benvenuto, {name}",

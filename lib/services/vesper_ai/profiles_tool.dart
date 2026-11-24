@@ -51,6 +51,7 @@ Map<String, Object?> _describeProfile(
       'id': v.id,
       'name': v.displayName,
       if (v.isRestricted) 'kids': true,
+      if (v.isLocked) 'locked': true,
       if (v.isMain) 'main': true,
       if (v.id == p.active.id) 'active': true,
     };
@@ -104,9 +105,11 @@ final _profilesTool = VesperTool(
             caller,
             'An AI app wants to switch to the profile {name}.',
             {'name': target.displayName});
-        // Leaving a kids profile: the PIN, like the TV's own switcher.
-        if (onKids) await _needPin(p);
-        if (!await p.switchTo(target.id, unlocked: onKids)) {
+        // Leaving a kids profile or opening a locked one: the PIN, like
+        // the TV's own switcher.
+        final pin = onKids || target.isLocked;
+        if (pin) await _needPin(p);
+        if (!await p.switchTo(target.id, unlocked: pin)) {
           throw VesperToolError('The switch did not happen.');
         }
         return {'active': target.displayName};

@@ -67,17 +67,23 @@ class ProfilePortrait extends StatelessWidget {
                     ])),
                 child: Stack(fit: StackFit.expand, children: [
                   face,
-                  if (profile.isRestricted)
-                    const Positioned(
+                  // A kids profile: the child; a locked one (PIN to open):
+                  // the padlock.
+                  if (profile.isRestricted || profile.isLocked)
+                    Positioned(
                         right: 7,
                         top: 7,
                         child: DecoratedBox(
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                                 color: Colors.black54, shape: BoxShape.circle),
                             child: Padding(
-                                padding: EdgeInsets.all(5),
-                                child: Icon(Icons.lock,
-                                    size: 16, color: Colors.white)))),
+                                padding: const EdgeInsets.all(5),
+                                child: Icon(
+                                    profile.isRestricted
+                                        ? Icons.child_care
+                                        : Icons.lock,
+                                    size: 16,
+                                    color: Colors.white)))),
                 ]))));
   }
 }

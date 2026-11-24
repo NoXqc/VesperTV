@@ -490,6 +490,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Locked profiles: minutes away before Who's watching shows again
+  /// (0 = every time VesperTV is left). Device-only.
+  int get profileRelockMinutes => _storage.getProfileRelockMinutes();
+
+  void setProfileRelockMinutes(int minutes) {
+    _storage.setProfileRelockMinutes(minutes);
+    notifyListeners();
+  }
+
   bool refinedFinish = false;
 
   void setRefinedFinish(bool value) {

@@ -250,6 +250,10 @@ class AppConstants {
   static const String keyViewerProfiles = 'nox_viewer_profiles';
   static const String keyActiveViewerId = 'nox_active_viewer';
   static const String keyParentalPin = 'nox_parental_pin';
+
+  /// Minutes away after which a locked profile asks its PIN again (0 =
+  /// every time the app is left). Device-only.
+  static const String keyProfileRelock = 'vesper_profile_relock';
   static const String keyPinFailCount = 'nox_pin_fail_count';
   static const String keyPinLockedUntil = 'nox_pin_locked_until';
 

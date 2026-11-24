@@ -301,6 +301,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       Platform.isAndroid &&
       !usesMediaKit &&
       !_preferences.launchWithProfiles &&
+      _profileSelection == null &&
       !_preferences.sportsMode &&
       !_preferences.hideLiveTv &&
       _preferences.effectiveStartSection == 'tv' &&
@@ -416,6 +417,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // Picking the same viewer again resumes their channel (Startup choice);
     // another viewer starts fresh (owner, 2026-11-08).
     _resumeIfViewer = _storage.getActiveViewerId();
+    // A locked profile asks its PIN again from Who's watching.
+    _viewerProfileService.lockActive();
     if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
     } else {
@@ -423,6 +426,38 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     }
     if (!mounted) return;
     setState(() => _profileSelection = Completer<void>());
+  }
+
+  /// When VesperTV went off screen (Home button, another app, minimised):
+  /// a locked profile asks its PIN again once it was away long enough
+  /// ([profileRelockDue], Settings > Profiles & startup).
+  DateTime? _leftAt;
+  AppLifecycleListener? _lockLifecycle;
+
+  /// Back on screen: a locked profile in use away past the chosen time
+  /// goes behind Who's watching. Runs before the warm-return resume
+  /// (registered first), which then waits for the pick.
+  void _relockIfDue() {
+    final left = _leftAt;
+    _leftAt = null;
+    if (left == null || !_ready || _profileSelection != null) return;
+    if (!_viewerProfileService.active.isLocked) return;
+    final away = DateTime.now().difference(left);
+    if (!profileRelockDue(away, _preferences.profileRelockMinutes)) return;
+    if (!_viewerProfileService.lockActive()) return;
+    debugPrint("ProfileLock: back after ${away.inSeconds} s, Who's watching");
+    _resumeIfViewer = _storage.getActiveViewerId();
+    // Set at once: the warm return (AppExit.afterWarm) reads it next.
+    final selection = Completer<void>();
+    _profileSelection = selection;
+    unawaited(() async {
+      if (usesMediaKit) {
+        DesktopMiniPlayer.instance.clear();
+      } else {
+        await _playbackService.stop();
+      }
+      if (mounted && _profileSelection == selection) setState(() {});
+    }());
   }
 
   final _startupRoutes = StartupRoutes();
@@ -563,6 +598,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     HardwareKeyboard.instance.removeHandler(_onGuideKey);
     HardwareKeyboard.instance.removeHandler(_onVoiceKey);
     _syncLifecycle?.dispose();
+    _lockLifecycle?.dispose();
     _vesperLifecycle?.dispose();
     _launcherLifecycle?.dispose();
     McpBridge.instance.stop();
@@ -958,6 +994,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
           onViewerChanged: _preferences.reloadPaletteForViewer);
+      _lockLifecycle = AppLifecycleListener(
+          onHide: () => _leftAt ??= DateTime.now(), onResume: _relockIfDue);
 
       // From here sync only writes what these services re-read (the same
       // reload as a profile switch, no network); the rest waits for the
@@ -1258,7 +1296,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       if (!mounted) return;
       PerfDiagnostics.mark('splashEnd');
-      if (_preferences.launchWithProfiles) {
+      // A locked profile in use: Who's watching, its PIN to go back in.
+      final locked = _viewerProfileService.lockActive();
+      if (locked) debugPrint("ProfileLock: locked profile, Who's watching");
+      if (_preferences.launchWithProfiles || locked) {
         _profileSelection = Completer<void>();
       }
       ProfileGate.register(

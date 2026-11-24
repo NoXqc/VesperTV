@@ -152,6 +152,24 @@ const Map<String, String> kEl = {
       'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ και εκκίνηση).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
+  "Lock":
+      "Κλείδωμα",
+  "Lock with PIN":
+      "Κλείδωμα με PIN",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Το άνοιγμα αυτού του προφίλ ζητά το γονικό PIN. Όταν το VesperTV ξεκινά ή έμεινε ανενεργό για λίγο, εμφανίζεται αντί γι' αυτό το «Ποιος παρακολουθεί;».",
+  "Lock profiles again":
+      "Επανακλείδωμα προφίλ",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Για προφίλ με ενεργό το «Κλείδωμα με PIN»: πόση ώρα μπορεί να μείνει το VesperTV πριν εμφανίσει ξανά το «Ποιος παρακολουθεί;».",
+  "Every time VesperTV is left":
+      "Κάθε φορά που κλείνει το VesperTV",
+  "After 1 minute":
+      "Μετά από 1 λεπτό",
+  "After {n} minutes":
+      "Μετά από {n} λεπτά",
+  "After 1 hour":
+      "Μετά από 1 ώρα",
   "Who is watching?": "Ποιος παρακολουθεί;",
   "Choose your profile to get started.":
       "Επιλέξτε το προφίλ σας για να ξεκινήσετε.",

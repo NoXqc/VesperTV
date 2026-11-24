@@ -146,6 +146,24 @@ const Map<String, String> kPl = {
       "Pokazuje się, gdy Twój profil jest zaznaczony. Wymaga opcji Uruchamiaj z wyborem profilu (Ustawienia > Profile i uruchamianie).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Wybór profilu po ekranie powitalnym, przed otwarciem aplikacji. Działa od następnego uruchomienia.",
+  "Lock":
+      "Blokada",
+  "Lock with PIN":
+      "Zablokuj PIN-em",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Otwarcie tego profilu wymaga PIN-u rodzicielskiego. Po uruchomieniu VesperTV lub po dłuższej przerwie pojawia się zamiast tego „Kto ogląda?”.",
+  "Lock profiles again":
+      "Ponowne blokowanie profili",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Dla profili z włączonym „Zablokuj PIN-em”: jak długo VesperTV może być nieużywany, zanim znów pojawi się „Kto ogląda?”.",
+  "Every time VesperTV is left":
+      "Za każdym razem po wyjściu z VesperTV",
+  "After 1 minute":
+      "Po 1 minucie",
+  "After {n} minutes":
+      "Po {n} minutach",
+  "After 1 hour":
+      "Po 1 godzinie",
   "Who is watching?": "Kto ogląda?",
   "Choose your profile to get started.": "Wybierz profil, aby zacząć.",
   "Welcome, {name}": "Witaj, {name}",

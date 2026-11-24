@@ -685,6 +685,13 @@ class StorageService {
   Future<void> setLaunchWithProfiles(bool value) =>
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
+  /// Minutes away before a locked profile asks its PIN again (0 = every
+  /// time the app is left), 5 until chosen.
+  int getProfileRelockMinutes() =>
+      _prefs.getInt(AppConstants.keyProfileRelock) ?? 5;
+  Future<void> setProfileRelockMinutes(int minutes) =>
+      _prefs.setInt(AppConstants.keyProfileRelock, minutes);
+
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
   bool getAskBeforeExit() =>
       _prefs.getBool(AppConstants.keyAskBeforeExit) ?? false;
@@ -2156,6 +2163,7 @@ class StorageService {
     AppConstants.keyLauncherLive,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
+    AppConstants.keyProfileRelock,
   };
 
   static bool _syncable(String key) =>

@@ -33,6 +33,7 @@ class ViewerProfile {
     required this.isRestricted,
     required this.createdAt,
     this.photoVersion = 0,
+    this.isLocked = false,
   });
 
   static const String mainId = 'main';
@@ -52,6 +53,13 @@ class ViewerProfile {
   final DateTime createdAt;
   final int photoVersion;
 
+  /// Opening this profile asks for the household PIN (Settings > Profiles >
+  /// a profile > Lock with PIN), and VesperTV goes back to Who's watching
+  /// instead of reopening it after a start or a while away (owner,
+  /// 2026-11-23: kids got into Main in the morning). Never on a kids
+  /// profile: leaving those already asks the PIN.
+  final bool isLocked;
+
   bool get isMain => id == mainId;
 
   /// The stored default name 'Main' is shown translated; a name the user
@@ -66,7 +74,8 @@ class ViewerProfile {
         createdAt: DateTime.now(),
       );
 
-  ViewerProfile copyWith({String? name, int? colorIndex, int? photoVersion}) =>
+  ViewerProfile copyWith(
+          {String? name, int? colorIndex, int? photoVersion, bool? isLocked}) =>
       ViewerProfile(
         id: id,
         name: name ?? this.name,
@@ -74,6 +83,7 @@ class ViewerProfile {
         isRestricted: isRestricted,
         createdAt: createdAt,
         photoVersion: photoVersion ?? this.photoVersion,
+        isLocked: isLocked ?? this.isLocked,
       );
 
   Map<String, dynamic> toJson() => {
@@ -83,6 +93,7 @@ class ViewerProfile {
         'isRestricted': isRestricted,
         'createdAt': createdAt.millisecondsSinceEpoch,
         'photoVersion': photoVersion,
+        if (isLocked) 'isLocked': true,
       };
 
   factory ViewerProfile.fromJson(Map<String, dynamic> json) => ViewerProfile(
@@ -91,6 +102,7 @@ class ViewerProfile {
         name: json['name'] as String,
         colorIndex: json['colorIndex'] as int? ?? 0,
         isRestricted: json['isRestricted'] as bool? ?? false,
+        isLocked: json['isLocked'] as bool? ?? false,
         createdAt:
             DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int? ?? 0),
       );

@@ -10,6 +10,12 @@ import 'dart:typed_data';
 import 'dart:io';
 import '../models/profile_copy.dart';
 import 'profile_photos.dart';
+import 'parental_pin.dart';
+
+/// Whether a locked profile in use goes back behind its PIN after VesperTV
+/// was left for [away] ([relockMinutes] 0 = every time it is left).
+bool profileRelockDue(Duration away, int relockMinutes) =>
+    relockMinutes <= 0 || away >= Duration(minutes: relockMinutes);
 
 /// Owns viewer-profile CRUD and the switch sequence — see `ViewerProfile`'s
 /// doc comment for the feature. Depends on `PlaylistManager`/
@@ -47,6 +53,46 @@ class ViewerProfileService extends ChangeNotifier {
       orElse: ViewerProfile.main);
 
   bool get isActiveRestricted => active.isRestricted;
+
+  /// The active profile is locked and VesperTV went back to Who's watching
+  /// ([lockActive]): picking it again asks the PIN like any locked profile.
+  bool _lockedOut = false;
+  bool get lockedOut => _lockedOut;
+
+  /// Puts a locked active profile behind its PIN again (a fresh start, or
+  /// back after [relockAfter] away). False when it isn't locked.
+  bool lockActive() {
+    if (!active.isLocked || active.isRestricted) return false;
+    _lockedOut = true;
+    return true;
+  }
+
+  /// Whether opening [target] from the profile in use needs the PIN.
+  bool needsPinFor(ViewerProfile target) {
+    if (target.id == _activeId) {
+      return _lockedOut && target.isLocked;
+    }
+    return active.isRestricted || (target.isLocked && !target.isRestricted);
+  }
+
+  /// Turns [id]'s lock on or off. Both ask the household PIN (one is set up
+  /// first when none exists): a kid must not lock or unlock a profile.
+  /// False when the PIN wasn't given.
+  Future<bool> setLocked(BuildContext context, String id, bool locked) async {
+    final pin = ParentalPin(_storage);
+    // No PIN yet: locking sets one up; unlocking has nothing to protect.
+    final ok = pin.isSet
+        ? await promptForPin(context)
+        : (!locked || await setupPinFlow(context));
+    if (!ok) return false;
+    _profiles = _profiles
+        .map((p) => p.id == id ? p.copyWith(isLocked: locked) : p)
+        .toList();
+    await _persist();
+    notifyListeners();
+    return true;
+  }
+
   ProfilePhotos get photos => _storage.profilePhotos;
   Future<File> photoFile(String id) => photos.file(id);
   Future<void> setPhoto(String id, Uint8List bytes) async {
@@ -165,12 +211,21 @@ class ViewerProfileService extends ChangeNotifier {
   /// entered for this request (Vesper AI asks it with a timeout).
   Future<bool> switchTo(BuildContext context, String targetId,
       {bool unlocked = false}) async {
-    if (targetId == _activeId) return true;
-    if (!_profiles.any((p) => p.id == targetId)) return false;
-    if (active.isRestricted && !unlocked) {
+    final target = _profiles.where((p) => p.id == targetId).firstOrNull;
+    if (target == null) return false;
+    if (targetId == _activeId && !_lockedOut) return true;
+    // Leaving a kids profile, or opening a locked one: the PIN.
+    if (needsPinFor(target) && !unlocked) {
       final unlocked = await promptForPin(context);
       if (!unlocked) return false;
     }
+    if (targetId == _activeId) {
+      // Back into the locked profile in use: nothing else changes.
+      _lockedOut = false;
+      notifyListeners();
+      return true;
+    }
+    _lockedOut = false;
     await _playbackService.stop();
     _activeId = targetId;
     await _storage.setActiveViewerId(targetId);

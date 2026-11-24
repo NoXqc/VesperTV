@@ -144,6 +144,24 @@ const Map<String, String> kUk = {
       "Показується, поки виділено ваш профіль. Потрібен «Запуск із вибором профілю» (Налаштування > Профілі та запуск).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Вибір профілю після заставки, перед відкриттям застосунку. Діє з наступного запуску.",
+  "Lock":
+      "Блокування",
+  "Lock with PIN":
+      "Блокувати PIN-кодом",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Відкриття цього профілю запитує батьківський PIN. Після запуску VesperTV або коли його залишили на деякий час, натомість з'являється «Хто дивиться?».",
+  "Lock profiles again":
+      "Знову блокувати профілі",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Для профілів з увімкненим «Блокувати PIN-кодом»: скільки часу VesperTV може бути залишеним, перш ніж знову з'явиться «Хто дивиться?».",
+  "Every time VesperTV is left":
+      "Щоразу, коли виходять з VesperTV",
+  "After 1 minute":
+      "Через 1 хвилину",
+  "After {n} minutes":
+      "Через {n} хвилин",
+  "After 1 hour":
+      "Через 1 годину",
   "Who is watching?": "Хто дивиться?",
   "Choose your profile to get started.": "Виберіть профіль, щоб почати.",
   "Welcome, {name}": "Вітаємо, {name}",
