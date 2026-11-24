@@ -45,6 +45,7 @@ import '../services/recording_service.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import '../utils/desktop_platform.dart';
+import '../models/stream_drm.dart';
 
 /// What the primary button plays: the episode to resume (saved position,
 /// not finished), else the one after the last finished, else the first.
@@ -634,7 +635,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ].join(' · '),
           group: widget.series.name,
           url: e.url,
-          headers: e.httpHeaders,
+          headers: StreamDrm.withoutDrm(e.httpHeaders),
           playlistId: e.playlistId,
           maxConnections: profile?.maxConnections ?? 1,
           poster: _posterUrl,

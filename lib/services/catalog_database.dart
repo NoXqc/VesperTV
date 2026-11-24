@@ -345,6 +345,34 @@ class CatalogDatabase {
         debugPrint('CatalogDatabase: $index skipped: $e');
       }
     }
+    // The single-column category / playlist indexes: every query filters by
+    // playlist + category or by playlist (the indexes above cover both), so
+    // they only made each saved row cost two more index updates. Dropped
+    // only once the covering index is there.
+    for (final (table, cover, drop) in [
+      (
+        'vod_channels',
+        'idx_vod_playlist_cat',
+        ['idx_vod_category', 'idx_vod_playlist']
+      ),
+      (
+        'series_items',
+        'idx_series_playlist_cat',
+        ['idx_series_category', 'idx_series_playlist']
+      ),
+    ]) {
+      try {
+        final has = await db.rawQuery(
+            "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
+            [cover]);
+        if (has.isEmpty) continue;
+        for (final index in drop) {
+          await db.execute('DROP INDEX IF EXISTS $index');
+        }
+      } catch (e) {
+        debugPrint('CatalogDatabase: $table index cleanup skipped: $e');
+      }
+    }
     return db;
   }
 
@@ -685,10 +713,11 @@ class CatalogDatabase {
     batch.delete('vod_channels',
         where: 'category_name = ? AND playlist_id = ?',
         whereArgs: [categoryName, playlistId]);
-    for (final c in items) {
-      batch.insert('vod_channels', _channelToRow(categoryName, c),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
+    // Many rows per INSERT, like the M3U import: one statement per movie
+    // was half the time of an Xtream Update Content (uzumaki, Linux,
+    // 164k movies: 541 ms per 1,610; 2.4x faster measured, 2026-11-23).
+    _insertMany(batch, 'vod_channels',
+        [for (final c in items) _channelToRow(categoryName, c)]);
     await batch.commit(noResult: true);
   }
 
@@ -840,10 +869,8 @@ class CatalogDatabase {
     batch.delete('series_items',
         where: 'category_name = ? AND playlist_id = ?',
         whereArgs: [categoryName, playlistId]);
-    for (final s in items) {
-      batch.insert('series_items', _seriesToRow(categoryName, s),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
+    _insertMany(batch, 'series_items',
+        [for (final s in items) _seriesToRow(categoryName, s)]);
     await batch.commit(noResult: true);
   }
 

@@ -35,6 +35,21 @@ void main() {
     expect(pick(names, 'windows'), 'VesperTV-windows-x64.zip');
   });
 
+  test('macOS takes the DMG every Sunday release carries (1.0.73)', () {
+    const names = [
+      'app-release.apk',
+      'VesperTV-linux-x64.tar.gz',
+      'VesperTV-linux-x86_64.flatpak',
+      'VesperTV-macos.dmg',
+      'VesperTV-windows-x64.zip',
+    ];
+    expect(pick(names, 'macos'), 'VesperTV-macos.dmg');
+    expect(pick(names, 'windows'), 'VesperTV-windows-x64.zip',
+        reason: 'a .dmg is never a Windows download');
+    expect(pick(names, 'android'), 'app-release.apk');
+    expect(pick(names, 'linux'), isNull);
+  });
+
   test('names are matched case-insensitively; unknown OS gets nothing', () {
     expect(pick(['VesperTV-MacOS.ZIP'], 'macos'), 'VesperTV-MacOS.ZIP');
     expect(pick(['app-release.apk'], 'linux'), isNull);

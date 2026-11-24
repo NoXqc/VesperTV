@@ -12,6 +12,7 @@ import '../utils/video_fit.dart';
 import 'audio_delay.dart';
 import 'content_updates.dart';
 import 'desktop_audio.dart';
+import 'apple_tv_display.dart';
 import 'display_match.dart';
 import 'device_defaults.dart';
 import 'playback_service.dart';
@@ -305,8 +306,9 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Settings > Playback > Frame rate & resolution (Android, device-only, off by default):
-  /// switch the TV to the video's frame rate / resolution ([DisplayMatch]).
+  /// Settings > Playback > Frame rate & resolution (device-only): switch the TV to the
+  /// video's frame rate / resolution ([DisplayMatch] on Android, off by default;
+  /// [AppleTvDisplayMatch] on Apple TV, frame rate only, on by default).
   bool get matchFrameRate => _storage.getMatchFrameRate();
   bool get match5060Only => _storage.getMatch5060Only();
   bool get matchResolution => _storage.getMatchResolution();
@@ -314,6 +316,7 @@ class AppPreferences extends ChangeNotifier {
   void setMatchFrameRate(bool value) {
     _storage.setMatchFrameRate(value);
     if (!DisplayMatch.enabled(_storage)) unawaited(DisplayMatch.reset());
+    if (!value) AppleTvDisplayMatch.reset(now: true);
     notifyListeners();
   }
 
@@ -487,6 +490,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Locked profiles: minutes away before Who's watching shows again
+  /// (0 = every time VesperTV is left). Device-only.
+  int get profileRelockMinutes => _storage.getProfileRelockMinutes();
+
+  void setProfileRelockMinutes(int minutes) {
+    _storage.setProfileRelockMinutes(minutes);
+    notifyListeners();
+  }
+
   bool refinedFinish = false;
 
   void setRefinedFinish(bool value) {
@@ -633,8 +645,7 @@ class AppPreferences extends ChangeNotifier {
   /// row = the row of buttons under it.
   static const int defaultPlayerMenuTransparency = 15;
   int get playerBarTransparency => _storage.getPlayerBarTransparency();
-  int get playerOptionsTransparency =>
-      _storage.getPlayerOptionsTransparency();
+  int get playerOptionsTransparency => _storage.getPlayerOptionsTransparency();
 
   void setPlayerBarTransparency(int value) {
     _storage.setPlayerBarTransparency(value);

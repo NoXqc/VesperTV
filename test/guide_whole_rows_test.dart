@@ -294,8 +294,8 @@ void main() {
     linedUp('after the details');
     await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
-    await key(tester, LogicalKeyboardKey.arrowDown);
-    await key(tester, LogicalKeyboardKey.arrowDown);
+    // To the last channel, then twice Down: the wrap takes a second press.
+    await key(tester, LogicalKeyboardKey.arrowDown, times: 3);
     linedUp('after wrapping to the first');
     expect(tester.takeException(), isNull);
   });

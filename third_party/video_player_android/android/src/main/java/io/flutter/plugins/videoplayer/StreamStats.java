@@ -33,6 +33,16 @@ final class StreamStats implements TransferListener {
   final java.util.concurrent.atomic.AtomicInteger reconnects =
       new java.util.concurrent.atomic.AtomicInteger();
   @Nullable volatile String lastReconnect;
+  /**
+   * Tuliprox's {@code X-Tuliprox-Fallback} on the latest response ({@code
+   * provider_connections_exhausted}, {@code user_connections_exhausted}, ...): the stream is the
+   * server's busy / error video, not the channel (Player API, 2026-11-23). Null when absent.
+   */
+  @Nullable volatile String fallback;
+
+  /// Tuliprox's {@code X-Tuliprox-Stream-Uid} of the latest answer (live MPEG-TS, Player API
+  /// users, since e5704880): the stream to end with {@code DELETE /api/v1/me/streams/{uid}}.
+  @Nullable volatile String streamUid;
   /** Big movie files: several connections + a memory ring (HttpVideoAsset, progressive only). */
   @Nullable volatile ReadAhead readAhead;
 
@@ -147,6 +157,8 @@ final class StreamStats implements TransferListener {
       synchronized (opensLock) {
         if (currentOpen != null && currentOpen[1] < 0) currentOpen[1] = System.nanoTime();
       }
+      fallback = headerValue(source.getResponseHeaders(), "x-tuliprox-fallback");
+      streamUid = headerValue(source.getResponseHeaders(), "x-tuliprox-stream-uid");
     }
     if (!isNetwork || fileUri == null || !fileUri.equals(dataSpec.uri)) return;
     long size = fileSizeFromHeaders(source.getResponseHeaders(), dataSpec);
@@ -176,5 +188,18 @@ final class StreamStats implements TransferListener {
         currentOpen = null;
       }
     }
+  }
+
+  /** The first value of header [name] (any case), or null. */
+  @Nullable
+  static String headerValue(@Nullable Map<String, List<String>> headers, String name) {
+    if (headers == null) return null;
+    for (Map.Entry<String, List<String>> e : headers.entrySet()) {
+      if (e.getKey() != null && e.getKey().equalsIgnoreCase(name)) {
+        List<String> values = e.getValue();
+        if (values != null && !values.isEmpty()) return values.get(0);
+      }
+    }
+    return null;
   }
 }

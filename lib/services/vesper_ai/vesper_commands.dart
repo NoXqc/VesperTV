@@ -86,6 +86,9 @@ VesperCommand? parseVesperCommand(String spoken) {
     }
   }
 
+  final rename = _renameGroup(s, spoken);
+  if (rename != null) return rename;
+
   final seek = _seek(s);
   if (seek != null) return seek;
 
@@ -786,6 +789,71 @@ VesperCommand? _seek(String s) {
 }
 
 // ------------------------------------------------------------- phrases
+
+// "rename the group Sports to My Sports" (owner, 2026-11-23: he tried it
+// by voice and nothing understood it). Group 1 = the group's name now,
+// group 2 = the new one. Own groups and the playlists' live groups alike
+// (`my_groups` rename).
+final _renameGroupPatterns = [
+  RegExp(r'^(?:rename|re name) (?:the |my )?(?:group|category) (.+?) '
+      r'(?:to|as|into) (.+)$'),
+  RegExp(r'^(?:rename|re name) (?:the |my )?(.+?) (?:group|category) '
+      r'(?:to|as|into) (.+)$'),
+  RegExp(r'^change (?:the )?name of (?:the |my )?(?:group|category) (.+?) '
+      r'to (.+)$'),
+  RegExp(r'^renomm(?:e|er|ez) (?:le |mon )?(?:groupe|categorie) (.+?) '
+      r'(?:en|pour) (.+)$'),
+  RegExp(r'^change(?:r|z)? le nom du groupe (.+?) (?:en|pour) (.+)$'),
+  RegExp(r'^renombr(?:a|ar) (?:el |mi )?(?:grupo|categoria) (.+?) '
+      r'(?:a|como|por) (.+)$'),
+  RegExp(r'^rinomin(?:a|are) (?:il |mio )?(?:gruppo|categoria) (.+?) '
+      r'(?:in|come|a) (.+)$'),
+  RegExp(r'^benenne (?:die |meine )?(?:gruppe|kategorie) (.+?) (?:in|zu) '
+      r'(.+?) um$'),
+  RegExp(r'^(?:die |meine )?gruppe (.+?) (?:in|zu) (.+?) umbenennen$'),
+  RegExp(r'^metonomase (?:tin )?(?:omada|kategoria) (.+?) (?:se|os) (.+)$'),
+];
+
+VesperCommand? _renameGroup(String s, String spoken) {
+  for (final p in _renameGroupPatterns) {
+    final m = p.firstMatch(s);
+    if (m == null) continue;
+    final group = m.group(1)!.trim();
+    final name = _asSpoken(spoken, m.group(2)!.trim());
+    if (group.isEmpty || name.isEmpty) continue;
+    return VesperCommand(
+        'my_groups', {'action': 'rename', 'group': group, 'name': name});
+  }
+  return null;
+}
+
+/// [folded] (words of the sentence, after folding) as [spoken] wrote
+/// them, so a new name keeps its capitals and letters: "… to My Sports"
+/// stays "My Sports", German "… in Fußball um" stays "Fußball". The last
+/// run of words that folds to it (the new name comes after the old one).
+/// All lowercase (most speech recognizers) gets a capital per word.
+String _asSpoken(String spoken, String folded) {
+  String fold(String t) =>
+      TitleSearch.fold(t).replaceAll(RegExp(r'\s+'), ' ').trim();
+  final words = spoken.trim().split(RegExp(r'\s+'));
+  var out = '';
+  for (var i = words.length - 1; i >= 0 && out.isEmpty; i--) {
+    for (var j = i + 1; j <= words.length; j++) {
+      final run = words.sublist(i, j).join(' ');
+      if (fold(run) == folded) {
+        out = run;
+        break;
+      }
+    }
+  }
+  if (out.isEmpty) out = folded;
+  out = out.replaceAll(RegExp(r'[.!?,;:]+$'), '').trim();
+  if (out != out.toLowerCase()) return out;
+  return [
+    for (final w in out.split(' '))
+      w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}'
+  ].join(' ');
+}
 
 const _fillers = [
   'hey vesper',

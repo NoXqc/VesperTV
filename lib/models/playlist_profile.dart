@@ -31,6 +31,7 @@ class PlaylistProfile {
     List<String>? backupServers,
     this.lastWorkingServer,
     List<String>? extraEpgUrls,
+    this.playlistEpgUrls,
   })  : backupServers = backupServers ?? <String>[],
         extraEpgUrls = extraEpgUrls ?? <String>[];
 
@@ -161,6 +162,23 @@ class PlaylistProfile {
   /// one of their channels). Loaded alongside [epgUrl].
   List<String> extraEpgUrls;
 
+  /// The guides an M3U names in its own `#EXTM3U` line (`url-tvg="a,b"`,
+  /// `x-tvg-url`), read at each download of the list and once from its
+  /// first line for a playlist added before this was read
+  /// (`PlaylistSession`). Used while [epgUrl] is blank, like an Xtream
+  /// panel's own xmltv.php: M3UPT's list named its guides there and
+  /// VesperTV showed none (2026-11-22). Null = not read yet.
+  final List<String>? playlistEpgUrls;
+
+  /// This playlist's own guides: the [epgUrl] the user typed, else the
+  /// ones its list names ([playlistEpgUrls]).
+  List<String> get mainEpgUrls => (epgUrl?.isNotEmpty ?? false)
+      ? [epgUrl!]
+      : (playlistEpgUrls ?? const <String>[]);
+
+  /// Every guide, in priority order: [mainEpgUrls], then [extraEpgUrls].
+  List<String> get guideUrls => {...mainEpgUrls, ...extraEpgUrls}.toList();
+
   /// Whichever of [xtreamServer]/[backupServers] actually answered last
   /// time, re-tried first on the next connect. Without this, a primary
   /// that's been down for a week costs every single launch the full
@@ -221,6 +239,7 @@ class PlaylistProfile {
     List<String>? backupServers,
     String? lastWorkingServer,
     List<String>? extraEpgUrls,
+    List<String>? playlistEpgUrls,
   }) =>
       PlaylistProfile(
         id: id,
@@ -252,6 +271,7 @@ class PlaylistProfile {
         backupServers: backupServers ?? List<String>.from(this.backupServers),
         lastWorkingServer: lastWorkingServer ?? this.lastWorkingServer,
         extraEpgUrls: extraEpgUrls ?? List<String>.from(this.extraEpgUrls),
+        playlistEpgUrls: playlistEpgUrls ?? this.playlistEpgUrls,
       );
 
   Map<String, dynamic> toJson() => {
@@ -281,6 +301,7 @@ class PlaylistProfile {
         'backupServers': backupServers,
         'lastWorkingServer': lastWorkingServer,
         if (extraEpgUrls.isNotEmpty) 'extraEpgUrls': extraEpgUrls,
+        if (playlistEpgUrls != null) 'playlistEpgUrls': playlistEpgUrls,
       };
 
   factory PlaylistProfile.fromJson(Map<String, dynamic> json) =>
@@ -321,6 +342,10 @@ class PlaylistProfile {
                 .where((s) => s.isNotEmpty)
                 .toList() ??
             <String>[],
+        playlistEpgUrls: (json['playlistEpgUrls'] as List?)
+            ?.map((e) => e.toString())
+            .where((s) => s.isNotEmpty)
+            .toList(),
       );
 
   bool get isXtream => mode == 'xtream';

@@ -23,6 +23,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
+import '../services/apple_tv_display.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
@@ -39,6 +40,7 @@ import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
 import '../utils/channel_name_matching.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/player_options_order.dart';
 import '../widgets/player_overlays.dart';
 import '../widgets/desktop_video_status.dart';
 import '../utils/scrub_steps.dart';
@@ -60,10 +62,13 @@ import '../services/skip_segments.dart';
 import '../widgets/glass_menu.dart';
 import '../services/ios_pip.dart';
 import '../services/silo_api.dart';
+import '../services/tuliprox.dart';
+import '../widgets/top_notice_overlay.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/video_fit.dart';
 import 'desktop_multiview_screen.dart';
 import '../services/ci_tour.dart';
+import '../models/stream_drm.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -622,8 +627,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       await _switchTo(selection.channel, start: position, play: playing);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('Could not switch stream. Try another source.'))));
+        TopNotice.show(tr('Could not switch stream. Try another source.'));
       }
     } finally {
       if (mounted) {
@@ -662,11 +666,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         if (!mounted || picked == null || _currentChannel.id != id) return;
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
-              playing, sources[picked], _playLiveSource);
-          if (note != null && mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(note)));
-          }
+              playing, sources[picked], _playLiveSource,
+              playChannel: (c) => _switchTo(c));
+          if (note != null && mounted) TopNotice.show(note);
           return;
         }
         await manager.ensureLiveChannelsLoaded();
@@ -684,10 +686,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         if (!mounted || fallback == null) continue;
         final added = await manager.addLiveFallback(sources.first, fallback);
         if (!mounted) return;
-        if (!added) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(tr('That source is already on the list.'))));
-        }
+        if (!added) TopNotice.show(tr('That source is already on the list.'));
       }
     } catch (_) {
       if (mounted) {
@@ -739,6 +738,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   Timer? _progressTimer;
   bool _progressReady = false;
   int _openGeneration = 0;
+
+  /// The live channel last opened here: a channel change ends its Tuliprox
+  /// stream on the server first ([Tuliprox.release]). Not on close: the
+  /// mini player may carry the stream on.
+  Channel? _tuliproxOpened;
 
   bool get _isLive => _currentChannel.isLive;
   List<Channel> get _queue => widget.queue ?? const [];
@@ -813,6 +817,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         unawaited(_openMedia(_currentChannel));
       }
       _applySeriesSubtitles();
+    }
+    // A stream taken from the guide's preview or a catch-up start never
+    // goes through _openMedia.
+    if (widget.existingPlayer != null || widget.catchupAt != null) {
+      _matchDisplay(_currentChannel);
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
     // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
@@ -906,7 +915,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       live: live,
       position: position.inMilliseconds / 1000,
       // A source's own headers (Media Hub) win over our User-Agent.
-      headers: {'User-Agent': kDesktopStreamUserAgent, ...channel.httpHeaders},
+      headers: {
+        'User-Agent': kDesktopStreamUserAgent,
+        ...StreamDrm.withoutDrm(channel.httpHeaders),
+      },
     );
     if (!mounted) return;
     if (error == null) {
@@ -1215,6 +1227,21 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   /// Open at the saved time without briefly playing the beginning first.
   /// Explicit start is used when switching source files within one title.
+  /// Apple TV: the TV follows this stream's frame rate (Settings >
+  /// Playback > Frame rate, [AppleTvDisplayMatch]); a channel change or a
+  /// new open cancels the ask still waiting for the old stream.
+  void _matchDisplay(Channel channel) {
+    if (!isAppleTv) return;
+    final generation = _openGeneration;
+    bool current() =>
+        mounted &&
+        generation == _openGeneration &&
+        _currentChannel.id == channel.id;
+    unawaited(AppleTvDisplayMatch.start(
+        context.read<StorageService>(), _player, current));
+    unawaited(AppleTvDisplayMatch.logAudio(_player, current));
+  }
+
   Future<void> _openMedia(Channel channel,
       {Duration? start, bool play = true}) async {
     final generation = ++_openGeneration;
@@ -1226,11 +1253,21 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _openedAt = DateTime.now();
     _errorCheck?.cancel();
     if (_tvError != null) setState(() => _tvError = null);
+    _matchDisplay(channel);
     try {
+      final leaving = _tuliproxOpened;
+      if (leaving != null && leaving.url != channel.url) {
+        await Tuliprox.instance
+            .release(leaving)
+            .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+        if (!current()) return;
+      }
+      _tuliproxOpened = channel;
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
       await openDesktopStream(_player, channel, start: resume, play: play);
       if (!current()) return;
+      if (channel.isLive) Tuliprox.instance.noteStarted(channel);
       DesktopLiveRecovery.of(_player).watch(channel);
       if (resume == null) {
         // Trakt/Simkl may only know a fraction until the stream opens.
@@ -1283,8 +1320,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// Trakt/Simkl: report mpv's exact position independently of saved progress.
   void _reportStopped() {
     // A Silo server's play ends here (a no-op for any other stream).
-    SiloSessions.instance
-        .stopped(_currentChannel.url, _player.state.position);
+    SiloSessions.instance.stopped(_currentChannel.url, _player.state.position);
     if (_currentChannel.transientPlayback) return;
     final state = _player.state;
     // A Media Hub source's "being downloaded" clip isn't the title.
@@ -1336,6 +1372,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.disposePlayer(_player);
+    // Apple TV: nothing plays on: the TV's own mode back (the preview
+    // that takes a live channel keeps the stream's mode).
+    if (!_handedOffToMiniPlayer) AppleTvDisplayMatch.reset();
     super.dispose();
   }
 
@@ -2386,54 +2425,100 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       title: OptionsTitleText(name: _currentChannel.name, programme: programme),
       sound: _TvSoundSummary(
           key: ValueKey('tv-sound-${_currentChannel.id}'), player: _player),
+      // One movable row in the viewer's order (hold OK on a tile), with
+      // Android's tile ids: an order saved on a box means the same here
+      // (it goes with Transfer and sync). Ids are saved: never rename one.
       tiles: [
-        if (_isLive) tile(Icons.list, tr('Channels'), _openPanel),
-        if (live) tile(Icons.swap_horiz, tr('Sources'), _openLiveSources),
-        if (prefs.dataPool)
-          tile(Icons.analytics_outlined, tr('Stream info'), _showTvDataPool),
-        if (live)
-          tile(Icons.history, tr('Recall — go back to a recent channel'),
-              _openRecallPicker,
-              shortLabel: tr('Recent')),
-        if (live && _currentChannel.hasCatchup)
-          tile(Icons.restart_alt, tr('Watch from the start'), _startOver,
-              shortLabel: tr('Start over')),
-        if (live)
-          tile(Icons.refresh, tr('Reload channel'), _reload,
-              shortLabel: tr('Reload')),
-        DesktopAudioButton(
-            key: ValueKey('tv-audio-${_currentChannel.id}'),
-            player: _player,
-            channel: _currentChannel,
-            tile: (open) => tile(
-                Icons.multitrack_audio, tr('Audio track'), open,
-                shortLabel: tr('Audio'))),
-        DesktopSubtitleButton(
-            key: ValueKey('tv-subs-${_currentChannel.id}'),
-            player: _player,
-            channel: _currentChannel,
-            tile: (open) => tile(Icons.subtitles, tr('Subtitles'), open)),
-        tile(Icons.av_timer, tr('Audio sync'),
-            () => showAudioDelayAdjuster(context),
-            detail: delay == 0
-                ? null
-                : '${delay > 0 ? '+' : '-'}${delay.abs()} ms'),
-        if (linked != null)
-          tile(
-              Icons.swap_horiz,
-              tr('Switch to {playlistName}: {name}', {
-                'playlistName': playlist.playlistNameFor(linked.playlistId),
-                'name': linked.name
-              }),
-              () => _switchTo(linked),
-              shortLabel: playlist.playlistNameFor(linked.playlistId)),
-        if (live && !prefs.hideMultiview)
-          tile(Icons.grid_view, tr('Open in Multiview'), _openMultiview,
-              shortLabel: tr('Multiview')),
-        if (widget.sources != null)
-          tile(Icons.swap_horiz, tr('Sources'), _openSources),
-        tile(prefs.videoFit.icon, tr(prefs.videoFit.label), _cycleFit),
-        tile(Icons.search, tr('Search'), _openTvSearch),
+        ReorderableOptionTiles(
+          active: _tvOptions,
+          onActivity: _armTvBarIdle,
+          tiles: [
+            if (_isLive)
+              ('channels', tile(Icons.list, tr('Channels'), _openPanel)),
+            if (live)
+              (
+                'live_sources',
+                tile(Icons.swap_horiz, tr('Sources'), _openLiveSources)
+              ),
+            if (prefs.dataPool)
+              (
+                'stream_info',
+                tile(Icons.analytics_outlined, tr('Stream info'),
+                    _showTvDataPool)
+              ),
+            if (live)
+              (
+                'recall',
+                tile(Icons.history, tr('Recall — go back to a recent channel'),
+                    _openRecallPicker,
+                    shortLabel: tr('Recent'))
+              ),
+            if (live && _currentChannel.hasCatchup)
+              (
+                'start_over',
+                tile(Icons.restart_alt, tr('Watch from the start'), _startOver,
+                    shortLabel: tr('Start over'))
+              ),
+            if (live)
+              (
+                'reload',
+                tile(Icons.refresh, tr('Reload channel'), _reload,
+                    shortLabel: tr('Reload'))
+              ),
+            (
+              'audio',
+              DesktopAudioButton(
+                  key: ValueKey('tv-audio-${_currentChannel.id}'),
+                  player: _player,
+                  channel: _currentChannel,
+                  tile: (open) => tile(
+                      Icons.multitrack_audio, tr('Audio track'), open,
+                      shortLabel: tr('Audio')))
+            ),
+            (
+              'subtitles',
+              DesktopSubtitleButton(
+                  key: ValueKey('tv-subs-${_currentChannel.id}'),
+                  player: _player,
+                  channel: _currentChannel,
+                  tile: (open) => tile(Icons.subtitles, tr('Subtitles'), open))
+            ),
+            (
+              'audio_sync',
+              tile(Icons.av_timer, tr('Audio sync'),
+                  () => showAudioDelayAdjuster(context),
+                  detail: delay == 0
+                      ? null
+                      : '${delay > 0 ? '+' : '-'}${delay.abs()} ms')
+            ),
+            if (linked != null)
+              (
+                'linked',
+                tile(
+                    Icons.swap_horiz,
+                    tr('Switch to {playlistName}: {name}', {
+                      'playlistName':
+                          playlist.playlistNameFor(linked.playlistId),
+                      'name': linked.name
+                    }),
+                    () => _switchTo(linked),
+                    shortLabel: playlist.playlistNameFor(linked.playlistId))
+              ),
+            if (live && !prefs.hideMultiview)
+              (
+                'multiview',
+                tile(Icons.grid_view, tr('Open in Multiview'), _openMultiview,
+                    shortLabel: tr('Multiview'))
+              ),
+            if (widget.sources != null)
+              ('sources', tile(Icons.swap_horiz, tr('Sources'), _openSources)),
+            (
+              'picture',
+              tile(prefs.videoFit.icon, tr(prefs.videoFit.label), _cycleFit)
+            ),
+            ('search', tile(Icons.search, tr('Search'), _openTvSearch)),
+          ],
+        ),
       ],
     );
   }
@@ -2772,6 +2857,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           _closeSchedule();
         } else if (_panelOpen) {
           _closePanel();
+        } else if (_tvRemote && _tvOptions && PlayerOptionsOrder.isMoving) {
+          // Back while a tile is being moved: done, the row stays.
+          PlayerOptionsOrder.endMove();
         } else if (_tvRemote && _tvOptions) {
           _closeTvOptions();
         } else if (_tvRemote && _scheduleChipFocus.hasFocus) {

@@ -358,7 +358,7 @@ Future<Map<String, Object?>> _guideAdd(VesperToolbox box,
   final before = List<String>.from(s.profile.extraEpgUrls);
   final after = [...before];
   for (final u in adding) {
-    if (u == s.profile.epgUrl || after.contains(u)) continue;
+    if (s.profile.mainEpgUrls.contains(u) || after.contains(u)) continue;
     after.add(u);
   }
   if (after.length > 5) {
@@ -422,7 +422,7 @@ Future<Map<String, Object?>> _guideRemove(VesperToolbox box,
     throw VesperToolError('guide is the n from status (1..${urls.length}).');
   }
   final url = urls[n - 1];
-  if (url == s.profile.epgUrl) {
+  if (s.profile.mainEpgUrls.contains(url)) {
     throw VesperToolError('That is the playlist\'s own guide; only extra '
         'guides can be removed here.');
   }
@@ -472,7 +472,7 @@ Future<Map<String, Object?>> _guideMove(VesperToolbox box,
     throw VesperToolError('guide is the n from status (1..${urls.length}).');
   }
   final url = urls[n - 1];
-  if (url == s.profile.epgUrl) {
+  if (s.profile.mainEpgUrls.contains(url)) {
     throw VesperToolError('That is the playlist\'s own guide: it always '
         'loads first. Move the extra guides around it.');
   }

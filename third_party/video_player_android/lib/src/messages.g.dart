@@ -435,6 +435,7 @@ class CreationOptions {
     required this.httpHeaders,
     this.userAgent,
     this.backBufferDurationMs,
+    this.allowEncodedAudio,
   });
 
   String uri;
@@ -447,6 +448,8 @@ class CreationOptions {
 
   int? backBufferDurationMs;
 
+  bool? allowEncodedAudio;
+
   List<Object?> _toList() {
     return <Object?>[
       uri,
@@ -454,6 +457,7 @@ class CreationOptions {
       httpHeaders,
       userAgent,
       backBufferDurationMs,
+      allowEncodedAudio,
     ];
   }
 
@@ -468,6 +472,7 @@ class CreationOptions {
       httpHeaders: (result[2]! as Map<Object?, Object?>).cast<String, String>(),
       userAgent: result[3] as String?,
       backBufferDurationMs: result[4] as int?,
+      allowEncodedAudio: result[5] as bool?,
     );
   }
 
@@ -480,7 +485,7 @@ class CreationOptions {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(uri, other.uri) && _deepEquals(formatHint, other.formatHint) && _deepEquals(httpHeaders, other.httpHeaders) && _deepEquals(userAgent, other.userAgent) && _deepEquals(backBufferDurationMs, other.backBufferDurationMs);
+    return _deepEquals(uri, other.uri) && _deepEquals(formatHint, other.formatHint) && _deepEquals(httpHeaders, other.httpHeaders) && _deepEquals(userAgent, other.userAgent) && _deepEquals(backBufferDurationMs, other.backBufferDurationMs) && _deepEquals(allowEncodedAudio, other.allowEncodedAudio);
   }
 
   @override
@@ -489,7 +494,7 @@ class CreationOptions {
 
   @override
   String toString() {
-    return 'CreationOptions(uri: $uri, formatHint: $formatHint, httpHeaders: $httpHeaders, userAgent: $userAgent, backBufferDurationMs: $backBufferDurationMs)';
+    return 'CreationOptions(uri: $uri, formatHint: $formatHint, httpHeaders: $httpHeaders, userAgent: $userAgent, backBufferDurationMs: $backBufferDurationMs, allowEncodedAudio: $allowEncodedAudio)';
   }
 }
 
@@ -1151,6 +1156,25 @@ class AndroidVideoPlayerApi {
         isNullValid: true,
     )
     ;
+  }
+
+  Future<bool> isAudioPassthroughEnabled(int playerId) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.video_player_android.AndroidVideoPlayerApi.isAudioPassthroughEnabled$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[playerId]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
   }
 
   Future<String> getLookupKeyForAsset(String asset, String? packageName) async {

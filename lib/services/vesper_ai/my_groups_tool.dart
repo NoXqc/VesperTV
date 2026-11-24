@@ -59,13 +59,25 @@ final _myGroupsTool = VesperTool(
       'order: a group\'s channels, refs first in that order, the rest after. '
       'move: a group (no ref), or a channel (ref) inside the group it is in '
       '(own or provider; group names the group for a copy), to top, bottom, '
-      'up / down (steps) or a position.',
+      'up / down (steps) or a position. rename: a group (group = its name '
+      'now, name = the new one): an own group, else a playlist\'s live group '
+      'as the TV shows it (playlist narrows it; a name that group\'s playlist '
+      'already has merges the two, like the playlist editor).',
   schema: {
     'type': 'object',
     'properties': {
       'action': {
         'type': 'string',
-        'enum': ['list', 'create', 'add', 'remove', 'delete', 'order', 'move'],
+        'enum': [
+          'list',
+          'create',
+          'add',
+          'remove',
+          'delete',
+          'order',
+          'move',
+          'rename'
+        ],
       },
       'group': {
         'type': 'string',
@@ -75,7 +87,12 @@ final _myGroupsTool = VesperTool(
       'playlist': {
         'type': 'string',
         'description': 'For add: put the channels in a group of this '
-            'playlist (name or id) instead of an own group.',
+            'playlist (name or id) instead of an own group. For rename: only '
+            'that playlist\'s group.',
+      },
+      'name': {
+        'type': 'string',
+        'description': 'For rename: the group\'s new name.',
       },
       'copy': {
         'type': 'boolean',
@@ -288,7 +305,76 @@ final _myGroupsTool = VesperTool(
           'position': (placed ?? from) + 1,
           'of': shown.length,
         };
+      case 'rename':
+        return _renameGroup(
+            box, caller, name, _str(args, 'name'), _str(args, 'playlist'));
     }
     throw VesperToolError('Unknown my_groups action $action.');
   },
 );
+
+/// `my_groups` rename, and Vesper's built-in "rename the group X to Y"
+/// (owner, 2026-11-23): what hold OK on a group > Rename… does on the TV.
+Future<Map<String, Object?>> _renameGroup(VesperToolbox box,
+    VesperCaller caller, String group, String name, String playlistName) async {
+  final playlist = box.playlist;
+  final to = name.trim();
+  if (group.isEmpty || to.isEmpty) {
+    throw VesperToolError('Give group (its name now) and name (the new one).');
+  }
+  bool same(String a, String b) =>
+      a == b || TitleSearch.fold(a) == TitleSearch.fold(b);
+  if (playlistName.isEmpty) {
+    for (final g in playlist.userGroups) {
+      if (!same(g, group)) continue;
+      await _confirmRemote(
+          box,
+          caller,
+          'An AI app wants to rename your group {group} to {name}.',
+          {'group': g, 'name': to});
+      final done = await playlist.renameUserGroup(g, to);
+      if (done == null) {
+        throw VesperToolError('"$to" is already the name of a group.');
+      }
+      return {'renamed': g, 'to': done, 'kind': 'own group'};
+    }
+  }
+  if (playlist.isUserGroup(to)) {
+    throw VesperToolError('"$to" is one of the viewer\'s own groups: pick '
+        'another name.');
+  }
+  final sessions = _editorSessions(box, playlistName);
+  // Exact names first ("Sports" over "SPORTS" in another playlist).
+  final found = <(PlaylistSession, String)>[];
+  for (final exact in [true, false]) {
+    for (final s in sessions) {
+      await s.ensureLiveChannelsLoaded();
+      for (final g in s.tvGroups) {
+        if (exact ? g.title == group : same(g.title, group)) {
+          found.add((s, g.title));
+          break;
+        }
+      }
+    }
+    if (found.isNotEmpty) break;
+  }
+  if (found.isEmpty) {
+    throw VesperToolError('No group named "$group" (the groups tool lists '
+        'them).');
+  }
+  await _confirmRemote(
+      box,
+      caller,
+      'An AI app wants to rename your group {group} to {name}.',
+      {'group': found.first.$2, 'name': to});
+  final playlists = <String>[];
+  for (final (s, title) in found) {
+    final done = await playlist.renameLiveGroup(s.profile.id, title, to);
+    if (done != null) playlists.add(s.profile.name);
+  }
+  return {
+    'renamed': found.first.$2,
+    'to': to,
+    'playlists': playlists,
+  };
+}

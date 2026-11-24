@@ -152,6 +152,24 @@ const Map<String, String> kEl = {
       'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ και εκκίνηση).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
+  "Lock":
+      "Κλείδωμα",
+  "Lock with PIN":
+      "Κλείδωμα με PIN",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Το άνοιγμα αυτού του προφίλ ζητά το γονικό PIN. Όταν το VesperTV ξεκινά ή έμεινε ανενεργό για λίγο, εμφανίζεται αντί γι' αυτό το «Ποιος παρακολουθεί;».",
+  "Lock profiles again":
+      "Επανακλείδωμα προφίλ",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Για προφίλ με ενεργό το «Κλείδωμα με PIN»: πόση ώρα μπορεί να μείνει το VesperTV πριν εμφανίσει ξανά το «Ποιος παρακολουθεί;».",
+  "Every time VesperTV is left":
+      "Κάθε φορά που κλείνει το VesperTV",
+  "After 1 minute":
+      "Μετά από 1 λεπτό",
+  "After {n} minutes":
+      "Μετά από {n} λεπτά",
+  "After 1 hour":
+      "Μετά από 1 ώρα",
   "Who is watching?": "Ποιος παρακολουθεί;",
   "Choose your profile to get started.":
       "Επιλέξτε το προφίλ σας για να ξεκινήσετε.",
@@ -364,6 +382,10 @@ const Map<String, String> kEl = {
   "Technical details": "Τεχνικές λεπτομέρειες",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Αυτό το βίντεο είναι Dolby Vision και αυτή η συσκευή δεν μπορεί να παίξει αυτό το είδος Dolby Vision. Διάλεξε μια έκδοση χωρίς DV (HDR10 ή SDR) αν την προσφέρει η πηγή σου.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Αυτό το κανάλι είναι προστατευμένο (DRM) και δεν ήταν δυνατό να ξεκλειδωθεί. Τα κλειδιά στη λίστα σας μπορεί να είναι παλιά ή αυτή η συσκευή δεν υποστηρίζει αυτό το είδος προστασίας.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Ο διακομιστής έστειλε κενή απάντηση αντί για το βίντεο. Αυτό το κανάλι ίσως παίζει μόνο στη χώρα του.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Αυτή η ροή διακοπτόταν και ξεκινούσε ξανά συνεχώς, οπότε η αναπαραγωγή σταμάτησε. Δοκιμάστε ξανά το κανάλι σε λίγο ή επιλέξτε άλλο.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":
@@ -995,6 +1017,8 @@ const Map<String, String> kEl = {
   "Open Download Page": "Άνοιγμα σελίδας λήψης",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Ανοίγει στον browser — αποσυμπιέστε τη λήψη και εκτελέστε το VesperTV.exe για ενημέρωση, αντικαθιστώντας τον παλιό φάκελο.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Ανοίγει στον browser — ανοίξτε το αρχείο που κατεβάσατε και σύρετε το VesperTV στις Εφαρμογές, αντικαθιστώντας την παλιά έκδοση.",
   "Download & Install": "Λήψη και εγκατάσταση",
   "Downloading update... {p}%": "Λήψη ενημέρωσης… {p}%",
   "Download complete.": "Η λήψη ολοκληρώθηκε.",
@@ -1921,12 +1945,18 @@ const Map<String, String> kEl = {
   "Saved, but {service} rejected the key — double-check it":
       "Αποθηκεύτηκε, αλλά το {service} απέρριψε το κλειδί — ελέγξτε το",
   "Debrid accounts": "Λογαριασμοί debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Προαιρετικά κλειδιά για την ετικέτα «Έτοιμο»",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Ορισμένες πηγές του Media Hub απαντούν στην Αναπαραγωγή με ένα σύντομο βίντεο «γίνεται λήψη» ενώ φέρνουν έναν τίτλο στον λογαριασμό σας debrid. Το VesperTV ελέγχει ξανά κάθε λεπτό και βάζει την ετικέτα «Έτοιμο» στην αφίσα του τίτλου μόλις είναι διαθέσιμος.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Προαιρετικό: με το δικό σας κλειδί, ο λογαριασμός σας το επιβεβαιώνει απευθείας. Χωρίς κλειδί, το VesperTV ρωτά ξανά την πηγή μέχρι να απαντήσει το πλήρες αρχείο.",
+  "This page doesn't add movies or shows":
+      "Αυτή η σελίδα δεν προσθέτει ταινίες ή σειρές",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Για να βλέπετε με τον λογαριασμό σας Real-Debrid ή TorBox, προσθέστε μια πηγή Media Hub που τον χρησιμοποιεί, όπως το Torrentio ή το AIOStreams ρυθμισμένο με το κλειδί debrid σας. Οι ταινίες και οι σειρές της εμφανίζονται τότε στο Media Hub.",
+  "Open Media Hub sources":
+      "Άνοιγμα πηγών Media Hub",
+  "What these keys do":
+      "Τι κάνουν αυτά τα κλειδιά",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Προαιρετικό. Ορισμένες πηγές debrid απαντούν στην Αναπαραγωγή με ένα σύντομο βίντεο «γίνεται λήψη» ενώ ο λογαριασμός σας φέρνει τον τίτλο. Με το κλειδί σας εδώ, το VesperTV ρωτά απευθείας τον λογαριασμό σας και βάζει την ετικέτα «Έτοιμο» στην αφίσα μόλις ο τίτλος είναι εκεί. Χωρίς κλειδί λειτουργεί επίσης: το VesperTV ρωτά ξανά την πηγή κάθε λεπτό.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Μόνο για την ετικέτα «Έτοιμο». Περιεχόμενο προσθέτετε στις Πηγές Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (κλειδί API). Φυλάσσεται στο VesperTV και χρησιμοποιείται μόνο για την ανάγνωση της λίστας λήψεών σας.",
   "Real-Debrid API token": "Διακριτικό API Real-Debrid",
@@ -4058,6 +4088,38 @@ const Map<String, String> kEl = {
       "Αλλαγή πηγής σε {stream}…",
   "Source changed to {stream}.":
       "Η πηγή άλλαξε: {stream}.",
+  "Source {n}":
+      "Πηγή {n}",
+  "Not working right now":
+      "Δεν λειτουργεί αυτή τη στιγμή",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Κάποιος άλλος παρακολουθεί αυτό το κανάλι στον διακομιστή, οπότε η πηγή του δεν μπορεί να αλλάξει μόνο για εσάς.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Το Tuliprox ήδη αλλάζει πηγή. Δοκιμάστε ξανά σε λίγο.",
+  "Wait a moment before switching again.":
+      "Περιμένετε λίγο πριν αλλάξετε ξανά.",
+  "That source didn't start. Still on the one before.":
+      "Αυτή η πηγή δεν ξεκίνησε. Παραμένει η προηγούμενη.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Το Tuliprox δεν μπόρεσε να ξεκινήσει αυτό το κανάλι από καμία πηγή του. Δοκιμάστε αργότερα ή διαλέξτε άλλο κανάλι.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Ο λογαριασμός σας παίζει ήδη σε όλες τις οθόνες που επιτρέπει. Σταματήστε μία ή περιμένετε λίγο και δοκιμάστε ξανά.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Όλες οι συνδέσεις παρόχου του διακομιστή χρησιμοποιούνται. Δοκιμάστε αργότερα ή δείτε ένα κανάλι που ήδη παίζει.",
+  "A stream or recording with a higher priority took this connection.":
+      "Μια ροή ή εγγραφή με υψηλότερη προτεραιότητα πήρε αυτή τη σύνδεση.",
+  "Your account on this server has expired.":
+      "Ο λογαριασμός σας σε αυτόν τον διακομιστή έχει λήξει.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Ο διακομιστής ακόμη ρυθμίζει αυτόν τον λογαριασμό. Δοκιμάστε ξανά σε λίγα λεπτά.",
+  "The stream session ended. Start the channel again.":
+      "Η συνεδρία ροής έληξε. Ξεκινήστε ξανά το κανάλι.",
+  "This source is in maintenance. Try again later.":
+      "Αυτή η πηγή είναι σε συντήρηση. Δοκιμάστε αργότερα.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "Παίζουν τώρα στον διακομιστή, έτοιμα για συμμετοχή (στις Πηγές): {channels}",
+  "Playing now on the server":
+      "Παίζει τώρα στον διακομιστή",
   "Tuliprox didn't switch the source.":
       "Το Tuliprox δεν άλλαξε την πηγή.",
   "Switch a channel's providers from the player's Sources":
@@ -4168,4 +4230,72 @@ const Map<String, String> kEl = {
       "Λιγότερο ευαίσθητη",
   "Very sensitive":
       "Πολύ ευαίσθητη",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "Από άλλη συσκευή",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Χρησιμοποιείτε ήδη το VesperTV σε άλλη συσκευή; Φέρτε εδώ τις λίστες, τα αγαπημένα και τις ρυθμίσεις σας.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Και οι δύο συσκευές μένουν ενημερωμένες. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Συγχρονισμός > Σύνδεση συσκευής και μετά εισαγάγετε τον κωδικό της εδώ.",
+  "Receive a transfer":
+      "Λήψη μεταφοράς",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Αντιγράφει τα πάντα μία φορά. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Μεταφορά σε άλλη συσκευή > Αποστολή από αυτή τη συσκευή.",
+  "Restore a backup":
+      "Επαναφορά αντιγράφου ασφαλείας",
+  "From a backup file VesperTV saved":
+      "Από αρχείο αντιγράφου ασφαλείας που αποθήκευσε το VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Συνδεθείτε στο iCloud από τις Ρυθμίσεις αυτής της συσκευής για να κρατάτε αντίγραφα ασφαλείας στο iCloud.",
+  "iCloud is restricted on this device.":
+      "Το iCloud είναι περιορισμένο σε αυτή τη συσκευή.",
+  "iCloud backups aren't available in this build yet.":
+      "Τα αντίγραφα ασφαλείας στο iCloud δεν είναι ακόμη διαθέσιμα σε αυτή την έκδοση.",
+  "iCloud can't be reached right now. Try again later.":
+      "Το iCloud δεν είναι προσβάσιμο αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα.",
+  "Your iCloud storage is full.":
+      "Ο αποθηκευτικός χώρος iCloud είναι γεμάτος.",
+  "Restore from iCloud":
+      "Επαναφορά από το iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Αντίγραφα ασφαλείας που αποθήκευσε το iPhone, το iPad ή το Apple TV σας στο iCloud με αυτό το Apple ID. Κάθε συσκευή κρατά εκεί το πιο πρόσφατο.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "Δεν υπάρχουν ακόμη αντίγραφα στο iCloud. Στην άλλη συσκευή: Ρυθμίσεις > Αντίγραφα και συσκευές > Αντίγραφα ασφαλείας και επαναφορά > Αποθήκευση και στο iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Το αντίγραφο αποθηκεύτηκε στο {path}, αλλά όχι στο iCloud: {error}",
+  "Backup folder":
+      "Φάκελος αντιγράφων",
+  "Backups now go to {name}.":
+      "Τα αντίγραφα πηγαίνουν τώρα στο {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "Σε αυτή τη συσκευή. Επιλέξτε αντί γι’ αυτό το iCloud Drive, το OneDrive ή έναν κοινόχρηστο φάκελο δικτύου στα Αρχεία.",
+  "Also save to iCloud":
+      "Αποθήκευση και στο iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Κάθε αντίγραφο πηγαίνει και στο iCloud σας, ώστε οι άλλες συσκευές Apple (και το Apple TV) να μπορούν να το επαναφέρουν. Το iCloud κρατά το πιο πρόσφατο από αυτή τη συσκευή.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "Από αντίγραφο που αποθήκευσε το iPhone, το iPad ή το Apple TV σας στο iCloud",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Αλλάζει την τηλεόραση στον ρυθμό καρέ του βίντεο μόλις ξεκινήσει (50 Hz για βρετανικά και ευρωπαϊκά κανάλια, 24 Hz για ταινίες), για ομαλή κίνηση. Ενεργοποιήστε επίσης το Ταίριασμα ρυθμού καρέ στις Ρυθμίσεις > Βίντεο και ήχος > Ταίριασμα περιεχομένου του Apple TV (tvOS 17 ή νεότερο). Η οθόνη μαυρίζει για ένα-δύο δευτερόλεπτα κατά την αλλαγή· κανάλια με τον ίδιο ρυθμό δεν αλλάζουν ξανά.",
+  "Frame rate":
+      "Ρυθμός καρέ",
+  "Sound out":
+      "Έξοδος ήχου",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Συνέχεια παρακολούθησης, νέα επεισόδια, η λίστα παρακολούθησής σας και τα αγαπημένα σας κανάλια πάνω από την αρχική οθόνη του Apple TV όταν το VesperTV είναι στην πάνω σειρά (Top Shelf).",
+  "Rename group":
+      "Μετονομασία ομάδας",
+  "You already have a group named {group}.":
+      "Έχετε ήδη μια ομάδα με το όνομα {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "Η ομάδα {group} περιέχει τώρα και τις δύο ομάδες. Κρατήστε πατημένο το OK πάνω της > Χρήση του ονόματος του παρόχου για να τις χωρίσετε.",
+  "{group} is now called {name}.":
+      "Η ομάδα {group} λέγεται τώρα {name}.",
+  "I could not find the group \"{title}\".":
+      "Δεν βρήκα την ομάδα «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Μια εφαρμογή AI θέλει να μετονομάσει την ομάδα σας {group} σε {name}.",
 };

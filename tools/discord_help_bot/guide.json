@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, and New group… to start your own group.",
+    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -115,7 +115,7 @@
     "id": "2086cf69a409bc57",
     "category": "Live TV",
     "title": "Your group's menu",
-    "answer": "Move Up / Down, Move to Top, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
+    "answer": "Move Up / Down, Move to Top, Rename…, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
     "controls": "Hold OK on your own group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -368,6 +368,22 @@
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
+    "id": "2ded955f883833a2",
+    "category": "Home",
+    "title": "What a Kids profile can see",
+    "answer": "A Kids profile only sees the playlist groups a parent allows: Settings > Profiles > the Kids profile > What this profile can see > a playlist > Groups, and turn on the groups it may watch. Everything else stays hidden in Live TV, Movies, TV Shows, Search and Multiview, including groups the provider adds later. Media Hub sources start off on a Kids profile: open Media Hub > Sources (PIN) and turn on the ones it may use. Leaving the profile, opening Settings and opening the Media Hub sources all ask for the PIN.",
+    "controls": "Settings > Profiles > Add profile > Kids profile",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
+    "id": "2ff0acc7e3d663f5",
+    "category": "Home",
+    "title": "Lock a profile with the PIN",
+    "answer": "Turn on Lock with PIN for Main or any other non-Kids profile (it asks for the parental PIN, or sets one up). Opening that profile then asks for the PIN from Who is watching?, Home, the profile page or Vesper, and so does its page in Settings > Profiles. When VesperTV starts with a locked profile in use, it shows Who is watching? first. After VesperTV was left (Home button, another app, screen off) for longer than Settings > Profiles & startup > Lock profiles again (every time, 1, 5, 15 or 30 minutes, or 1 hour; 5 by default, this device only), it shows Who is watching? again; the PIN brings you back to what was playing. A padlock marks a locked profile, a child icon a Kids profile.",
+    "controls": "Settings > Profiles > a profile > Lock with PIN",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
     "id": "8b1446377f0dda91",
     "category": "Home",
     "title": "Home mini player",
@@ -437,6 +453,14 @@
     "title": "Your add-ons in one list",
     "answer": "Open from Settings › Playlists & sources › Media Hub sources, or Sources in the Media Hub tab. On the left: Add a source, then All, Streams, Catalogs & lists, Media servers, Live TV and Subtitles with how many each has, then Manage from phone, Customize Media Hub and Advanced. On the right, one row per add-on with its logo, version, description and tags (Streams, Movies, TV Shows, Live TV, Subtitles, Built in, Under Other). OK on a row turns it on or off for this profile (subtitle add-ons for the device); a dimmed row is off. Right goes to its ⋯ button and OK opens its options: Enabled, Show under Other, TV add-on, View source URL (with Copy URL) and Remove, which asks first. Holding OK on a row opens the same options. Cinemeta is built in: it can be turned off, not removed. The line under the list explains the row you are on. Add a source has the link field (several links at once work) and From phone, Manage from phone, Import from Stremio, Jellyfin / Emby / Plex, Trakt & Simkl and Online subtitles. Advanced has Refresh Media Hub (reads every add-on again: new catalogs, logos, versions) and Clear Media Hub.",
     "controls": "Media Hub sources → ↑ / ↓ / ← / →",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "5af6f645926e8d53",
+    "category": "Media Hub",
+    "title": "Watch with Real-Debrid or TorBox",
+    "answer": "Debrid accounts does not add movies or shows. To watch with your debrid account, add a Media Hub source that uses it (such as Torrentio or AIOStreams set up with your debrid key) in Settings › Playlists & sources › Media Hub sources › Add a source, or press Open Media Hub sources on the Debrid accounts page. The keys on that page are optional: they only let VesperTV ask your account directly when a title is still downloading, to put a \"Ready\" tag on its poster sooner.",
+    "controls": "Settings › Advanced › Debrid accounts",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
@@ -885,6 +909,14 @@
     "title": "Change settings and clear history with an AI",
     "answer": "Your AI and linked AI apps can read and change many settings: playback (skip intro, Up Next, live buffer, audio delay, subtitle size and languages, frame rate and resolution matching), startup, language and theme, the guide, which tabs show, and Sports Trak options. Several can change at once with one OK on the TV. They can also clear recent searches and channels, Continue Watching and saved progress, Media Hub Recently watched or the watch list, and reload the TV guide. Ask on the TV first, AI keys, the PIN, profiles and playlists are never changed this way. Kids profiles can read settings but not change them. Some startup settings apply the next time the app starts.",
     "controls": "Ask your AI: turn off skip intro · hide the Movies tab · clear my watch history · update the guide",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "5eafa483c6868403",
+    "category": "Vesper AI",
+    "title": "Rename a group by voice",
+    "answer": "Built in, no AI key needed: \"rename the group Sports to My Sports\", \"renomme le groupe Sports en Mes sports\", \"renombra el grupo Deportes a Fútbol\", \"rinomina il gruppo Sport in Calcio\", \"benenne die Gruppe Sport in Fußball um\". It renames one of your own groups or a playlist's live group, the same as Hold OK on the group > Rename….",
+    "controls": "Say: rename the group Sports to My Sports",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

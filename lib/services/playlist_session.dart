@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -45,11 +46,20 @@ class PlaylistSession {
     required this.isRestrictedViewer,
     required this.onNotify,
     this.myGroupOf,
-  });
+  }) {
+    // A kids profile is closed from the start: before the list loads, an
+    // empty "known minus allowed" set showed it every group.
+    if (isRestrictedViewer()) hiddenGroups = _kidsHidden();
+  }
 
   /// The viewer's own group a live channel was moved into (see
   /// `UserGroups`, owned by `PlaylistManager`), or null.
   final String? Function(Channel)? myGroupOf;
+
+  /// Whether [title] is one of the viewer's own groups (set by the
+  /// manager): a kids profile lists one only from groups it may see
+  /// (`PlaylistManager._myGroupOf`), so its title needs no allowing.
+  bool Function(String title)? isOwnGroup;
 
   PlaylistProfile profile;
   final StorageService storage;
@@ -116,6 +126,12 @@ class PlaylistSession {
   /// User-chosen live channel order per group title (ordered rawIds) — see
   /// [moveChannel]. Missing = provider order.
   Map<String, List<String>> channelOrder = {};
+
+  /// Bumped on every [channelOrder] change (a move, the editor's order, a
+  /// viewer's load): `PlaylistManager.liveViewSignature` reads it, or the TV
+  /// tab kept drawing the old order until something else rebuilt it (a
+  /// moved channel stayed in place until OK, owner 2026-11-23).
+  int channelOrderVersion = 0;
 
   /// Live TV only — see [AppConstants.keyHiddenChannels]'s doc comment
   /// for why this exists alongside whole-group hiding. Keyed by
@@ -268,6 +284,83 @@ class PlaylistSession {
         ...hidden.where(tvTitles.contains),
       };
       await storage.setHiddenGroups(profile.id, hiddenGroups);
+    }
+    onNotify();
+  }
+
+  /// Hold OK on a live group > Rename… (owner, 2026-11-23), and Vesper's
+  /// "rename the group X to Y": the editor's Groups-tab rename for one
+  /// group. Every provider group the TV lists as [shown] (a merged group
+  /// renames as one) is shown as [name]; '' = back to the provider's own
+  /// names (a merge splits again). A name another group of this playlist
+  /// has merges the two, as in the editor. Returns the group's title now,
+  /// or null when [shown] isn't one of this playlist's live groups.
+  Future<String?> renameLiveGroup(String shown, String name) async {
+    final providers = [
+      for (final t in sourceTvGroupTitles.toSet())
+        if (edits.groupTitle(t) == shown) t
+    ];
+    if (providers.isEmpty) return null;
+    var wanted = name.trim();
+    if (wanted.length > 120) wanted = wanted.substring(0, 120);
+    final to = wanted.isEmpty ? providers.first : wanted;
+    // A new object: the TV tab's signature reads the edits' identity.
+    final next = PlaylistEdits.fromJson(edits.toJson());
+    for (final t in providers) {
+      final target = wanted.isEmpty ? t : wanted;
+      if (target == t) {
+        next.groupNames.remove(t);
+      } else {
+        next.groupNames[t] = target;
+      }
+    }
+    await saveEdits(next);
+    await carryLiveGroupState(shown, to);
+    return to;
+  }
+
+  /// A renamed live group keeps what is stored under its title: its place
+  /// in the order, its star, hidden state and channel order (the editor's
+  /// Save groups sends order and hidden by the new titles itself). Into a
+  /// title that already has its own (a merge), that one's stay.
+  Future<void> carryLiveGroupState(String from, String to) async {
+    if (from == to) return;
+    final order = groupOrder['tv'];
+    if (order != null && order.contains(from)) {
+      final next = [...order];
+      final at = next.indexOf(from);
+      if (next.contains(to)) {
+        next.removeAt(at);
+      } else {
+        next[at] = to;
+      }
+      groupOrder['tv'] = next;
+      await storage.setGroupOrder(profile.id, 'tv', next);
+    }
+    // Shown or hidden as the renamed group was: merged into a hidden group,
+    // a shown one must not vanish. A kid profile's hidden set is the
+    // opposite of its allowlist: not rewritten from here (the TV offers no
+    // Rename… there).
+    if (!isRestrictedViewer()) {
+      final hidden = hiddenGroups.contains(from);
+      if (hidden || hiddenGroups.contains(to)) {
+        hiddenGroups = {...hiddenGroups}..remove(from);
+        if (hidden) {
+          hiddenGroups.add(to);
+        } else {
+          hiddenGroups.remove(to);
+        }
+        await storage.setHiddenGroups(profile.id, hiddenGroups);
+      }
+    }
+    if (favoritedGroups.remove(from)) {
+      favoritedGroups.add(to);
+      await storage.setFavoritedGroups(profile.id, favoritedGroups);
+    }
+    if (channelOrder.remove(from) case final ids?) {
+      channelOrder.putIfAbsent(to, () => ids);
+      channelOrderVersion++;
+      await storage.setChannelOrder(profile.id, channelOrder);
     }
     onNotify();
   }
@@ -437,12 +530,12 @@ class PlaylistSession {
         type: storage.getGroupOrder(profile.id, type),
     };
     channelOrder = storage.getChannelOrder(profile.id);
+    channelOrderVersion++;
     hiddenChannels = storage.getHiddenChannels(profile.id);
     edits = PlaylistEdits.decode(storage.getPlaylistEditsJson(profile.id));
     applyEdits();
     if (isRestrictedViewer()) {
-      hiddenGroups =
-          _allKnownGroupTitles().difference(storage.getShownGroups(profile.id));
+      hiddenGroups = _kidsHidden();
     } else {
       hiddenGroups = storage.getHiddenGroups(profile.id);
     }
@@ -462,6 +555,11 @@ class PlaylistSession {
           ...seriesCategories.map((c) => c.name),
         }
       : channels.map((c) => c.group).toSet();
+
+  /// A kids profile's hidden groups: everything not on its allowlist
+  /// ([shown], else the stored one). See [_KidsHiddenGroups].
+  Set<String> _kidsHidden([Set<String>? shown]) =>
+      _KidsHiddenGroups(this, shown ?? storage.getShownGroups(profile.id));
 
   /// Called by `PlaylistManager.applyActiveViewer` whenever the active
   /// viewer changes — reloads this playlist's favorited/hidden-groups/
@@ -517,7 +615,7 @@ class PlaylistSession {
         }
       }
       await storage.setShownGroups(profile.id, shown);
-      hiddenGroups = _allKnownGroupTitles().difference(shown);
+      hiddenGroups = _kidsHidden(shown);
     } else {
       for (final title in titles) {
         if (hidden) {
@@ -580,7 +678,10 @@ class PlaylistSession {
 
       final url = profile.m3uUrl;
       if (url == null || url.isEmpty) return;
-      if (await _restoreM3uCache()) return;
+      if (await _restoreM3uCache()) {
+        _readGuidesOnce(url);
+        return;
+      }
       await loadFromUrl(url);
     } finally {
       _loadViewerScopedState();
@@ -588,6 +689,23 @@ class PlaylistSession {
   }
 
   // --- M3U mode -----------------------------------------------------------
+
+  /// The guides the list's `#EXTM3U` line names, after each download
+  /// (`PlaylistManager` keeps them in [PlaylistProfile.playlistEpgUrls]).
+  void Function(List<String> urls)? onPlaylistGuides;
+
+  /// A playlist added before VesperTV kept its list's guides, started from
+  /// its saved copy: its first line read once, in the background. Not when
+  /// the user typed a guide (theirs is used instead).
+  void _readGuidesOnce(String url) {
+    if (profile.playlistEpgUrls != null || profile.mainEpgUrls.isNotEmpty) {
+      return;
+    }
+    final report = onPlaylistGuides;
+    if (report == null) return;
+    unawaited(M3uParser.fetchHeaderGuideUrls(url).then(report).catchError(
+        (Object e) => debugPrint('PlaylistGuides: first line not read ($e)')));
+  }
 
   /// The saved M3U text ([AppConstants.cacheFileM3uSource]); null when
   /// storage has no cache folder (tests).
@@ -835,6 +953,7 @@ class PlaylistSession {
       lastLoadSummary = counts;
       lastLoaded = DateTime.now();
       profile = profile.copyWith(m3uUrl: url);
+      onPlaylistGuides?.call(imported?.live.guideUrls ?? parsed!.guideUrls);
 
       loadingPhase = tr('Playlist added');
       onNotify();
@@ -1603,13 +1722,18 @@ class PlaylistSession {
     }
     loadingCategoryNames.add(key);
     try {
+      final fetch = Stopwatch()..start();
       final items = await api.getVodStreams(cat.id, cat.name);
+      _syncFetchMs += fetch.elapsedMilliseconds;
+      _syncItems += items.length;
       _noteFetch(null);
       for (final channel in items) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
       }
+      final save = Stopwatch()..start();
       await _persistVodCategory(cat.name, items);
+      _syncSaveMs += save.elapsedMilliseconds;
       vodByCategoryName[cat.name] = sortCatalogChannels(items, _rowSort('vod'))
           .take(_maxItemsPerCategory)
           .toList();
@@ -1635,12 +1759,17 @@ class PlaylistSession {
     }
     loadingCategoryNames.add(key);
     try {
+      final fetch = Stopwatch()..start();
       final items = await api.getSeriesForCategory(cat.id);
+      _syncFetchMs += fetch.elapsedMilliseconds;
+      _syncItems += items.length;
       _noteFetch(null);
       for (final series in items) {
         series.isFavorite = favoriteSeriesIds().contains(series.id);
       }
+      final save = Stopwatch()..start();
       await _persistSeriesCategory(cat.name, items);
+      _syncSaveMs += save.elapsedMilliseconds;
       seriesByCategoryName[cat.name] =
           sortCatalogSeries(items, _rowSort('series'))
               .take(_maxItemsPerCategory)
@@ -1754,6 +1883,14 @@ class PlaylistSession {
     return refreshAllCategories(stop: stop);
   }
 
+  /// Update Content / Add Playlist's movie + show pass, for Send log
+  /// (`CatalogSync:`): time downloading vs saving, summed over the
+  /// categories loading side by side (uzumaki, Linux, 2026-11-22: "loading
+  /// is extremely slow"; which half was it?).
+  int _syncFetchMs = 0;
+  int _syncSaveMs = 0;
+  int _syncItems = 0;
+
   Future<bool> _warmCategories(
       {required bool force, bool Function()? stop}) async {
     if (isWarmingCatalog) return false;
@@ -1779,6 +1916,10 @@ class PlaylistSession {
               !hiddenGroups.contains(c.name))
           .toList();
       final total = vodTodo.length + seriesTodo.length;
+      final pass = Stopwatch()..start();
+      _syncFetchMs = 0;
+      _syncSaveMs = 0;
+      _syncItems = 0;
       if (total > 0) {
         isWarmingCatalog = true;
         warmCatalogDone = 0;
@@ -1822,6 +1963,12 @@ class PlaylistSession {
                   : maxConcurrent.clamp(1, seriesTodo.length),
               (_) => seriesWorker()),
         ]);
+        debugPrint('CatalogSync: $warmCatalogDone/$total categories, '
+            '$_syncItems titles in ${(pass.elapsedMilliseconds / 1000).toStringAsFixed(1)} s '
+            '(${maxConcurrent.clamp(1, 3)} at a time; downloads '
+            '${(_syncFetchMs / 1000).toStringAsFixed(1)} s, saves '
+            '${(_syncSaveMs / 1000).toStringAsFixed(1)} s, summed)'
+            '${serverDown ? ' server down' : ''}${stopped() ? ' stopped' : ''}');
       }
       // Not a full sync when the server was down or it was stopped: try
       // again next launch.
@@ -2166,6 +2313,7 @@ class PlaylistSession {
     final anchorIndex = all.indexOf(anchor);
     all.insert(delta < 0 ? anchorIndex : anchorIndex + 1, rawId);
     channelOrder[groupTitle] = all;
+    channelOrderVersion++;
     await storage.setChannelOrder(profile.id, channelOrder);
     onNotify();
     return to;
@@ -2190,6 +2338,7 @@ class PlaylistSession {
       ...first,
       ...current.where((id) => !firstSet.contains(id)),
     ];
+    channelOrderVersion++;
     await storage.setChannelOrder(profile.id, channelOrder);
     onNotify();
   }
@@ -2543,4 +2692,80 @@ bool _isAccountRejection(Object error) {
   final text = error.toString().toLowerCase();
   return text.contains('invalid xtream username') ||
       text.contains('account is not active');
+}
+
+/// A kids profile's hidden groups: every group its allowlist doesn't
+/// name, whether or not this playlist lists that group. It used to be
+/// "the groups this playlist lists, minus the allowed ones", so anything
+/// unlisted counted as shown: movies left in the catalog under a category
+/// the provider renamed or dropped, channels whose category the provider
+/// doesn't list (Uncategorized), a group renamed in the editor, and every
+/// group before the list had loaded. Global search found them on a kids
+/// profile (Discord, 2026-11-23). Iterating gives the listed groups that
+/// are hidden (signatures, counts); add / remove go through the allowlist
+/// ([PlaylistSession._applyGroupHiddenChange]), never here.
+class _KidsHiddenGroups extends SetBase<String> {
+  _KidsHiddenGroups(this._session, this._allowed) {
+    _known = _session._allKnownGroupTitles();
+    _hidden = {
+      for (final t in _known)
+        if (contains(t)) t
+    };
+  }
+
+  final PlaylistSession _session;
+  final Set<String> _allowed;
+  late final Set<String> _known;
+  late final Set<String> _hidden;
+
+  PlaylistEdits? _editsSeen;
+  Set<String> _allowedRenamed = const {};
+
+  /// An allowed group shown under its editor name (the TV and search use
+  /// that title). A save replaces [PlaylistSession.edits].
+  bool _allowedUnderEditorName(String title) {
+    final edits = _session.edits;
+    if (!identical(edits, _editsSeen)) {
+      _editsSeen = edits;
+      _allowedRenamed = edits.groupNames.isEmpty
+          ? const {}
+          : {for (final g in _allowed) edits.groupTitle(g)};
+    }
+    return _allowedRenamed.contains(title);
+  }
+
+  @override
+  bool contains(Object? element) {
+    if (element is! String) return false;
+    if (_allowed.contains(element) || _allowedUnderEditorName(element)) {
+      return false;
+    }
+    // Own groups and editor moves into another playlist's group (NUL
+    // title): PlaylistManager._myGroupOf gives them only for a channel
+    // from an allowed group. Never a group this playlist lists itself.
+    if (_known.contains(element)) return true;
+    if (element.startsWith('\u0000')) return false;
+    return !(_session.isOwnGroup?.call(element) ?? false);
+  }
+
+  @override
+  Iterator<String> get iterator => _hidden.iterator;
+
+  @override
+  int get length => _hidden.length;
+
+  @override
+  String? lookup(Object? element) =>
+      contains(element) ? element as String : null;
+
+  @override
+  bool add(String value) =>
+      throw UnsupportedError('A kids profile hides groups by its allowlist');
+
+  @override
+  bool remove(Object? value) =>
+      throw UnsupportedError('A kids profile hides groups by its allowlist');
+
+  @override
+  Set<String> toSet() => {..._hidden};
 }

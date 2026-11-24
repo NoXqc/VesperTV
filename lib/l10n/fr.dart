@@ -151,6 +151,24 @@ const Map<String, String> kFr = {
       "S'affiche quand votre profil est sélectionné. Nécessite Lancer avec le sélecteur de profils (Paramètres > Profils et démarrage).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Choisissez un profil après l’écran de démarrage, avant l’ouverture de l’application. S’applique au prochain démarrage.",
+  "Lock":
+      "Verrouillage",
+  "Lock with PIN":
+      "Verrouiller avec le NIP",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Ouvrir ce profil demande le NIP parental. Quand VesperTV démarre ou a été quitté un moment, il affiche plutôt « Qui regarde? ».",
+  "Lock profiles again":
+      "Reverrouiller les profils",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Pour les profils avec « Verrouiller avec le NIP » : combien de temps VesperTV peut être quitté avant de réafficher « Qui regarde? ».",
+  "Every time VesperTV is left":
+      "Chaque fois qu'on quitte VesperTV",
+  "After 1 minute":
+      "Après 1 minute",
+  "After {n} minutes":
+      "Après {n} minutes",
+  "After 1 hour":
+      "Après 1 heure",
   "Who is watching?": "Qui regarde?",
   "Choose your profile to get started.":
       "Choisissez votre profil pour commencer.",
@@ -370,6 +388,10 @@ const Map<String, String> kFr = {
   'Technical details': "Détails techniques",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Cette vidéo est en Dolby Vision, et cet appareil ne peut pas lire ce type de Dolby Vision. Choisissez une version sans DV (HDR10 ou SDR) si votre source en propose une.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Cette chaîne est protégée (DRM) et n'a pas pu être déverrouillée. Les clés de votre liste de lecture sont peut-être périmées, ou cet appareil ne prend pas en charge ce type de protection.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Le serveur a renvoyé une réponse vide au lieu de la vidéo. Cette chaîne n'est peut-être disponible que dans son pays.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Ce flux n'arrêtait pas de se couper et de redémarrer, la lecture a donc été arrêtée. Réessayez la chaîne dans un instant ou choisissez-en une autre.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
@@ -1018,6 +1040,8 @@ const Map<String, String> kFr = {
   'Open Download Page': "Ouvrir la page de téléchargement",
   'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
       "S'ouvre dans votre navigateur — décompressez le fichier et lancez VesperTV.exe pour mettre à jour, en remplaçant l'ancien dossier.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "S'ouvre dans votre navigateur — ouvrez le fichier téléchargé et glissez VesperTV dans Applications, en remplaçant l'ancienne version.",
   'Download & Install': "Télécharger et installer",
   'Downloading update... {p}%': "Téléchargement de la MAJ… {p} %",
   'Download complete.': "Téléchargement terminé.",
@@ -1978,12 +2002,18 @@ const Map<String, String> kFr = {
   "Saved, but {service} rejected the key — double-check it":
       "Enregistré, mais {service} a refusé la clé — vérifiez-la",
   "Debrid accounts": "Comptes debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Clés optionnelles pour l'étiquette « Prêt »",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Certaines sources du Media Hub répondent à Lecture par une courte vidéo « en cours de téléchargement » pendant qu'elles récupèrent un titre dans votre compte debrid. VesperTV revérifie alors chaque minute et ajoute une étiquette « Prêt » sur l'affiche du titre dès qu'il est là.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Optionnel : avec votre propre clé, votre compte le confirme directement. Sans clé, VesperTV redemande à la source jusqu'à ce que le fichier complet réponde.",
+  "This page doesn't add movies or shows":
+      "Cette page n'ajoute pas de films ni de séries",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Pour regarder avec votre compte Real-Debrid ou TorBox, ajoutez une source Media Hub qui l'utilise, comme Torrentio ou AIOStreams configuré avec votre clé debrid. Ses films et séries apparaissent alors dans le Media Hub.",
+  "Open Media Hub sources":
+      "Ouvrir les sources Media Hub",
+  "What these keys do":
+      "À quoi servent ces clés",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Optionnel. Certaines sources debrid répondent à Lecture par une courte vidéo « en cours de téléchargement » pendant que votre compte récupère le titre. Avec votre clé ici, VesperTV interroge directement votre compte et ajoute l'étiquette « Prêt » sur l'affiche dès que le titre est là. Sans clé, ça fonctionne aussi : VesperTV redemande à la source chaque minute.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Seulement pour l'étiquette « Prêt ». Le contenu s'ajoute dans Sources Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid : real-debrid.com/apitoken. TorBox : torbox.app/settings (clé API). Conservée dans VesperTV et utilisée seulement pour lire votre liste de téléchargements.",
   "Real-Debrid API token": "Jeton API Real-Debrid",
@@ -4110,6 +4140,38 @@ const Map<String, String> kFr = {
       "Changement de source vers {stream}…",
   "Source changed to {stream}.":
       "Source changée : {stream}.",
+  "Source {n}":
+      "Source {n}",
+  "Not working right now":
+      "Ne fonctionne pas pour le moment",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Quelqu'un d'autre regarde cette chaîne sur le serveur, sa source ne peut donc pas être changée seulement pour vous.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox change déjà de source. Réessayez dans un instant.",
+  "Wait a moment before switching again.":
+      "Attendez un instant avant de changer à nouveau.",
+  "That source didn't start. Still on the one before.":
+      "Cette source n'a pas démarré. La précédente continue.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox n'a pu démarrer cette chaîne depuis aucune de ses sources. Réessayez plus tard ou choisissez une autre chaîne.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Votre compte regarde déjà sur tous les écrans qu'il autorise. Arrêtez-en un, ou attendez un instant et réessayez.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Toutes les connexions fournisseur du serveur sont utilisées. Réessayez plus tard, ou regardez une chaîne déjà en cours.",
+  "A stream or recording with a higher priority took this connection.":
+      "Un flux ou un enregistrement plus prioritaire a pris cette connexion.",
+  "Your account on this server has expired.":
+      "Votre compte sur ce serveur a expiré.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Le serveur configure encore ce compte. Réessayez dans quelques minutes.",
+  "The stream session ended. Start the channel again.":
+      "La session du flux est terminée. Relancez la chaîne.",
+  "This source is in maintenance. Try again later.":
+      "Cette source est en maintenance. Réessayez plus tard.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "En cours sur le serveur, prêtes à rejoindre (dans Sources) : {channels}",
+  "Playing now on the server":
+      "En cours sur le serveur",
   "Tuliprox didn't switch the source.":
       "Tuliprox n'a pas changé la source.",
   "Switch a channel's providers from the player's Sources":
@@ -4219,4 +4281,72 @@ const Map<String, String> kFr = {
       "Moins sensible",
   "Very sensitive":
       "Très sensible",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "Depuis un autre appareil",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Vous utilisez déjà VesperTV sur un autre appareil ? Récupérez ici vos listes, favoris et réglages.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Les deux appareils restent à jour. Sur l’autre appareil : Paramètres > Sauvegarde et appareils > Synchronisation > Associer un appareil, puis entrez son code ici.",
+  "Receive a transfer":
+      "Recevoir un transfert",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Copie tout en une fois. Sur l’autre appareil : Paramètres > Sauvegarde et appareils > Transférer vers un autre appareil > Envoyer depuis cet appareil.",
+  "Restore a backup":
+      "Restaurer une sauvegarde",
+  "From a backup file VesperTV saved":
+      "Depuis un fichier de sauvegarde créé par VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "cette Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Connectez-vous à iCloud dans les Réglages de cet appareil pour garder des sauvegardes dans iCloud.",
+  "iCloud is restricted on this device.":
+      "iCloud est restreint sur cet appareil.",
+  "iCloud backups aren't available in this build yet.":
+      "Les sauvegardes iCloud ne sont pas encore disponibles dans cette version.",
+  "iCloud can't be reached right now. Try again later.":
+      "iCloud est injoignable pour le moment. Réessayez plus tard.",
+  "Your iCloud storage is full.":
+      "Votre stockage iCloud est plein.",
+  "Restore from iCloud":
+      "Restaurer depuis iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Les sauvegardes que votre iPhone, iPad ou Apple TV a enregistrées dans iCloud avec cet identifiant Apple. Chaque appareil y garde sa plus récente.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "Aucune sauvegarde dans iCloud pour l’instant. Sur l’autre appareil : Paramètres > Sauvegarde et appareils > Sauvegarde et restauration > Enregistrer aussi dans iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Sauvegarde enregistrée dans {path}, mais pas dans iCloud : {error}",
+  "Backup folder":
+      "Dossier de sauvegarde",
+  "Backups now go to {name}.":
+      "Les sauvegardes vont maintenant dans {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "Sur cet appareil. Choisissez plutôt iCloud Drive, OneDrive ou un partage réseau dans Fichiers.",
+  "Also save to iCloud":
+      "Enregistrer aussi dans iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Chaque sauvegarde va aussi dans votre iCloud, pour que vos autres appareils Apple (Apple TV compris) puissent la restaurer. iCloud garde la plus récente de cet appareil.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "Depuis une sauvegarde que votre iPhone, iPad ou Apple TV a enregistrée dans iCloud",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Règle le téléviseur sur la fréquence d’images de la vidéo dès qu’elle commence (50 Hz pour les chaînes britanniques et européennes, 24 Hz pour les films), pour des mouvements fluides. Activez aussi Adapter la fréquence d’images dans Réglages > Vidéo et audio > Adapter le contenu de l’Apple TV (tvOS 17 ou plus récent). L’écran devient noir une ou deux secondes pendant le changement ; les chaînes de même fréquence ne changent plus.",
+  "Frame rate":
+      "Fréquence d’images",
+  "Sound out":
+      "Son envoyé",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Reprendre l’écoute, les nouveaux épisodes, votre liste à regarder et vos chaînes favorites au-dessus de l’écran d’accueil de l’Apple TV quand VesperTV est dans la rangée du haut (Top Shelf).",
+  "Rename group":
+      "Renommer le groupe",
+  "You already have a group named {group}.":
+      "Vous avez déjà un groupe nommé {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} regroupe maintenant les deux groupes. Maintenez OK dessus > Utiliser le nom du fournisseur pour les séparer.",
+  "{group} is now called {name}.":
+      "{group} s’appelle maintenant {name}.",
+  "I could not find the group \"{title}\".":
+      "Je n’ai pas trouvé le groupe « {title} ».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "Une app d’IA veut renommer votre groupe {group} en {name}.",
 };

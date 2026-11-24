@@ -55,12 +55,12 @@ void main() {
   group('tuliproxChannelRef', () {
     test('reads the Xtream user and channel id on the same host', () {
       final r = tuliproxChannelRef(
-          _base, 'https://tv.example.com/live/DM200lab/DOM002/1234.ts')!;
-      expect(r.username, 'DM200lab');
+          _base, 'https://tv.example.com/live/labuser/labpass/1234.ts')!;
+      expect(r.username, 'labuser');
       expect(r.id, 1234);
       expect(
           tuliproxChannelRef(
-                  _base, 'https://TV.example.com/DM200lab/DOM002/77.m3u8')!
+                  _base, 'https://TV.example.com/labuser/labpass/77.m3u8')!
               .id,
           77);
     });
@@ -133,15 +133,18 @@ void main() {
       calls = [];
       switched = null;
       Tuliprox.instance.api = TuliproxApi(client: MockClient((req) async {
+        final p = req.url.path;
+        // A server whose playlist user has no player routes (or an older
+        // Tuliprox): the playlist sign-in is refused, the admin routes list.
+        if (p == '/admin/auth/token') return http.Response('', 403);
         calls.add('${req.method} ${req.url.path}');
         expect(req.headers['Authorization'], 'Bearer t');
-        final p = req.url.path;
         if (p == '/admin/api/v1/streams') {
           return http.Response(
               jsonEncode([
                 _stream(5, 'someone', 1234, group: 1234), // another user
-                _stream(9, 'DM200lab', 88001, group: 1234, started: 50),
-                _stream(11, 'DM200lab', 88002,
+                _stream(9, 'labuser', 88001, group: 1234, started: 50),
+                _stream(11, 'labuser', 88002,
                     group: 1234, started: 200, member: 88002), // newest
               ]),
               200);
@@ -190,12 +193,12 @@ void main() {
           base: _base, username: 'admin', token: 't', issuedAt: DateTime.now());
     });
 
-    tearDown(() => Tuliprox.instance.login.value = null);
+    tearDown(() => Tuliprox.instance.save(null));
 
     test('lists the members of this user\'s newest stream of the channel',
         () async {
       final g = await Tuliprox.instance.groupFor(
-          _channel('https://tv.example.com/live/DM200lab/DOM002/1234.ts'));
+          _channel('https://tv.example.com/live/labuser/labpass/1234.ts'));
       expect(g, isNotNull);
       expect(g!.uid, 11);
       expect(g.currentVid, 88002);
@@ -214,7 +217,7 @@ void main() {
     test('picking a member row switches the open stream on the server',
         () async {
       final own =
-          _channel('https://tv.example.com/live/DM200lab/DOM002/1234.ts');
+          _channel('https://tv.example.com/live/labuser/labpass/1234.ts');
       final g = (await Tuliprox.instance.groupFor(own))!;
       final url = Tuliprox.instance.notePick(own, g.uid, g.members[2]);
       // The row's URL is the channel's own, with a fragment no server sees.
@@ -259,7 +262,7 @@ void main() {
           'target': 'DM200_lab',
           'credentials': [
             {
-              'username': 'DM200lab',
+              'username': 'labuser',
               'password': '***',
               'server': 'default',
               'max_connections': 1,
@@ -279,7 +282,7 @@ void main() {
 
     test('lists users, playlists and the address each streams from', () {
       final u = TuliproxUsers.fromJson(apiproxy);
-      expect(u.users.map((x) => x.username), ['DM200lab', 'aa', 'bb']);
+      expect(u.users.map((x) => x.username), ['labuser', 'aa', 'bb']);
       expect(u.targets, ['DM200_lab', 'trex_1']);
       expect(u.addressOf(u.users.first), 'https://tv.example.com');
       expect(u.addressOf(u.users[1]), 'http://10.0.0.5:8901/tv');

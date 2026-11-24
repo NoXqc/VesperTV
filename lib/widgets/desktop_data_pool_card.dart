@@ -8,6 +8,7 @@ import '../models/channel.dart';
 import '../models/media_file_info.dart';
 import '../services/desktop_audio.dart';
 import 'data_pool_card.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// Data pool on Windows: the same card as Android's [DataPoolCard], fed
 /// from mpv's own properties instead of ExoPlayer's tracks. Polls once a
@@ -50,6 +51,9 @@ class DesktopStreamStats {
     'file-format',
     'hwdec-current',
     'file-size',
+    // What actually goes to the TV / receiver (Apple TV's "Sound out" row).
+    'current-ao',
+    'audio-out-params/channel-count',
   ];
 
   final Map<String, String> values;
@@ -198,6 +202,16 @@ class _DesktopDataPoolCardState extends State<DesktopDataPoolCard> {
       right: [
         row(tr('Audio'),
             audioParts.isEmpty ? notReported : audioParts.join(' · ')),
+        // Apple TV: what reaches the TV / receiver, to tell 5.1 from a
+        // stereo downmix (dev-notes/apple-tv-parity-plan.md point 4).
+        if (isAppleTv && s.integer('audio-out-params/channel-count') != null)
+          row(
+              tr('Sound out'),
+              [
+                DataPoolCard.channelsName(
+                    s.integer('audio-out-params/channel-count')),
+                if (s['current-ao'].isNotEmpty) s['current-ao'],
+              ].whereType<String>().join(' · ')),
         if (audioTracks.length > 1)
           row(
               tr('Audio tracks'),

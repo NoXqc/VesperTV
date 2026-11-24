@@ -210,6 +210,13 @@ iPhone job. Before the first run:
    2027-11; renew it the same way. The step warns in the log when the
    engine still went unsigned.
 
+## Parity with Android TV (2026-11-23, `claude/appletv-parity`)
+
+Match frame rate (tvOS 17+, SDR only), 128 MiB player buffer, surround (no passthrough on tvOS, a
+"Sound out" row), options row tile order, Top Shelf rows (TopShelf extension + App Group) and the
+archive signing that keeps entitlements (iCloud, App Group) in the uploaded build. Plan, what was
+built and what is unverified: `dev-notes/apple-tv-parity-plan.md`.
+
 ## Test box
 
 Apple TV 4K 2nd gen (2021) or 3rd gen (2022). Not the Apple TV HD

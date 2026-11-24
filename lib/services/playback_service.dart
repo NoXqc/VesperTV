@@ -9,11 +9,16 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
+import 'package:video_player_android/video_player_android.dart'
+    show AndroidVideoPlayer, AndroidVideoPlayerOptions;
+import 'package:video_player_platform_interface/video_player_platform_interface.dart'
+    show VideoPlayerPlatform;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
+import '../models/stream_drm.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
 import 'perf_diagnostics.dart';
@@ -22,6 +27,7 @@ import 'playlist_manager.dart';
 import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
+import 'tuliprox.dart';
 import 'audio_track_preferences.dart';
 import 'catchup_format.dart';
 import 'catchup_session.dart';
@@ -624,6 +630,18 @@ class PlaybackService extends ChangeNotifier {
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
 
+    // Leaving a Tuliprox stream: it ends on the server first, so the new
+    // channel finds a one-connection account free instead of waiting for
+    // Tuliprox to notice the closed connection (uzumaki, 2026-11-23). Only
+    // when its stream is known (player routes); at most 1.5 s.
+    final leaving = currentChannel;
+    if (leaving != null && leaving.url != channel.url) {
+      await Tuliprox.instance
+          .release(leaving)
+          .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      if (gen != _playGen) return;
+    }
+
     if (await _reuseNativeLive(channel, openUrl, recordHistory)) return;
     if (gen != _playGen) return;
 
@@ -644,6 +662,8 @@ class PlaybackService extends ChangeNotifier {
     final session = catchup;
     _watchCatchupStart(session);
     currentChannel = channel;
+    Tuliprox.instance.noteStarted(channel);
+    _checkTuliproxSlate(channel);
     error = null;
     reconnectStatus = null;
     _autoAdvanceDismissed = false;
@@ -798,6 +818,7 @@ class PlaybackService extends ChangeNotifier {
       if (await _retryOnBackupServers(channel, e)) return;
       if (_retryOnCopy(channel)) return;
       error = sniff == null ? e.toString() : '$e\n${sniff.tag}';
+      _noteTuliproxRefusal(channel, error!);
       notifyListeners();
     });
 
@@ -1366,6 +1387,8 @@ class PlaybackService extends ChangeNotifier {
     }
     final generation = ++_nativeZapGeneration;
     currentChannel = channel;
+    Tuliprox.instance.noteStarted(channel);
+    _checkTuliproxSlate(channel);
     error = null;
     reconnectStatus = null;
     notifyListeners();
@@ -1564,8 +1587,15 @@ class PlaybackService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       unawaited(newController.dispose());
+      // What the link serves now, for the error screen only (Reload never
+      // retries as HLS or follows a link: play() does that).
+      final sniff = await _sniffUnreadable(channel, e);
+      if (currentChannel?.id != channel.id) return;
       reconnectStatus = null;
-      error = e.toString();
+      error = sniff == null || sniff.kind == 'hls' || sniff.kind == 'link'
+          ? e.toString()
+          : '$e\n${sniff.tag}';
+      _noteTuliproxRefusal(channel, error!);
       notifyListeners();
     } finally {
       _reloadingCurrentChannel = false;
@@ -1784,6 +1814,23 @@ class PlaybackService extends ChangeNotifier {
     return (channel: ch, controller: c);
   }
 
+  /// Encoded output cannot be muted per tile; reconnect it as PCM for Multiview.
+  /// (PR #12, issue #9.) A player that is already gone natively counts as
+  /// not movable: Multiview then opens the channel anew, as before.
+  static Future<bool> canHandOverToMultiview(VideoPlayerHdrController c) async {
+    final platform = VideoPlayerPlatform.instance;
+    if (platform is AndroidVideoPlayer) {
+      try {
+        return !await platform
+            .isAudioPassthroughEnabled(SubtitleTracks.playerIdOf(c));
+      } catch (e) {
+        debugPrint('Multiview: passthrough check failed ($e), reopening');
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// The controller [releaseLive] would hand over now, or null.
   VideoPlayerHdrController? get liveHandover {
     final c = controller;
@@ -1820,6 +1867,55 @@ class PlaybackService extends ChangeNotifier {
     await _storage.setLastChannelId(channel.id);
   }
 
+  /// Tuliprox refused [channel] and said why (`[Tuliprox reason]` in the
+  /// error): the error screen words it, and when the account or provider is
+  /// full it also names channels already playing that can be joined (read
+  /// after, so the screen redraws then).
+  void _noteTuliproxRefusal(Channel channel, String raw) {
+    final reason = tuliproxReasonOf(raw);
+    if (reason == null) return;
+    unawaited(Tuliprox.instance.noteFallback(channel, reason).then((fresh) {
+      if (fresh && error != null && currentChannel?.url == channel.url) {
+        notifyListeners();
+      }
+    }));
+  }
+
+  /// What Tuliprox's answer for [channel] said, kept by the native
+  /// StreamStats: its stream uid (`X-Tuliprox-Stream-Uid`, read at 1.5 s:
+  /// the exact stream to end on leaving) and whether it is the busy video,
+  /// not the channel (`X-Tuliprox-Fallback` on a 200 answer, again at 4 s).
+  /// Android only (the computer player's mpv doesn't show headers).
+  void _checkTuliproxSlate(Channel channel) {
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (Tuliprox.instance.refOf(channel) == null) return;
+    _readTuliproxHeaders(channel, const Duration(milliseconds: 1500));
+    _readTuliproxHeaders(channel, const Duration(seconds: 4));
+  }
+
+  void _readTuliproxHeaders(Channel channel, Duration after) {
+    Future<void>.delayed(after, () async {
+      final c = controller;
+      if (c == null ||
+          currentChannel?.url != channel.url ||
+          !c.value.isInitialized) {
+        return;
+      }
+      try {
+        final m = await _statsChannel.invokeMapMethod<Object?, Object?>(
+            'getStats', {'playerId': SubtitleTracks.playerIdOf(c)});
+        if (currentChannel?.url != channel.url) return;
+        final uid = int.tryParse('${m?['streamUid'] ?? ''}');
+        if (uid != null) Tuliprox.instance.noteOwnUid(channel, uid);
+        final reason = m?['fallback'] as String?;
+        if (reason == null || reason.isEmpty) return;
+        await Tuliprox.instance.noteFallback(channel, reason);
+      } catch (_) {
+        // Player gone, or a build without the stats bridge.
+      }
+    });
+  }
+
   Future<void> stop() async {
     _nativeZapGeneration++;
     _playGen++;
@@ -1827,6 +1923,9 @@ class PlaybackService extends ChangeNotifier {
     catchup = null;
     _pendingCatchup = null;
     _cancelNativeSwitchHolds();
+    // Its Tuliprox stream ends on the server now ([Tuliprox.release]).
+    final leaving = currentChannel;
+    if (leaving != null) unawaited(Tuliprox.instance.release(leaving));
     await _teardown();
     // Nothing plays any more: the TV goes back to its own mode. A channel
     // change doesn't come here, so zapping keeps a matched mode.
@@ -1845,12 +1944,18 @@ class PlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Once per link: when the player couldn't read [channel]'s stream at
-  /// all (ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED), what the link really
+  /// When the player couldn't read [channel]'s stream at all
+  /// (ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED), what the link really
   /// served — an HLS playlist (retried as HLS), or a source's error reply
   /// instead of the file (a debrid service's plan limit, an expired
   /// account… — Media Hub TV show, user photo 2026-10-21). Logged without
   /// the link, for Send log.
+  ///
+  /// Asked with the player's own headers on every such failure, so the error
+  /// screen says what the link serves now (an empty reply: RTP outside
+  /// Portugal answers `204` with no body, owner on a Portugal VPN played it,
+  /// 2026-11-22). Acting on an `hls` / `link` reply (the caller's retries)
+  /// stays once per link: a link that keeps failing as HLS would loop.
   Future<StreamSniff?> _sniffUnreadable(Channel channel, Object error) async {
     final raw = error.toString();
     // MANIFEST_MALFORMED: opened as HLS, but the reply wasn't a playlist —
@@ -1858,11 +1963,15 @@ class PlaybackService extends ChangeNotifier {
     // photo 2026-10-22: "Input does not start with the #EXTM3U header").
     if (!(raw.contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED') ||
             raw.contains('ERROR_CODE_PARSING_MANIFEST_MALFORMED')) ||
-        channel.url.startsWith('/') ||
-        !_sniffedUrls.add(channel.url)) {
+        channel.url.startsWith('/')) {
       return null;
     }
-    final sniff = await sniffStream(channel.url);
+    final first = _sniffedUrls.add(channel.url);
+    final sniff = await sniffStream(channel.url, headers: {
+      // The Android player's own default (video_player_android).
+      'User-Agent': 'ExoPlayer',
+      ...StreamDrm.withoutDrm(channel.httpHeaders),
+    });
     final what = channel.isLive
         ? 'live'
         : channel.playlistId == ArchiveService.playlistId
@@ -1873,6 +1982,7 @@ class PlaybackService extends ChangeNotifier {
     final ext = dot > path.lastIndexOf('/') ? path.substring(dot) : 'none';
     debugPrint('PlaybackService: unreadable $what stream (extension $ext): '
         'served ${sniff?.tag ?? 'nothing (request failed)'}');
+    if (!first && (sniff?.kind == 'hls' || sniff?.kind == 'link')) return null;
     return sniff;
   }
 
@@ -2012,8 +2122,9 @@ class StreamSniff {
   const StreamSniff(this.kind, {this.text, this.status});
 
   /// `hls`, `link` (the body is only another http(s) link: a `.strm`
-  /// file), `json`, `html`, `text` (a reply, not a video) or `binary`
-  /// (media data the player has no reader for).
+  /// file), `json`, `html`, `text` (a reply, not a video), `empty` (a
+  /// success status with no body at all: RTP's `204` outside Portugal) or
+  /// `binary` (media data the player has no reader for).
   final String kind;
 
   /// The reply's own words: a JSON `error`/`message`/`detail`, a page's
@@ -2030,17 +2141,26 @@ class StreamSniff {
 }
 
 /// The first KB of [url] (redirects followed), classified. Null when the
-/// request itself failed.
-Future<StreamSniff?> sniffStream(String url, {http.Client? client}) async {
+/// request itself failed. [headers]: the player's, so the link answers as
+/// it did to the player.
+Future<StreamSniff?> sniffStream(String url,
+    {http.Client? client, Map<String, String> headers = const {}}) async {
   final c = client ?? http.Client();
   try {
     final req = http.Request('GET', Uri.parse(url))
+      ..headers.addAll(headers)
       ..headers['Range'] = 'bytes=0-1023';
     final r = await c.send(req).timeout(const Duration(seconds: 10));
     final bytes = <int>[];
     await for (final chunk in r.stream.timeout(const Duration(seconds: 10))) {
       bytes.addAll(chunk);
       if (bytes.length >= 1024) break;
+    }
+    // Nothing at all with a success status (204 No Content, an empty 200):
+    // the server chose to send no video. An error status is left to the
+    // checks below.
+    if (bytes.isEmpty && r.statusCode < 400) {
+      return StreamSniff('empty', status: r.statusCode);
     }
     final status = r.statusCode >= 400 ? r.statusCode : null;
     final type = (r.headers['content-type'] ?? '').toLowerCase();
@@ -2093,6 +2213,7 @@ VideoPlayerHdrController streamController(
   Future<ClosedCaptionFile>? closedCaptionFile,
   VideoPlayerOptions? videoPlayerOptions,
   Map<String, String> httpHeaders = const {},
+  bool allowEncodedAudio = true,
 }) {
   // On a TV box another app taking audio focus (launcher previews, voice
   // assistant, CEC) made ExoPlayer pause silently: a frozen picture with
@@ -2115,6 +2236,12 @@ VideoPlayerHdrController streamController(
           o?.preventsDisplaySleepDuringVideoPlayback ?? true,
       webOptions: o?.webOptions,
       backBufferDurationMs: CatchupFormat.backBuffer.inMilliseconds,
+    );
+  }
+  if (Platform.isAndroid) {
+    videoPlayerOptions = AndroidVideoPlayerOptions(
+      allowEncodedAudio: allowEncodedAudio,
+      options: videoPlayerOptions,
     );
   }
   // A recording (RecordingService.channelFor): a local .ts file.

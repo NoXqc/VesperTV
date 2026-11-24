@@ -21,6 +21,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/audio_track_preferences.dart';
 import '../services/catchup_session.dart';
+import '../services/tuliprox.dart';
 import '../services/vod_buffering.dart';
 import '../utils/time_format.dart';
 import '../utils/video_quality.dart';
@@ -372,6 +373,11 @@ class _SwitchToLinkedChannelButtonState
 /// code makes an incapable decoder chip decode 10-bit HDR. This just
 /// stops surfacing that as a raw stack-trace-shaped string.
 String friendlyPlaybackError(String raw) {
+  // Tuliprox said why it served no stream (X-Tuliprox-Fallback): its words,
+  // plus channels already playing on the server that can be joined.
+  final reason = tuliproxReasonOf(raw);
+  final said = reason == null ? null : tuliproxFallbackMessage(reason);
+  if (said != null) return said;
   // No decoder for the video at all (ExoPlayerEventListener's
   // [UNSUPPORTED_VIDEO: mime codecs size] tag). Dolby Vision profile 5/7 is
   // the usual one: profile 8 already plays as HDR10 on a plain HEVC decoder.
@@ -385,6 +391,12 @@ String friendlyPlaybackError(String raw) {
     return tr(
         'This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.');
   }
+  // ExoPlayer's DRM errors (6000s): the playlist's ClearKey keys are wrong
+  // or old, the license server refused, or the box has no such DRM.
+  if (raw.contains('ERROR_CODE_DRM_')) {
+    return tr(
+        "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.");
+  }
   if (isDecoderPlaybackError(raw)) {
     return tr(
         'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');
@@ -392,6 +404,11 @@ String friendlyPlaybackError(String raw) {
   // What the link really served (PlaybackService._sniffUnreadable).
   final reply = RegExp(r'\[SOURCE_REPLY:(\w+)[^\]]*\] ?(.*)').firstMatch(raw);
   if (reply != null) {
+    // A success status with no body (sniffStream): the server sent nothing.
+    if (reply[1] == 'empty') {
+      return tr(
+          'The server sent an empty answer instead of the video. This channel may only play in its own country.');
+    }
     if (reply[1] == 'binary') {
       return tr(
           'This file\'s format can\'t be played here. Try another stream (an MKV or MP4 one).');
@@ -660,7 +677,8 @@ class PlayerControls extends StatelessWidget {
 
   /// Recall, Watch from the start, Reload, tracks, Audio sync, linked
   /// channel, Multiview: in the bar on phones, in the options row on TV.
-  List<Widget> _actionButtons(BuildContext context, PlaybackService? playback) =>
+  List<Widget> _actionButtons(
+          BuildContext context, PlaybackService? playback) =>
       [for (final (_, tile) in _actionTiles(context, playback)) tile];
 
   /// [_actionButtons] with each one's id, for the viewer's options row
@@ -675,31 +693,37 @@ class PlayerControls extends StatelessWidget {
     }
     return [
       if (isLive && channel != null)
-        ('recall', LabeledIconButton(
-          icon: Icons.history,
-          label: tr('Recall — go back to a recent channel'),
-          shortLabel: tr('Recent'),
-          onPressed: () {
-            onActivity?.call();
-            showRecallPicker(context, channel!);
-          },
-        )),
+        (
+          'recall',
+          LabeledIconButton(
+            icon: Icons.history,
+            label: tr('Recall — go back to a recent channel'),
+            shortLabel: tr('Recent'),
+            onPressed: () {
+              onActivity?.call();
+              showRecallPicker(context, channel!);
+            },
+          )
+        ),
       // Start over: the programme on now, from
       // its start (catch-up channels only).
       if (isLive && channel != null && channel!.hasCatchup)
-        ('start_over', LabeledIconButton(
-          icon: Icons.restart_alt,
-          label: tr('Watch from the start'),
-          shortLabel: tr('Start over'),
-          onPressed: () {
-            onActivity?.call();
-            final now =
-                context.read<EpgService>().getCurrentProgram(channel!.epgId);
-            if (now != null) {
-              playback?.playCatchup(channel!, now.start);
-            }
-          },
-        )),
+        (
+          'start_over',
+          LabeledIconButton(
+            icon: Icons.restart_alt,
+            label: tr('Watch from the start'),
+            shortLabel: tr('Start over'),
+            onPressed: () {
+              onActivity?.call();
+              final now =
+                  context.read<EpgService>().getCurrentProgram(channel!.epgId);
+              if (now != null) {
+                playback?.playCatchup(channel!, now.start);
+              }
+            },
+          )
+        ),
       // Manual recovery for a channel that's silently
       // stalled (frozen frame, no spinner, no error) — see
       // PlaybackService.reloadCurrentChannel's doc comment
@@ -707,15 +731,18 @@ class PlayerControls extends StatelessWidget {
       // automatic watchdog. Live only, same gating as Recall
       // above.
       if (isLive && channel != null)
-        ('reload', LabeledIconButton(
-          icon: Icons.refresh,
-          label: tr('Reload channel'),
-          shortLabel: tr('Reload'),
-          onPressed: () {
-            onActivity?.call();
-            context.read<PlaybackService>().reloadCurrentChannel();
-          },
-        )),
+        (
+          'reload',
+          LabeledIconButton(
+            icon: Icons.refresh,
+            label: tr('Reload channel'),
+            shortLabel: tr('Reload'),
+            onPressed: () {
+              onActivity?.call();
+              context.read<PlaybackService>().reloadCurrentChannel();
+            },
+          )
+        ),
       // Keyed by stream: the bar stays mounted
       // across zaps (and a native live zap
       // keeps the controller), so without a
@@ -724,48 +751,63 @@ class PlayerControls extends StatelessWidget {
       // channel's audio tracks never showed
       // (CBC Montreal described-video track,
       // owner 2026-10-26).
-      ('audio', _AudioTrackButton(
-          key: ValueKey(Object.hash('audio', controller, channel?.id)),
-          controller: controller)),
-      ('subtitles', _SubtitleButton(
-          key: ValueKey(Object.hash('subs', controller, channel?.id)),
-          controller: controller)),
+      (
+        'audio',
+        _AudioTrackButton(
+            key: ValueKey(Object.hash('audio', controller, channel?.id)),
+            controller: controller)
+      ),
+      (
+        'subtitles',
+        _SubtitleButton(
+            key: ValueKey(Object.hash('subs', controller, channel?.id)),
+            controller: controller)
+      ),
       // Every stream, not only multi-track ones: the
       // sound can be off on any channel (Shield +
       // soundbar user, 2026-11-05).
-      ('audio_sync', LabeledIconButton(
-        icon: Icons.av_timer,
-        label: tr('Audio sync'),
-        detail: audioDelay == null || audioDelay == 0
-            ? null
-            : '${audioDelay > 0 ? '+' : '-'}${audioDelay.abs()} ms',
-        onPressed: () {
-          onActivity?.call();
-          showAudioDelayAdjuster(context);
-        },
-      )),
+      (
+        'audio_sync',
+        LabeledIconButton(
+          icon: Icons.av_timer,
+          label: tr('Audio sync'),
+          detail: audioDelay == null || audioDelay == 0
+              ? null
+              : '${audioDelay > 0 ? '+' : '-'}${audioDelay.abs()} ms',
+          onPressed: () {
+            onActivity?.call();
+            showAudioDelayAdjuster(context);
+          },
+        )
+      ),
       // Live buffer (Settings > Playback) from the player: the native player
       // takes the new reserve at once, so a stalling channel can be tried
       // with a bigger one without leaving it.
       if (isLive && channel != null)
-        ('buffer', _LiveBufferButton(
-          controller: controller,
-          channel: channel!,
-          ownsPlayer: playback?.controller == controller,
-          onActivity: onActivity,
-        )),
+        (
+          'buffer',
+          _LiveBufferButton(
+            controller: controller,
+            channel: channel!,
+            ownsPlayer: playback?.controller == controller,
+            onActivity: onActivity,
+          )
+        ),
       if (linkedChannel != null)
         ('linked', _LinkedChannelButton(linkedChannel: linkedChannel!)),
       if (onOpenMultiview != null)
-        ('multiview', LabeledIconButton(
-          icon: Icons.grid_view,
-          label: tr('Open in Multiview'),
-          shortLabel: tr('Multiview'),
-          onPressed: () {
-            onActivity?.call();
-            onOpenMultiview!();
-          },
-        )),
+        (
+          'multiview',
+          LabeledIconButton(
+            icon: Icons.grid_view,
+            label: tr('Open in Multiview'),
+            shortLabel: tr('Multiview'),
+            onPressed: () {
+              onActivity?.call();
+              onOpenMultiview!();
+            },
+          )
+        ),
     ];
   }
 
@@ -2907,7 +2949,8 @@ class LiveInfoBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(
           20 + inset.left, 7, 20 + inset.right, 8 + inset.bottom),
       decoration: BoxDecoration(
-        color: RefinedFinish.surface(context,
+        color: RefinedFinish.surface(
+            context,
             playerMenuColor(
                 const Color(0xD90D1014), playerBarTransparency(context))),
         border: const Border(top: BorderSide(color: Colors.white12)),
@@ -2960,8 +3003,7 @@ class PlayerOptionsPill extends StatelessWidget {
     // a dark fill below 15 % (none at 15 %: its gradient replaced the
     // colour, the old look) up to solid at 0 %.
     final t = playerOptionsTransparency(context);
-    final pillFill = Colors.black.withValues(
-        alpha: playerMenuAlpha(0, t));
+    final pillFill = Colors.black.withValues(alpha: playerMenuAlpha(0, t));
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(

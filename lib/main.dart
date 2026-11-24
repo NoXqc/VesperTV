@@ -26,6 +26,7 @@ import 'screens/home_screen.dart';
 import 'screens/archive_screen.dart';
 import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
+import 'screens/from_another_device_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/apple_tv_menu.dart';
@@ -81,6 +82,7 @@ import 'services/sports_phone_notifications.dart';
 import 'services/sports_goal_background.dart' show sportsGoalBackgroundMain;
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
+import 'widgets/top_notice_overlay.dart';
 import 'widgets/native_video_hole.dart';
 import 'services/viewer_profile_service.dart';
 import 'models/cyberpunk_palette.dart';
@@ -299,6 +301,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       Platform.isAndroid &&
       !usesMediaKit &&
       !_preferences.launchWithProfiles &&
+      _profileSelection == null &&
       !_preferences.sportsMode &&
       !_preferences.hideLiveTv &&
       _preferences.effectiveStartSection == 'tv' &&
@@ -414,6 +417,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // Picking the same viewer again resumes their channel (Startup choice);
     // another viewer starts fresh (owner, 2026-11-08).
     _resumeIfViewer = _storage.getActiveViewerId();
+    // A locked profile asks its PIN again from Who's watching.
+    _viewerProfileService.lockActive();
     if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
     } else {
@@ -421,6 +426,38 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     }
     if (!mounted) return;
     setState(() => _profileSelection = Completer<void>());
+  }
+
+  /// When VesperTV went off screen (Home button, another app, minimised):
+  /// a locked profile asks its PIN again once it was away long enough
+  /// ([profileRelockDue], Settings > Profiles & startup).
+  DateTime? _leftAt;
+  AppLifecycleListener? _lockLifecycle;
+
+  /// Back on screen: a locked profile in use away past the chosen time
+  /// goes behind Who's watching. Runs before the warm-return resume
+  /// (registered first), which then waits for the pick.
+  void _relockIfDue() {
+    final left = _leftAt;
+    _leftAt = null;
+    if (left == null || !_ready || _profileSelection != null) return;
+    if (!_viewerProfileService.active.isLocked) return;
+    final away = DateTime.now().difference(left);
+    if (!profileRelockDue(away, _preferences.profileRelockMinutes)) return;
+    if (!_viewerProfileService.lockActive()) return;
+    debugPrint("ProfileLock: back after ${away.inSeconds} s, Who's watching");
+    _resumeIfViewer = _storage.getActiveViewerId();
+    // Set at once: the warm return (AppExit.afterWarm) reads it next.
+    final selection = Completer<void>();
+    _profileSelection = selection;
+    unawaited(() async {
+      if (usesMediaKit) {
+        DesktopMiniPlayer.instance.clear();
+      } else {
+        await _playbackService.stop();
+      }
+      if (mounted && _profileSelection == selection) setState(() {});
+    }());
   }
 
   final _startupRoutes = StartupRoutes();
@@ -474,25 +511,26 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// content lives behind Settings > Playlist Manager rather than just
   /// showing up on its own.
   bool _newUserPromptPending = false;
-  Completer<bool>? _newUserPromptCompleter;
+  Completer<WelcomeChoice>? _newUserPromptCompleter;
 
   /// Set from [WelcomeAddPlaylistScreen]'s answer, consumed once `_ready`
   /// flips true (see `_buildReadyContent`'s `build` doc comment below) —
-  /// can't just push [AddPlaylistScreen] directly from the prompt itself,
-  /// since the real `MaterialApp`/`Navigator` this screen's bootstrap gate
-  /// runs ahead of doesn't exist yet at that point.
-  bool _pendingAutoOpenAddPlaylist = false;
+  /// can't just push [AddPlaylistScreen] / [FromAnotherDeviceScreen]
+  /// directly from the prompt itself, since the real `MaterialApp`/
+  /// `Navigator` this screen's bootstrap gate runs ahead of doesn't exist
+  /// yet at that point.
+  WelcomeChoice _welcomeChoice = WelcomeChoice.skip;
 
-  Future<bool> _confirmNewUserWantsPlaylist() {
-    final completer = Completer<bool>();
+  Future<WelcomeChoice> _askNewUser() {
+    final completer = Completer<WelcomeChoice>();
     _newUserPromptCompleter = completer;
     if (mounted) setState(() => _newUserPromptPending = true);
     return completer.future;
   }
 
-  void _respondToNewUserPrompt(bool wantsToAddPlaylist) {
+  void _respondToNewUserPrompt(WelcomeChoice choice) {
     if (mounted) setState(() => _newUserPromptPending = false);
-    _newUserPromptCompleter?.complete(wantsToAddPlaylist);
+    _newUserPromptCompleter?.complete(choice);
     _newUserPromptCompleter = null;
   }
 
@@ -560,6 +598,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     HardwareKeyboard.instance.removeHandler(_onGuideKey);
     HardwareKeyboard.instance.removeHandler(_onVoiceKey);
     _syncLifecycle?.dispose();
+    _lockLifecycle?.dispose();
     _vesperLifecycle?.dispose();
     _launcherLifecycle?.dispose();
     McpBridge.instance.stop();
@@ -863,6 +902,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ..nameEventsProvider = _playlistManager.channelNameEventsByEpgId
         ..idleEventIdsProvider = _playlistManager.idleEventChannelEpgIds
         ..beforeRefresh = _playlistManager.ensureLiveChannelsLoaded;
+      // An M3U's own guides (`#EXTM3U url-tvg`), found at a download or the
+      // first launch after an update: loaded at once.
+      _playlistManager.onGuidesFound =
+          (sources) => unawaited(_epgService.loadAdded(sources));
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
       // rows, SQLite on its own thread), so it doesn't compete with the
@@ -951,6 +994,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
           onViewerChanged: _preferences.reloadPaletteForViewer);
+      _lockLifecycle = AppLifecycleListener(
+          onHide: () => _leftAt ??= DateTime.now(), onResume: _relockIfDue);
 
       // From here sync only writes what these services re-read (the same
       // reload as a profile switch, no network); the rest waits for the
@@ -1069,7 +1114,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // with the join screen, the code filled in (it asks before joining).
       SyncLinks.instance
         ..arrived = (() {
-          if (_newUserPromptPending) _respondToNewUserPrompt(false);
+          if (_newUserPromptPending) {
+            _respondToNewUserPrompt(WelcomeChoice.skip);
+          }
         })
         ..canOpen = (() =>
             mounted &&
@@ -1125,7 +1172,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // phone is about to get its playlists from sync (SyncLinks).
       if (_playlistManager.profiles.isEmpty &&
           !await SyncLinks.instance.hasPending) {
-        _pendingAutoOpenAddPlaylist = await _confirmNewUserWantsPlaylist();
+        _welcomeChoice = await _askNewUser();
       }
 
       // TiviMate/MyTVOnline3-style: a full catalog sync (every non-hidden
@@ -1249,7 +1296,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       if (!mounted) return;
       PerfDiagnostics.mark('splashEnd');
-      if (_preferences.launchWithProfiles) {
+      // A locked profile in use: Who's watching, its PIN to go back in.
+      final locked = _viewerProfileService.lockActive();
+      if (locked) debugPrint("ProfileLock: locked profile, Who's watching");
+      if (_preferences.launchWithProfiles || locked) {
         _profileSelection = Completer<void>();
       }
       ProfileGate.register(
@@ -1293,13 +1343,18 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         WidgetsBinding.instance
             .addPostFrameCallback((_) => _showToast(tr('Content updated')));
       }
-      if (_pendingAutoOpenAddPlaylist) {
+      final welcome = switch (_welcomeChoice) {
+        WelcomeChoice.addPlaylist => const AddPlaylistScreen(),
+        WelcomeChoice.fromAnotherDevice => const FromAnotherDeviceScreen(),
+        WelcomeChoice.skip => null,
+      };
+      if (welcome != null) {
         // Same reasoning as the toast above — the real Navigator this
         // pushes onto doesn't exist until this build lands.
-        _pendingAutoOpenAddPlaylist = false;
+        _welcomeChoice = WelcomeChoice.skip;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _navigatorKey.currentState?.push(
-              MaterialPageRoute(builder: (_) => const AddPlaylistScreen()));
+          _navigatorKey.currentState
+              ?.push(MaterialPageRoute(builder: (_) => welcome));
         });
       }
       // Profile selection waits for the application's first frame above. Any
@@ -1458,7 +1513,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// into [DesktopPlayerScreen] (not [PlaybackService]/[PlayerScreen] at
   /// all — Windows' own, wholly separate player, see that screen's own doc
   /// comment) via [_navigatorKey] directly, not through a postFrame-
-  /// callback the way [_pendingAutoOpenAddPlaylist] needs to: unlike that
+  /// callback the way [_welcomeChoice] needs to: unlike that
   /// flag (checked synchronously in the same frame `_ready` flips true),
   /// this runs after a real awaited disk read below, well after the real
   /// Navigator already exists — same reasoning [DesktopLiveResumeHint]
@@ -1958,6 +2013,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               const ProgrammeReminderOverlay(),
               const ProviderExpiryOverlay(),
               const GoalsAlertOverlay(),
+              const TopNoticeOverlay(),
               const VesperBubbleOverlay(),
             ],
           ),

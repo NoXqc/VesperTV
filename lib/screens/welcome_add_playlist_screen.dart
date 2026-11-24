@@ -6,6 +6,15 @@ import '../utils/tv_theme.dart';
 import '../widgets/mode_button.dart';
 import '../l10n/l10n.dart';
 
+/// What the new viewer picked on [WelcomeAddPlaylistScreen].
+enum WelcomeChoice {
+  skip,
+  addPlaylist,
+
+  /// Sync, a transfer or a backup ([FromAnotherDeviceScreen]).
+  fromAnotherDevice,
+}
+
 /// Shown once, from main.dart's bootstrap gate, the very first time the app
 /// launches with zero playlists configured — a brand-new install has no
 /// other hint that content lives behind Settings > Playlist Manager rather
@@ -16,11 +25,13 @@ import '../l10n/l10n.dart';
 class WelcomeAddPlaylistScreen extends StatelessWidget {
   const WelcomeAddPlaylistScreen({super.key, required this.onRespond});
 
-  /// `true` to open [AddPlaylistScreen] right after bootstrap finishes,
-  /// `false` to land on the normal (empty) main app — see main.dart's
-  /// `_pendingAutoOpenAddPlaylist` for why this can't just push the screen
-  /// directly from here (no Navigator exists yet at this point).
-  final void Function(bool wantsToAddPlaylist) onRespond;
+  /// [WelcomeChoice.addPlaylist] opens [AddPlaylistScreen] right after
+  /// bootstrap finishes, [WelcomeChoice.fromAnotherDevice] opens
+  /// [FromAnotherDeviceScreen], [WelcomeChoice.skip] lands on the normal
+  /// (empty) main app — see main.dart's `_welcomeChoice` for why this can't
+  /// just push the screen directly from here (no Navigator exists yet at
+  /// this point).
+  final void Function(WelcomeChoice choice) onRespond;
 
   @override
   Widget build(BuildContext context) {
@@ -39,22 +50,29 @@ class WelcomeAddPlaylistScreen extends StatelessWidget {
           // (vision-impaired user, 2026-11-02).
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final stacked = constraints.maxWidth < 420 ||
+              final stacked = constraints.maxWidth < 640 ||
                   MediaQuery.textScalerOf(context).scale(16) > 20;
               final skip = ModeButton(
                 label: tr('Skip for now'),
                 selected: false,
-                onTap: () => onRespond(false),
+                onTap: () => onRespond(WelcomeChoice.skip),
               );
               final add = ModeButton(
                 label: tr('Add Playlist'),
                 selected: false,
-                onTap: () => onRespond(true),
+                onTap: () => onRespond(WelcomeChoice.addPlaylist),
+              );
+              // Sync, a transfer or a backup from a device that already has
+              // VesperTV (BallerMC, Discord, 2026-11-22: a new Apple TV
+              // install offered only Skip / Add Playlist).
+              final other = ModeButton(
+                label: tr('From another device'),
+                selected: false,
+                onTap: () => onRespond(WelcomeChoice.fromAnotherDevice),
               );
               return SingleChildScrollView(
                 child: ConstrainedBox(
-                  constraints:
-                      BoxConstraints(minHeight: constraints.maxHeight),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.all(stacked ? 20 : 32),
@@ -106,6 +124,12 @@ class WelcomeAddPlaylistScreen extends StatelessWidget {
                             style: const TextStyle(color: Colors.white70),
                             textAlign: TextAlign.center,
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            tr('Already use VesperTV on another device? Bring your playlists, favourites and settings here.'),
+                            style: const TextStyle(color: Colors.white70),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 28),
                           // ModeButton over plain Outlined/FilledButton for
                           // the same reason as CatalogSyncPromptScreen — a
@@ -117,18 +141,28 @@ class WelcomeAddPlaylistScreen extends StatelessWidget {
                               children: [
                                 add,
                                 const SizedBox(height: 12),
+                                other,
+                                const SizedBox(height: 12),
                                 skip,
                               ],
                             )
                           else
+                            // Same height for all three when one label
+                            // wraps (a longer translation).
                             SizedBox(
-                              width: 320,
-                              child: Row(
-                                children: [
-                                  Expanded(child: skip),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: add),
-                                ],
+                              width: 560,
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(child: skip),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: other),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: add),
+                                  ],
+                                ),
                               ),
                             ),
                         ],

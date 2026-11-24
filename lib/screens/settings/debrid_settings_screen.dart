@@ -7,10 +7,14 @@ import '../../services/debrid_api.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
+import 'archive_sources_screen.dart';
 
 /// Optional Real-Debrid / TorBox keys (bring-your-own, like TMDB's): with
 /// one, a Media Hub title that first played as a "being downloaded" clip
 /// gets its "Ready" tag as soon as the account has it (`ArchiveReadyWatch`).
+/// Many users took this page for the place to add their debrid add-ons
+/// (owner, 2026-11-23): it first says it adds nothing to watch and opens
+/// Media Hub sources, where content is added.
 class DebridSettingsScreen extends StatefulWidget {
   const DebridSettingsScreen({super.key});
 
@@ -97,6 +101,9 @@ class _DebridSettingsScreenState extends State<DebridSettingsScreen> {
     ));
   }
 
+  void _openSources() => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => const ArchiveSourcesScreen()));
+
   Widget _field(TextEditingController controller, FocusNode focus,
       FocusNode next, String label) {
     return TvTextFieldGate(
@@ -120,18 +127,17 @@ class _DebridSettingsScreenState extends State<DebridSettingsScreen> {
     return SettingsScaffold(
       title: tr('Debrid accounts'),
       body: ListView(
-          // Sized to its rows: a floating panel hugs them.
-          shrinkWrap: true,
+        // Sized to its rows: a floating panel hugs them.
+        shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            tr('Some Media Hub sources answer Play with a short "being downloaded" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a "Ready" tag on the title\'s poster once it\'s there.'),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            tr('Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.'),
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          _NotForContent(onOpen: _openSources),
+          const SizedBox(height: 20),
+          Text(tr('What these keys do'),
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Text(tr(
+              'Optional. Some debrid sources answer Play with a short "being downloaded" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a "Ready" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.')),
           const SizedBox(height: 12),
           Text(
             tr('Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.'),
@@ -152,6 +158,49 @@ class _DebridSettingsScreenState extends State<DebridSettingsScreen> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : Text(tr('Save')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The page's first lines: this is not where movies and shows come from.
+class _NotForContent extends StatelessWidget {
+  const _NotForContent({required this.onOpen});
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: accent.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(12),
+        color: accent.withValues(alpha: 0.08),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.info_outline, color: accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(tr("This page doesn't add movies or shows"),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(tr(
+              'To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.')),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            autofocus: true,
+            onPressed: onOpen,
+            icon: const Icon(Icons.add_link),
+            label: Text(tr('Open Media Hub sources')),
           ),
         ],
       ),

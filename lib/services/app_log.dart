@@ -228,6 +228,7 @@ class AppLog {
         _host(p.xtreamServer),
         _host(p.m3uUrl),
         _host(p.epgUrl),
+        ...?p.playlistEpgUrls?.map(_host),
         ...p.backupServers.map(_host),
       ]) {
         if (s != null && s.trim().length >= 3) secrets.add(s.trim());

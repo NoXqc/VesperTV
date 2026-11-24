@@ -33,6 +33,8 @@ final class HttpVideoAsset extends VideoAsset {
   @Nullable private final String userAgent;
   // VesperTV patch: Data pool measured bitrate, see StatsBridge.
   private final StreamStats stats;
+  // VesperTV patch: the playlist's DRM (StreamDrm), taken out of the headers.
+  @Nullable private final StreamDrm drm;
 
   @Nullable
   @Override
@@ -48,6 +50,9 @@ final class HttpVideoAsset extends VideoAsset {
       @Nullable String userAgent) {
     super(assetUrl);
     this.streamingFormat = streamingFormat;
+    // Before anything uses the headers: the DRM header is ours, never sent.
+    this.drm = StreamDrm.take(httpHeaders);
+    if (drm != null) android.util.Log.i("VesperDrm", "stream DRM: " + drm);
     this.httpHeaders = httpHeaders;
     this.userAgent = userAgent;
     // Only a progressive file has one resource whose Content-Length is its size.
@@ -76,6 +81,7 @@ final class HttpVideoAsset extends VideoAsset {
     if (mimeType != null) {
       builder.setMimeType(mimeType);
     }
+    if (drm != null) builder.setDrmConfiguration(drm.configuration());
     return builder.build();
   }
 
@@ -115,8 +121,11 @@ final class HttpVideoAsset extends VideoAsset {
               readAhead);
     }
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, http);
-    return new DefaultMediaSourceFactory(
-        dataSourceFactory, MatroskaAtmos.wrap(liveCaptionExtractors()));
+    DefaultMediaSourceFactory factory =
+        new DefaultMediaSourceFactory(
+            dataSourceFactory, MatroskaAtmos.wrap(liveCaptionExtractors()));
+    if (drm != null) factory.setDrmSessionManagerProvider(drm.sessionManagers(initialFactory));
+    return factory;
   }
 
   /**

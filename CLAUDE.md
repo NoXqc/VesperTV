@@ -154,7 +154,8 @@ announced to testers via `DISCORD_TEST_WEBHOOK` when set). Hotfix = the only mid
 Weekly outline: `pubspec.yaml` `<ver>+N` (versionCode `+N` must always rise) → `flutter analyze` → build APK +
 verify signature (§5) → build Windows + zip → **commit & push first** → `gh release create <ver> --target <sha>
 --latest … app-release.apk VesperTV-windows-x64.zip` → make sure the tag equals HEAD → move `stable` to it →
-Linux: `gh workflow run linux-flatpak.yml` and `linux-build.yml` with `--ref main -f release_tag=<tag>` → verify
+Linux + Mac: `gh workflow run linux-flatpak.yml`, `linux-build.yml` and `macos-build.yml` with `--ref main -f
+release_tag=<tag>` → verify
 downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The Stable updater offers
 any *different* tag (`_isDifferent`) except to a test-build install (newer only); never leave two `.zip`/`.apk`
 assets on a release.
@@ -223,7 +224,11 @@ audio stalls remains unconfirmed. See `dev-notes/vod-seek-buffering.md`.
 Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPassthrough`) — opt-in
 HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
 when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
-context-less sink above. Texture players (Multiview, Compatibility video) never pass through.
+context-less sink above. Multiview tiles never pass through. Since PR #12 (corporate-gadfly, issue #9,
+2026-11-22) the Compatibility video main player does too (`AndroidVideoPlayerOptions.allowEncodedAudio`,
+`TextureVideoPlayer`): Fire OS 6 sticks are on Compatibility video by default and their Dolby E-AC-3 decoder
+gives stereo, so 5.1 there needs passthrough. A passthrough player is never handed into Multiview
+(`PlaybackService.canHandOverToMultiview`: it reopens as PCM). Notes: dev-notes/six-channel-audio-investigation.md.
 Unreleased (2026-11-09): **`MatroskaAtmos.java`** (`HttpVideoAsset` wraps the extractors factory):
 MatroskaExtractor never flags Atmos (only TS frames and MP4's dec3 do), so Media Hub MKVs showed
 "E-AC-3 5.1". An MKV E-AC-3 track's first frame goes through `Ac3Util.parseAc3SyncframeInfo`; JOC
@@ -243,6 +248,10 @@ Unreleased (2026-11-21, +956): **`ReadAhead.java` + `ReadAheadDataSource.java`**
 connections when one is slower than the file, into a 64 MB memory ring (a 4 GB ring FILE was tried
 first: the Homatics read it back from flash at 6 MB/s); `HttpVideoAsset` wraps progressive files,
 `VideoPlayer` releases it. Details: `dev-notes/read-ahead.md`.
+Unreleased (2026-11-22, +958, `claude/drm-clearkey`): **`StreamDrm.java`** - M3U `#KODIPROP` DRM (ClearKey keys,
+Widevine / PlayReady / ClearKey license servers) arrives as the reserved header `X-VesperTV-DRM` (Dart
+`StreamDrm`); `HttpVideoAsset` removes it before any request, sets `MediaItem.DrmConfiguration` and a
+`DrmSessionManagerProvider` (`LocalMediaDrmCallback` for playlist keys). Details: `dev-notes/drm.md`.
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -342,7 +351,8 @@ first: the Homatics read it back from flash at 6 MB/s); `HttpVideoAsset` wraps p
   gradient. Result: 24 ms. Any new full-screen gradient behind a page: use BakedBackdrop.
   (18) **The TV screen does not watch PlaylistManager** (2026-11-18, +838..+847): it listens and rebuilds on the
   TV tab only when `PlaylistManager.liveViewSignature()` changes (live lists, hidden, edits, merges, own groups,
-  viewer, groups + order, playlists, favourites, error); the browse tabs rebuild on every change as before. The
+  viewer, groups + order, channel order (`PlaylistSession.channelOrderVersion`), playlists, favourites + their order
+  and sort, error); the browse tabs rebuild on every change as before. The
   Movies / TV Shows warm-up notified every few hundred ms for minutes on big playlists and each rebuild cost
   300-850 ms on the Homatics. **New PlaylistManager state shown on the TV tab must go into liveViewSignature** (or
   read with its own `context.select`, like `_TvTopBar`'s spinner), or the TV tab won't update. Group counts there
@@ -467,7 +477,7 @@ first: the Homatics read it back from flash at 6 MB/s); `HttpVideoAsset` wraps p
   are skipped). Debrid-backed add-ons (Torrentio + Real-Debrid/TorBox etc.) are fine and supported —
   owner, 2026-10-21: users are worldwide, don't judge their sources. Their uncached streams
   (`[TB download]`, `[RD download]`…) 302 to a ~0.1 MB "being downloaded" clip; see
-  `ArchiveReadyWatch` (Ready tag) and `DebridApi` (Settings > Media Hub > Debrid accounts).
+  `ArchiveReadyWatch` (Ready tag) and `DebridApi` (Settings > Advanced > Debrid accounts: keys for the Ready tag only, never a way to add content; the page says so and opens Media Hub sources).
   Two kinds of add-on source: a **stream-only** add-on on IMDb ids gets its grids/metas from
   Cinemeta (`ArchiveCatalogProvider`) and only `/stream/` goes to the add-on; an add-on with **its
   own catalogs** (any type, any id scheme — since 1.0.24) is browsed and played entirely from its
@@ -490,6 +500,139 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-23 - Debrid accounts page wording (`claude/debrid-help`, worktree `VesperTV-claude-debridhelp`):** owner:
+  many users think Settings > Advanced > Debrid accounts is where their debrid add-ons go. The page now opens with a box
+  "This page doesn't add movies or shows" + where content comes from (a Media Hub source such as Torrentio / AIOStreams
+  set up with the debrid key) + **Open Media Hub sources** (focused first on TV); the key text below is shorter; the
+  Settings row subtitle says "Only for the Ready tag. Add content in Media Hub sources". 7 languages; remote.html "Watch
+  with Real-Debrid or TorBox" + guide.json. test/debrid_page_test.dart.
+- **Claude, 2026-11-23 - Profile lock (`claude/profile-lock`, worktree `VesperTV-claude-profilelock`; merged into main, test build 1.0.74-dev.980):** users (via the
+  owner): a kid leaving the app or starting it in the morning landed in Main. Settings > Profiles > a profile > **Lock
+  with PIN** (any non-kids profile, `ViewerProfile.isLocked`; on/off asks the PIN): opening it asks the household PIN
+  everywhere (Who is watching?, Home cards, profile page, Vesper `profiles`), a start with it in use shows Who is
+  watching?, and so does coming back after **Lock profiles again** (Every time VesperTV is left / 1 / 5 / 15 / 30 min /
+  1 h, default 5, device-only; main.dart `_lockLifecycle` + `_relockIfDue`, `profileRelockDue`). Kids cards show a
+  child icon now, the padlock = locked. Details: dev-notes/profile-lock.md. Not box-tested before test build 980.
+- **Claude, 2026-11-23 - kids profile search leak (`claude/kids-search`, worktree `VesperTV-claude-kidssearch`; merged into main, test build 1.0.74-dev.979):**
+  Discord (wile.e.coyote): adult group hidden, kids profile + PIN, a quick search still showed adult content and
+  played it. A kids profile's hidden groups were "groups the playlist lists minus the allowlist", so anything unlisted
+  counted as shown: catalog movies under a category the provider renamed / dropped (never pruned from the DB),
+  Xtream channels in an unlisted category (Uncategorized), editor renames, and every group before the list loaded.
+  Now `_KidsHiddenGroups`: hidden unless allowed (allowlist title or its editor name; own groups and NUL move titles
+  pass). Media Hub (owner: "Add the media hub safeguard" + PIN on its sources): on a kids profile every source is
+  off until turned on for it (`ArchiveService.isKidsProfile`, a source with no saved Enabled = off; one added there
+  is on there), and Media Hub > Sources / Servers ask the PIN (`_openWithPin`; Settings already did). Details:
+  dev-notes/features.md (viewer profiles), remote.html "What a Kids profile can see". Tests: kids_search_test (3 of
+  4 failed before the fix), kids_media_hub_test.
+- **Claude, 2026-11-23 - Tuliprox Player API (`claude/tuliprox-user-api`, worktree `VesperTV-claude-tpxuser`,
+  test +971):** Tuliprox's dev (uzumaki) added `/api/v1/me/*` (branch `feature/player_user_api`, on the owner's VPS).
+  VesperTV signs the playlist's own user in (user + password from the stream URL, memory only) for **Sources without
+  an admin login** (own stream's failover members with quality, switch with plain refusal words), **ends the previous
+  stream on a channel change / stop** (`DELETE /me/streams/{uid}`, uzumaki: "on channel switch, drop the previous";
+  Android `_playChannel` + `stop()`, computer player on channel change only), and words **`X-Tuliprox-Fallback`**
+  (native `StreamStats.fallback` + `[Tuliprox reason]` in HTTP errors) with channels already playing that can be
+  joined, listed in Sources. Old servers / no player features = the admin routes as before. Tuliprox e5704880
+  (VPS since 16:17): the Player API is found through `player_api.php` `server_info.player_api_path` (no Settings
+  sign-in needed, `vesper_tuliprox_found`) and Android takes the exact stream uid from `X-Tuliprox-Stream-Uid`.
+  The player's Sources / Tuliprox messages roll down from the top (`TopNotice`, `widgets/top_notice_overlay.dart`):
+  the bottom snackbar covered the options row and Sources. Owner-tested +971..+974 on the Homatics + phone: zaps
+  release the old stream, busy reasons in words, a full account joins a running channel (`free_shared_joins`).
+  Source switches still land 20-30 s late (the player sits ~20 s behind live: Tuliprox bursts; asked the dev).
+  Details: dev-notes/tuliprox-player-api.md. Analyze 16, 2468 tests + native StreamStats 15.
+- **Claude, 2026-11-23 - Rename a group on the TV + by voice (`claude/group-rename`, worktree
+  `VesperTV-claude-grouprename`):** owner: groups could only be renamed in the playlist editor (or by Your AI's
+  `rename_group`), and his voice try did nothing. Hold OK on a live group > **Rename…** / **Use the provider's name**,
+  on an own group > **Rename…** (`askGroupRename`; `PlaylistManager.renameLiveGroup` / `renameUserGroup`); the
+  group's order, star, hidden state, channel order and editor placements follow the new title
+  (`PlaylistSession.carryLiveGroupState`, `UserGroups.rename` / `renameRef`). Vesper: `my_groups` rename + built-in
+  "rename the group X to Y" in 6 languages (no AI key needed). Name dialogs dispose their controller after the close
+  animation (use-after-dispose assertion). Details: dev-notes/editor-group-move-copy.md, dev-notes/vesper-ai.md.
+  Tests: group_rename_test, tv_group_rename_menu_test. +970 on the Homatics.
+- **Claude, 2026-11-23 - faster catalog saves (`claude/desktop-catalog-speed`, worktree `VesperTV-claude-catalogbench`):**
+  uzumaki (Tuliprox dev, Linux): Update Content / Add Playlist "extremely slow" (164k movies, 44k shows, `SlowDb:
+  upsertVod n=1610 541ms`). Xtream movie / show saves now use `_insertMany` (many rows per INSERT, like the M3U import)
+  and the four single-column category / playlist indexes are dropped (covered by `(playlist_id, category_name)`). On
+  Windows / Linux every sqflite database shares ONE `sqflite_common_ffi` isolate, so a long save also delays guide /
+  Movies reads. Measured in a CPU-capped Linux container (`tool/bench/`, image `vesper-bench`): database alone 2.4x
+  faster, the app's save path ~25-30% (0.2 CPU: 21.4 -> 15.8 s, worst read wait 408 -> 303 ms; the rest is handing
+  rows to that isolate). New Send log line `CatalogSync:` (downloads vs saves). Next steps + numbers:
+  dev-notes/catalog-save-speed.md. Analyze 16, 2445 tests. Test APK +967. Not box-tested.
+- **Claude, 2026-11-23 - Dispatcharr Redirect streams in Sources (`claude/dispatcharr-redirect-sources`, worktree
+  `VesperTV-claude-dredirect`):** cillfog (Discord): streams on a Redirect stream profile played as the channel but not
+  when picked in the player's Sources. Dispatcharr 0.34.1 redirects only channels; one stream on Redirect gets 188 bytes
+  then nothing (reproduced on the PC's test server). A Redirect stream now plays the provider's address for an admin
+  login (shown `url`; no X-API-Key to the provider) or `skip_redirect=true` with the key for others (Dispatcharr proxies
+  it). Redirect = Dispatcharr's own rule (locked profile "Redirect"; stream profile else the default), read via
+  `DispatcharrApi.streamProfiles`. Analyze 16, 2442 tests. Details: dev-notes/dispatcharr.md (2026-11-23). Not box-tested.
+- **Claude, 2026-11-23 - "From another device" + iCloud backups + Apple TV parity (merged into main + pushed for
+  Sunday 2026-11-29's 1.0.74; Apple TV part needs a test box):** (1) `claude/welcome-sync`: first launch gets a third
+  button **From another device** (Sync code / Receive a transfer / Restore from iCloud / Restore a backup;
+  `FromAnotherDeviceScreen`, `WelcomeChoice`), iPhone / iPad Backup folder in Files (`BackupFolder`, Swift
+  `VesperBackupFolder`), iPhone / iPad / Apple TV **Also save to iCloud** + **Restore from iCloud** (CloudKit private DB
+  `iCloud.app.vespertv.player`, record `Backup` per device, Swift `VesperICloud` in both runners, entitlement-presence
+  guard): dev-notes/icloud-backups.md. (2) `claude/appletv-parity`: Apple TV match frame rate (tvOS 17+
+  `AVDisplayCriteria`, SDR only, `AppleTvDisplayMatch` + Swift `VesperDisplay`), 128 MiB player buffer, no passthrough
+  on tvOS + "Sound out" row, options row tile order, **Top Shelf** rows (TopShelf extension added in CI by
+  `tools/tvos/add_topshelf_target.rb`, App Group `group.app.vespertv.player`), and `tvos-build.yml` signs the archive
+  ad hoc with the entitlements (an unsigned archive lost iCloud / App Group): dev-notes/apple-tv-parity-plan.md.
+  Apple portal (container, App Group, both App IDs, `app.vespertv.player.TopShelf`) + CloudKit `Backup` schema
+  (deployed to Production) done 2026-11-23. Swift only compiled by CI. Analyze 16.
+- **Claude, 2026-11-23 - Move Up / Down redraw + double-Down wrap (`claude/channel-move-redraw`, worktree
+  `VesperTV-claude-moveredraw`):** owner (Homatics): moving a channel Up / Down showed nothing until OK, then it
+  appeared in its new place. Not the wrap (his guess): since the TV guide speed-up (10c94bb, 1.0.70) the TV tab
+  redraws only when `liveViewSignature` changes, and neither a group's channel order (`PlaylistSession.channelOrder`,
+  also the editor's Channel order) nor the Favourites order / sort was in it; OK's own setState redrew it.
+  Now `channelOrderVersion` (bumped on move, editor order, viewer load) + the stored Favourites order and sort are in
+  the signature (own groups were already in via `_myGroups`). Owner also asked that the Timeline guide's wrap (Down on
+  the last channel -> first, +950) take a **second Down**: the first stops, a new press within 2 s wraps; a held
+  Down's repeats never wrap (`_noteDownRelease` HardwareKeyboard watcher, armed row cleared in `_trackFocus`).
+  Tests: playlist_editor_groups_test (redraw: failed without the fix), guide_programme_steps_test (second Down, held
+  Down), guide_whole_rows_test. Analyze 16, 2402 tests. Test APK +965. Not box-tested.
+- **Claude, 2026-11-22 - M3U header guides + `.xz` guides (`claude/m3u-header-epg`, worktree `VesperTV-claude-m3uepg`,
+  74de60a, merged into main + pushed for Sunday 2026-11-29's 1.0.74):** a user's M3UPT list (m3upt.com/iptv, Portuguese public channels) showed no guide.
+  Its guides are named in the list's own header, `#EXTM3U url-tvg="…epg-m3upt.xml.xz,…epg-locomotion.xml.xz"`, which
+  VesperTV read for catch-up only, and both are `.xz`, which it couldn't open (gzip only). Now: (1) `M3uParser.guideUrlsOf`
+  (`url-tvg` / `x-tvg-url` / `tvg-url`, comma lists, web links only); every download reports them (`fetchAndParse
+  onGuides` -> `M3uList.guideUrls`, both the isolate parse and `M3uImport`); `PlaylistManager._keepPlaylistGuides` saves
+  them as `PlaylistProfile.playlistEpgUrls` (null = never read) and hands new ones in use to `onGuidesFound` -> main.dart
+  `EpgService.loadAdded` (loads at once, not a guide update: `lastUpdated` / retry untouched). A playlist added before this
+  build reads its list's first line once at start (`M3uParser.fetchHeaderGuideUrls`, `PlaylistSession._readGuidesOnce`).
+  **A blank EPG URL on an M3U = its list's guides** (`PlaylistProfile.mainEpgUrls` / `guideUrls`, like an Xtream panel's
+  own xmltv.php); a typed one wins. Used by `epgSources`, the playlist editor (Main guide, Main guide 2), Vesper AI
+  `epg_matching`, `ContentDue`, Send-log redaction; EPG settings shows them as the blank field's hint. (2) `.xz` guides:
+  `EpgService._autoDecompress` sniffs the XZ magic, `_unxz` writes the download to a temp file and unpacks it file to
+  file on a background isolate (`package:archive` 4.2.0, now a direct dependency); a cut file = "Damaged .xz guide".
+  Real check: M3UPT's 1.7 MB guide = 39 MB XML, 91 of 157 channels filled, 3.5 s on the PC. `archive`'s own XZEncoder
+  writes streams its decoder flags incomplete: tests use a real xz-utils fixture. `test/m3u_header_guides_test.dart`
+  (16). Analyze 16, 2398 tests. Not box-tested. Same day: **`VesperTV-macos.dmg` attached to release 1.0.73** (CI run
+  45083800016 = the release commit 8260255, owner: "Just put it on GitHub"); from 1.0.74 every Sunday release gets it
+  through CI and the Mac app's Check for Updates (entry below). Next build > 963.
+- **Claude, 2026-11-22 - Mac in every Sunday release (`claude/mac-weekly`, worktree `VesperTV-claude-macweekly`, from
+  ca7b47c, merged into main + pushed for 1.0.74; owner: "windows Linux Mac should all be part of sunday's updates"):** `macos-build.yml`
+  takes `release_tag` like the Linux workflows (build main, check tag = commit, upload `VesperTV-macos.dmg` with
+  `--clobber`, delete older versioned DMGs); dev-notes/release.md §6 step 4b runs it with the Linux ones. Only the
+  `.dmg` goes on a release, never the Mac `.zip` (old Windows updaters take the first `.zip`). App: macOS Check for
+  Updates now reads releases (`AppUpdateService`: only Linux returns null; `pickAsset('macos')` takes `.dmg` or
+  `-macos.zip`) and opens the DMG in the browser like Windows' zip, with its own hint (7 languages); test builds are
+  APK-only so a Mac never sees them. README + site: Mac card (#mac, macOS 12+, Open Anyway) and buttons; download
+  labels lost their version (they said 1.0.72 after 1.0.73: nothing in the Sunday steps updates them). 1.0.73
+  already has the DMG (attached by hand, run 45083800016); its Mac app can't check for updates yet (1.0.74 can).
+  Mac app not tested on a Mac (CI build only).
+- **Claude, 2026-11-22 - release 1.0.73 (beta), +963 (latest): the first Sunday weekly stable** (owner: "/cutr").
+  Android + Windows + Linux (Flatpak + tarball via CI, release_tag). The `stable` branch was created on the release
+  commit. Since 1.0.72:
+  - weekly stable + test builds (Update channel), version + build in Settings > Help, Send log in Help;
+  - PR #12 Fire OS 6 passthrough in Compatibility video;
+  - read-ahead for big movie files;
+  - M3U DRM (ClearKey / license servers / stream headers);
+  - 4K Reload, Dispatcharr reconnect after the switch;
+  - guide whole rows + 7 days ahead, programme steps, OK on a group, wider logos;
+  - player options row order + transparency, Left = Back to the guide;
+  - Sports Trak matching + launcher Live now row, Silo, editor Duplicates sort;
+  - TV focus + baked backdrops.
+  Apple TV work rides along in the shared code. NOT in it: the Apple TV text-field fix `claude/appletv-search-focus`
+  10e5528 (TestFlight 962 only), arrow holds (`claude/arrow-holds`, uncommitted). Analyze 16, 2382 tests. Notes:
+  dev-notes/releases/1.0.73.md. `main` moved to 1.0.74 after the cut. Next build > 963.
 - **Claude, 2026-11-21 - guide rows + reach, Apple TV remote (merged into main for Sunday's 1.0.73, owner: "Yes"):**
   Unbeaten82 (Apple TV, full-video guide, Compact UI): (1) the bottom channel was always cut off: a focused block off the
   view sideways called `Scrollable.ensureVisible`, which also scrolled the rows to the block's top, 4 px inside its row;

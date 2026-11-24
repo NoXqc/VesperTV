@@ -58,6 +58,7 @@ class AppConstants {
   static const String keyDispatcharr = 'vesper_dispatcharr';
   static const String keyDispatcharrSources = 'vesper_dispatcharr_sources';
   static const String keyTuliprox = 'vesper_tuliprox';
+  static const String keyTuliproxFound = 'vesper_tuliprox_found';
   static const String keyProviderExpiryNoticeDay =
       'vesper_provider_expiry_notice_day';
   static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
@@ -249,6 +250,10 @@ class AppConstants {
   static const String keyViewerProfiles = 'nox_viewer_profiles';
   static const String keyActiveViewerId = 'nox_active_viewer';
   static const String keyParentalPin = 'nox_parental_pin';
+
+  /// Minutes away after which a locked profile asks its PIN again (0 =
+  /// every time the app is left). Device-only.
+  static const String keyProfileRelock = 'vesper_profile_relock';
   static const String keyPinFailCount = 'nox_pin_fail_count';
   static const String keyPinLockedUntil = 'nox_pin_locked_until';
 
@@ -353,6 +358,11 @@ class AppConstants {
   /// Days between automatic backups (7 when unset); device-only like the
   /// switch.
   static const String keyAutoBackupDays = 'vesper_auto_backup_days';
+
+  /// iPhone / iPad / Apple TV, Settings > Backup & restore > Also save to
+  /// iCloud: each backup also replaces this device's copy in iCloud (off by
+  /// default; never synced, like the switch above).
+  static const String keyBackupICloud = 'vesper_backup_icloud';
 
   /// Settings > General > Background video: hide the live picture (not
   /// the stream) while Sports Trak, Settings or Search is open — opt-in

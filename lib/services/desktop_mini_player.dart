@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
+import 'apple_tv_display.dart';
 import 'desktop_catchup.dart';
 import 'epg_service.dart';
 import 'playlist_manager.dart';
@@ -205,5 +206,8 @@ class DesktopMiniPlayer {
     _player = null;
     _controller = null;
     channel.value = null;
+    // Apple TV: the TV's own mode back unless something plays within a
+    // few seconds (a new channel right after keeps the mode it asks for).
+    AppleTvDisplayMatch.reset();
   }
 }

@@ -6,13 +6,17 @@ import 'package:http/http.dart' as http;
 
 import '../models/catchup.dart';
 import '../models/channel.dart';
+import '../models/stream_drm.dart';
 import '../l10n/l10n.dart';
 
 /// Parses M3U / M3U8 playlists into [Channel] objects.
 ///
 /// Supports the common extended attributes (`tvg-id`, `tvg-logo`,
-/// `group-title`), the `#EXTGRP:` fallback tag, and an optional external
-/// subtitle track via `#EXTVLCOPT:sub-file=`.
+/// `group-title`), the `#EXTGRP:` fallback tag, an optional external
+/// subtitle track via `#EXTVLCOPT:sub-file=`, per-entry stream headers
+/// (`#EXTVLCOPT:http-user-agent=` / `http-referrer=` / `http-origin=`,
+/// `#EXTHTTP:{json}`, Kodi `#KODIPROP:inputstream.adaptive.stream_headers=`)
+/// and Kodi `#KODIPROP` DRM ([StreamDrm]).
 class M3uParser {
   /// The same group classification used by the Movies/TV Shows catalogs.
   /// Series takes precedence over movie/VOD in combined group names.
@@ -111,6 +115,56 @@ class M3uParser {
 
   static final RegExp _xcUrlPattern =
       RegExp(r'^https?://[^/]+/(live/)?[^/]+/[^/]+/\d+(\.(ts|m3u8))?$');
+
+  /// The TV guides an `#EXTM3U` line names ([attributesOf] of it):
+  /// `url-tvg` (Kodi, TiviMate), `x-tvg-url` or `tvg-url`, each one link or
+  /// several separated by commas (M3UPT: two `.xml.xz` guides). Web links
+  /// only, in order, without repeats.
+  static List<String> guideUrlsOf(Map<String, String> header) => {
+        for (final key in const ['url-tvg', 'x-tvg-url', 'tvg-url'])
+          for (final part in (header[key] ?? '').split(','))
+            if (part
+                .trim()
+                .startsWith(RegExp(r'https?://', caseSensitive: false)))
+              part.trim(),
+      }.toList();
+
+  /// The guides named in the `#EXTM3U` line of the list at [url], reading
+  /// only its first line: a playlist added before VesperTV kept them, read
+  /// once without downloading the whole list again.
+  static Future<List<String>> fetchHeaderGuideUrls(String url,
+      {Duration limit = const Duration(seconds: 30)}) async {
+    final client = http.Client();
+    try {
+      final Stream<List<int>> bytes;
+      if (Uri.tryParse(url)?.scheme == 'file') {
+        bytes = File.fromUri(Uri.parse(url)).openRead();
+      } else {
+        final response = await client
+            .send(http.Request('GET', Uri.parse(url)))
+            .timeout(limit);
+        if (response.statusCode != 200) {
+          throw M3uHttpError(Uri.parse(url).host, response.statusCode);
+        }
+        bytes = response.stream;
+      }
+      final lines = bytes
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter());
+      // The first line that isn't blank; leaving the loop cancels the rest
+      // of the download.
+      await for (final raw in lines.timeout(limit)) {
+        final line = raw.trim();
+        if (line.isEmpty) continue;
+        return line.startsWith('#EXTM3U')
+            ? guideUrlsOf(attributesOf(line))
+            : const <String>[];
+      }
+      return const <String>[];
+    } finally {
+      client.close();
+    }
+  }
 
   /// Catch-up of one entry from its `#EXTINF` attributes, falling back to
   /// the `#EXTM3U` header's (Kodi IPTV Simple conventions): `catchup` /
@@ -220,13 +274,17 @@ class M3uParser {
           Set<String> favorites,
           Map<String, String> epgOverrides) =>
       Isolate.run(() async {
+        var guides = const <String>[];
         final channels = Channel.withUniqueIds(await fetchAndParse(url,
-            playlistId: playlistId, saveTo: saveTo, onBytes: progress.send));
+            playlistId: playlistId,
+            saveTo: saveTo,
+            onBytes: progress.send,
+            onGuides: (urls) => guides = urls));
         for (final c in channels) {
           c.isFavorite = favorites.contains(c.id);
           c.epgIdOverride = epgOverrides[c.rawId];
         }
-        return M3uList(channels);
+        return M3uList(channels, guideUrls: guides);
       });
 
   /// How long the server may take to start answering: a provider builds a
@@ -254,12 +312,16 @@ class M3uParser {
   /// [onEntry]: gets each entry as it is read, instead of a returned list
   /// ([M3uImport] stores a 1.28M-entry list without holding it); a future
   /// it returns pauses the read until it completes.
+  ///
+  /// [onGuides]: the guides the `#EXTM3U` line names ([guideUrlsOf]), once
+  /// the whole list is read.
   static Future<List<Channel>> fetchAndParse(String url,
       {required String playlistId,
       String? saveTo,
       void Function(int bytes)? onBytes,
       Duration stall = stallLimit,
-      Future<void>? Function(Channel entry)? onEntry}) async {
+      Future<void>? Function(Channel entry)? onEntry,
+      void Function(List<String> urls)? onGuides}) async {
     final part = saveTo == null ? null : File('$saveTo.part');
     final sink = part?.openWrite();
     Future<List<Channel>> parse(Stream<List<int>> bytes) async {
@@ -292,6 +354,7 @@ class M3uParser {
         await sink.close();
         await part!.rename(saveTo!);
       }
+      onGuides?.call(guideUrlsOf(state._headerAttrs));
       return state.channels;
     }
 
@@ -348,7 +411,7 @@ class M3uHttpError implements Exception {
 /// groups. One pass, so it can be built on the background isolate with the
 /// parse.
 class M3uList {
-  M3uList(this.channels) {
+  M3uList(this.channels, {this.guideUrls = const []}) {
     final byTitle = <String, String>{};
     for (final c in channels) {
       byGroup.putIfAbsent(c.group, () => []).add(c);
@@ -360,6 +423,10 @@ class M3uList {
   }
 
   final List<Channel> channels;
+
+  /// The guides the list's `#EXTM3U` line names ([M3uParser.guideUrlsOf]);
+  /// empty when it wasn't read from the list itself (a saved catalog).
+  final List<String> guideUrls;
 
   /// Every entry by group title, whatever its tab.
   final Map<String, List<Channel>> byGroup = {};
@@ -406,6 +473,13 @@ class _ParseState {
   Map<String, String> _headerAttrs = const {};
   String? _pendingName;
   String? _pendingSubtitleUrl;
+
+  /// The entry's `#KODIPROP:inputstream.adaptive.*` values (names without
+  /// that prefix, lower-cased) and its stream headers. Kept until the URL
+  /// line, not cleared by `#EXTINF`: playlists put these lines before or
+  /// after it. Null until an entry has one (big lists have none).
+  Map<String, String>? _kodiProps;
+  Map<String, String>? _streamHeaders;
   int _autoId = 0;
 
   /// One String per distinct group title: every entry's title is its own
@@ -427,6 +501,12 @@ class _ParseState {
       _pendingSubtitleUrl = null;
     } else if (line.startsWith('#EXTVLCOPT:sub-file=')) {
       _pendingSubtitleUrl = line.split('=').skip(1).join('=').trim();
+    } else if (line.startsWith('#EXTVLCOPT:')) {
+      _noteVlcOption(line.substring('#EXTVLCOPT:'.length));
+    } else if (line.startsWith('#KODIPROP:')) {
+      _noteKodiProp(line.substring('#KODIPROP:'.length));
+    } else if (line.startsWith('#EXTHTTP:')) {
+      _noteHttpJson(line.substring('#EXTHTTP:'.length));
     } else if (line.startsWith('#EXTGRP:')) {
       _attrs['group-title'] = line.substring('#EXTGRP:'.length).trim();
     } else if (line.startsWith('#')) {
@@ -458,6 +538,7 @@ class _ParseState {
             url: line,
             logoUrl: _attrs['tvg-logo'],
             subtitleUrl: _pendingSubtitleUrl,
+            playlistHeaders: _entryHeaders(),
             catchupDays: catchup.days,
             catchupKind: catchup.kind,
             catchupSource: catchup.source);
@@ -466,8 +547,95 @@ class _ParseState {
       _pendingName = null;
       _attrs = {};
       _pendingSubtitleUrl = null;
+      _kodiProps = null;
+      _streamHeaders = null;
       return entry;
     }
     return null;
+  }
+
+  /// `http-user-agent="…"`, `http-referrer=…`, `http-origin=…`,
+  /// `http-cookie=…` (VLC's options; TiviMate and OTT Navigator read them
+  /// as the stream's headers). Other VLC options are ignored.
+  void _noteVlcOption(String option) {
+    final at = option.indexOf('=');
+    if (at <= 0) return;
+    final name = switch (option.substring(0, at).trim().toLowerCase()) {
+      'http-user-agent' => 'User-Agent',
+      'http-referrer' || 'http-referer' => 'Referer',
+      'http-origin' => 'Origin',
+      'http-cookie' => 'Cookie',
+      _ => null,
+    };
+    if (name == null) return;
+    final value = _unquote(option.substring(at + 1));
+    if (value.isNotEmpty) (_streamHeaders ??= {})[name] = value;
+  }
+
+  /// `inputstream.adaptive.<name>=<value>`: DRM ([StreamDrm.fromKodiProps])
+  /// and `stream_headers` / `manifest_headers` / `common_headers`
+  /// (`Name=value&…`, values URL-encoded).
+  void _noteKodiProp(String prop) {
+    final at = prop.indexOf('=');
+    if (at <= 0) return;
+    var name = prop.substring(0, at).trim().toLowerCase();
+    const prefix = 'inputstream.adaptive.';
+    if (!name.startsWith(prefix)) return;
+    name = name.substring(prefix.length);
+    final value = prop.substring(at + 1).trim();
+    if (name.endsWith('_headers')) {
+      final headers = StreamDrm.parseHeaderQuery(value);
+      for (final e in headers.entries) {
+        (_streamHeaders ??= {})[_headerName(e.key)] = e.value;
+      }
+      return;
+    }
+    (_kodiProps ??= {})[name] = value;
+  }
+
+  /// `#EXTHTTP:{"User-Agent":"…","Referer":"…","cookie":"…"}`.
+  void _noteHttpJson(String raw) {
+    Object? json;
+    try {
+      json = jsonDecode(raw.trim());
+    } catch (_) {
+      return;
+    }
+    if (json is! Map) return;
+    for (final e in json.entries) {
+      final value = e.value;
+      if (value is! String || value.isEmpty) continue;
+      (_streamHeaders ??= {})[_headerName('${e.key}')] = value;
+    }
+  }
+
+  /// The usual names in their usual spelling: the Android player reads the
+  /// user agent only from `User-Agent`.
+  static String _headerName(String name) => switch (name.trim().toLowerCase()) {
+        'user-agent' || 'useragent' => 'User-Agent',
+        'referer' || 'referrer' => 'Referer',
+        'origin' => 'Origin',
+        'cookie' => 'Cookie',
+        _ => name.trim(),
+      };
+
+  static String _unquote(String value) {
+    var v = value.trim();
+    if (v.length >= 2 &&
+        ((v.startsWith('"') && v.endsWith('"')) ||
+            (v.startsWith("'") && v.endsWith("'")))) {
+      v = v.substring(1, v.length - 1).trim();
+    }
+    return v;
+  }
+
+  /// The finished entry's headers, with its DRM under
+  /// [StreamDrm.headerKey]; const {} for the usual entry without any.
+  Map<String, String> _entryHeaders() {
+    final props = _kodiProps;
+    final drm = props == null ? null : StreamDrm.fromKodiProps(props);
+    final headers = _streamHeaders;
+    if (drm == null) return headers ?? const {};
+    return {...?headers, StreamDrm.headerKey: drm.encode()};
   }
 }

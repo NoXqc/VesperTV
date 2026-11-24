@@ -303,6 +303,19 @@ Future<void> openSyncLink(NavigatorState nav, String code) async {
       builder: (_) => _SyncJoinScreen(initialCode: code)));
 }
 
+/// First launch > From another device > Sync: Sync, and over it I have a
+/// code. A new device joins the other one's sync: its Set up sync row
+/// would start a second, empty sync (BallerMC, Discord, 2026-11-22).
+Future<void> openSyncJoin(NavigatorState nav) async {
+  final on = nav.context.read<CloudSyncService>().status == SyncStatus.on;
+  unawaited(
+      nav.push(MaterialPageRoute<void>(builder: (_) => const SyncScreen())));
+  if (!on) {
+    await nav
+        .push(MaterialPageRoute<void>(builder: (_) => const _SyncJoinScreen()));
+  }
+}
+
 /// Explicit traversal also includes the header Back button. Non-lazy content
 /// keeps every destination mounted; ensureVisible uses an immediate jump.
 class _SyncNavigation extends StatelessWidget {

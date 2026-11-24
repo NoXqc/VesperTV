@@ -13,6 +13,7 @@ import 'local_playlist_files.dart';
 import 'sync_profile_match.dart' show syncProfileNameKey;
 import '../utils/app_store.dart';
 import '../utils/constants.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
 /// directory for larger cached payloads (parsed playlist/catalog JSON) —
@@ -410,6 +411,15 @@ class StorageService {
       ? _prefs.remove(AppConstants.keyTuliprox)
       : _prefs.setString(AppConstants.keyTuliprox, json);
 
+  /// Tuliprox servers whose Player API a playlist's own login reaches,
+  /// found in `player_api.php` (`server_info.player_api_path`): JSON
+  /// `{host: base URL}`. Holds no login. Device-only.
+  String getTuliproxFound() =>
+      _prefs.getString(AppConstants.keyTuliproxFound) ?? '';
+  Future<void> setTuliproxFound(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyTuliproxFound)
+      : _prefs.setString(AppConstants.keyTuliproxFound, json);
+
   /// The day (YYYY-MM-DD) the "subscription ends soon" card last showed
   /// (`ProviderExpiryOverlay`): once a day at most. Device-only.
   String getProviderExpiryNoticeDay() =>
@@ -675,6 +685,13 @@ class StorageService {
   Future<void> setLaunchWithProfiles(bool value) =>
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
+  /// Minutes away before a locked profile asks its PIN again (0 = every
+  /// time the app is left), 5 until chosen.
+  int getProfileRelockMinutes() =>
+      _prefs.getInt(AppConstants.keyProfileRelock) ?? 5;
+  Future<void> setProfileRelockMinutes(int minutes) =>
+      _prefs.setInt(AppConstants.keyProfileRelock, minutes);
+
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
   bool getAskBeforeExit() =>
       _prefs.getBool(AppConstants.keyAskBeforeExit) ?? false;
@@ -845,8 +862,11 @@ class StorageService {
   Future<void> setUiTexture(bool value) =>
       _prefs.setBool(AppConstants.keyUiTexture, value);
 
+  /// Off by default on Android; on by default on Apple TV, where the
+  /// viewer's own Settings > Video and Audio > Match Content > Match Frame
+  /// Rate (off by default) decides whether the TV really switches.
   bool getMatchFrameRate() =>
-      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
+      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? isAppleTv;
   Future<void> setMatchFrameRate(bool value) =>
       _prefs.setBool(AppConstants.keyMatchFrameRate, value);
   bool getMatch5060Only() =>
@@ -1010,11 +1030,10 @@ class StorageService {
 
   /// Settings > Playback > Player bar / Options row transparency, percent;
   /// 15 = the player's menus as they were before the settings.
-  int _playerMenuPercent(String key) =>
-      (_prefs.getInt(_vk(key)) ??
-              _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
-              15)
-          .clamp(0, 100);
+  int _playerMenuPercent(String key) => (_prefs.getInt(_vk(key)) ??
+          _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
+          15)
+      .clamp(0, 100);
   int getPlayerBarTransparency() =>
       _playerMenuPercent(AppConstants.keyPlayerBarTransparency);
   Future<void> setPlayerBarTransparency(int value) => _prefs.setInt(
@@ -1028,8 +1047,7 @@ class StorageService {
   /// The TV player's options row order (tile ids, see
   /// `ReorderableOptionTiles`); empty = the default order.
   List<String> getPlayerOptionsOrder() =>
-      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ??
-      const [];
+      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ?? const [];
   Future<void> setPlayerOptionsOrder(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keyPlayerOptionsOrder), ids);
 
@@ -2066,6 +2084,12 @@ class StorageService {
 
   Future<void> setAutoBackupDays(int days) =>
       _prefs.setInt(AppConstants.keyAutoBackupDays, days);
+
+  /// Also save to iCloud (Apple devices; off by default, never synced).
+  bool getBackupToICloud() =>
+      _prefs.getBool(AppConstants.keyBackupICloud) ?? false;
+  Future<void> setBackupToICloud(bool value) =>
+      _prefs.setBool(AppConstants.keyBackupICloud, value);
   DateTime? getLastAutoBackup() {
     final ms = _prefs.getInt(AppConstants.keyLastAutoBackup);
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
@@ -2128,6 +2152,7 @@ class StorageService {
     AppConstants.keyAutoBackup,
     AppConstants.keyAutoBackupDays,
     AppConstants.keyLastAutoBackup,
+    AppConstants.keyBackupICloud,
     AppConstants.keyVideoFill,
     AppConstants.keyVideoFit,
     AppConstants.keyAutoTrailers,
@@ -2138,6 +2163,7 @@ class StorageService {
     AppConstants.keyLauncherLive,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
+    AppConstants.keyProfileRelock,
   };
 
   static bool _syncable(String key) =>

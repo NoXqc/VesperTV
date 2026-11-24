@@ -144,6 +144,24 @@ const Map<String, String> kUk = {
       "Показується, поки виділено ваш профіль. Потрібен «Запуск із вибором профілю» (Налаштування > Профілі та запуск).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Вибір профілю після заставки, перед відкриттям застосунку. Діє з наступного запуску.",
+  "Lock":
+      "Блокування",
+  "Lock with PIN":
+      "Блокувати PIN-кодом",
+  "Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows \"Who is watching?\" instead.":
+      "Відкриття цього профілю запитує батьківський PIN. Після запуску VesperTV або коли його залишили на деякий час, натомість з'являється «Хто дивиться?».",
+  "Lock profiles again":
+      "Знову блокувати профілі",
+  "For profiles with Lock with PIN on: how long VesperTV can be left before it shows \"Who is watching?\" again.":
+      "Для профілів з увімкненим «Блокувати PIN-кодом»: скільки часу VesperTV може бути залишеним, перш ніж знову з'явиться «Хто дивиться?».",
+  "Every time VesperTV is left":
+      "Щоразу, коли виходять з VesperTV",
+  "After 1 minute":
+      "Через 1 хвилину",
+  "After {n} minutes":
+      "Через {n} хвилин",
+  "After 1 hour":
+      "Через 1 годину",
   "Who is watching?": "Хто дивиться?",
   "Choose your profile to get started.": "Виберіть профіль, щоб почати.",
   "Welcome, {name}": "Вітаємо, {name}",
@@ -347,6 +365,10 @@ const Map<String, String> kUk = {
   "Technical details": "Технічні подробиці",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Це відео Dolby Vision, а цей пристрій не може відтворити такий тип Dolby Vision. Виберіть версію без DV (HDR10 або SDR), якщо вона є у вашому джерелі.",
+  "This channel is protected (DRM) and couldn't be unlocked. The keys in your playlist may be out of date, or this device can't play this kind of protection.":
+      "Цей канал захищений (DRM), і його не вдалося розблокувати. Ключі у вашому плейлисті можуть бути застарілими, або цей пристрій не підтримує такий тип захисту.",
+  "The server sent an empty answer instead of the video. This channel may only play in its own country.":
+      "Сервер надіслав порожню відповідь замість відео. Можливо, цей канал працює лише у своїй країні.",
   "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
       "Цей потік постійно обривався й перезапускався, тому відтворення зупинено. Спробуйте канал ще раз трохи згодом або виберіть інший.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":
@@ -980,6 +1002,8 @@ const Map<String, String> kUk = {
   "Open Download Page": "Відкрити сторінку завантаження",
   "Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.":
       "Відкривається в браузері — розпакуйте завантаження й запустіть VesperTV.exe, щоб оновити, замінивши стару папку.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Відкривається в браузері — відкрийте завантажений файл і перетягніть VesperTV до «Програм», замінивши стару версію.",
   "Download & Install": "Завантажити та встановити",
   "Downloading update... {p}%": "Завантаження оновлення... {p}%",
   "Download complete.": "Завантаження завершено.",
@@ -1881,12 +1905,18 @@ const Map<String, String> kUk = {
   "Saved, but {service} rejected the key — double-check it":
       "Збережено, але {service} відхилив ключ — перевірте його",
   "Debrid accounts": "Облікові записи debrid",
-  "Optional keys for the \"Ready\" tag":
-      "Необов'язкові ключі для позначки «Готово»",
-  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
-      "Деякі джерела Media Hub відповідають на «Відтворити» коротким відео «завантажується», поки отримують назву у ваш обліковий запис debrid. Тоді VesperTV перевіряє щохвилини й ставить позначку «Готово» на постер назви, щойно вона там.",
-  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
-      "Необов'язково: з власним ключем ваш обліковий запис підтверджує це напряму. Без ключа VesperTV знову запитує джерело, доки не відповість повний файл.",
+  "This page doesn't add movies or shows":
+      "Ця сторінка не додає фільми чи серіали",
+  "To watch with your Real-Debrid or TorBox account, add a Media Hub source that uses it, such as Torrentio or AIOStreams set up with your debrid key. Its movies and shows then appear in the Media Hub.":
+      "Щоб дивитися з вашим обліковим записом Real-Debrid або TorBox, додайте джерело Media Hub, яке його використовує, наприклад Torrentio або AIOStreams, налаштований з вашим ключем debrid. Його фільми й серіали тоді з'являться в Media Hub.",
+  "Open Media Hub sources":
+      "Відкрити джерела Media Hub",
+  "What these keys do":
+      "Для чого ці ключі",
+  "Optional. Some debrid sources answer Play with a short \"being downloaded\" video while your account fetches the title. With your key here, VesperTV asks your account directly and puts a \"Ready\" tag on the poster as soon as the title is there. Without a key it still works: VesperTV asks the source again every minute.":
+      "Необов'язково. Деякі джерела debrid відповідають на «Відтворити» коротким відео «завантажується», поки ваш обліковий запис отримує назву. З вашим ключем тут VesperTV питає ваш обліковий запис напряму й ставить позначку «Готово» на постер, щойно назва там. Без ключа теж працює: VesperTV питає джерело знову щохвилини.",
+  "Only for the \"Ready\" tag. Add content in Media Hub sources":
+      "Лише для позначки «Готово». Вміст додається в Джерелах Media Hub",
   "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
       "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Зберігається у VesperTV і використовується лише для читання списку ваших завантажень.",
   "Real-Debrid API token": "Токен API Real-Debrid",
@@ -3572,6 +3602,38 @@ const Map<String, String> kUk = {
       "Ваш пароль надсилається лише на ваш сервер, один раз. VesperTV зберігає токен входу, а не пароль.",
   "Changing source to {stream}…": "Зміна джерела на {stream}…",
   "Source changed to {stream}.": "Джерело змінено на {stream}.",
+  "Source {n}":
+      "Джерело {n}",
+  "Not working right now":
+      "Зараз не працює",
+  "Someone else is watching this channel on the server, so its source can't be switched just for you.":
+      "Цей канал на сервері дивиться ще хтось, тому його джерело не можна змінити лише для вас.",
+  "Tuliprox is already switching. Try again in a moment.":
+      "Tuliprox уже перемикає. Спробуйте ще раз за мить.",
+  "Wait a moment before switching again.":
+      "Зачекайте трохи, перш ніж перемикати знову.",
+  "That source didn't start. Still on the one before.":
+      "Це джерело не запустилося. Лишається попереднє.",
+  "Tuliprox couldn't start this channel from any of its sources. Try again later, or pick another channel.":
+      "Tuliprox не зміг запустити цей канал із жодного джерела. Спробуйте пізніше або виберіть інший канал.",
+  "Your account is already watching on all the screens it allows. Stop one of them, or wait a moment and try again.":
+      "Ваш обліковий запис уже відтворює на всіх дозволених екранах. Зупиніть один із них або зачекайте й спробуйте знову.",
+  "All of the server's provider connections are in use. Try again later, or watch a channel that's already playing.":
+      "Усі з'єднання провайдера на сервері зайняті. Спробуйте пізніше або дивіться канал, який уже відтворюється.",
+  "A stream or recording with a higher priority took this connection.":
+      "Потік або запис із вищим пріоритетом зайняв це з'єднання.",
+  "Your account on this server has expired.":
+      "Термін дії вашого облікового запису на цьому сервері закінчився.",
+  "The server is still setting up this account. Try again in a few minutes.":
+      "Сервер ще налаштовує цей обліковий запис. Спробуйте за кілька хвилин.",
+  "The stream session ended. Start the channel again.":
+      "Сеанс потоку завершився. Запустіть канал знову.",
+  "This source is in maintenance. Try again later.":
+      "Це джерело на обслуговуванні. Спробуйте пізніше.",
+  "Playing now on the server, ready to join (in Sources): {channels}":
+      "Зараз відтворюються на сервері, можна приєднатися (у Джерелах): {channels}",
+  "Playing now on the server":
+      "Зараз відтворюється на сервері",
   "Tuliprox didn't switch the source.": "Tuliprox не перемкнув джерело.",
   "Switch a channel's providers from the player's Sources":
       "Перемикайте провайдерів каналу в «Джерелах» плеєра",
@@ -3678,4 +3740,72 @@ const Map<String, String> kUk = {
       "Менш чутлива",
   "Very sensitive":
       "Дуже чутлива",
+  // First launch > From another device (2026-11-22).
+  "From another device":
+      "З іншого пристрою",
+  "Already use VesperTV on another device? Bring your playlists, favourites and settings here.":
+      "Уже користуєтеся VesperTV на іншому пристрої? Перенесіть сюди свої плейлисти, обране та налаштування.",
+  "Both devices stay up to date. On the other device: Settings > Backup & devices > Sync > Link a device, then enter its code here.":
+      "Обидва пристрої залишаються актуальними. На іншому пристрої: Налаштування > Резервні копії та пристрої > Синхронізація > Пов'язати пристрій, а потім введіть тут його код.",
+  "Receive a transfer":
+      "Отримати перенесення",
+  "Copies everything once. On the other device: Settings > Backup & devices > Transfer to another device > Send from this device.":
+      "Копіює все один раз. На іншому пристрої: Налаштування > Резервні копії та пристрої > Перенесення на інший пристрій > Надіслати з цього пристрою.",
+  "Restore a backup":
+      "Відновити резервну копію",
+  "From a backup file VesperTV saved":
+      "З файлу резервної копії, збереженого VesperTV",
+  // Backup folder (iPhone / iPad) + iCloud backups (2026-11-22).
+  "this Apple TV":
+      "цьому Apple TV",
+  "Sign in to iCloud in this device's Settings to keep backups in iCloud.":
+      "Увійдіть в iCloud у Параметрах цього пристрою, щоб зберігати резервні копії в iCloud.",
+  "iCloud is restricted on this device.":
+      "iCloud обмежено на цьому пристрої.",
+  "iCloud backups aren't available in this build yet.":
+      "Резервні копії в iCloud ще недоступні в цій версії.",
+  "iCloud can't be reached right now. Try again later.":
+      "iCloud зараз недоступний. Спробуйте пізніше.",
+  "Your iCloud storage is full.":
+      "Ваше сховище iCloud заповнене.",
+  "Restore from iCloud":
+      "Відновити з iCloud",
+  "Backups your iPhone, iPad or Apple TV saved to iCloud with this Apple ID. Each device keeps its newest one there.":
+      "Резервні копії, які ваш iPhone, iPad або Apple TV зберіг в iCloud з цим Apple ID. Кожен пристрій тримає там свою найновішу.",
+  "No backups in iCloud yet. On the other device: Settings > Backup & devices > Backup & restore > Also save to iCloud.":
+      "В iCloud ще немає резервних копій. На іншому пристрої: Налаштування > Резервні копії та пристрої > Резервне копіювання та відновлення > Також зберігати в iCloud.",
+  "Backup saved to {path}, but not to iCloud: {error}":
+      "Резервну копію збережено в {path}, але не в iCloud: {error}",
+  "Backup folder":
+      "Папка резервних копій",
+  "Backups now go to {name}.":
+      "Тепер резервні копії зберігаються в {name}.",
+  "On this device. Choose iCloud Drive, OneDrive or a network share in Files instead.":
+      "На цьому пристрої. Натомість виберіть iCloud Drive, OneDrive або мережеву папку у Файлах.",
+  "Also save to iCloud":
+      "Також зберігати в iCloud",
+  "Each backup also goes to your iCloud, so your other Apple devices (Apple TV too) can restore it. iCloud keeps the newest one from this device.":
+      "Кожна резервна копія також потрапляє у ваш iCloud, щоб інші пристрої Apple (і Apple TV) могли її відновити. iCloud зберігає найновішу з цього пристрою.",
+  "From a backup your iPhone, iPad or Apple TV saved to iCloud":
+      "З резервної копії, яку ваш iPhone, iPad або Apple TV зберіг в iCloud",
+  "Switches the TV to the video's frame rate when it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. Also turn on Match Frame Rate in the Apple TV's Settings > Video and Audio > Match Content (tvOS 17 or newer). The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again.":
+      "Перемикає телевізор на частоту кадрів відео, щойно воно починається (50 Гц для британських і європейських каналів, 24 Гц для фільмів), для плавного руху. Також увімкніть «Узгоджувати частоту кадрів» у Параметрах Apple TV > Відео й аудіо > Узгодження вмісту (tvOS 17 або новіша). Під час перемикання екран темніє на секунду-дві; канали з тією ж частотою більше не перемикаються.",
+  "Frame rate":
+      "Частота кадрів",
+  "Sound out":
+      "Звук на виході",
+  "Continue watching, new episodes, your Watch list and your favourite channels above the Apple TV's home screen when VesperTV is in its top row (Top Shelf).":
+      "Продовжити перегляд, нові епізоди, ваш список перегляду та улюблені канали над головним екраном Apple TV, коли VesperTV у верхньому ряду (Top Shelf).",
+  "Rename group":
+      "Перейменувати групу",
+  "You already have a group named {group}.":
+      "У вас уже є група з назвою {group}.",
+  "{group} now holds both groups. Hold OK on it > Use the provider's name to split them.":
+      "{group} тепер містить обидві групи. Утримуйте на ній OK > Використовувати назву провайдера, щоб розділити їх.",
+  "{group} is now called {name}.":
+      "{group} тепер називається {name}.",
+  "I could not find the group \"{title}\".":
+      "Не вдалося знайти групу «{title}».",
+  "An AI app wants to rename your group {group} to {name}.":
+      "AI-застосунок хоче перейменувати вашу групу {group} на {name}.",
 };

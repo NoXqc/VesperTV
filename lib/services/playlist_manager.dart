@@ -511,12 +511,44 @@ class PlaylistManager extends ChangeNotifier {
       onNotify: notifyListeners,
       myGroupOf: _myGroupOf,
     )
+      ..isOwnGroup = ((title) => _myGroups.contains(title))
       ..liveGroupsToken = _liveCountsSignature
       ..onEditsApplied = () {
         recomputeMerge();
         _checkSavedLive(session);
-      };
+      }
+      ..onPlaylistGuides =
+          (urls) => unawaited(_keepPlaylistGuides(session, urls));
     return session;
+  }
+
+  /// Guides that just became some playlist's own (its list names them and
+  /// no guide was typed): main.dart loads them at once instead of at the
+  /// next timed guide update.
+  void Function(List<EpgSource> sources)? onGuidesFound;
+
+  /// Saves the guides [session]'s M3U names ([PlaylistProfile
+  /// .playlistEpgUrls]) when they changed, and hands the new ones in use to
+  /// [onGuidesFound].
+  Future<void> _keepPlaylistGuides(
+      PlaylistSession session, List<String> urls) async {
+    final before = session.profile.playlistEpgUrls;
+    if (before != null && listEquals(before, urls)) return;
+    if (_sessionFor(session.profile.id) != session) return;
+    final profile = session.profile.copyWith(playlistEpgUrls: urls);
+    await updatePlaylist(profile);
+    debugPrint('PlaylistGuides: ${profile.id} names ${urls.length} '
+        'guide(s)${profile.epgUrl?.isNotEmpty ?? false ? ' (typed one used)' : ''}');
+    if (!profile.enabled || (profile.epgUrl?.isNotEmpty ?? false)) return;
+    final added = [
+      for (final url in urls)
+        if (!(before ?? const <String>[]).contains(url)) url
+    ];
+    if (added.isEmpty) return;
+    onGuidesFound?.call([
+      for (final url in added)
+        (url: url, knownChannelIds: knownChannelIdsFor(profile.id))
+    ]);
   }
 
   /// A playlist read another way (M3U <-> Xtream: an Xtream panel's M3U
@@ -1750,14 +1782,12 @@ class PlaylistManager extends ChangeNotifier {
   /// the playlist editor, Vesper AI). The order is the priority: a channel
   /// an earlier guide fills keeps it ([EpgService] drops it from later
   /// guides). One list for the startup timer and the EPG settings page:
-  /// the page used to rebuild it without the extra guides.
+  /// the page used to rebuild it without the extra guides. A blank EPG URL
+  /// on an M3U = the guides its list names ([PlaylistProfile.guideUrls]).
   List<EpgSource> epgSources() => [
         for (final p in profiles)
           if (p.enabled)
-            for (final url in {
-              if (p.epgUrl?.isNotEmpty ?? false) p.epgUrl!,
-              ...p.extraEpgUrls,
-            })
+            for (final url in p.guideUrls)
               (url: url, knownChannelIds: knownChannelIdsFor(p.id)),
       ];
 
@@ -2538,8 +2568,8 @@ class PlaylistManager extends ChangeNotifier {
       await _saveMyGroups();
       return true;
     }
-    final shown =
-        visibleChannels(playlistId: playlistId, groupTitle: group, category: 'tv');
+    final shown = visibleChannels(
+        playlistId: playlistId, groupTitle: group, category: 'tv');
     if (shown.isEmpty) return false;
     for (final c in shown) {
       final ref = _placedGroupOf(c, group);
@@ -3077,6 +3107,16 @@ class PlaylistManager extends ChangeNotifier {
           Object.hashAllUnordered(s.mergeHidden),
       ]),
       'favourites': _favoritesVersion,
+      // Move Up / Down on a channel: each step must redraw the list at once
+      // (owner, 2026-11-23: the moved channel only showed in its new place
+      // after OK). A group's order and the Favourites order + sort.
+      'channelOrder': Object.hashAll([
+        for (final s in _enabledSessionsSortedFor('tv')) s.channelOrderVersion,
+      ]),
+      'favouriteOrder': Object.hash(
+        Object.hashAll(_storage.getFavoriteLiveOrder()),
+        _storage.getFavoriteLiveSort(),
+      ),
       'guideLinks': Object.hashAll([
         for (final s in _enabledSessionsSortedFor('tv')) s.guideLinksVersion,
       ]),
@@ -3223,6 +3263,70 @@ class PlaylistManager extends ChangeNotifier {
     await _saveMyGroups();
     return title;
   }
+
+  /// Whether [name] is free for a renamed group: not another own group
+  /// nor a live group of an enabled playlist (groups are picked by title;
+  /// [except] is the group being renamed).
+  bool groupNameTaken(String name, {String? except}) {
+    final n = name.trim();
+    if (n.isEmpty || n == except) return false;
+    return _myGroups.contains(n) || tvGroups.any((g) => g.title == n);
+  }
+
+  /// Hold OK on an own group > Rename…: the new title, or null when [name]
+  /// is empty or taken ([groupNameTaken]).
+  Future<String?> renameUserGroup(String title, String name) async {
+    final to = name.trim();
+    if (to.isEmpty || !_myGroups.contains(title)) return null;
+    if (to == title) return title;
+    if (groupNameTaken(to)) return null;
+    _myGroups.rename(title, to);
+    await _saveMyGroups();
+    return to;
+  }
+
+  /// Hold OK on a live group > Rename… ([PlaylistSession.renameLiveGroup]):
+  /// what the editor's Move / Copy put in it follows the new title. A name
+  /// of another group of the same playlist merges the two; null = not
+  /// renamed ([name] is one of the viewer's own groups, or no such group).
+  Future<String?> renameLiveGroup(
+      String playlistId, String shown, String name) async {
+    final s = _sessionFor(playlistId);
+    if (s == null || _myGroups.contains(name.trim())) return null;
+    final to = await s.renameLiveGroup(shown, name);
+    if (to == null || to == shown) return to;
+    _myGroups.renameRef(GroupRef.provider(playlistId, shown),
+        GroupRef.provider(playlistId, to));
+    await _saveMyGroups();
+    return to;
+  }
+
+  /// After a rename saved some other way (Vesper AI's playlist editor
+  /// `rename_group`): live group [from] of [playlistId], now [to], keeps
+  /// its order, star, channel order and what was placed in it.
+  Future<void> carryLiveGroupRename(
+      String playlistId, String from, String to) async {
+    final s = _sessionFor(playlistId);
+    if (s == null || from == to) return;
+    await s.carryLiveGroupState(from, to);
+    _myGroups.renameRef(
+        GroupRef.provider(playlistId, from), GroupRef.provider(playlistId, to));
+    await _saveMyGroups();
+  }
+
+  /// Whether live group [title] of [playlistId] is renamed (or merged) by
+  /// the playlist editor / Rename…: hold OK offers the provider's name.
+  bool isLiveGroupRenamed(String playlistId, String title) {
+    final s = _sessionFor(playlistId);
+    if (s == null) return false;
+    return s.edits.groupNames.entries
+        .any((e) => e.value == title && e.key != title);
+  }
+
+  /// Live groups of [playlistId] the TV lists right now, by shown title
+  /// (renames and merges applied).
+  List<String> liveGroupTitles(String playlistId) =>
+      [for (final g in _sessionFor(playlistId)?.tvGroups ?? const []) g.title];
 
   /// Deletes own group [title]; its channels go back to their groups.
   Future<void> deleteUserGroup(String title) {

@@ -23,10 +23,13 @@ import 'group_management_screen.dart';
 import 'hidden_channels_screen.dart';
 
 Future<void> openProfileEditor(BuildContext context, String id) async {
-  if (!await context.read<ViewerProfileService>().requireUnlock(context) ||
-      !context.mounted) {
-    return;
-  }
+  final viewers = context.read<ViewerProfileService>();
+  final target = viewers.profiles.where((p) => p.id == id).firstOrNull;
+  // A kids profile in use, or another profile's lock: the PIN first (its
+  // page can rename, unlock or delete it).
+  final pin = viewers.isActiveRestricted ||
+      (target != null && target.isLocked && target.id != viewers.active.id);
+  if (pin && (!await promptForPin(context) || !context.mounted)) return;
   await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) =>
           SwallowHeldActivate(child: ProfileDetailScreen(profileId: id))));
@@ -261,18 +264,19 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
                       ]),
                       for (final option in ProfileCopy.values)
                         if (!_restricted || option != ProfileCopy.visibility)
-                          GlassFocusFrame(child: CheckboxListTile(
-                              title: Text(tr(labels[option]!)),
-                              value: _options.contains(option),
-                              onChanged: _saving
-                                  ? null
-                                  : (v) => setState(() {
-                                        if (v == true) {
-                                          _options.add(option);
-                                        } else {
-                                          _options.remove(option);
-                                        }
-                                      }))),
+                          GlassFocusFrame(
+                              child: CheckboxListTile(
+                                  title: Text(tr(labels[option]!)),
+                                  value: _options.contains(option),
+                                  onChanged: _saving
+                                      ? null
+                                      : (v) => setState(() {
+                                            if (v == true) {
+                                              _options.add(option);
+                                            } else {
+                                              _options.remove(option);
+                                            }
+                                          }))),
                       const SizedBox(height: 20),
                       FilledButton(
                           onPressed: _saving ? null : _save,
@@ -427,6 +431,16 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                           selected: profile.colorIndex,
                           firstNode: _colourNode,
                           onChanged: (i) => viewers.setColour(profile.id, i)),
+                      if (!profile.isRestricted) ...[
+                        _heading('Lock'),
+                        TvSwitchListTile(
+                            title: Text(tr('Lock with PIN')),
+                            subtitle: Text(tr(
+                                'Opening this profile asks for the parental PIN. After VesperTV starts or was left for a while, it shows "Who is watching?" instead.')),
+                            value: profile.isLocked,
+                            onChanged: (on) =>
+                                viewers.setLocked(context, profile.id, on)),
+                      ],
                       if (profile.isRestricted) ...[
                         _heading('Kids & PIN'),
                         Text(tr(

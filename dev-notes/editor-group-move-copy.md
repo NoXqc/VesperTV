@@ -60,6 +60,16 @@ lists on first need), `POST /api/place?pl=` `{ids, mode: move|copy, to: {own}|{n
 group}}`, `POST /api/unplace?pl=` `{ids}`; both return the playlist's `placements` map
 (`rawId -> {mv, cp}`) and `/api/channels` rows carry `mv` / `cp`.
 
+## Rename on the TV (Claude, 2026-11-23)
+Hold OK on a live group > **Rename…** (+ **Use the provider's name** when renamed) and on an own group > **Rename…**.
+A live group's rename is the editor's Groups-tab rename (`PlaylistEdits.groupNames`, for every viewer; not offered
+on a kid profile); a name another group of the same playlist has merges the two, Use the provider's name splits them.
+What is stored under the shown title follows it (`PlaylistSession.carryLiveGroupState`: group order, star, hidden,
+channel order; `UserGroups.renameRef`: Move / Copy placements and `porder`). Own groups: `UserGroups.rename` (moves,
+order, copies). A name can't be an own group's (groups are picked by title). Only the active viewer's order / star
+follow: other viewers' stored ones keep the old title (the editor's rename never moved them either). Movies / TV
+Shows groups have no rename (editor group names are live only).
+
 ## Tests
 `test/editor_group_placement_test.dart` (model + manager listing across two playlists),
 `test/playlist_editor_groups_test.dart` (real server routes), `test/editor_group_move.test.mjs`

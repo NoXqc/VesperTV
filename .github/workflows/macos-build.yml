@@ -1,15 +1,23 @@
 # macOS build: an unsigned VesperTV.app, zipped, plus a plain DMG, as workflow artifacts.
 # Lets the project produce Mac builds without owning a Mac.
 #
-# Not a release asset on purpose: Windows builds older than the per-platform
-# asset picker (AppUpdateService.pickAsset) take the first ".zip" on the
-# latest release, so attaching this zip could offer a Mac app to a PC.
+# With "release_tag" the DMG is also attached to that release as
+# VesperTV-macos.dmg (every Sunday release since 1.0.73: dev-notes/release.md
+# step 4b); the Mac app's Check for Updates opens it. The ZIP stays an
+# artifact on purpose: Windows builds older than the per-platform asset
+# picker (AppUpdateService.pickAsset) take the first ".zip" on the latest
+# release, so attaching it could offer a Mac app to a PC. A ".dmg" is safe.
 # Unsigned / not notarized: after the first blocked launch, macOS needs
 # System Settings > Privacy & Security > Open Anyway (dev-notes/macos-desktop.md).
 name: macOS build
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Attach the DMG to this release (its tag must be the commit built); empty = artifact only
+        type: string
+        default: ''
   push:
     branches: [main]
 
@@ -61,3 +69,38 @@ jobs:
         with:
           name: build-macos-log
           path: build-macos.log
+
+  attach:
+    name: Attach to the release
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: VesperTV-macos-dmg
+          path: dl
+      - name: Upload VesperTV-macos.dmg
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Only the build of the release's own commit goes on it.
+          tag_sha="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
+          if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+            echo "Tag $TAG is $tag_sha but this run built $GITHUB_SHA"; exit 1
+          fi
+          f="$(find dl -name '*-macos.dmg' -type f | head -1)"
+          if [ -z "$f" ]; then echo "No .dmg in the artifact"; find dl; exit 1; fi
+          # One name for every release, so releases/latest/download/... links keep working.
+          cp "$f" VesperTV-macos.dmg
+          ls -l VesperTV-macos.dmg
+          gh release upload "$TAG" VesperTV-macos.dmg --clobber --repo "$REPO"
+          # Older versioned DMGs on this release go.
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' \
+            | grep -- '-macos\.dmg$' | grep -vx 'VesperTV-macos.dmg' \
+            | while read -r a; do gh release delete-asset "$TAG" "$a" --yes --repo "$REPO"; done
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[] | "\(.name) \(.size)"'
