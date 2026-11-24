@@ -1010,11 +1010,10 @@ class StorageService {
 
   /// Settings > Playback > Player bar / Options row transparency, percent;
   /// 15 = the player's menus as they were before the settings.
-  int _playerMenuPercent(String key) =>
-      (_prefs.getInt(_vk(key)) ??
-              _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
-              15)
-          .clamp(0, 100);
+  int _playerMenuPercent(String key) => (_prefs.getInt(_vk(key)) ??
+          _prefs.getInt(_vk(AppConstants.keyPlayerMenuTransparency)) ??
+          15)
+      .clamp(0, 100);
   int getPlayerBarTransparency() =>
       _playerMenuPercent(AppConstants.keyPlayerBarTransparency);
   Future<void> setPlayerBarTransparency(int value) => _prefs.setInt(
@@ -1028,8 +1027,7 @@ class StorageService {
   /// The TV player's options row order (tile ids, see
   /// `ReorderableOptionTiles`); empty = the default order.
   List<String> getPlayerOptionsOrder() =>
-      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ??
-      const [];
+      _prefs.getStringList(_vk(AppConstants.keyPlayerOptionsOrder)) ?? const [];
   Future<void> setPlayerOptionsOrder(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keyPlayerOptionsOrder), ids);
 
@@ -1978,7 +1976,15 @@ class StorageService {
         bool b => {'t': 'b', 'v': b},
         int i => {'t': 'i', 'v': i},
         double x => {'t': 'd', 'v': x},
-        List<String> l => {'t': 'l', 'v': l},
+        // macOS / iOS / Windows / Linux hand a stored list back as
+        // List<Object?> after a restart (only Android casts it): a
+        // `List<String>` match dropped every list from sync, Transfer
+        // and backups, and the Mac then synced "no favourites" to
+        // every device (LOG-SHHSZH + LOG-2AJK8E, 2026-11-24).
+        List l => {
+            't': 'l',
+            'v': [for (final x in l) '$x']
+          },
         _ => null,
       };
       if (tagged != null) out[key] = tagged;

@@ -102,6 +102,21 @@ void main() {
     expect(after['settings']['folder'], '/storage/SD/Recordings');
   });
 
+  test('a list read back untyped (macOS) still syncs', () async {
+    SharedPreferences.setMockInitialValues({
+      AppConstants.keyFavorites: <Object?>['p1::1', 'p1::2'],
+    });
+    final storage = StorageService();
+    await storage.init();
+    final fav = storage.exportForSync()[AppConstants.keyFavorites];
+    expect(fav, {
+      't': 'l',
+      'v': ['p1::1', 'p1::2']
+    });
+    expect((fav as Map)['v'], isA<List<String>>());
+    expect(storage.exportForTransfer()[AppConstants.keyFavorites], fav);
+  });
+
   test('start choices travel with a transfer, never with sync', () async {
     SharedPreferences.setMockInitialValues({
       AppConstants.keyStartSection: 'home',
