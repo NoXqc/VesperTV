@@ -275,16 +275,18 @@ class M3uParser {
           Map<String, String> epgOverrides) =>
       Isolate.run(() async {
         var guides = const <String>[];
+        ({String? path})? playerApi;
         final channels = Channel.withUniqueIds(await fetchAndParse(url,
             playlistId: playlistId,
             saveTo: saveTo,
             onBytes: progress.send,
-            onGuides: (urls) => guides = urls));
+            onGuides: (urls) => guides = urls,
+            onPlayerApi: (path) => playerApi = (path: path)));
         for (final c in channels) {
           c.isFavorite = favorites.contains(c.id);
           c.epgIdOverride = epgOverrides[c.rawId];
         }
-        return M3uList(channels, guideUrls: guides);
+        return M3uList(channels, guideUrls: guides, playerApi: playerApi);
       });
 
   /// How long the server may take to start answering: a provider builds a
@@ -315,16 +317,23 @@ class M3uParser {
   ///
   /// [onGuides]: the guides the `#EXTM3U` line names ([guideUrlsOf]), once
   /// the whole list is read.
+  ///
+  /// [onPlayerApi]: Tuliprox's Player API path for this playlist user
+  /// (response header `X-Tuliprox-Player-Api-Path`, else the `#EXTM3U`
+  /// attribute `x-tuliprox-player-api`), null without one; once the whole
+  /// list is read.
   static Future<List<Channel>> fetchAndParse(String url,
       {required String playlistId,
       String? saveTo,
       void Function(int bytes)? onBytes,
       Duration stall = stallLimit,
       Future<void>? Function(Channel entry)? onEntry,
-      void Function(List<String> urls)? onGuides}) async {
+      void Function(List<String> urls)? onGuides,
+      void Function(String? path)? onPlayerApi}) async {
     final part = saveTo == null ? null : File('$saveTo.part');
     final sink = part?.openWrite();
-    Future<List<Channel>> parse(Stream<List<int>> bytes) async {
+    Future<List<Channel>> parse(Stream<List<int>> bytes,
+        {String? headerPath}) async {
       final state = _ParseState(playlistId: playlistId, keep: onEntry == null);
       var received = 0;
       final sinceReport = Stopwatch()..start();
@@ -355,6 +364,8 @@ class M3uParser {
         await part!.rename(saveTo!);
       }
       onGuides?.call(guideUrlsOf(state._headerAttrs));
+      onPlayerApi
+          ?.call(headerPath ?? state._headerAttrs['x-tuliprox-player-api']);
       return state.channels;
     }
 
@@ -371,7 +382,8 @@ class M3uParser {
       if (streamedResponse.statusCode != 200) {
         throw M3uHttpError(Uri.parse(url).host, streamedResponse.statusCode);
       }
-      return await parse(streamedResponse.stream);
+      return await parse(streamedResponse.stream,
+          headerPath: streamedResponse.headers['x-tuliprox-player-api-path']);
     } catch (_) {
       if (sink != null) {
         await sink.close().catchError((_) {});
@@ -411,7 +423,7 @@ class M3uHttpError implements Exception {
 /// groups. One pass, so it can be built on the background isolate with the
 /// parse.
 class M3uList {
-  M3uList(this.channels, {this.guideUrls = const []}) {
+  M3uList(this.channels, {this.guideUrls = const [], this.playerApi}) {
     final byTitle = <String, String>{};
     for (final c in channels) {
       byGroup.putIfAbsent(c.group, () => []).add(c);
@@ -427,6 +439,11 @@ class M3uList {
   /// The guides the list's `#EXTM3U` line names ([M3uParser.guideUrlsOf]);
   /// empty when it wasn't read from the list itself (a saved catalog).
   final List<String> guideUrls;
+
+  /// Tuliprox's Player API path the download named
+  /// ([M3uParser.fetchAndParse] onPlayerApi): null when the list wasn't
+  /// downloaded (a saved catalog), `(path: null)` when it named none.
+  final ({String? path})? playerApi;
 
   /// Every entry by group title, whatever its tab.
   final Map<String, List<Channel>> byGroup = {};

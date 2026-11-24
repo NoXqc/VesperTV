@@ -385,7 +385,25 @@ TuliproxChannelRef? tuliproxChannelRef(String base, String url) {
   final u = Uri.tryParse(url);
   if (b == null || u == null || b.host.isEmpty) return null;
   if (u.host.toLowerCase() != b.host.toLowerCase()) return null;
-  final segs = u.pathSegments.where((s) => s.isNotEmpty).toList();
+  var segs = u.pathSegments.where((s) => s.isNotEmpty).toList();
+  // A reverse-proxy prefix the server's address starts with too
+  // (`https://host/tuliprox/live/...` for base `https://host/tuliprox/ui`).
+  final basePath = b.pathSegments.where((s) => s.isNotEmpty).toList();
+  var skip = 0;
+  while (skip < basePath.length - 1 &&
+      skip < segs.length &&
+      segs[skip] == basePath[skip]) {
+    skip++;
+  }
+  segs = segs.sublist(skip);
+  // An M3U output's streams: `/m3u-stream/live/{user}/{pass}/{id}.ts` or
+  // the HLS form `/m3u-stream/{user}/{pass}/{id}/live.m3u8`.
+  if (segs.isNotEmpty && segs[0] == 'm3u-stream') {
+    segs = segs.sublist(1);
+    if (segs.length == 4 && segs[3] == 'live.m3u8') {
+      segs = segs.sublist(0, 3);
+    }
+  }
   List<String>? rest;
   if (segs.length == 4 && segs[0] == 'live') rest = segs.sublist(1);
   if (segs.length == 3) rest = segs;
@@ -894,13 +912,18 @@ class Tuliprox {
   void noteServer(String server, Object? playerApiPath) {
     final u = Uri.tryParse(server);
     final host = u?.host.toLowerCase() ?? '';
-    if (host.isEmpty) return;
+    if (u == null || host.isEmpty) return;
     final old = _found[host];
     if (playerApiPath is String && playerApiPath.startsWith('/')) {
       final path = playerApiPath == '/'
           ? ''
           : playerApiPath.replaceFirst(RegExp(r'/+$'), '');
-      final base = '${hostOf(server)}$path';
+      // The server's own address keeps a reverse-proxy prefix
+      // (`https://host/tuliprox` + `/ui`), never its query.
+      final prefix = u.path
+          .replaceFirst(RegExp(r'/player_api\.php$'), '')
+          .replaceFirst(RegExp(r'/+$'), '');
+      final base = '${hostOf(server)}$prefix$path';
       if (old == base) return;
       _found[host] = base;
       debugPrint('Tuliprox: Player API found on ${hostOf(server)}');
@@ -911,6 +934,18 @@ class Tuliprox {
     }
     unawaited(
         _storage?.setTuliproxFound(_found.isEmpty ? '' : jsonEncode(_found)));
+  }
+
+  /// An M3U playlist was downloaded from [listUrl]: Tuliprox (since
+  /// 2bfb3991) names its Player API [path] in the response header or the
+  /// `#EXTM3U` line (null = none). The server address is the list's
+  /// without `/get.php` / `/apiget` / `/m3u` and the query; a list read
+  /// from a file has none, so a channel's [streamUrl] gives it instead.
+  void noteM3uServer(String listUrl, String? path, {String? streamUrl}) {
+    final root = tuliproxServerRoot(listUrl) ??
+        (streamUrl == null ? null : tuliproxServerRoot(streamUrl));
+    if (root == null) return;
+    noteServer(root, path);
   }
 
   /// The player read [channel]'s stream uid from Tuliprox's answer
@@ -1285,6 +1320,29 @@ class Tuliprox {
         '${pick.member.vid} (${pick.member.input})');
     return pick.member.title;
   }
+}
+
+/// Tuliprox's own address in [url] (a playlist download or a stream):
+/// scheme, host, port and any reverse-proxy prefix, without the route
+/// (`get.php`, `apiget`, `m3u`, `player_api.php`, `live`, `m3u-stream`)
+/// and the query. Null for a link that isn't http(s).
+String? tuliproxServerRoot(String url) {
+  final u = Uri.tryParse(url);
+  if (u == null || !u.isScheme('http') && !u.isScheme('https')) return null;
+  if (u.host.isEmpty) return null;
+  const routes = {
+    'get.php',
+    'apiget',
+    'm3u',
+    'player_api.php',
+    'live',
+    'm3u-stream',
+  };
+  final segs = u.pathSegments.where((s) => s.isNotEmpty).toList();
+  var cut = segs.indexWhere(routes.contains);
+  if (cut < 0) cut = segs.isEmpty ? 0 : segs.length - 1;
+  final prefix = segs.take(cut).join('/');
+  return '${Tuliprox.hostOf(url)}${prefix.isEmpty ? '' : '/$prefix'}';
 }
 
 /// The `X-Tuliprox-Fallback` reason in a player error (`[Tuliprox reason]`,

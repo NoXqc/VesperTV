@@ -24,6 +24,7 @@ import 'xtream_api_service.dart';
 import '../l10n/l10n.dart';
 import 'perf_diagnostics.dart';
 import 'playlist_edits.dart';
+import 'tuliprox.dart';
 
 /// One playlist's own load/cache state — extracted from what used to be
 /// `PlaylistManager`'s entire body, back when only one playlist could
@@ -940,6 +941,13 @@ class PlaylistSession {
       lastLoaded = DateTime.now();
       profile = profile.copyWith(m3uUrl: url);
       onPlaylistGuides?.call(imported?.live.guideUrls ?? parsed!.guideUrls);
+      final list = imported?.live ?? parsed!;
+      final playerApi = list.playerApi;
+      if (playerApi != null) {
+        Tuliprox.instance.noteM3uServer(url, playerApi.path,
+            streamUrl:
+                list.byTab['tv']!.isEmpty ? null : list.byTab['tv']!.first.url);
+      }
 
       loadingPhase = tr('Playlist added');
       onNotify();

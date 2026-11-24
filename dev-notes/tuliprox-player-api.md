@@ -71,6 +71,15 @@ All in `lib/services/tuliprox.dart` (`Tuliprox` singleton, `TuliproxApi`).
    `max_free_shared_joins` (lab user on the owner's VPS since 2026-11-23). Without it, joinable streams
    say `requires_free_slot: true` when the account is full and VesperTV offers none.
 
+10. **M3U playlists + reverse-proxy prefixes (Tuliprox 2bfb3991, +975, `claude/tuliprox-m3u-discovery`).** An M3U
+    download reads `X-Tuliprox-Player-Api-Path` (response header) or `#EXTM3U x-tuliprox-player-api`
+    (`M3uParser.fetchAndParse onPlayerApi` -> `M3uList.playerApi`, through the isolate and `M3uImport`) ->
+    `Tuliprox.noteM3uServer` (server root = the list URL without `get.php` / `apiget` / `m3u` and query,
+    `tuliproxServerRoot`; a list from a file uses a channel's stream URL). `noteServer` now keeps a server's path
+    prefix (`https://host/tuliprox` + `/ui`), and `tuliproxChannelRef` reads M3U streams
+    (`/m3u-stream/live/{u}/{p}/{id}.ts`, `/m3u-stream/{u}/{p}/{id}/live.m3u8`) and prefixed paths. Existing M3U
+    playlists learn it at their next download (Update Content). `test/tuliprox_m3u_discovery_test.dart`.
+
 ## Not done / open
 
 - The lab's grouping splits channels: `strip_regex` misses U+02B0 (the ʰ of ʰᵉᵛᶜ), and
