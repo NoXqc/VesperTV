@@ -4336,4 +4336,22 @@ const Map<String, String> kEs = {
       "No encontré el grupo «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "Una app de IA quiere renombrar tu grupo {group} a {name}.",
+  "No profile":
+      "Ningún perfil",
+  "Every profile":
+      "Todos los perfiles",
+  "Only this profile ({name})":
+      "Solo este perfil ({name})",
+  "Which profiles get it?":
+      "¿Qué perfiles lo tendrán?",
+  "Only this profile":
+      "Solo este perfil",
+  "This profile":
+      "Este perfil",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Ya añadidos, ahora también activados para los perfiles elegidos: {names}",
+  "Added, off for this profile":
+      "Añadido, desactivado en este perfil",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} ya estaba añadido para otros perfiles. Ahora está activado para los perfiles elegidos.",
 };

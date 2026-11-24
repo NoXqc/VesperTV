@@ -99,7 +99,22 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   only gives them for a channel from an allowed group). Media Hub on a kids profile: every source
   is off until turned on for that profile (`ArchiveService.isKidsProfile`: no saved per-profile
   Enabled = off; a source added while it is in use is turned on for it), and the Media Hub's own
-  Sources / Servers buttons ask the PIN (`ArchiveScreen._openWithPin`). `CatalogDatabase`'s own `is_favorite`
+  Sources / Servers buttons ask the PIN (`ArchiveScreen._openWithPin`).
+  **Which profiles get a Media Hub source (owner, 2026-11-24, `claude/source-profiles`):** people sharing
+  a box want their own add-ons / Stremio account. The sources list stays shared (`vesper_archive_sources`);
+  each profile's Enabled lives in its `vesper_archive_source_prefs` (per viewer). `widgets/source_profiles.dart`:
+  a **Profiles** row (only with 2+ profiles) on Add a source (link field) and Import from Stremio (the
+  "For" choice, default = every regular profile + the kids profile in use) and in a source's options (its
+  current profiles, `ArchiveService.profilesWith`). The picker: Only this profile / Every profile / one tick per
+  profile; ticking a kids profile asks the PIN unless a kids profile is in use. `setSourceProfiles` /
+  `_forProfiles` write EVERY profile's Enabled (`StorageService.get/setArchiveSourcePrefsJson(viewerId:)`)
+  and set the shared `enabled` to "every regular profile has it", so a profile made later gets only those.
+  Prefs are written before a new source is saved (no profile sees it come and go); the kids "added here = on
+  here" rule no longer overrides an explicit choice (`putIfAbsent`). An add-on already added by another
+  profile is turned on for the chosen profiles (or the one in use) instead of "Already added"
+  (`addSourceProfiles`, `AddonImportResult.nowOn`; Stremio's list ticks the ones off for this profile:
+  `hasSourceOn`). Media servers / Trakt / Simkl: options > Profiles after connecting. Remove is still for
+  everyone. Tests: source_profiles_test, source_profiles_picker_test. `CatalogDatabase`'s own `is_favorite`
   column stopped being the favorite source of truth — `PlaylistManager` injects a live callback
   (`isVodFavorite`/`isSeriesFavorite`) instead; only write that column while Main is active.
   `ViewerProfileService.requireUnlock` is the single PIN choke point for *opening Settings at all*

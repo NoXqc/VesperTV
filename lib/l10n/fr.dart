@@ -4349,4 +4349,22 @@ const Map<String, String> kFr = {
       "Je n’ai pas trouvé le groupe « {title} ».",
   "An AI app wants to rename your group {group} to {name}.":
       "Une app d’IA veut renommer votre groupe {group} en {name}.",
+  "No profile":
+      "Aucun profil",
+  "Every profile":
+      "Tous les profils",
+  "Only this profile ({name})":
+      "Seulement ce profil ({name})",
+  "Which profiles get it?":
+      "Quels profils l’auront ?",
+  "Only this profile":
+      "Seulement ce profil",
+  "This profile":
+      "Ce profil",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Déjà ajoutés, maintenant activés aussi pour les profils choisis : {names}",
+  "Added, off for this profile":
+      "Ajouté, désactivé pour ce profil",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} était déjà ajouté pour d’autres profils. Il est maintenant activé pour les profils choisis.",
 };

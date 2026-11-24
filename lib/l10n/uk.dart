@@ -3808,4 +3808,22 @@ const Map<String, String> kUk = {
       "Не вдалося знайти групу «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "AI-застосунок хоче перейменувати вашу групу {group} на {name}.",
+  "No profile":
+      "Жодного профілю",
+  "Every profile":
+      "Усі профілі",
+  "Only this profile ({name})":
+      "Лише цей профіль ({name})",
+  "Which profiles get it?":
+      "Які профілі його отримають?",
+  "Only this profile":
+      "Лише цей профіль",
+  "This profile":
+      "Цей профіль",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Уже додано, тепер увімкнено й для вибраних профілів: {names}",
+  "Added, off for this profile":
+      "Додано, вимкнено для цього профілю",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} уже було додано для інших профілів. Тепер його увімкнено для вибраних профілів.",
 };

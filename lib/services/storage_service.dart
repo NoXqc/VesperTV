@@ -506,11 +506,13 @@ class StorageService {
   Future<void> setArchiveSourcesJson(String json) =>
       _prefs.setString(AppConstants.keyArchiveSources, json);
 
-  /// Per viewer (see [AppConstants.keyArchiveSourcePrefs]).
-  String? getArchiveSourcePrefsJson() =>
-      _prefs.getString(_vk(AppConstants.keyArchiveSourcePrefs));
-  Future<void> setArchiveSourcePrefsJson(String json) =>
-      _prefs.setString(_vk(AppConstants.keyArchiveSourcePrefs), json);
+  /// Per viewer (see [AppConstants.keyArchiveSourcePrefs]); [viewerId] =
+  /// another profile's (a source's Profiles picker), else the one in use.
+  String? getArchiveSourcePrefsJson({String? viewerId}) => _prefs
+      .getString(_vk(AppConstants.keyArchiveSourcePrefs, viewerId: viewerId));
+  Future<void> setArchiveSourcePrefsJson(String json, {String? viewerId}) =>
+      _prefs.setString(
+          _vk(AppConstants.keyArchiveSourcePrefs, viewerId: viewerId), json);
 
   /// Languages picked from online subtitles (add-on codes like "fre"),
   /// most recent first — the player's Subtitles list offers them directly.

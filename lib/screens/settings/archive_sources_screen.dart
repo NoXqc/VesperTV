@@ -22,6 +22,7 @@ import '../../widgets/glass_menu.dart';
 import '../../widgets/hold_to_activate.dart';
 import '../../widgets/setting_row.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/source_profiles.dart';
 import '../../widgets/tv_menu_tile.dart' show CompactMenus;
 import '../../widgets/tv_text_field_gate.dart';
 import 'addons_screen.dart';
@@ -1243,6 +1244,13 @@ class _SourceOptionsState extends State<_SourceOptions> {
             trailing: GlassSwitch(value: e.enabled),
             onTap: () => _set(e, 'enabled', !e.enabled),
           ),
+          if (e.source != null)
+            SourceProfilesRow(
+              title: tr('Profiles'),
+              profileIds: service.profilesWith(e.source!),
+              onChanged: (ids) =>
+                  service.setSourceProfiles([e.source!.manifestUrl], ids),
+            ),
           if (e.other != null)
             SettingRow(
               icon: Icons.filter_alt_outlined,
@@ -1307,6 +1315,9 @@ class _AddSourceState extends State<_AddSource> {
   final _linkFocus = FocusNode(debugLabel: 'source-link');
   final _addFocus = FocusNode(debugLabel: 'source-add');
   bool _adding = false;
+
+  /// The Profiles row's choice; null = the usual (every regular profile).
+  Set<String>? _profiles;
 
   /// Left stays in the typed text until its start (a keyboard's Left).
   bool get keepsLeft =>
@@ -1386,8 +1397,21 @@ class _AddSourceState extends State<_AddSource> {
     String? error;
     ArchiveSource? added;
     try {
-      added = await service.addSource(url);
+      added = await service.addSource(url, profiles: _profiles);
     } on StateError {
+      // Another profile added it (maybe only for itself): on for these
+      // profiles too.
+      final now = await service.addSourceProfiles([url], _profiles);
+      if (now.isNotEmpty) {
+        if (!mounted) return;
+        setState(() => _adding = false);
+        _link.clear();
+        messenger.showSnackBar(SnackBar(
+            content: Text(tr(
+                '{name} was already added for other profiles. It is on for the profiles you picked now.',
+                {'name': now.first.name}))));
+        return;
+      }
       error = tr('That source is already in the list.');
     } on ArchiveApiException {
       // Not movies/shows: a subtitles-only add-on (OpenSubtitles v3...)
@@ -1423,7 +1447,7 @@ class _AddSourceState extends State<_AddSource> {
     final importer = AddonImporter(context.read<ArchiveService>(),
         AddonService(context.read<StorageService>()));
     setState(() => _adding = true);
-    final result = await importer.importLinks(links);
+    final result = await importer.importLinks(links, profiles: _profiles);
     if (!mounted) return;
     setState(() => _adding = false);
     _link.clear();
@@ -1544,6 +1568,12 @@ class _AddSourceState extends State<_AddSource> {
                 if (f) _say(tr('Several links at once work too.'));
               },
               onTap: _add,
+            ),
+            SourceProfilesRow(
+              key: const ValueKey('source-profiles'),
+              title: tr('Profiles'),
+              profileIds: _profiles,
+              onChanged: (ids) => setState(() => _profiles = ids),
             ),
             SettingsSectionTitle(tr('Other ways')),
           ],

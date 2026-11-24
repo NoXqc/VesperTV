@@ -339,9 +339,9 @@ class ArchiveService extends ChangeNotifier {
   int _kidsState = -1;
   bool _kids = false;
 
-  /// This profile's choices, by manifest URL.
-  Map<String, Map<String, dynamic>> _sourcePrefs() {
-    final raw = _storage.getArchiveSourcePrefsJson();
+  /// This profile's choices (or [viewerId]'s), by manifest URL.
+  Map<String, Map<String, dynamic>> _sourcePrefs({String? viewerId}) {
+    final raw = _storage.getArchiveSourcePrefsJson(viewerId: viewerId);
     if (raw == null) return const {};
     try {
       return {
@@ -352,6 +352,103 @@ class ArchiveService extends ChangeNotifier {
     } catch (_) {
       return const {};
     }
+  }
+
+  /// The profiles [source] is on for (each one's own Enabled), by id.
+  Set<String> profilesWith(ArchiveSource source) {
+    final stored = _storedSources
+            .where((s) => s.manifestUrl == source.manifestUrl)
+            .firstOrNull ??
+        source;
+    return {
+      for (final p in _storage.getViewerProfiles())
+        if (switch (_sourcePrefs(viewerId: p.id)[stored.manifestUrl]
+            ?['enabled']) {
+          final bool on => on,
+          _ => !p.isRestricted && stored.enabled,
+        })
+          p.id,
+    };
+  }
+
+  /// Turns the sources at [urls] on for the profiles in [profileIds] and
+  /// off for every other one (a source's Profiles row). The shared value
+  /// follows too, so a profile made later gets a source only when every
+  /// regular profile has it (owner, 2026-11-24: "for this profile" must
+  /// stay that).
+  Future<void> setSourceProfiles(
+      Iterable<String> urls, Set<String> profileIds) async {
+    final links = urls.toSet();
+    if (links.isEmpty) return;
+    final everyone = await _writeSourceProfiles(links, profileIds);
+    final list = _storedSources;
+    if (list
+        .any((s) => links.contains(s.manifestUrl) && s.enabled != everyone)) {
+      await _saveSources([
+        for (final s in list)
+          links.contains(s.manifestUrl) ? s.copyWith(enabled: everyone) : s,
+      ]);
+    } else {
+      _notify();
+    }
+  }
+
+  /// Sources already added (another profile's import, maybe only for it)
+  /// turned on for [profileIds] too, or the profile in use when null: an
+  /// import gives the importer what they picked. Returns the ones that
+  /// changed.
+  Future<List<ArchiveSource>> addSourceProfiles(Iterable<String> links,
+      [Set<String>? profileIds]) async {
+    final ids = profileIds ?? {_storage.getActiveViewerId()};
+    final urls = {
+      for (final l in links) ArchiveApiService.normalizeManifestUrl(l)
+    };
+    final changed = <ArchiveSource>[];
+    for (final s in _storedSources) {
+      if (!urls.contains(s.manifestUrl)) continue;
+      final now = profilesWith(s);
+      if (now.containsAll(ids)) continue;
+      await setSourceProfiles([s.manifestUrl], {...now, ...ids});
+      changed.add(s);
+    }
+    return changed;
+  }
+
+  /// True when [link] is a source this profile has on.
+  bool hasSourceOn(String link) {
+    final url = ArchiveApiService.normalizeManifestUrl(link);
+    return sources.any((s) => s.manifestUrl == url && s.enabled);
+  }
+
+  /// Writes every profile's Enabled for [links]; true when every regular
+  /// profile has them (the shared value to save).
+  Future<bool> _writeSourceProfiles(
+      Set<String> links, Set<String> profileIds) async {
+    final profiles = _storage.getViewerProfiles();
+    for (final p in profiles) {
+      final prefs = {
+        for (final e in _sourcePrefs(viewerId: p.id).entries)
+          e.key: {...e.value},
+      };
+      for (final url in links) {
+        (prefs[url] ??= {})['enabled'] = profileIds.contains(p.id);
+      }
+      await _storage.setArchiveSourcePrefsJson(jsonEncode(prefs),
+          viewerId: p.id);
+    }
+    return profiles
+        .where((p) => !p.isRestricted)
+        .every((p) => profileIds.contains(p.id));
+  }
+
+  /// New sources with the add page's "For" choice: each profile's Enabled
+  /// written before they're saved (no profile sees them come and go).
+  Future<List<ArchiveSource>> _forProfiles(
+      List<ArchiveSource> added, Set<String>? profileIds) async {
+    if (profileIds == null || added.isEmpty) return added;
+    final everyone = await _writeSourceProfiles(
+        {for (final s in added) s.manifestUrl}, profileIds);
+    return [for (final s in added) s.copyWith(enabled: everyone)];
   }
 
   Future<void> _setSourcePref(
@@ -501,7 +598,8 @@ class ArchiveService extends ChangeNotifier {
         for (final e in _sourcePrefs().entries) e.key: {...e.value},
       };
       for (final url in added) {
-        (prefs[url] ??= {})['enabled'] = true;
+        // A "For" choice made while adding wins.
+        (prefs[url] ??= {}).putIfAbsent('enabled', () => true);
       }
       await _storage.setArchiveSourcePrefsJson(jsonEncode(prefs));
     }
@@ -612,15 +710,17 @@ class ArchiveService extends ChangeNotifier {
   Future<ArchiveSource> checkSource(String link) => _api.fetchManifest(link);
 
   /// Adds sources from [checkSource] in one save and one refresh; a link
-  /// already in the list is left out. Returns the ones added.
-  Future<List<ArchiveSource>> addCheckedSources(
-      List<ArchiveSource> found) async {
+  /// already in the list is left out. Returns the ones added. [profiles]:
+  /// the only profiles that get them (null = as usual: every regular
+  /// profile, see [sources]).
+  Future<List<ArchiveSource>> addCheckedSources(List<ArchiveSource> found,
+      {Set<String>? profiles}) async {
     final list = _storedSources;
     final have = {for (final s in list) s.manifestUrl};
-    final added = [
+    final added = await _forProfiles([
       for (final s in found)
         if (have.add(s.manifestUrl)) s,
-    ];
+    ], profiles);
     if (added.isEmpty) return added;
     await _saveSources([...list, ...added]);
     unawaited(refresh(force: true));
@@ -635,12 +735,14 @@ class ArchiveService extends ChangeNotifier {
 
   /// Checks [link]'s manifest and adds it. Throws [ArchiveApiException]
   /// (bad link, no streams/catalogs) or [StateError] (already added).
-  Future<ArchiveSource> addSource(String link) async {
-    final source = await _api.fetchManifest(link);
+  /// [profiles] as in [addCheckedSources].
+  Future<ArchiveSource> addSource(String link, {Set<String>? profiles}) async {
+    final fetched = await _api.fetchManifest(link);
     final list = _storedSources;
-    if (list.any((s) => s.manifestUrl == source.manifestUrl)) {
+    if (list.any((s) => s.manifestUrl == fetched.manifestUrl)) {
       throw StateError('already added');
     }
+    final source = (await _forProfiles([fetched], profiles)).single;
     await _saveSources([...list, source]);
     unawaited(refresh(force: true));
     return source;

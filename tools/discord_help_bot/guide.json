@@ -459,8 +459,16 @@
     "id": "379850184a4df45a",
     "category": "Media Hub",
     "title": "Your add-ons in one list",
-    "answer": "Open from Settings › Playlists & sources › Media Hub sources, or Sources in the Media Hub tab. On the left: Add a source, then All, Streams, Catalogs & lists, Media servers, Live TV and Subtitles with how many each has, then Manage from phone, Customize Media Hub and Advanced. On the right, one row per add-on with its logo, version, description and tags (Streams, Movies, TV Shows, Live TV, Subtitles, Built in, Under Other). OK on a row turns it on or off for this profile (subtitle add-ons for the device); a dimmed row is off. Right goes to its ⋯ button and OK opens its options: Enabled, Show under Other, TV add-on, View source URL (with Copy URL) and Remove, which asks first. Holding OK on a row opens the same options. Cinemeta is built in: it can be turned off, not removed. The line under the list explains the row you are on. Add a source has the link field (several links at once work) and From phone, Manage from phone, Import from Stremio, Jellyfin / Emby / Plex, Trakt & Simkl and Online subtitles. Advanced has Refresh Media Hub (reads every add-on again: new catalogs, logos, versions) and Clear Media Hub.",
+    "answer": "Open from Settings › Playlists & sources › Media Hub sources, or Sources in the Media Hub tab. On the left: Add a source, then All, Streams, Catalogs & lists, Media servers, Live TV and Subtitles with how many each has, then Manage from phone, Customize Media Hub and Advanced. On the right, one row per add-on with its logo, version, description and tags (Streams, Movies, TV Shows, Live TV, Subtitles, Built in, Under Other). OK on a row turns it on or off for this profile (subtitle add-ons for the device); a dimmed row is off. Right goes to its ⋯ button and OK opens its options: Enabled, Profiles (with more than one profile: which profiles have it), Show under Other, TV add-on, View source URL (with Copy URL) and Remove, which asks first. Holding OK on a row opens the same options. Cinemeta is built in: it can be turned off, not removed. The line under the list explains the row you are on. Add a source has the link field (several links at once work), Profiles, and From phone, Manage from phone, Import from Stremio, Jellyfin / Emby / Plex, Trakt & Simkl and Online subtitles. Advanced has Refresh Media Hub (reads every add-on again: new catalogs, logos, versions) and Clear Media Hub.",
     "controls": "Media Hub sources → ↑ / ↓ / ← / →",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "c326905a7a6be1a0",
+    "category": "Media Hub",
+    "title": "Different add-ons for each profile",
+    "answer": "With more than one profile, each person can have their own add-ons or their own Stremio account. Open their profile, go to Media Hub sources › Add a source, set Profiles to Only this profile (or tick the profiles that should get it), then add the link or use Import from Stremio. Without a choice, a new source goes to every profile except Kids profiles. For a source already added, open its options › Profiles. Ticking a Kids profile asks the PIN. An add-on another profile already has is turned on for the profiles you picked instead of being added twice. A profile made later only gets the sources every profile has. Remove still removes a source for everyone; Enabled only changes the profile in use.",
+    "controls": "Media Hub sources › Add a source › Profiles",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {

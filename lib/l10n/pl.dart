@@ -3930,4 +3930,22 @@ const Map<String, String> kPl = {
       "Nie znalazłem grupy „{title}”.",
   "An AI app wants to rename your group {group} to {name}.":
       "Aplikacja AI chce zmienić nazwę Twojej grupy {group} na {name}.",
+  "No profile":
+      "Żaden profil",
+  "Every profile":
+      "Wszystkie profile",
+  "Only this profile ({name})":
+      "Tylko ten profil ({name})",
+  "Which profiles get it?":
+      "Które profile go dostaną?",
+  "Only this profile":
+      "Tylko ten profil",
+  "This profile":
+      "Ten profil",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Już dodane, teraz włączone także dla wybranych profili: {names}",
+  "Added, off for this profile":
+      "Dodane, wyłączone dla tego profilu",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} było już dodane dla innych profili. Teraz jest włączone dla wybranych profili.",
 };

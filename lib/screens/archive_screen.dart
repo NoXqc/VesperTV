@@ -366,9 +366,16 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   late final VoidCallback _releaseResumeHint;
 
+  /// Media Hub pages open right now (one can open over another: Vesper,
+  /// Sports Trak). Leaving the last one ends its searches.
+  static int _openPages = 0;
+  late final ArchiveService _hub;
+
   @override
   void initState() {
     super.initState();
+    _openPages++;
+    _hub = context.read<ArchiveService>();
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     _previewForeground =
@@ -488,6 +495,14 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   @override
   void dispose() {
+    // Back out of the Media Hub = the search ends (owner, 2026-11-24: it
+    // was still there the next time). A title page or the player over the
+    // Media Hub keeps it.
+    if (--_openPages == 0) {
+      for (final type in ArchiveType.values) {
+        _hub.clearSearch(type);
+      }
+    }
     _focusTick.dispose();
     WidgetsBinding.instance.removeObserver(this);
     appRouteObserver.unsubscribe(this);

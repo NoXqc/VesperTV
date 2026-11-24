@@ -4239,4 +4239,22 @@ const Map<String, String> kDe = {
       "Ich habe die Gruppe „{title}“ nicht gefunden.",
   "An AI app wants to rename your group {group} to {name}.":
       "Eine KI-App möchte deine Gruppe {group} in {name} umbenennen.",
+  "No profile":
+      "Kein Profil",
+  "Every profile":
+      "Alle Profile",
+  "Only this profile ({name})":
+      "Nur dieses Profil ({name})",
+  "Which profiles get it?":
+      "Welche Profile bekommen es?",
+  "Only this profile":
+      "Nur dieses Profil",
+  "This profile":
+      "Dieses Profil",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Schon hinzugefügt, jetzt auch für die gewählten Profile an: {names}",
+  "Added, off for this profile":
+      "Hinzugefügt, für dieses Profil aus",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} war schon für andere Profile hinzugefügt. Jetzt ist es für die gewählten Profile an.",
 };

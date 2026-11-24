@@ -4298,4 +4298,22 @@ const Map<String, String> kEl = {
       "Δεν βρήκα την ομάδα «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "Μια εφαρμογή AI θέλει να μετονομάσει την ομάδα σας {group} σε {name}.",
+  "No profile":
+      "Κανένα προφίλ",
+  "Every profile":
+      "Όλα τα προφίλ",
+  "Only this profile ({name})":
+      "Μόνο αυτό το προφίλ ({name})",
+  "Which profiles get it?":
+      "Ποια προφίλ θα το έχουν;",
+  "Only this profile":
+      "Μόνο αυτό το προφίλ",
+  "This profile":
+      "Αυτό το προφίλ",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Έχουν ήδη προστεθεί, τώρα ενεργά και για τα προφίλ που επιλέξατε: {names}",
+  "Added, off for this profile":
+      "Προστέθηκε, ανενεργό για αυτό το προφίλ",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "Το {name} είχε ήδη προστεθεί για άλλα προφίλ. Τώρα είναι ενεργό για τα προφίλ που επιλέξατε.",
 };

@@ -500,6 +500,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-24 - Media Hub sources per profile (`claude/source-profiles`, worktree `VesperTV-claude-sourceprofiles`,
+  from main d5aa980):** owner: users want different sources / Stremio imports per profile ("for this profile or a drop
+  down to select which profiles gets it"). **Profiles** row (2+ profiles only) on Add a source, Import from Stremio and
+  each source's options: Only this profile / Every profile / ticks (kids = PIN). Writes every profile's Enabled + the
+  shared default (a profile made later gets only what every regular profile has); an add-on another profile already
+  has is turned on for the chosen profiles instead of "Already added". Details: dev-notes/features.md (viewer
+  profiles); remote.html "Different add-ons for each profile". Tests: source_profiles_test, source_profiles_picker_test.
+  Same branch: **leaving the Media Hub ends its search** (owner: it was still there next time; the query lives in the
+  app-wide ArchiveService): `ArchiveScreen.dispose` clears every type's search when the last Media Hub page closes
+  (`_openPages`; a title page / player over it keeps it). test/archive_search_leave_test.dart (fails without).
 - **Claude, 2026-11-24 - start screen after a profile pick / switch (`claude/profile-switch-home`, worktree
   `VesperTV-claude-profilehome`):** wile.e.coyote (Discord, Open on = Home, profiles selector on): (1) picking a profile in
   Who's watching after Back opened TV, not Home: `StartupRoutes` applied Open on to the first build only; now

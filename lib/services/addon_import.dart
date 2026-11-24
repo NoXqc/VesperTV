@@ -15,6 +15,9 @@ class AddonImportResult {
   final subtitles = <String>[];
   final alreadyThere = <String>[];
 
+  /// Already added for other profiles only: now on for the chosen ones.
+  final nowOn = <String>[];
+
   /// Links no part of VesperTV can use (no streams/lists/subtitles, or
   /// lists on their own ids), and links that didn't answer.
   final unusable = <String>[];
@@ -22,6 +25,7 @@ class AddonImportResult {
 
   int get total =>
       added.length +
+      nowOn.length +
       subtitles.length +
       alreadyThere.length +
       unusable.length +
@@ -51,9 +55,11 @@ class AddonImporter {
   }
 
   /// [names]: a known name per link (Stremio's list), shown for links
-  /// that fail before their manifest is read.
+  /// that fail before their manifest is read. [profiles]: the only
+  /// profiles that get the Media Hub sources (null = every regular one;
+  /// subtitle add-ons are for the device).
   Future<AddonImportResult> importLinks(List<String> links,
-      {Map<String, String> names = const {}}) async {
+      {Map<String, String> names = const {}, Set<String>? profiles}) async {
     final result = AddonImportResult();
     final checked = <ArchiveSource>[];
     final subtitleLinks = <String>{
@@ -61,10 +67,11 @@ class AddonImporter {
     };
     final newSubtitles = <Addon>[];
     String nameOf(String url) => names[url] ?? Uri.parse(url).host;
+    final existing = <String>[];
 
     await Future.wait(links.map((url) async {
       if (_archive.hasSource(url)) {
-        result.alreadyThere.add(nameOf(url));
+        existing.add(url);
         return;
       }
       try {
@@ -91,8 +98,21 @@ class AddonImporter {
       }
     }));
 
-    for (final s in await _archive.addCheckedSources(checked)) {
+    for (final s
+        in await _archive.addCheckedSources(checked, profiles: profiles)) {
       result.added.add(s.name);
+    }
+    // Picked again (another profile added it): on for these profiles too.
+    final turnedOn = {
+      for (final s in await _archive.addSourceProfiles(existing, profiles))
+        s.manifestUrl,
+    };
+    for (final url in existing) {
+      final name = nameOf(url);
+      (turnedOn.contains(ArchiveApiService.normalizeManifestUrl(url))
+              ? result.nowOn
+              : result.alreadyThere)
+          .add(name);
     }
     if (newSubtitles.isNotEmpty) {
       await _addons.save([..._addons.addons, ...newSubtitles]);

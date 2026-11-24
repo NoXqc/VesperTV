@@ -68,8 +68,8 @@ class _Archive extends ArchiveService {
   Future<ArchiveSource> checkSource(String link) async =>
       ArchiveSource(manifestUrl: link, name: 'Imported');
   @override
-  Future<List<ArchiveSource>> addCheckedSources(
-      List<ArchiveSource> sources) async {
+  Future<List<ArchiveSource>> addCheckedSources(List<ArchiveSource> sources,
+      {Set<String>? profiles}) async {
     added.addAll(sources);
     return sources;
   }

@@ -4343,4 +4343,22 @@ const Map<String, String> kIt = {
       "Non ho trovato il gruppo «{title}».",
   "An AI app wants to rename your group {group} to {name}.":
       "Un’app di IA vuole rinominare il tuo gruppo {group} in {name}.",
+  "No profile":
+      "Nessun profilo",
+  "Every profile":
+      "Tutti i profili",
+  "Only this profile ({name})":
+      "Solo questo profilo ({name})",
+  "Which profiles get it?":
+      "Quali profili lo avranno?",
+  "Only this profile":
+      "Solo questo profilo",
+  "This profile":
+      "Questo profilo",
+  "Already added, now also on for the profiles you picked: {names}":
+      "Già aggiunti, ora attivi anche per i profili scelti: {names}",
+  "Added, off for this profile":
+      "Aggiunto, disattivato per questo profilo",
+  "{name} was already added for other profiles. It is on for the profiles you picked now.":
+      "{name} era già aggiunto per altri profili. Ora è attivo per i profili scelti.",
 };

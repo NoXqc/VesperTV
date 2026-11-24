@@ -11,12 +11,16 @@ import '../../services/archive_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/glass_menu.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/source_profiles.dart';
 
 /// The summary shown after an import ([AddonImportResult]), one line per
 /// outcome that happened.
 String addonImportSummary(AddonImportResult r) => [
       if (r.added.isNotEmpty)
         tr('Added to the Media Hub: {names}', {'names': r.added.join(', ')}),
+      if (r.nowOn.isNotEmpty)
+        tr('Already added, now also on for the profiles you picked: {names}',
+            {'names': r.nowOn.join(', ')}),
       if (r.subtitles.isNotEmpty)
         tr('Added to subtitle add-ons: {names}',
             {'names': r.subtitles.join(', ')}),
@@ -52,6 +56,10 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
   final Set<String> _picked = {};
   AddonImportResult? _result;
   String? _error;
+
+  /// The Profiles row's choice; null = the usual (every regular profile).
+  /// Each person can import their own Stremio account for their profile.
+  Set<String>? _profiles;
 
   static const _pollEvery = Duration(seconds: 3);
   static const _codeLife = Duration(minutes: 10);
@@ -124,7 +132,7 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
           ..clear()
           ..addAll(addons
               .map((a) => a.url)
-              .where((u) => !service.hasSource(u) && !_isUnsupportedAddon(u)));
+              .where((u) => !service.hasSourceOn(u) && !_isUnsupportedAddon(u)));
         _step = _Step.list;
       });
       _focusMain();
@@ -159,7 +167,7 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
         if (_picked.contains(a.url)) a
     ];
     final result = await importer.importLinks([for (final a in picked) a.url],
-        names: {for (final a in picked) a.url: a.name});
+        names: {for (final a in picked) a.url: a.name}, profiles: _profiles);
     if (!mounted) return;
     setState(() {
       _result = result;
@@ -266,15 +274,22 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
           ),
         ),
         const SizedBox(height: 8),
+        SourceProfilesRow(
+          title: tr('Profiles'),
+          profileIds: _profiles,
+          onChanged: (ids) => setState(() => _profiles = ids),
+        ),
         for (final a in _addons)
           GlassFocusFrame(child: CheckboxListTile(
             value: _picked.contains(a.url),
             title: Text(a.name),
             subtitle: _isUnsupportedAddon(a.url)
                 ? Text(tr("Can't play in VesperTV"))
-                : service.hasSource(a.url)
+                : service.hasSourceOn(a.url)
                     ? Text(tr('Already added'))
-                    : Text(Uri.parse(a.url).host,
+                    : service.hasSource(a.url)
+                        ? Text(tr('Added, off for this profile'))
+                        : Text(Uri.parse(a.url).host,
                         style: const TextStyle(color: Colors.white54)),
             onChanged: (v) => setState(
                 () => v == true ? _picked.add(a.url) : _picked.remove(a.url)),
