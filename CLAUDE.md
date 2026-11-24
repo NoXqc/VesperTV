@@ -500,6 +500,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-24 - start screen after a profile pick / switch (`claude/profile-switch-home`, worktree
+  `VesperTV-claude-profilehome`):** wile.e.coyote (Discord, Open on = Home, profiles selector on): (1) picking a profile in
+  Who's watching after Back opened TV, not Home: `StartupRoutes` applied Open on to the first build only; now
+  `reopen` (main.dart `_finishProfileSelection`) builds the start section again, clearing the crash-guard flag if armed.
+  (2) After a switch from Home's profile cards, Back from Home opened Who's watching: the TV root (keyed by viewer)
+  remounts under Home and the new one lost `_returnToTv` (700 ms guard + tabs focus); `_remountHandOver` carries it
+  (and Home as the root tab on phones). Tests: home_back_navigation_test (16 remount cases, 8 failed before),
+  startup_routes_test. His other items: kids search = test build 979/980; second playlist hidden on kids = intended
+  (allowlist); slow profile load = waiting for a log. Analyze 16, 2499 tests. Not box-tested.
 - **Claude, 2026-11-23 - Debrid accounts page wording (`claude/debrid-help`, worktree `VesperTV-claude-debridhelp`):** owner:
   many users think Settings > Advanced > Debrid accounts is where their debrid add-ons go. The page now opens with a box
   "This page doesn't add movies or shows" + where content comes from (a Media Hub source such as Torrentio / AIOStreams

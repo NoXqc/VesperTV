@@ -353,6 +353,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
   Future<void> _finishProfileSelection() async {
     final selection = _profileSelection;
+    // The app is built again from its first route: Startup > Open on
+    // applies to this pick too (a no-op before the first one).
+    _startupRoutes.reopen(_storage);
     setState(() => _profileSelection = null);
     // The application Navigator must exist before startup playback can push.
     await WidgetsBinding.instance.endOfFrame;
