@@ -12,7 +12,7 @@ import io.flutter.embedding.engine.FlutterEngine
 /**
  * Flutter builds its accessibility (semantics) tree on every frame as soon as ANY
  * accessibility service is on. On TV boxes those are usually key filters: VesperTV's own
- * Remote buttons (RemoteKeyService) and launchers such as Monet. They never read the
+ * Remote buttons add-on (RemoteKeysLink) and launchers such as Monet. They never read the
  * screen, yet the tree cost 50-110 ms per heavy frame on the Homatics (2026-11-13 trace:
  * the glide to full screen and back). When no enabled service can retrieve window content,
  * the tree is turned off; a screen reader (TalkBack, Select to Speak...) turns it back on.

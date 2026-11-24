@@ -4262,4 +4262,10 @@ const Map<String, String> kDe = {
       "Gruppen mit XXX, Adult, Porn oder 18+ im Namen sind im Kinderprofil immer ausgeblendet.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Aus schaltet alle Sportfunktionen auf diesem Gerät ab: den Tab, den Sports-Modus, die Spiele auf der Startseite und auf dem TV-Startbildschirm, Torbenachrichtigungen, Spielerinnerungen und die Spiel-Tabs im Player. Deine Ligen, Teams und Auswahlen bleiben gespeichert. Um nur den Tab auszublenden, nutze Einstellungen > Oberfläche > Tabs.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Erlaube {app} auf dem nächsten Bildschirm, Apps zu installieren, komm dann zurück und drücke hier noch einmal.",
+  "Downloading…":
+      "Wird heruntergeladen…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Um Tasten wie TV, YouTube oder Prime zu nutzen, füge das kostenlose Add-on „{name}“ hinzu, eine kleine separate App. Drücke OK, um es herunterzuladen und zu installieren.",
 };

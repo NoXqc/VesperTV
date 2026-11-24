@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 import '../../l10n/l10n.dart';
+import '../../services/app_update_service.dart';
 import '../../services/remote_buttons.dart';
 import '../../utils/constants.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -42,7 +44,10 @@ class _RemoteButtonsScreenState extends State<RemoteButtonsScreen>
   Timer? _learnTimeout;
 
   /// Android: [RemoteKeys] (buttons the box keeps); null elsewhere.
-  ({bool enabled, bool connected})? _boxKeys;
+  ({bool installed, bool enabled, bool connected})? _boxKeys;
+
+  /// The remote buttons add-on is downloading.
+  bool _installing = false;
 
   @override
   void initState() {
@@ -125,6 +130,38 @@ class _RemoteButtonsScreenState extends State<RemoteButtonsScreen>
           {'button': remoteButtonName(keyId)}));
       _learnFocus.requestFocus();
     });
+  }
+
+  /// Downloads the "VesperTV remote buttons" add-on (the accessibility
+  /// service, a separate app since 2026-11-24) and hands it to Android's
+  /// installer, like Check for Updates does with VesperTV itself.
+  Future<void> _installAddon() async {
+    if (_installing) return;
+    final updates = AppUpdateService();
+    if (!await updates.canRequestInstalls()) {
+      _say(tr(
+          'Allow {app} to install apps on the next screen, then come back and press this again.',
+          {'app': AppConstants.appName}));
+      await updates.requestInstallPermission();
+      return;
+    }
+    setState(() => _installing = true);
+    try {
+      final head = await http
+          .head(Uri.parse(RemoteKeys.addonUrl))
+          .timeout(const Duration(seconds: 15));
+      final size = int.tryParse(head.headers['content-length'] ?? '') ?? 0;
+      if (head.statusCode != 200 || size <= 0) {
+        throw UpdateDownloadException('HTTP ${head.statusCode}');
+      }
+      final file = await updates.downloadUpdate(RemoteKeys.addonUrl,
+          expectedSizeBytes: size);
+      await updates.installApk(file.path);
+    } catch (_) {
+      if (mounted) _say(tr('Download failed. Please try again.'));
+    } finally {
+      if (mounted) setState(() => _installing = false);
+    }
   }
 
   void _say(String text) =>
@@ -257,7 +294,19 @@ class _RemoteButtonsScreenState extends State<RemoteButtonsScreen>
                 tr('OK, Back and the arrows keep their jobs. A button set here only does what you set: a hold you leave on Nothing does nothing.'),
                 style: const TextStyle(fontSize: 13, color: Colors.white60)),
           ),
-          if (_boxKeys case final box?) ...[
+          if (_boxKeys case final box? when !box.installed) ...[
+            const SizedBox(height: 12),
+            TvMenuTile(
+              icon: Icons.download_outlined,
+              title: tr('Buttons your box keeps'),
+              subtitle: _installing
+                  ? tr('Downloading…')
+                  : tr(
+                      'To use buttons like TV, YouTube or Prime, add the free "{name}" add-on, a small separate app. Press OK to download and install it.',
+                      {'name': '${AppConstants.appName} remote buttons'}),
+              onTap: _installAddon,
+            ),
+          ] else if (_boxKeys case final box?) ...[
             const SizedBox(height: 12),
             TvMenuTile(
               icon: box.connected

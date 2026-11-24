@@ -568,11 +568,13 @@ class RemoteButtons {
 }
 
 /// Android: buttons the box keeps for itself (the Homatics' TV, YouTube,
-/// Prime, app button and Settings never reach an app). RemoteKeyService, an
-/// accessibility service the viewer turns on in Android's settings, sees
-/// them first and, while VesperTV is on screen, hands it the Guide key, the
-/// learned buttons ([_take], by Android key code) and any button while
-/// Settings waits for one.
+/// Prime, app button and Settings never reach an app). The "VesperTV remote
+/// buttons" add-on (a separate small app since 2026-11-24: Play Protect
+/// blocks a sideloaded app that declares an accessibility service, so
+/// VesperTV can't carry it) has an accessibility service the viewer turns on
+/// in Android's settings. It sees them first and, while VesperTV is on
+/// screen, hands it the Guide key, the learned buttons ([_take], by Android
+/// key code) and any button while Settings waits for one (RemoteKeysLink.kt).
 class RemoteKeys {
   RemoteKeys._();
 
@@ -614,12 +616,21 @@ class RemoteKeys {
     return _androidCodes[keyId] ?? const [];
   }
 
-  /// Null off Android. enabled = switched on in Android's settings;
-  /// connected = running (on but not running: Android blocked it).
-  static Future<({bool enabled, bool connected})?> status() async {
+  /// Where the add-on downloads from: small, signed with VesperTV's key,
+  /// served by the site (docs/addons/), never attached to a GitHub release
+  /// (the updater installs a release's first .apk).
+  static const addonUrl =
+      'https://vespertv.app/addons/VesperTV-remote-buttons.apk';
+
+  /// Null off Android. installed = the add-on is on this device; enabled =
+  /// switched on in Android's settings; connected = running (on but not
+  /// running: Android blocked it).
+  static Future<({bool installed, bool enabled, bool connected})?>
+      status() async {
     final map = await _call<Map<Object?, Object?>>('status');
     if (map == null) return null;
     return (
+      installed: map['installed'] == true,
       enabled: map['enabled'] == true,
       connected: map['connected'] == true,
     );

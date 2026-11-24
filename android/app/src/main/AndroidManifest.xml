@@ -31,6 +31,14 @@
          recognizer (asked for only when the viewer first talks to it). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
+    <!-- Settings > Remote buttons > Buttons your box keeps (RemoteKeysLink.kt): the
+         accessibility service is the separate "VesperTV remote buttons" add-on
+         (android/remotebuttons). Play Protect blocks a sideloaded app that declares
+         one, so VesperTV never does again. Signature permission = only our key links. -->
+    <permission
+        android:name="com.nox.nox_iptv.permission.REMOTE_KEYS"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.nox.nox_iptv.permission.REMOTE_KEYS"/>
     <!-- Not TV-only: phones/tablets can still install and run this fine. -->
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
@@ -133,19 +141,6 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-requested live sports goal notifications for subscribed games; overlapping games share one bounded session with a Stop action."/>
         </service>
-        <!-- Test +750: remote buttons the box's firmware takes (RemoteKeyService). -->
-        <service
-            android:name=".RemoteKeyService"
-            android:exported="true"
-            android:label="@string/remote_keys_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/remote_keys_service"/>
-        </service>
         <receiver android:name=".SportsAlarmReceiver" android:exported="false"/>
         <receiver android:name=".RecorderAlarmReceiver" android:exported="false"/>
         <!-- Clears the launcher's "Live now in Sports" row once the app stops
@@ -193,6 +188,8 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- The remote buttons add-on (RemoteKeysLink.kt). -->
+        <package android:name="com.nox.nox_iptv.remotebuttons"/>
         <!-- Android TV's TvProvider (LauncherChannels.kt). -->
         <provider android:authorities="android.media.tv" />
         <intent>

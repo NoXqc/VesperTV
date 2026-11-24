@@ -24,3 +24,5 @@ plugins {
 }
 
 include(":app")
+// "VesperTV remote buttons" add-on (android/remotebuttons/build.gradle.kts).
+include(":remotebuttons")

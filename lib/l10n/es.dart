@@ -4359,4 +4359,10 @@ const Map<String, String> kEs = {
       "Los grupos llamados XXX, Adult, Porn o 18+ siempre están ocultos en un perfil infantil.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Desactivado, apaga todas las funciones de deportes en este dispositivo: la pestaña, el Modo Deportes, los partidos en Inicio y en la pantalla de inicio de la TV, las alertas de goles, los recordatorios de partidos y las pestañas de partido del reproductor. Tus ligas, equipos y elecciones se conservan. Para ocultar solo la pestaña, usa Ajustes > Interfaz > Pestañas.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Permite que {app} instale aplicaciones en la siguiente pantalla, luego vuelve y pulsa aquí otra vez.",
+  "Downloading…":
+      "Descargando…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Para usar botones como TV, YouTube o Prime, añade el complemento gratuito «{name}», una pequeña app aparte. Pulsa OK para descargarlo e instalarlo.",
 };

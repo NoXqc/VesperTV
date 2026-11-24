@@ -3953,4 +3953,10 @@ const Map<String, String> kPl = {
       "Grupy o nazwach XXX, Adult, Porn lub 18+ są zawsze ukryte w profilu dziecka.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Wyłączone wyłącza wszystkie funkcje sportowe na tym urządzeniu: kartę, Tryb sportowy, mecze na stronie głównej i na ekranie głównym TV, powiadomienia o golach, przypomnienia o meczach i karty meczu w odtwarzaczu. Twoje ligi, drużyny i wybory zostają zachowane. Aby ukryć tylko kartę, użyj Ustawienia > Interfejs > Karty.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Pozwól {app} instalować aplikacje na następnym ekranie, potem wróć i naciśnij tu ponownie.",
+  "Downloading…":
+      "Pobieranie…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Aby używać przycisków takich jak TV, YouTube czy Prime, dodaj darmowy dodatek „{name}”, małą osobną aplikację. Naciśnij OK, aby go pobrać i zainstalować.",
 };

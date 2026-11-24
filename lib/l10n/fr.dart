@@ -4372,4 +4372,10 @@ const Map<String, String> kFr = {
       "Les groupes nommés XXX, Adult, Porn ou 18+ sont toujours masqués sur un profil enfant.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Désactivé, toutes les fonctions sport sont coupées sur cet appareil : l’onglet, le Mode Sports, les matchs sur l’Accueil et sur l’écran d’accueil de la TV, les alertes de buts, les rappels de matchs et les onglets de match du lecteur. Vos ligues, équipes et choix sont conservés. Pour masquer seulement l’onglet, utilisez Paramètres > Interface > Onglets.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Autorisez {app} à installer des applications sur l’écran suivant, puis revenez et appuyez de nouveau ici.",
+  "Downloading…":
+      "Téléchargement…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Pour utiliser des boutons comme TV, YouTube ou Prime, ajoutez le module gratuit « {name} », une petite application à part. Appuyez sur OK pour le télécharger et l’installer.",
 };

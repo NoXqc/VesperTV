@@ -4366,4 +4366,10 @@ const Map<String, String> kIt = {
       "I gruppi chiamati XXX, Adult, Porn o 18+ sono sempre nascosti in un profilo bambini.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Spento, disattiva tutte le funzioni sport su questo dispositivo: la scheda, la Modalità Sport, le partite nella Home e nella schermata iniziale della TV, gli avvisi gol, i promemoria delle partite e le schede partita del player. Leghe, squadre e scelte restano salvate. Per nascondere solo la scheda, usa Impostazioni > Interfaccia > Schede.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Consenti a {app} di installare app nella schermata successiva, poi torna qui e premi di nuovo.",
+  "Downloading…":
+      "Download in corso…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Per usare tasti come TV, YouTube o Prime, aggiungi il componente gratuito “{name}”, una piccola app separata. Premi OK per scaricarlo e installarlo.",
 };

@@ -3831,4 +3831,10 @@ const Map<String, String> kUk = {
       "Групи з назвами XXX, Adult, Porn або 18+ завжди приховані в дитячому профілі.",
   "Off turns off every sports feature on this device: the tab, Sports Mode, the games on Home and on the TV home screen, goal alerts, game reminders and the player's game tabs. Your leagues, teams and picks are kept. To hide only the tab, use Settings > Interface > Tabs.":
       "Вимкнення вимикає всі спортивні функції на цьому пристрої: вкладку, Спортивний режим, матчі на Головній і на головному екрані ТВ, сповіщення про голи, нагадування про матчі та вкладки матчу в плеєрі. Ваші ліги, команди та вибір зберігаються. Щоб приховати лише вкладку, скористайтеся Налаштування > Інтерфейс > Вкладки.",
+  "Allow {app} to install apps on the next screen, then come back and press this again.":
+      "Дозвольте {app} встановлювати застосунки на наступному екрані, потім поверніться й натисніть тут ще раз.",
+  "Downloading…":
+      "Завантаження…",
+  "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
+      "Щоб користуватися кнопками TV, YouTube чи Prime, додайте безкоштовний додаток «{name}» — невеликий окремий застосунок. Натисніть OK, щоб завантажити й установити його.",
 };
