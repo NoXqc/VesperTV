@@ -157,6 +157,34 @@ void main() {
     startup.dispose();
   });
 
+  for (final pickAfter in [
+    const Duration(seconds: 2),
+    const Duration(minutes: 5),
+  ]) {
+    testWidgets(
+        "a pick in Who's watching opens the start section again "
+        '(${pickAfter.inSeconds} s after the launch)', (tester) async {
+      await storage.setStartSection('home');
+      await tester.pumpWidget(app());
+      expect(find.text('Page home').hitTestable(), findsOneWidget);
+      await tester.pump(pickAfter);
+      // Who's watching replaces the app; picking a viewer builds it again
+      // (main.dart _finishProfileSelection).
+      await tester.pumpWidget(const SizedBox());
+      startup.reopen(storage);
+      await tester.pumpWidget(app());
+      expect(find.text('Page home').hitTestable(), findsOneWidget,
+          reason: 'Home again, not TV (and not the crash-guard fallback)');
+      final nav = tester.state<NavigatorState>(find.byType(Navigator));
+      nav.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Page tv').hitTestable(), findsOneWidget);
+      await tester.pump(const Duration(seconds: 15));
+      expect(storage.getStartSectionPending(), isFalse);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   for (final page in ['tv', 'sports']) {
     testWidgets('hidden $page starts on Movies without a hidden first frame',
         (tester) async {

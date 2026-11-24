@@ -18,6 +18,20 @@ class StartupRoutes {
   bool homeInRoot = false;
   Timer? _guardTimer;
 
+  /// Who's watching took the app's place (Back at the root with the
+  /// selector on, a locked profile coming back): the viewer picked next
+  /// opens on Startup > Open on again, like a launch. It opened on TV
+  /// (wile.e.coyote, 2026-11-24: Home set, TV after picking the profile).
+  /// A start section still in its crash-guard window counts as opened.
+  void reopen(StorageService storage) {
+    if (_guardTimer?.isActive ?? false) {
+      _guardTimer!.cancel();
+      unawaited(storage.setStartSectionPending(false));
+    }
+    _generated = false;
+    _rootClaimed = false;
+  }
+
   /// Only the first root consumes the startup choice. Viewer/language
   /// remounts retain the existing behavior of returning to TV.
   String takeRootSection() {

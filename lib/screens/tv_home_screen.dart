@@ -390,6 +390,36 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _returnToTv = false;
   bool _returnHomeToFavorites = false;
   Timer? _returnBackGuard;
+
+  /// A profile switch remounts this screen (main.dart keys it by viewer)
+  /// while Home / Media Hub / Sports Trak can be open over it, and so can
+  /// Home as this screen's own tab (phones). The new screen takes the old
+  /// one's place: Back from that page returns to the tabs column with its
+  /// guard against the press's tail, and Home stays the tab. Without it the
+  /// tail of the Back closing Home opened Who's watching (wile.e.coyote,
+  /// 2026-11-24). Set in [deactivate], which runs before the new screen's
+  /// initState; cleared in [dispose] when no new screen took it.
+  static ({bool returnToTv, bool favorites, bool home})? _remountHandOver;
+
+  @override
+  void deactivate() {
+    if (_returnToTv || _tab == 'Home') {
+      _remountHandOver = (
+        returnToTv: _returnToTv,
+        favorites: _returnHomeToFavorites,
+        home: _tab == 'Home',
+      );
+    }
+    super.deactivate();
+  }
+
+  /// Moved in the tree, not replaced: nothing to hand over.
+  @override
+  void activate() {
+    super.activate();
+    _remountHandOver = null;
+  }
+
   bool _focusRecoveryScheduled = false;
   int _browseFocusRequest = 0;
 
@@ -2946,11 +2976,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     FocusManager.instance.addListener(_scheduleFocusRecovery);
     HardwareKeyboard.instance.addHandler(_noteKey);
     WatchList.instance.changes.addListener(_watchListChanged);
-    _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
+    final handOver = _remountHandOver;
+    _remountHandOver = null;
+    _returnToTv = widget.startupBrowseCovered ||
+        widget.startupSportsCovered ||
+        (handOver?.returnToTv ?? false);
+    _returnHomeToFavorites = handOver?.favorites ?? false;
     final prefs = context.read<AppPreferences>();
-    _initialTab = prefs.isTabHidden(widget.initialTab)
-        ? prefs.fallbackTab
+    final firstTab = (handOver?.home ?? false) &&
+            widget.initialTab == 'TV' &&
+            !prefs.homeHidden
+        ? 'Home'
         : widget.initialTab;
+    _initialTab = prefs.isTabHidden(firstTab) ? prefs.fallbackTab : firstTab;
     _tab = _initialTab;
     if (_tab == 'TV') {
       _selectedGroup = _favoritesGroupSentinel;
@@ -3065,6 +3103,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _focusPreviewHistory?.cancel();
     WatchList.instance.changes.removeListener(_watchListChanged);
     _returnBackGuard?.cancel();
+    _remountHandOver = null;
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
     FocusManager.instance.removeListener(_scheduleFocusRecovery);

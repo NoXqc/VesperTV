@@ -21,115 +21,134 @@ import 'wide_guide_back_test.dart' show GuidePlaylist, GuideEpg;
 import 'warm_exit_helper.dart';
 
 void main() {
-  for (final startupHome in [false, true]) {
-    for (final hidden in [false, true]) {
-      for (final back in ['system', 'key', 'duplicate', 'held']) {
-        testWidgets(
-            'Home Back returns to TV without Exit: startup=$startupHome hidden=$hidden, $back',
-            (tester) async {
-          final exits = recordWarmExits();
-          tester.view.physicalSize = const Size(1920, 1080);
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.reset);
-          SharedPreferences.setMockInitialValues(
-              {AppConstants.keyShowClock: false});
-          final storage = ZapStorage();
-          await storage.init();
-          await storage.setHomeRows(
-              [for (final kind in HomeRowKind.values) '-${kind.id}']);
-          await storage.setHideProfiles(hidden);
-          final prefs = AppPreferences(storage);
-          await prefs.init();
-          prefs.isTelevision = true;
-          final playlist = GuidePlaylist(storage);
-          final playback = PlaybackService(storage, playlist);
-          final epg = GuideEpg(storage);
-          final viewers = ViewerProfileService(storage, playlist, playback);
-          final archive = ArchiveService(storage);
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMessageHandler(
-                  'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
-                  (_) async =>
-                      const StandardMessageCodec().encodeMessage([null]));
-          await tester.pumpWidget(MultiProvider(
-              providers: [
-                Provider<StorageService>.value(value: storage),
-                ChangeNotifierProvider<AppPreferences>.value(value: prefs),
-                ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
-                ChangeNotifierProvider<PlaybackService>.value(value: playback),
-                ChangeNotifierProvider<EpgService>.value(value: epg),
-                ChangeNotifierProvider<ViewerProfileService>.value(
-                    value: viewers),
-                ChangeNotifierProvider<ArchiveService>.value(value: archive),
-              ],
-              child: MaterialApp(
-                  navigatorObservers: [appRouteObserver],
-                  onGenerateInitialRoutes: startupHome
-                      ? (_) => [
-                            MaterialPageRoute<void>(
-                                builder: (_) => const TvHomeScreen(
-                                    startupBrowseCovered: true)),
-                            MaterialPageRoute<void>(
-                                builder: (_) => const HomeScreen()),
-                          ]
-                      : null,
-                  routes: {'/': (_) => const TvHomeScreen()})));
-          await tester.pumpAndSettle();
-          if (!startupHome) {
-            await tester.tap(find.text('Home'));
+  for (final remount in [false, true]) {
+    for (final startupHome in [false, true]) {
+      for (final hidden in [false, true]) {
+        for (final back in ['system', 'key', 'duplicate', 'held']) {
+          testWidgets(
+              'Home Back returns to TV without Exit: startup=$startupHome hidden=$hidden, $back'
+              '${remount ? ', TV screen remounted under Home (profile switch)' : ''}',
+              (tester) async {
+            final exits = recordWarmExits();
+            tester.view.physicalSize = const Size(1920, 1080);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            SharedPreferences.setMockInitialValues(
+                {AppConstants.keyShowClock: false});
+            final storage = ZapStorage();
+            await storage.init();
+            await storage.setHomeRows(
+                [for (final kind in HomeRowKind.values) '-${kind.id}']);
+            await storage.setHideProfiles(hidden);
+            final prefs = AppPreferences(storage);
+            await prefs.init();
+            prefs.isTelevision = true;
+            final playlist = GuidePlaylist(storage);
+            final playback = PlaybackService(storage, playlist);
+            final epg = GuideEpg(storage);
+            final viewers = ViewerProfileService(storage, playlist, playback);
+            final archive = ArchiveService(storage);
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMessageHandler(
+                    'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+                    (_) async =>
+                        const StandardMessageCodec().encodeMessage([null]));
+            // main.dart keys the TV root by viewer: a profile switch made
+            // while Home is open remounts it under Home.
+            final viewerKey = ValueNotifier<int>(0);
+            Widget root(bool startupCovered) => ValueListenableBuilder<int>(
+                valueListenable: viewerKey,
+                builder: (_, n, __) => TvHomeScreen(
+                    key: ValueKey('viewer$n'),
+                    startupBrowseCovered: startupCovered && n == 0));
+            await tester.pumpWidget(MultiProvider(
+                providers: [
+                  Provider<StorageService>.value(value: storage),
+                  ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+                  ChangeNotifierProvider<PlaylistManager>.value(
+                      value: playlist),
+                  ChangeNotifierProvider<PlaybackService>.value(
+                      value: playback),
+                  ChangeNotifierProvider<EpgService>.value(value: epg),
+                  ChangeNotifierProvider<ViewerProfileService>.value(
+                      value: viewers),
+                  ChangeNotifierProvider<ArchiveService>.value(value: archive),
+                ],
+                child: MaterialApp(
+                    navigatorObservers: [appRouteObserver],
+                    onGenerateInitialRoutes: startupHome
+                        ? (_) => [
+                              MaterialPageRoute<void>(
+                                  builder: (_) => root(true)),
+                              MaterialPageRoute<void>(
+                                  builder: (_) => const HomeScreen()),
+                            ]
+                        : null,
+                    routes: {'/': (_) => root(false)})));
             await tester.pumpAndSettle();
-          }
-          expect(find.byType(HomeScreen), findsOneWidget);
-          if (back == 'system') {
-            await tester.binding.handlePopRoute();
-          } else if (back == 'held') {
-            // A long press: Home closes on the key-down; its repeats and
-            // release must be handled here, or Android turns them into a
-            // second Back after the return guard (owner, 2026-11-10).
-            const back = LogicalKeyboardKey.goBack;
-            const physical = PhysicalKeyboardKey.escape;
-            await tester.sendKeyDownEvent(back, physicalKey: physical);
+            if (!startupHome) {
+              await tester.tap(find.text('Home'));
+              await tester.pumpAndSettle();
+            }
+            expect(find.byType(HomeScreen), findsOneWidget);
+            if (remount) {
+              viewerKey.value++;
+              await tester.pumpAndSettle();
+              expect(find.byType(HomeScreen), findsOneWidget);
+            }
+            if (back == 'system') {
+              await tester.binding.handlePopRoute();
+            } else if (back == 'held') {
+              // A long press: Home closes on the key-down; its repeats and
+              // release must be handled here, or Android turns them into a
+              // second Back after the return guard (owner, 2026-11-10).
+              const back = LogicalKeyboardKey.goBack;
+              const physical = PhysicalKeyboardKey.escape;
+              await tester.sendKeyDownEvent(back, physicalKey: physical);
+              await tester.pumpAndSettle();
+              expect(find.byType(HomeScreen), findsNothing);
+              expect(BackPressSwallow.active, isTrue);
+              for (var i = 0; i < 3; i++) {
+                expect(
+                    await tester.sendKeyRepeatEvent(back,
+                        physicalKey: physical),
+                    isTrue);
+                await tester.pump(const Duration(milliseconds: 300));
+              }
+              expect(await tester.sendKeyUpEvent(back, physicalKey: physical),
+                  isTrue);
+              expect(BackPressSwallow.active, isFalse);
+            } else {
+              await tester.sendKeyEvent(LogicalKeyboardKey.goBack,
+                  physicalKey: PhysicalKeyboardKey.escape);
+              if (back == 'duplicate') {
+                await tester.pumpAndSettle();
+                await tester.binding.handlePopRoute();
+              }
+            }
             await tester.pumpAndSettle();
             expect(find.byType(HomeScreen), findsNothing);
-            expect(BackPressSwallow.active, isTrue);
-            for (var i = 0; i < 3; i++) {
-              expect(
-                  await tester.sendKeyRepeatEvent(back, physicalKey: physical),
-                  isTrue);
-              await tester.pump(const Duration(milliseconds: 300));
-            }
-            expect(await tester.sendKeyUpEvent(back, physicalKey: physical),
-                isTrue);
-            expect(BackPressSwallow.active, isFalse);
-          } else {
-            await tester.sendKeyEvent(LogicalKeyboardKey.goBack,
-                physicalKey: PhysicalKeyboardKey.escape);
-            if (back == 'duplicate') {
-              await tester.pumpAndSettle();
-              await tester.binding.handlePopRoute();
-            }
-          }
-          await tester.pumpAndSettle();
-          expect(find.byType(HomeScreen), findsNothing);
-          expect(find.byType(AlertDialog), findsNothing);
-          expect(exits, isEmpty, reason: 'Back from Home must not leave');
-          expect(find.text('TV').hitTestable(), findsOneWidget);
-          // A deliberate later Back on TV leaves at once (warm exit).
-          await tester.pump(const Duration(milliseconds: 750));
-          await tester.binding.handlePopRoute();
-          await tester.pumpAndSettle();
-          expect(find.byType(AlertDialog), findsNothing);
-          expect(exits, ['warm']);
-          await tester.pump(const Duration(seconds: 20));
-          await tester.pumpWidget(const SizedBox());
-          viewers.dispose();
-          playback.dispose();
-          playlist.dispose();
-          prefs.dispose();
-          epg.dispose();
-          archive.dispose();
-          await tester.pump();
-        });
+            expect(find.byType(AlertDialog), findsNothing);
+            expect(exits, isEmpty, reason: 'Back from Home must not leave');
+            expect(find.text('TV').hitTestable(), findsOneWidget);
+            // A deliberate later Back on TV leaves at once (warm exit).
+            await tester.pump(const Duration(milliseconds: 750));
+            await tester.binding.handlePopRoute();
+            await tester.pumpAndSettle();
+            expect(find.byType(AlertDialog), findsNothing);
+            expect(exits, ['warm']);
+            await tester.pump(const Duration(seconds: 20));
+            await tester.pumpWidget(const SizedBox());
+            viewers.dispose();
+            playback.dispose();
+            playlist.dispose();
+            prefs.dispose();
+            epg.dispose();
+            archive.dispose();
+            viewerKey.dispose();
+            await tester.pump();
+          });
+        }
       }
     }
   }
