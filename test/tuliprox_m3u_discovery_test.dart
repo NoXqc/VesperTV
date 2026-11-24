@@ -133,8 +133,8 @@ void main() {
     test('from the #EXTM3U line', () async {
       header = null;
       body = '#EXTM3U url-tvg="http://x/epg.xml" '
-              'x-tuliprox-player-api="/ui"\n' +
-          entry;
+          'x-tuliprox-player-api="/ui"\n'
+          '$entry';
       expect(await read(), '/ui');
     });
 
