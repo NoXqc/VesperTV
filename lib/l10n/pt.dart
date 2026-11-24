@@ -492,7 +492,579 @@ const Map<String, String> kPt = {
       "Nenhuma legenda em {language} para este título.",
   'No {language} subtitles online for this title.':
       "Nenhuma legenda em {language} online para este título.",
-  'Track {id}': "Faixa {id}",
+ 'Sports': "Desporto",
+  'this team': "esta equipa",
+  'My Teams': "As minhas equipas",
+  'Last channels': "Últimos canais",
+  'No other source found for this game.':
+      "Nenhuma outra fonte encontrada para este jogo.",
+  '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
+      "◀ ▶ separadores  ·  OK para ver  ·  Voltar para fechar",
+  'None of your teams play today.': "Nenhuma das suas equipas joga hoje.",
+  'Follow teams from {tab} > Standings to see them here.':
+      "Siga equipas em {tab} > Classificação para as ver aqui.",
+  'No games from your leagues are live right now.':
+      "Nenhum jogo das suas ligas está em direto neste momento.",
+  'Hold OK on a team to unfollow · on a game to pick the channel':
+      "Mantenha OK premido numa equipa para deixar de seguir · num jogo para escolher o canal",
+  'Add team': "Adicionar equipa",
+  'Follow one from Standings': "Siga uma na Classificação",
+  'Could not load': "Não foi possível carregar",
+  'Follow your teams to see them here': "Siga as suas equipas para as ver aqui",
+  'Follow another team': "Seguir outra equipa",
+  'Add team opens Standings: hold OK on a team to follow it.':
+      "Adicionar equipa abre a Classificação: mantenha OK premido numa equipa para a seguir.",
+  'This team could not be loaded. Check the connection.':
+      "Não foi possível carregar esta equipa. Verifique a ligação.",
+  'Next 2 weeks': "Próximas 2 semanas",
+  'No games in the next two weeks.':
+      "Sem jogos nas próximas duas semanas.",
+  'vs': "vs",
+  'at': "@",
+  'Today {time}': "Hoje {time}",
+  'Tomorrow {time}': "Amanhã {time}",
+  'Last game: {opponent} · Final': "Últ. jogo: {opponent} · Final",
+  'Last game: {result} {mine}-{other} {opponent}':
+      "Últ. jogo: {result} {mine}-{other} {opponent}",
+  'LIVE': "EM DIRETO",
+  'Looking…': "A procurar…",
+  'TEAM': "EQUIPA",
+  'Later today': "Mais tarde hoje",
+  'Tomorrow': "Amanhã",
+  'Not played': "Não disputados",
+  'Scheduled': "Agendados",
+  'Live now': "Em direto agora",
+  'Final': "Final",
+  'All': "Tudo",
+  'Edit leagues': "Editar ligas",
+  'Scores hidden': "Resultados ocultos",
+  'Scores shown': "Resultados visíveis",
+  'Yesterday': "Ontem",
+  'Today': "Hoje",
+  'Day': "Dia",
+  'OK: watch  ·  OK again: full screen  ·  Hold OK: stats  ·  ▼ all games':
+      "OK: ver  ·  OK novamente: ecrã inteiro  ·  Manter premido OK: estatísticas  ·  ▼ todos os jogos",
+  'OK again on a game: full screen  ·  ▶❚❚: stop':
+      "OK novamente num jogo: ecrã inteiro  ·  ▶❚❚: parar",
+  'Standings': "Classificação",
+  '{name} standings': "Classificação {name}",
+  '{name} championship': "Campeonato {name}",
+  'No games on this day for your leagues':
+      "Sem jogos neste dia para as suas ligas",
+  'Try another day, or add leagues with Edit leagues.':
+      "Experimente outro dia ou adicione ligas em Editar ligas.",
+  'Live now  {count}': "Em direto agora  {count}",
+  'Live': "Em direto",
+  'Starts in {p}{p2}m': "Começa em {p}{p2} min",
+  'Looking for the channel…': "A procurar o canal…",
+  'No channel found — OK to pick one':
+      "Nenhum canal encontrado — OK para escolher um",
+  'Hold OK to pick or swap the channel':
+      "Mantenha OK premido para escolher ou trocar o canal",
+  'Hold OK: pick the channel  ·  ▶❚❚: watch here':
+      "Manter premido OK: escolher o canal  ·  ▶❚❚: ver aqui",
+  'Tap the game again: full screen  ·  Back: stop':
+      "Toque novamente no jogo: ecrã inteiro  ·  Voltar: parar",
+  'Tap: watch here  ·  Hold: pick the channel':
+      "Toque: ver aqui  ·  Manter premido: escolher o canal",
+  'Play here': "Reproduzir aqui",
+  '{channel} · plays at the top of {tab}':
+      "{channel} · reproduz no topo de {tab}",
+  '▶❚❚: watch this game  ·  Back: playing game':
+      "▶❚❚: ver este jogo  ·  Voltar: jogo em reprodução",
+  'OK: full screen  ·  ▶❚❚ or Back: stop':
+      "OK: ecrã inteiro  ·  ▶❚❚ ou Voltar: parar",
+  'Still looking for channels…': "Ainda a procurar canais…",
+  'No channel found for this game': "Nenhum canal encontrado para este jogo",
+  'On {matches} channel{s}': "Em {matches} canal{s}",
+  'Pick the channel': "Escolher o canal",
+  'Choose a different channel': "Escolher outro canal",
+  'Search your channels — it can be remembered for this game or team':
+      "Pesquise nos seus canais — pode ser memorizado para este jogo ou equipa",
+  'Forget my pick': "Esquecer a minha escolha",
+  'Go back to the automatic match': "Voltar à correspondência automática",
+  'Remember this channel?': "Memorizar este canal?",
+  'Just this game': "Apenas este jogo",
+  'Best for channels named after one game':
+      "Ideal para canais com o nome de um jogo",
+  'Always for the {shortName}': "Sempre para {shortName}",
+  'Best for a regular channel, like a regional network':
+      "Ideal para um canal habitual, como uma emissora regional",
+  'Leagues': "Ligas",
+  'Save': "Guardar",
+  'Pick the channel for {title}': "Escolha o canal para {title}",
+  'Search channels': "Pesquisar canais",
+  'No channels match "{query}"': "Nenhum canal corresponde a «{query}»",
+  '{results}{p} channels': "{results}{p} canais",
+  '{group} · Now: {now}': "{group} · Agora: {now}",
+  'Preseason': "Pré-época",
+  'Pick a league above, then hold OK on a team to follow it. Back returns to My Teams.':
+      "Escolha uma liga acima e mantenha OK premido numa equipa para a seguir. Voltar regressa às Minhas equipas.",
+  'Standings could not be loaded. Check the connection.':
+      "Não foi possível carregar a classificação. Verifique a ligação.",
+  'switch conference': "mudar conferência",
+  'switch table': "mudar tabela",
+  'Hold OK on a team to follow it (My Teams)':
+      "Mantenha OK premido numa equipa para a seguir (As minhas equipas)",
+  'Your pick': "A sua escolha",
+  'Found by its name': "Encontrado pelo nome",
+  'Found in the guide': "Encontrado no guia",
+  "Team's channel, no guide listing": "Canal da equipa, sem programação no guia",
+  "Broadcaster, no guide listing": "Emissora, sem programação no guia",
+  "Only on a hidden channel": "Apenas num canal oculto",
+  "Not in your guide yet": "Ainda não está no seu guia",
+  "On a hidden channel — OK to pick one":
+      "Num canal oculto — OK para escolher um",
+  "Not in your guide yet — OK to pick one":
+      "Ainda não está no seu guia — OK para escolher um",
+  "Only found on {channel}, which is hidden in your lists.":
+      "Encontrado apenas em {channel}, que está oculto nas suas listas.",
+  "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
+      "O seu guia ainda não abrange a hora deste jogo. Atualize o guia mais perto do jogo.",
+  "No channel name or guide listing names this game.":
+      "Nenhum nome de canal ou programação do guia menciona este jogo.",
+  'Some scores could not be loaded. Check the connection.':
+      "Não foi possível carregar alguns resultados. Verifique a ligação.",
+  'Unfollow': "Deixar de seguir",
+  'Follow': "Seguir",
+  'Remove from My Teams': "Remover das Minhas equipas",
+  'Add to My Teams — their games show first in {tab}':
+      "Adicionar às Minhas equipas — os jogos aparecem primeiro em {tab}",
+  // Results (W/L/D = won/lost/draw) and standings columns.
+  'W': "V",
+  'L': "D",
+  'D': "E",
+  'T': "E",
+  'GP': "J",
+  'GD': "DIF",
+  'PTS': "PTS",
+  'OTL': "DPR",
+  'DIFF': "DIF",
+  'STRK': "SÉRIE",
+  'L10': "ÚLT10",
+  'REC': "V-D",
+  'PF': "MF",
+  'PA': "MS",
+  'HOME': "CASA",
+  'AWAY': "FORA",
+  'PCT': "PCT",
+  'GB': "JD",
+
+  // ── TV home ──────────────────────────────────────────────────────────
+  'TV': "TV",
+  'Favorites': "Favoritos",
+  'Favourites': "Favoritos",
+  'Remove from Favourites': "Remover dos Favoritos",
+  'Add to Favourites': "Adicionar aos Favoritos",
+  'Cancel Hide': "Cancelar ocultar",
+  'Hide Group': "Ocultar grupo",
+  'Move Up / Down': "Mover cima / baixo",
+  "Show": "Mostrar",
+  "Hide": "Ocultar",
+  "Hidden here · {n} groups": "Oculto aqui · {n} grupos",
+  "At least one playlist stays shown.":
+      "Pelo menos uma lista de reprodução mantém-se visível.",
+  "{name} hidden in {tab}": "{name} oculto em {tab}",
+  "{name} shown in {tab}": "{name} visível em {tab}",
+  "Playlists": "Listas de reprodução",
+  "Jump to playlist": "Ir para a lista de reprodução",
+  "{n} groups": "{n} grupos",
+  "Background video": "Vídeo em segundo plano",
+  "Mute": "Silenciar",
+  "Unmute": "Ativar som",
+  "Show under Other": "Mostrar em Outros",
+  "On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.":
+      "Ativado: esta fonte aparece apenas atrás do filtro de género Outros (Filmes e Séries). Desativado: nas linhas principais. Prima Atualizar no Media Hub após alterar isto.",
+  "Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.":
+      "Use o filtro Outros em Media Hub > Filmes / Séries > Género para ver esta fonte.",
+  "Back to main": "Voltar ao principal",
+  "Compatibility video": "Vídeo de compatibilidade",
+  "Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.":
+      "Ative isto se a imagem aparecer duplicada, com tamanho incorreto ou com riscas coloridas (Fire TV Sticks antigos). Aplica-se a partir do canal seguinte. Ativado por predefinição no Android 7 e anteriores.",
+  "Hide the live picture behind other pages":
+      "Ocultar a imagem em direto atrás de outras páginas",
+  "A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device's software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.":
+      "Um canal em direto continua a reproduzir atrás de {tab}, Definições e Pesquisar. Alguns Fire TV Sticks continuam a mostrar a imagem por cima dessas páginas. Ative isto se acontecer: o som continua, apenas a imagem fica oculta até voltar. Atualizar o software do dispositivo (Fire TV: Definições > O meu Fire TV > Acerca de > Procurar atualizações) também pode resolver.",
+  'Go to row': "Ir para a linha",
+  "Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.":
+      "Escrever o endereço de um servidor e palavra-passe com um telecomando é penoso. Digitalize este código com a câmara do telemóvel e inicie sessão aí — os detalhes aparecem aqui para verificar e ligar.",
+  "Check the details here, then press Connect.":
+      "Verifique os detalhes aqui e prima Ligar.",
+  "{n} other catalogs": "{n} outros catálogos",
+  "Use the Other filter in Media Hub > Movies > Genre to see this content.":
+      "Use o filtro Outros em Media Hub > Filmes > Género para ver este conteúdo.",
+  "Backup & restore": "Cópia de segurança e restauro",
+  "Save everything to a file on this device":
+      "Guardar tudo num ficheiro neste dispositivo",
+  "Back up now": "Fazer cópia de segurança agora",
+  "Playlists, favourites, profiles, progress and settings, saved to {path}":
+      "Listas de reprodução, favoritos, perfis, progresso e definições, guardados em {path}",
+  "Automatic backup": "Cópia de segurança automática",
+  "When VesperTV starts. Keeps the last {n}.":
+      "Quando o VesperTV inicia. Mantém as últimas {n}.",
+  "How often":
+      "Frequência",
+  "Every day":
+      "Todos os dias",
+  "Every 3 days":
+      "A cada 3 dias",
+  "Every week":
+      "Todas as semanas",
+  "Every 2 weeks":
+      "A cada 2 semanas",
+  "Every month":
+      "Todos os meses",
+  "Restore from a file": "Restaurar a partir de um ficheiro",
+  "Pick a backup file, e.g. after reinstalling VesperTV":
+      "Escolha um ficheiro de cópia de segurança, p. ex. após reinstalar o VesperTV",
+  "Backups": "Cópias de segurança",
+  "No backups yet.": "Ainda não existem cópias de segurança.",
+  "Backups include your playlist logins. Keep the files private.":
+      "As cópias de segurança incluem os dados de início de sessão das suas listas de reprodução. Mantenha os ficheiros privados.",
+  "Manual": "Manual",
+  "Restore this backup": "Restaurar esta cópia de segurança",
+  "Restore": "Restaurar",
+  "Restore backup?": "Restaurar cópia de segurança?",
+  "Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.":
+      "Tudo neste dispositivo (listas de reprodução, favoritos, perfis, definições) é substituído pela cópia de segurança de {from}. A sua configuração atual é guardada primeiro como cópia de segurança automática. O VesperTV fecha em seguida.",
+  "the chosen file": "o ficheiro escolhido",
+  "Backup restored": "Cópia de segurança restaurada",
+  "Backup saved to {path}": "Cópia de segurança guardada em {path}",
+  "Backup failed: {error}": "Falha na cópia de segurança: {error}",
+  "VesperTV needs storage access to save backups.":
+      "O VesperTV precisa de acesso ao armazenamento para guardar cópias de segurança.",
+  "Couldn't read the backup folder: {error}":
+      "Não foi possível ler a pasta de cópias de segurança: {error}",
+  "Couldn't read this backup: {error}":
+      "Não foi possível ler esta cópia de segurança: {error}",
+  "Couldn't delete this backup.":
+      "Não foi possível eliminar esta cópia de segurança.",
+  "This device has no file picker. Copy the backup into {path} on this device instead.":
+      "Este dispositivo não tem seletor de ficheiros. Em vez disso, copie a cópia de segurança para {path} neste dispositivo.",
+  "This file is not a VesperTV backup.":
+      "Este ficheiro não é uma cópia de segurança do VesperTV.",
+  "Up / Down moves {name}. OK when done.":
+      "Cima / Baixo move {name}. OK quando concluído.",
+  "Mix playlists in Favourites": "Misturar listas de reprodução nos Favoritos",
+  "TV, Movies and TV Shows favourites from every playlist in one A-Z list, instead of one list per playlist.":
+      "Favoritos de TV, Filmes e Séries de todas as listas de reprodução numa única lista A-Z, em vez de uma lista por lista de reprodução.",
+  'Move to Top': "Mover para o topo",
+  'Unhide this channel': "Mostrar novamente este canal",
+  'Hide this channel': "Ocultar este canal",
+  'Double': "Duplo",
+  'for groups': "para grupos",
+  'Exit': "Sair",
+  'Exit {appName}?': "Sair do {appName}?",
+  'Are you sure you want to exit {appName}?':
+      "Tem a certeza de que pretende sair do {appName}?",
+  'Stay': "Ficar",
+  'History': "Histórico",
+  'No channels watched yet.': "Ainda não viu nenhum canal.",
+  'Update Content': "Atualizar conteúdo",
+  'Minimize': "Minimizar",
+  'Close': "Fechar",
+  'Exit {appName}': "Sair do {appName}",
+  'Long-press a group elsewhere to favorite the whole thing.':
+      "Mantenha premido num grupo noutro local para adicionar tudo aos favoritos.",
+  'Nothing playing': "Nada em reprodução",
+  'Click to resume': "Clique para retomar",
+  'Filter channels in this group...': "Filtrar canais neste grupo…",
+  'Close filter': "Fechar filtro",
+  'Hidden — find it again in Settings > Playlist Manager > Hidden Channels':
+      "Oculto — encontre novamente em Definições > Gestor de listas de reprodução > Canais ocultos",
+  'Unhidden': "Visível novamente",
+  'No favorited movies or TV shows yet.\nHold Select on a poster to add one.':
+      "Ainda não existem filmes ou séries nos favoritos.\nMantenha premido Selecionar num cartaz para adicionar.",
+  'No favorited movies yet.': "Ainda não existem filmes nos favoritos.",
+  'No favorited TV shows yet.': "Ainda não existem séries nos favoritos.",
+  'No favorite channels yet — press Down while watching one to add it.':
+      "Ainda não existem canais favoritos — prima Baixo enquanto vê um para adicionar.",
+  'Updating…': "A atualizar…",
+  'No program data': "Sem dados de programação",
+  'No program data available': "Sem dados de programação disponíveis",
+  'Next: {title} ({p})': "A seguir: {title} ({p})",
+  'Focus a program to see details':
+      "Foque um programa para ver detalhes",
+  'Space': "Espaço",
+  'Loading EPG…': "A carregar EPG…",
+
+  // ── Welcome ──────────────────────────────────────────────────────────
+  'Hey beautiful Human,': "Olá, belo ser humano,",
+  'Hey beautiful Human': "Olá, belo ser humano",
+  'Welcome to VesperTV': "Bem-vindo ao VesperTV",
+  'Add your first playlist?': "Adicionar a sua primeira lista de reprodução?",
+  'Add a playlist to kick things off, or skip for now if you just want to browse and discover the app without content.':
+      "Adicione uma lista de reprodução para começar, ou ignore por agora se quiser apenas explorar e descobrir a aplicação sem conteúdo.",
+
+  // ── Add playlist ─────────────────────────────────────────────────────
+  'Add Playlist': "Adicionar lista de reprodução",
+  'Paste some text first.': "Cole primeiro algum texto.",
+  "Couldn't find anything usable in that text.":
+      "Não foi possível encontrar nada utilizável nesse texto.",
+  'Received from your phone — check the details, then press Add Playlist.':
+      "Recebido do seu telemóvel — verifique os detalhes e prima Adicionar lista de reprodução.",
+  'Scan the code with your phone and send the form first.':
+      "Digitalize o código com o seu telemóvel e envie primeiro o formulário.",
+  'Playlist name is required.': "O nome da lista de reprodução é obrigatório.",
+  'Server, username, and password are all required.':
+      "O servidor, o nome de utilizador e a palavra-passe são todos obrigatórios.",
+  'M3U playlist URL is required.': "O URL da lista de reprodução M3U é obrigatório.",
+  'Playlist updated.': "Lista de reprodução atualizada.",
+  'Playlist added.': "Lista de reprodução adicionada.",
+  'Download content': "Transferir conteúdo",
+  'This provider has a large catalog. Download everything in the background, or choose which groups to include first?':
+      "Este fornecedor tem um catálogo grande. Transferir tudo em segundo plano ou escolher primeiro que grupos incluir?",
+  'Choose Groups First': "Escolher grupos primeiro",
+  'Download All': "Transferir tudo",
+  'Edit Playlist': "Editar lista de reprodução",
+  'Playlist source': "Origem da lista de reprodução",
+  'M3U URL': "URL M3U",
+  'Xtream Codes': "Xtream Codes",
+  'Smart Add': "Adição inteligente",
+  'From phone': "A partir do telemóvel",
+  'Playlist name': "Nome da lista de reprodução",
+  'Name': "Nome",
+  'e.g. My Provider, or 8kStrong': "p. ex. O meu fornecedor, ou 8kStrong",
+  'M3U Playlist URL': "URL da lista de reprodução M3U",
+  'EPG (XMLTV) URL': "URL do EPG (XMLTV)",
+  'Paste the message your provider sent you — we\'ll pull out the server, username, and password.':
+      "Cole a mensagem que o seu fornecedor lhe enviou — extrairemos o servidor, o nome de utilizador e a palavra-passe.",
+  'Paste provider message': "Colar mensagem do fornecedor",
+  'Parse': "Analisar",
+  'Confirm the server': "Confirmar o servidor",
+  'No server URL found in that text — enter it below.':
+      "Não foi encontrado nenhum URL de servidor nesse texto — introduza-o abaixo.",
+  'Server URL (e.g. http://host:port)':
+      "URL do servidor (p. ex. http://host:porta)",
+  'Username': "Nome de utilizador",
+  'Password': "Palavra-passe",
+  'Custom EPG (XMLTV) URL — optional': "URL de EPG personalizado (XMLTV) — opcional",
+  'Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.':
+      "Deixe em branco para usar o xmltv.php do painel. Defina isto se o EPG do seu fornecedor estiver vazio ou não for fiável (p. ex. um feed de terceiros como o EPGgenius) — apenas preenche um canal se os IDs desse feed corresponderem aos deste painel.",
+  'Paste different text': "Colar texto diferente",
+  'Status': "Estado",
+  'Failed to add playlist: {p}': "Falha ao adicionar lista de reprodução: {p}",
+  'Save Changes': "Guardar alterações",
+  'Fill in the form on the left, then press {p} above.':
+      "Preencha o formulário à esquerda e prima {p} acima.",
+  'Unexpected Xtream API response': "Resposta inesperada da API Xtream",
+  'Invalid Xtream username/password':
+      "Nome de utilizador ou palavra-passe Xtream inválidos",
+  'Xtream account is not active (status: {status})':
+      "A conta Xtream não está ativa (estado: {status})",
+
+  // ── Phone pairing ────────────────────────────────────────────────────
+  'Code expired': "Código expirado",
+  'Add from your phone': "Adicionar a partir do telemóvel",
+  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.':
+      "Escrever uma palavra-passe longa com um telecomando é penoso. Digitalize este código com a câmara do telemóvel e preencha o formulário aí — aparece aqui para verificar e adicionar.",
+  'Scan with your phone (mobile data is fine).':
+      "Digitalize com o telemóvel (os dados móveis servem).",
+  'Connect your phone to the same Wi-Fi as this TV, then scan.':
+      "Ligue o telemóvel à mesma rede Wi-Fi desta TV e depois digitalize.",
+  'Fill in the form and tap Send to TV.':
+      "Preencha o formulário e toque em Enviar para a TV.",
+  'Check the details here, then press Add Playlist.':
+      "Verifique os detalhes aqui e prima Adicionar lista de reprodução.",
+  'Waiting for your phone…': "A aguardar pelo telemóvel…",
+  'Or open on the phone:': "Ou abra no telemóvel:",
+  'Your details are encrypted on the phone; the relay only passes along scrambled data and deletes it.':
+      "Os seus detalhes são encriptados no telemóvel; o retransmissor apenas transmite dados cifrados e elimina-os.",
+  'New code': "Novo código",
+  'Phone on this Wi-Fi? Use the Wi-Fi code':
+      "Telemóvel nesta rede Wi-Fi? Use o código Wi-Fi",
+  'Phone not on this Wi-Fi? Use the other code':
+      "Telemóvel fora desta rede Wi-Fi? Use o outro código",
+
+  // ── Channel linking / EPG matching ───────────────────────────────────
+  'Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.':
+      "Adicione e ative primeiro uma segunda lista de reprodução — uma ligação associa um canal numa lista ao equivalente noutra.",
+  'Auto-Pair Channels': "Emparelhar canais auto.",
+  'Unpair Channels': "Desemparelhar canais",
+  'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
+      "A rever canais emparelhados auto. ({reviewFilter}) — escreva para pesquisar todos",
+  'Search your channels': "Pesquisar nos seus canais",
+  'Not linked': "Não associado",
+  'Linked channel no longer available':
+      "Canal associado já não disponível",
+  'Linked to {p}: {name}': "Associado a {p}: {name}",
+  'Clear link': "Limpar associação",
+  'Link "{name}"': "Associar «{name}»",
+  'Search other playlists\' channels': "Pesquisar canais de outras listas de reprodução",
+  'No matches.': "Sem correspondências.",
+  'No EPG feed has been loaded yet this session — run "Update EPG Now" first so there\'s a channel directory to match against.':
+      "Ainda não foi carregado nenhum feed EPG nesta sessão — execute primeiro «Atualizar EPG agora» para existir um diretório de canais para correspondência.",
+  'No EPG feed has been loaded yet this session — run "Update EPG Now" above first so there\'s a channel directory to search.':
+      "Ainda não foi carregado nenhum feed EPG nesta sessão — execute primeiro «Atualizar EPG agora» acima para existir um diretório de canais para pesquisar.",
+  'Assigned: {p}': "Atribuído: {p}",
+  'Matched automatically': "Correspondência automática",
+  'Clear assignment': "Limpar atribuição",
+  'Assign "{channelName}"': "Atribuir «{channelName}»",
+  'Search the EPG feed\'s channels': "Pesquisar nos canais do feed EPG",
+  'No EPG feed has been loaded yet this app session — go back and run "Update EPG Now" first.':
+      "Ainda não foi carregado nenhum feed EPG nesta sessão da aplicação — volte atrás e execute primeiro «Atualizar EPG agora».",
+  'Now: {title}': "Agora: {title}",
+  'No current program data': "Sem dados do programa atual",
+  'Channels are pairing, please wait…': "A emparelhar canais, aguarde…",
+  'No new matches found — anything still unmatched needs a manual pick.':
+      "Nenhuma nova correspondência encontrada — o que continuar sem correspondência requer escolha manual.",
+  'Paired {paired} channel{s} automatically.':
+      "Emparelhados automaticamente: {paired} canal{s}.",
+  'Review': "Rever",
+  'Continue': "Continuar",
+  'Nothing was auto-paired — there\'s nothing to undo.':
+      "Nada foi emparelhado automaticamente — não há nada para anular.",
+  'Undo {autoPairedCount} automatic pairing{s}? Anything you\'ve set by hand is kept.':
+      "Anular {autoPairedCount} emparelhamento{s} automático? Tudo o que definiu manualmente é mantido.",
+  'Unpair': "Desemparelhar",
+
+  // ── Check for updates ────────────────────────────────────────────────
+  'Couldn\'t open the download link.':
+      "Não foi possível abrir a ligação de descarga.",
+  'Allow installing updates': "Permitir instalar atualizações",
+  'Android needs one-time permission for VesperTV to install an update it downloaded. The next screen is Android\'s own settings — turn the toggle on, then come back here and press Install again.':
+      "O Android precisa de permissão única para o VesperTV instalar uma atualização transferida. O ecrã seguinte é das definições do Android — ative o interruptor, volte aqui e prima Instalar novamente.",
+  'Check for Updates': "Verificar atualizações",
+  'Current version: —': "Versão atual: —",
+  'Current version: {currentVersion}': "Versão atual: {currentVersion}",
+  'Checking...': "A verificar…",
+  'You\'re on the latest version.': "Tem a versão mais recente.",
+  'Check Again': "Verificar novamente",
+  'Version {version} is available': "A versão {version} está disponível",
+  'Open Download Page': "Abrir página de descarga",
+  'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
+      "Abre no navegador — extraia a transferência e execute VesperTV.exe para atualizar, substituindo a pasta antiga.",
+  "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
+      "Abre no navegador — abra o ficheiro transferido e arraste o VesperTV para Aplicações, substituindo o anterior.",
+  'Download & Install': "Transferir e instalar",
+  'Downloading update... {p}%': "A transferir atualização… {p}%",
+  'Download complete.': "Transferência concluída.",
+  'Install': "Instalar",
+  'Android will ask you to confirm the install — that\'s normal, not every app can skip it.':
+      "O Android vai pedir para confirmar a instalação — é normal, nem todas as aplicações podem ignorar este passo.",
+  'Something went wrong: {p}': "Algo correu mal: {p}",
+  'unknown error': "erro desconhecido",
+  'Try Again': "Tentar novamente",
+  'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minute.':
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente dentro de cerca de {n} minuto.",
+  'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minutes.':
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente dentro de cerca de {n} minutos.",
+  'GitHub is temporarily rate-limiting update checks from this network — try again shortly.':
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente em breve.",
+
+  // ── EPG settings ─────────────────────────────────────────────────────
+  'No EPG URL set yet — add a playlist first.':
+      "Ainda não foi definido nenhum URL de EPG — adicione primeiro uma lista de reprodução.",
+  'Cache cleared.': "Cache limpa.",
+  'EPG': "EPG",
+  'General': "Geral",
+  'EPG Matching': "Correspondência EPG",
+  'Channel Pairing': "Emparelhamento de canais",
+  'Auto-refresh interval': "Intervalo de atualização automática",
+  '{p} hours': "{p} horas",
+  'EPG never updated': "EPG nunca atualizado",
+  'EPG last updated: {p}': "Última atualização do EPG: {p}",
+  'Update EPG Now': "Atualizar EPG agora",
+  'Clear Cache': "Limpar cache",
+  'Clears the cached EPG and catalog data — playlist source, favorites, and group visibility are kept.':
+      "Limpa os dados em cache do EPG e do catálogo — a origem da lista de reprodução, os favoritos e a visibilidade dos grupos são mantidos.",
+  'Fixes a channel with no program data by manually assigning it to an entry in the loaded EPG feed — useful when a provider\'s own id doesn\'t match a third-party source.':
+      "Corrige um canal sem dados de programação atribuindo-o manualmente a uma entrada do feed EPG carregado — útil quando o ID do próprio fornecedor não corresponde a uma fonte de terceiros.",
+  'Links a channel on one playlist to its equivalent on another. If a live channel fails to load, or you switch to it yourself from the player, playback can fall back to the paired channel on the other playlist instead.':
+      "Associa um canal numa lista de reprodução ao equivalente noutra. Se um canal em direto falhar ao carregar, ou se mudar manualmente a partir do reprodutor, a reprodução pode recorrer ao canal emparelhado na outra lista.",
+
+  // ── General settings ─────────────────────────────────────────────────
+  'Clear search & channel history?':
+      "Limpar histórico de pesquisa e canais?",
+  'Removes your recent searches and the History list of live channels.':
+      "Remove as suas pesquisas recentes e a lista de Histórico de canais em direto.",
+  'Search and channel history cleared.':
+      "Histórico de pesquisa e canais limpo.",
+  'Clear Movies & TV Shows history?':
+      "Limpar histórico de Filmes e Séries?",
+  'Removes Continue Watching and the saved progress of every movie and episode.':
+      "Remove Continuar a ver e o progresso guardado de cada filme e episódio.",
+  'Movies & TV Shows history cleared.':
+      "Histórico de Filmes e Séries limpo.",
+  'Language': "Idioma",
+  'Follows the device language': "Segue o idioma do dispositivo",
+  'Automatic': "Automático",
+  "Fallback": "Alternativa",
+  'Startup': "Arranque",
+  'Resume last channel in full screen':
+      "Retomar último canal em ecrã inteiro",
+  'Opens the last live channel full screen after the splash.':
+      "Abre o último canal em direto em ecrã inteiro após o ecrã inicial.",
+  'Resume last channel with the guide open':
+      "Retomar último canal com o guia aberto",
+  'Plays the last live channel in the small preview, with the channel list.':
+      "Reproduz o último canal em direto na pequena pré-visualização, com a lista de canais.",
+  'Both off: nothing plays at startup (a "Hold > to resume" reminder instead).':
+      "Ambos desativados: nada reproduz no arranque (um lembrete «Mantenha premido > para retomar» em vez disso).",
+  'Tabs': "Separadores",
+  'Hide Movies and TV Shows': "Ocultar Filmes e Séries",
+  'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
+      "Remove ambos os separadores e os respetivos resultados de pesquisa, p. ex. se vir filmes e séries noutro local.",
+  'Favorite channels are in the TV tab, under Favourites.':
+      "Os canais favoritos estão no separador TV, em Favoritos.",
+  'Show the Multiview tip': "Mostrar a dica da Multivista",
+  'The connections reminder shown when opening Multiview.':
+      "O lembrete de ligações apresentado ao abrir a Multivista.",
+  'Resume reminder': "Lembrete de retoma",
+  'Show the "Hold > to resume" reminder':
+      "Mostrar o lembrete «Mantenha premido > para retomar»",
+  'The pill at the bottom while a channel plays in the background. Off: hidden.':
+      "A barra inferior enquanto um canal reproduz em segundo plano. Desativado: oculta.",
+  'The pill at the bottom while a channel plays in the background. Off: hidden — holding Right still resumes.':
+      "A barra inferior enquanto um canal reproduz em segundo plano. Desativado: oculta — manter premido Direita continua a retomar.",
+  'Clear search & channel history': "Limpar histórico de pesquisa e canais",
+  'Recent searches and the live channel History':
+      "Pesquisas recentes e o Histórico de canais em direto",
+  'Clear Movies & TV Shows history': "Limpar histórico de Filmes e Séries",
+  'Continue Watching and saved progress': "Continuar a ver e progresso guardado",
+
+  // ── Group management / hidden channels ───────────────────────────────
+  'Leave group selection?': "Sair da seleção de grupos?",
+  'Your show/hide choices are saved, and anything still visible will start downloading — same as pressing Done.':
+      "As suas escolhas de mostrar/ocultar são guardadas e tudo o que continuar visível iniciará a transferência — tal como premir Concluído.",
+  'Leave': "Sair",
+  'Save playlist?': "Guardar lista de reprodução?",
+  'Your playlist will be saved with the selected groups. You can always add or remove groups later in Settings > Group Management.':
+      "A sua lista de reprodução será guardada com os grupos selecionados. Pode sempre adicionar ou remover grupos mais tarde em Definições > Gestão de grupos.",
+  'Confirm': "Confirmar",
+  'Group Management': "Gestão de grupos",
+  'Done': "Concluído",
+  'If you are done selecting your groups, press Confirm below.\n\nIf you are not done yet, press Left to go back to your categories.':
+      "Se terminou de selecionar os seus grupos, prima Confirmar abaixo.\n\nSe ainda não terminou, prima Esquerda para voltar às categorias.",
+  'No categories yet — load a playlist first.':
+      "Ainda não existem categorias — carregue primeiro uma lista de reprodução.",
+  'Search groups': 'Buscar grupos',
+  "Countries": "Países",
+  "Countries and prefixes": "Países e prefixos",
+  "{count} hidden": "{count} ocultos",
+  "Shown groups": "Grupos visíveis",
+  "Hidden groups": "Grupos ocultos",
+  "No groups here.": "Nenhum grupo aqui.",
+  "Hide every group": "Ocultar todos os grupos",
+  "Then select the countries to keep.": "Em seguida, selecione os países a manter.",
+  "All hidden. Select the countries to keep.": "Tudo oculto. Selecione os países a manter.",
+  "Found at the start of the group names. Select one to show or hide all its groups at once.": "Encontrados no início dos nomes dos grupos. Selecione um para mostrar ou ocultar todos os grupos de uma vez.",
+  "1 group": "1 grupo",
+  "{count} groups": "{count} grupos",
+  "{shown} of {total} shown": "{shown} de {total} visíveis",
+  "Groups without a country": "Grupos sem país",
+  '{shown} of {total} groups': '{shown} de {total} grupos',
+  'Show results': 'Mostrar resultados',
+  'Hide results': 'Ocultar resultados',
+  'No groups start with "{query}".': 'Nenhum grupo começa por «{query}».',
+  'Show All': "Mostrar todo",
+  'Hide All': "Ocultar todo",
+  'Hidden channels': "Canais ocultos",
+  'No channels are individually hidden. Hide one from its row in the Live TV list.':
+      "Nenhum canal está oculto individualmente. Oculte um a partir da respetiva linha na lista de TV em direto.",
+  'Unhide': "Mostrar",
+  'Show group': "Mostrar grupo",
+  'Hide group': "Ocultar grupo", 'Track {id}': "Faixa {id}",
   'Audio {n}': "Áudio {n}",
   'Audio Track': "Faixa de Áudio",
   'Audio track': "Faixa de áudio",
@@ -598,160 +1170,161 @@ const Map<String, String> kPt = {
   'Nothing found': "Nada encontrado",
 
   // ── Sports ───────────────────────────────────────────────────────────
-  'Sports': "Deportes",
-  'this team': "este equipo",
-  'My Teams': "Mis equipos",
-  'Last channels': "Últimos canales",
-  'No other source found for this game.': "No se encontró otra fuente para este partido.",
+'Sports': "Desporto",
+  'this team': "esta equipa",
+  'My Teams': "As minhas equipas",
+  'Last channels': "Últimos canais",
+  'No other source found for this game.':
+      "Nenhuma outra fonte encontrada para este jogo.",
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
-      "◀ ▶ pestañas  ·  OK para ver  ·  Atrás para cerrar",
-  'None of your teams play today.': "Ninguno de tus equipos juega hoy.",
+      "◀ ▶ separadores  ·  OK para ver  ·  Voltar para fechar",
+  'None of your teams play today.': "Nenhuma das suas equipas joga hoje.",
   'Follow teams from {tab} > Standings to see them here.':
-      "Sigue equipos desde {tab} > Clasificación para verlos aquí.",
+      "Siga equipas em {tab} > Classificação para as ver aqui.",
   'No games from your leagues are live right now.':
-      "Ningún partido de tus ligas está en directo ahora.",
+      "Nenhum jogo das suas ligas está em direto neste momento.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
-      "Mantén OK en un equipo para dejar de seguirlo · en un partido para elegir el canal",
-  'Add team': "Añadir equipo",
-  'Follow one from Standings': "Sigue uno desde la tabla",
-  'Could not load': "No se pudo cargar",
-  'Follow your teams to see them here': "Sigue a tus equipos para verlos aquí",
-  'Follow another team': "Seguir otro equipo",
+      "Mantenha OK premido numa equipa para deixar de seguir · num jogo para escolher o canal",
+  'Add team': "Adicionar equipa",
+  'Follow one from Standings': "Siga uma na Classificação",
+  'Could not load': "Não foi possível carregar",
+  'Follow your teams to see them here': "Siga as suas equipas para as ver aqui",
+  'Follow another team': "Seguir outra equipa",
   'Add team opens Standings: hold OK on a team to follow it.':
-      "«Añadir equipo» abre la tabla: mantén OK en un equipo para seguirlo.",
+      "Adicionar equipa abre a Classificação: mantenha OK premido numa equipa para a seguir.",
   'This team could not be loaded. Check the connection.':
-      "No se pudo cargar este equipo. Revisa la conexión.",
+      "Não foi possível carregar esta equipa. Verifique a ligação.",
   'Next 2 weeks': "Próximas 2 semanas",
   'No games in the next two weeks.':
-      "No hay partidos en las próximas dos semanas.",
+      "Sem jogos nas próximas duas semanas.",
   'vs': "vs",
   'at': "@",
-  'Today {time}': "Hoy {time}",
-  'Tomorrow {time}': "Mañana {time}",
-  'Last game: {opponent} · Final': "Últ. partido: {opponent} · Final",
+  'Today {time}': "Hoje {time}",
+  'Tomorrow {time}': "Amanhã {time}",
+  'Last game: {opponent} · Final': "Últ. jogo: {opponent} · Final",
   'Last game: {result} {mine}-{other} {opponent}':
-      "Últ. partido: {result} {mine}-{other} {opponent}",
-  'LIVE': "EN VIVO",
-  'Looking…': "Buscando…",
-  'TEAM': "EQUIPO",
-  'Later today': "Hoy, más tarde",
-  'Tomorrow': "Mañana",
-  'Not played': "No jugados",
-  'Scheduled': "Programados",
-  'Live now': "En vivo",
+      "Últ. jogo: {result} {mine}-{other} {opponent}",
+  'LIVE': "EM DIRETO",
+  'Looking…': "A procurar…",
+  'TEAM': "EQUIPA",
+  'Later today': "Mais tarde hoje",
+  'Tomorrow': "Amanhã",
+  'Not played': "Não disputados",
+  'Scheduled': "Agendados",
+  'Live now': "Em direto agora",
   'Final': "Final",
-  'All': "Todo",
-  'Edit leagues': "Ligas",
-  'Scores hidden': "Marcadores ocultos",
-  'Scores shown': "Marcadores visibles",
-  'Yesterday': "Ayer",
-  'Today': "Hoy",
-  'Day': "Día",
+  'All': "Tudo",
+  'Edit leagues': "Editar ligas",
+  'Scores hidden': "Resultados ocultos",
+  'Scores shown': "Resultados visíveis",
+  'Yesterday': "Ontem",
+  'Today': "Hoje",
+  'Day': "Dia",
   'OK: watch  ·  OK again: full screen  ·  Hold OK: stats  ·  ▼ all games':
-      "OK: ver  ·  OK otra vez: pantalla completa  ·  Mantener OK: estadísticas  ·  ▼ todos los partidos",
+      "OK: ver  ·  OK novamente: ecrã inteiro  ·  Manter premido OK: estatísticas  ·  ▼ todos os jogos",
   'OK again on a game: full screen  ·  ▶❚❚: stop':
-      "OK otra vez en un partido: pantalla completa  ·  ▶❚❚: detener",
-  'Standings': "Clasificación",
-  '{name} standings': "Clasificación {name}",
-  '{name} championship': "Campeonato de {name}",
+      "OK novamente num jogo: ecrã inteiro  ·  ▶❚❚: parar",
+  'Standings': "Classificação",
+  '{name} standings': "Classificação {name}",
+  '{name} championship': "Campeonato {name}",
   'No games on this day for your leagues':
-      "No hay partidos este día en tus ligas",
+      "Sem jogos neste dia para as suas ligas",
   'Try another day, or add leagues with Edit leagues.':
-      "Prueba otro día o añade ligas con el botón Ligas.",
-  'Live now  {count}': "En vivo  {count}",
-  'Live': "En vivo",
-  'Starts in {p}{p2}m': "Empieza en {p}{p2} min",
-  'Looking for the channel…': "Buscando el canal…",
+      "Experimente outro dia ou adicione ligas em Editar ligas.",
+  'Live now  {count}': "Em direto agora  {count}",
+  'Live': "Em direto",
+  'Starts in {p}{p2}m': "Começa em {p}{p2} min",
+  'Looking for the channel…': "A procurar o canal…",
   'No channel found — OK to pick one':
-      "No se encontró canal — OK para elegir uno",
+      "Nenhum canal encontrado — OK para escolher um",
   'Hold OK to pick or swap the channel':
-      "Mantén OK para elegir o cambiar el canal",
+      "Mantenha OK premido para escolher ou trocar o canal",
   'Hold OK: pick the channel  ·  ▶❚❚: watch here':
-      "Mantén OK: elegir el canal  ·  ▶❚❚: ver aquí",
+      "Manter premido OK: escolher o canal  ·  ▶❚❚: ver aqui",
   'Tap the game again: full screen  ·  Back: stop':
-      "Toca el partido otra vez: pantalla completa  ·  Atrás: detener",
+      "Toque novamente no jogo: ecrã inteiro  ·  Voltar: parar",
   'Tap: watch here  ·  Hold: pick the channel':
-      "Tocar: ver aquí  ·  Mantener: elegir el canal",
-  'Play here': "Reproducir aquí",
+      "Toque: ver aqui  ·  Manter premido: escolher o canal",
+  'Play here': "Reproduzir aqui",
   '{channel} · plays at the top of {tab}':
-      "{channel} · se reproduce arriba en {tab}",
+      "{channel} · reproduz no topo de {tab}",
   '▶❚❚: watch this game  ·  Back: playing game':
-      "▶❚❚: ver este partido  ·  Atrás: partido en curso",
+      "▶❚❚: ver este jogo  ·  Voltar: jogo em reprodução",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
-      "OK: pantalla completa  ·  ▶❚❚ o Atrás: detener",
-  'Still looking for channels…': "Todavía buscando canales…",
-  'No channel found for this game': "No se encontró canal para este partido",
-  'On {matches} channel{s}': "Canales: {matches}",
-  'Pick the channel': "Elegir el canal",
-  'Choose a different channel': "Elegir otro canal",
+      "OK: ecrã inteiro  ·  ▶❚❚ ou Voltar: parar",
+  'Still looking for channels…': "Ainda a procurar canais…",
+  'No channel found for this game': "Nenhum canal encontrado para este jogo",
+  'On {matches} channel{s}': "Em {matches} canal{s}",
+  'Pick the channel': "Escolher o canal",
+  'Choose a different channel': "Escolher outro canal",
   'Search your channels — it can be remembered for this game or team':
-      "Busca en tus canales; se puede recordar para este partido o equipo",
-  'Forget my pick': "Olvidar mi elección",
-  'Go back to the automatic match': "Volver a la elección automática",
-  'Remember this channel?': "¿Recordar este canal?",
-  'Just this game': "Solo este partido",
+      "Pesquise nos seus canais — pode ser memorizado para este jogo ou equipa",
+  'Forget my pick': "Esquecer a minha escolha",
+  'Go back to the automatic match': "Voltar à correspondência automática",
+  'Remember this channel?': "Memorizar este canal?",
+  'Just this game': "Apenas este jogo",
   'Best for channels named after one game':
-      "Ideal para canales con el nombre de un partido",
-  'Always for the {shortName}': "Siempre para {shortName}",
+      "Ideal para canais com o nome de um jogo",
+  'Always for the {shortName}': "Sempre para {shortName}",
   'Best for a regular channel, like a regional network':
-      "Ideal para un canal fijo, como una cadena regional",
+      "Ideal para um canal habitual, como uma emissora regional",
   'Leagues': "Ligas",
   'Save': "Guardar",
-  'Pick the channel for {title}': "Elige el canal para {title}",
-  'Search channels': "Buscar canales",
-  'No channels match "{query}"': "Ningún canal coincide con «{query}»",
-  '{results}{p} channels': "{results}{p} canales",
-  '{group} · Now: {now}': "{group} · Ahora: {now}",
-  'Preseason': "Pretemporada",
+  'Pick the channel for {title}': "Escolha o canal para {title}",
+  'Search channels': "Pesquisar canais",
+  'No channels match "{query}"': "Nenhum canal corresponde a «{query}»",
+  '{results}{p} channels': "{results}{p} canais",
+  '{group} · Now: {now}': "{group} · Agora: {now}",
+  'Preseason': "Pré-época",
   'Pick a league above, then hold OK on a team to follow it. Back returns to My Teams.':
-      "Elige una liga arriba y mantén OK en un equipo para seguirlo. Atrás vuelve a Mis equipos.",
+      "Escolha uma liga acima e mantenha OK premido numa equipa para a seguir. Voltar regressa às Minhas equipas.",
   'Standings could not be loaded. Check the connection.':
-      "No se pudo cargar la clasificación. Revisa la conexión.",
-  'switch conference': "cambiar conferencia",
-  'switch table': "cambiar de tabla",
+      "Não foi possível carregar a classificação. Verifique a ligação.",
+  'switch conference': "mudar conferência",
+  'switch table': "mudar tabela",
   'Hold OK on a team to follow it (My Teams)':
-      "Mantén OK en un equipo para seguirlo (Mis equipos)",
-  'Your pick': "Tu elección",
-  'Found by its name': "Encontrado por su nombre",
-  'Found in the guide': "Encontrado en la guía",
-  "Team's channel, no guide listing": "Canal del equipo, sin ficha en la guía",
-  "Broadcaster, no guide listing": "Cadena emisora, sin ficha en la guía",
-  "Only on a hidden channel": "Solo en un canal oculto",
-  "Not in your guide yet": "Aún no está en tu guía",
+      "Mantenha OK premido numa equipa para a seguir (As minhas equipas)",
+  'Your pick': "A sua escolha",
+  'Found by its name': "Encontrado pelo nome",
+  'Found in the guide': "Encontrado no guia",
+  "Team's channel, no guide listing": "Canal da equipa, sem programação no guia",
+  "Broadcaster, no guide listing": "Emissora, sem programação no guia",
+  "Only on a hidden channel": "Apenas num canal oculto",
+  "Not in your guide yet": "Ainda não está no seu guia",
   "On a hidden channel — OK to pick one":
-      "En un canal oculto — OK para elegir uno",
+      "Num canal oculto — OK para escolher um",
   "Not in your guide yet — OK to pick one":
-      "Aún no está en tu guía — OK para elegir uno",
+      "Ainda não está no seu guia — OK para escolher um",
   "Only found on {channel}, which is hidden in your lists.":
-      "Solo se encontró en {channel}, que está oculto en tus listas.",
+      "Encontrado apenas em {channel}, que está oculto nas suas listas.",
   "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
-      "Tu guía aún no cubre la hora de este partido. Actualiza la guía más cerca del partido.",
+      "O seu guia ainda não abrange a hora deste jogo. Atualize o guia mais perto do jogo.",
   "No channel name or guide listing names this game.":
-      "Ningún nombre de canal ni ficha de la guía menciona este partido.",
+      "Nenhum nome de canal ou programação do guia menciona este jogo.",
   'Some scores could not be loaded. Check the connection.':
-      "No se pudieron cargar algunos marcadores. Revisa la conexión.",
-  'Unfollow': "Dejar de seguir",
+      "Não foi possível carregar alguns resultados. Verifique a ligação.",
+  'Unfollow': "Deixar de seguir",
   'Follow': "Seguir",
-  'Remove from My Teams': "Quitar de Mis equipos",
+  'Remove from My Teams': "Remover das Minhas equipas",
   'Add to My Teams — their games show first in {tab}':
-      "Añadir a Mis equipos: sus partidos salen primero en {tab}",
+      "Adicionar às Minhas equipas — os jogos aparecem primeiro em {tab}",
   // Results (W/L/D = won/lost/draw) and standings columns.
-  'W': "G",
-  'L': "P",
+  'W': "V",
+  'L': "D",
   'D': "E",
   'T': "E",
-  'GP': "PJ",
+  'GP': "J",
   'GD': "DIF",
   'PTS': "PTS",
-  'OTL': "PPR",
+  'OTL': "DPR",
   'DIFF': "DIF",
-  'STRK': "RACHA",
+  'STRK': "SÉRIE",
   'L10': "ÚLT10",
-  'REC': "G-P",
-  'PF': "PF",
-  'PA': "PC",
-  'HOME': "LOCAL",
-  'AWAY': "VISIT",
+  'REC': "V-D",
+  'PF': "MF",
+  'PA': "MS",
+  'HOME': "CASA",
+  'AWAY': "FORA",
   'PCT': "PCT",
   'GB': "JD",
 
@@ -759,412 +1332,414 @@ const Map<String, String> kPt = {
   'TV': "TV",
   'Favorites': "Favoritos",
   'Favourites': "Favoritos",
-  'Remove from Favourites': "Quitar de favoritos",
-  'Add to Favourites': "Añadir a favoritos",
+  'Remove from Favourites': "Remover dos Favoritos",
+  'Add to Favourites': "Adicionar aos Favoritos",
   'Cancel Hide': "Cancelar ocultar",
   'Hide Group': "Ocultar grupo",
-  'Move Up / Down': "Subir / bajar",
+  'Move Up / Down': "Mover cima / baixo",
   "Show": "Mostrar",
   "Hide": "Ocultar",
-  "Hidden here · {n} groups": "Oculta aquí · {n} grupos",
+  "Hidden here · {n} groups": "Oculto aqui · {n} grupos",
   "At least one playlist stays shown.":
-      "Al menos una lista debe seguir visible.",
-  "{name} hidden in {tab}": "{name} oculta en {tab}",
-  "{name} shown in {tab}": "{name} visible en {tab}",
-  "Playlists": "Listas",
-  "Jump to playlist": "Ir a la lista",
+      "Pelo menos uma lista de reprodução mantém-se visível.",
+  "{name} hidden in {tab}": "{name} oculto em {tab}",
+  "{name} shown in {tab}": "{name} visível em {tab}",
+  "Playlists": "Listas de reprodução",
+  "Jump to playlist": "Ir para a lista de reprodução",
   "{n} groups": "{n} grupos",
-  "Background video": "Vídeo en segundo plano",
+  "Background video": "Vídeo em segundo plano",
   "Mute": "Silenciar",
-  "Unmute": "Activar sonido",
-  "Show under Other": "Mostrar en Otros",
+  "Unmute": "Ativar som",
+  "Show under Other": "Mostrar em Outros",
   "On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.":
-      "Activado: esta fuente solo aparece tras el filtro de género Otros (Películas y Series). Desactivado: en las filas principales. Pulsa Actualizar en Media Hub después de cambiarlo.",
+      "Ativado: esta fonte aparece apenas atrás do filtro de género Outros (Filmes e Séries). Desativado: nas linhas principais. Prima Atualizar no Media Hub após alterar isto.",
   "Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.":
-      "Usa el filtro Otros en Media Hub > Películas / Series > Género para ver esta fuente.",
-  "Back to main": "Volver al principal",
-  "Compatibility video": "Vídeo compatible",
+      "Use o filtro Outros em Media Hub > Filmes / Séries > Género para ver esta fonte.",
+  "Back to main": "Voltar ao principal",
+  "Compatibility video": "Vídeo de compatibilidade",
   "Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.":
-      "Actívalo si la imagen aparece duplicada, con un tamaño incorrecto o con rayas de colores (Fire TV Stick antiguos). Se aplica desde el siguiente canal. Activado por defecto en Android 7 y anteriores.",
+      "Ative isto se a imagem aparecer duplicada, com tamanho incorreto ou com riscas coloridas (Fire TV Sticks antigos). Aplica-se a partir do canal seguinte. Ativado por predefinição no Android 7 e anteriores.",
   "Hide the live picture behind other pages":
-      "Ocultar la imagen en directo detrás de otras páginas",
+      "Ocultar a imagem em direto atrás de outras páginas",
   "A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device's software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.":
-      "Un canal en directo sigue sonando detrás de {tab}, Ajustes y Buscar. Algunos Fire TV Stick siguen mostrando su imagen encima de esas páginas. Actívalo si te pasa: el sonido sigue, solo se oculta la imagen hasta que vuelvas. Actualizar el software del dispositivo (Fire TV: Configuración > Mi Fire TV > Acerca de > Buscar actualizaciones) también puede solucionarlo.",
-  'Go to row': "Ir a la fila",
+      "Um canal em direto continua a reproduzir atrás de {tab}, Definições e Pesquisar. Alguns Fire TV Sticks continuam a mostrar a imagem por cima dessas páginas. Ative isto se acontecer: o som continua, apenas a imagem fica oculta até voltar. Atualizar o software do dispositivo (Fire TV: Definições > O meu Fire TV > Acerca de > Procurar atualizações) também pode resolver.",
+  'Go to row': "Ir para a linha",
   "Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.":
-      "Escribir la dirección de un servidor y una contraseña con el mando es incómodo. Escanea este código con la cámara del teléfono e inicia sesión allí: los datos aparecen aquí para que los compruebes.",
+      "Escrever o endereço de um servidor e palavra-passe com um telecomando é penoso. Digitalize este código com a câmara do telemóvel e inicie sessão aí — os detalhes aparecem aqui para verificar e ligar.",
   "Check the details here, then press Connect.":
-      "Comprueba los datos aquí y pulsa Conectar.",
-  "{n} other catalogs": "{n} otros catálogos",
+      "Verifique os detalhes aqui e prima Ligar.",
+  "{n} other catalogs": "{n} outros catálogos",
   "Use the Other filter in Media Hub > Movies > Genre to see this content.":
-      "Usa el filtro Otros en Media Hub > Películas > Género para ver este contenido.",
-  "Backup & restore": "Copia de seguridad y restauración",
+      "Use o filtro Outros em Media Hub > Filmes > Género para ver este conteúdo.",
+  "Backup & restore": "Cópia de segurança e restauro",
   "Save everything to a file on this device":
-      "Guardar todo en un archivo en este dispositivo",
-  "Back up now": "Hacer copia ahora",
+      "Guardar tudo num ficheiro neste dispositivo",
+  "Back up now": "Fazer cópia de segurança agora",
   "Playlists, favourites, profiles, progress and settings, saved to {path}":
-      "Listas, favoritos, perfiles, progreso y ajustes, guardados en {path}",
-  "Automatic backup": "Copia automática",
+      "Listas de reprodução, favoritos, perfis, progresso e definições, guardados em {path}",
+  "Automatic backup": "Cópia de segurança automática",
   "When VesperTV starts. Keeps the last {n}.":
-      "Al iniciar VesperTV. Conserva las últimas {n}.",
+      "Quando o VesperTV inicia. Mantém as últimas {n}.",
   "How often":
-      "Frecuencia",
+      "Frequência",
   "Every day":
-      "Cada día",
+      "Todos os dias",
   "Every 3 days":
-      "Cada 3 días",
+      "A cada 3 dias",
   "Every week":
-      "Cada semana",
+      "Todas as semanas",
   "Every 2 weeks":
-      "Cada 2 semanas",
+      "A cada 2 semanas",
   "Every month":
-      "Cada mes",
-  "Restore from a file": "Restaurar desde un archivo",
+      "Todos os meses",
+  "Restore from a file": "Restaurar a partir de um ficheiro",
   "Pick a backup file, e.g. after reinstalling VesperTV":
-      "Elige un archivo de copia, por ejemplo tras reinstalar VesperTV",
-  "Backups": "Copias de seguridad",
-  "No backups yet.": "Todavía no hay copias.",
+      "Escolha um ficheiro de cópia de segurança, p. ex. após reinstalar o VesperTV",
+  "Backups": "Cópias de segurança",
+  "No backups yet.": "Ainda não existem cópias de segurança.",
   "Backups include your playlist logins. Keep the files private.":
-      "Las copias incluyen los datos de acceso de tus listas. Mantén los archivos en privado.",
+      "As cópias de segurança incluem os dados de início de sessão das suas listas de reprodução. Mantenha os ficheiros privados.",
   "Manual": "Manual",
-  "Restore this backup": "Restaurar esta copia",
+  "Restore this backup": "Restaurar esta cópia de segurança",
   "Restore": "Restaurar",
-  "Restore backup?": "¿Restaurar la copia?",
+  "Restore backup?": "Restaurar cópia de segurança?",
   "Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.":
-      "Todo lo que hay en este dispositivo (listas, favoritos, perfiles, ajustes) se sustituye por la copia de {from}. Tu configuración actual se guarda antes como copia automática. VesperTV se cierra después.",
-  "the chosen file": "el archivo elegido",
-  "Backup restored": "Copia restaurada",
-  "Backup saved to {path}": "Copia guardada en {path}",
-  "Backup failed: {error}": "Error en la copia: {error}",
+      "Tudo neste dispositivo (listas de reprodução, favoritos, perfis, definições) é substituído pela cópia de segurança de {from}. A sua configuração atual é guardada primeiro como cópia de segurança automática. O VesperTV fecha em seguida.",
+  "the chosen file": "o ficheiro escolhido",
+  "Backup restored": "Cópia de segurança restaurada",
+  "Backup saved to {path}": "Cópia de segurança guardada em {path}",
+  "Backup failed: {error}": "Falha na cópia de segurança: {error}",
   "VesperTV needs storage access to save backups.":
-      "VesperTV necesita acceso al almacenamiento para guardar copias.",
+      "O VesperTV precisa de acesso ao armazenamento para guardar cópias de segurança.",
   "Couldn't read the backup folder: {error}":
-      "No se pudo leer la carpeta de copias: {error}",
-  "Couldn't read this backup: {error}": "No se pudo leer esta copia: {error}",
-  "Couldn't delete this backup.": "No se pudo eliminar esta copia.",
+      "Não foi possível ler a pasta de cópias de segurança: {error}",
+  "Couldn't read this backup: {error}":
+      "Não foi possível ler esta cópia de segurança: {error}",
+  "Couldn't delete this backup.":
+      "Não foi possível eliminar esta cópia de segurança.",
   "This device has no file picker. Copy the backup into {path} on this device instead.":
-      "Este dispositivo no tiene selector de archivos. Copia la copia de seguridad en {path} de este dispositivo.",
+      "Este dispositivo não tem seletor de ficheiros. Em vez disso, copie a cópia de segurança para {path} neste dispositivo.",
   "This file is not a VesperTV backup.":
-      "Este archivo no es una copia de VesperTV.",
+      "Este ficheiro não é uma cópia de segurança do VesperTV.",
   "Up / Down moves {name}. OK when done.":
-      "Arriba / Abajo mueve {name}. OK para terminar.",
-  "Mix playlists in Favourites": "Mezclar las listas en Favoritos",
+      "Cima / Baixo move {name}. OK quando concluído.",
+  "Mix playlists in Favourites": "Misturar listas de reprodução nos Favoritos",
   "TV, Movies and TV Shows favourites from every playlist in one A-Z list, instead of one list per playlist.":
-      "Los favoritos de TV, Películas y Series de todas las listas en una sola lista de la A a la Z, en lugar de una lista por cada una.",
-  'Move to Top': "Mover arriba del todo",
-  'Unhide this channel': "Volver a mostrar este canal",
+      "Favoritos de TV, Filmes e Séries de todas as listas de reprodução numa única lista A-Z, em vez de uma lista por lista de reprodução.",
+  'Move to Top': "Mover para o topo",
+  'Unhide this channel': "Mostrar novamente este canal",
   'Hide this channel': "Ocultar este canal",
-  'Double': "Doble",
-  'for groups': "para los grupos",
-  'Exit': "Salir",
-  'Exit {appName}?': "¿Salir de {appName}?",
+  'Double': "Duplo",
+  'for groups': "para grupos",
+  'Exit': "Sair",
+  'Exit {appName}?': "Sair do {appName}?",
   'Are you sure you want to exit {appName}?':
-      "¿Seguro que quieres salir de {appName}?",
-  'Stay': "Quedarme",
-  'History': "Historial",
-  'No channels watched yet.': "Todavía no has visto ningún canal.",
-  'Update Content': "Act. contenido",
+      "Tem a certeza de que pretende sair do {appName}?",
+  'Stay': "Ficar",
+  'History': "Histórico",
+  'No channels watched yet.': "Ainda não viu nenhum canal.",
+  'Update Content': "Atualizar conteúdo",
   'Minimize': "Minimizar",
-  'Close': "Cerrar",
-  'Exit {appName}': "Salir de {appName}",
+  'Close': "Fechar",
+  'Exit {appName}': "Sair do {appName}",
   'Long-press a group elsewhere to favorite the whole thing.':
-      "Mantén OK en un grupo en otra parte para añadirlo entero a favoritos.",
-  'Nothing playing': "Nada en reproducción",
-  'Click to resume': "Clic para reanudar",
-  'Filter channels in this group...': "Filtrar canales de este grupo…",
-  'Close filter': "Cerrar filtro",
+      "Mantenha premido num grupo noutro local para adicionar tudo aos favoritos.",
+  'Nothing playing': "Nada em reprodução",
+  'Click to resume': "Clique para retomar",
+  'Filter channels in this group...': "Filtrar canais neste grupo…",
+  'Close filter': "Fechar filtro",
   'Hidden — find it again in Settings > Playlist Manager > Hidden Channels':
-      "Oculto: lo encontrarás en Ajustes > Gestor de listas > Canales ocultos",
-  'Unhidden': "Visible otra vez",
+      "Oculto — encontre novamente em Definições > Gestor de listas de reprodução > Canais ocultos",
+  'Unhidden': "Visível novamente",
   'No favorited movies or TV shows yet.\nHold Select on a poster to add one.':
-      "Aún no hay películas ni series en favoritos.\nMantén OK en un póster para añadir una.",
-  'No favorited movies yet.': "Aún no hay películas en favoritos.",
-  'No favorited TV shows yet.': "Aún no hay series en favoritos.",
+      "Ainda não existem filmes ou séries nos favoritos.\nMantenha premido Selecionar num cartaz para adicionar.",
+  'No favorited movies yet.': "Ainda não existem filmes nos favoritos.",
+  'No favorited TV shows yet.': "Ainda não existem séries nos favoritos.",
   'No favorite channels yet — press Down while watching one to add it.':
-      "Aún no hay canales favoritos: pulsa Abajo mientras ves uno para añadirlo.",
-  'Updating…': "Actualizando…",
-  'No program data': "Sin programación",
-  'No program data available': "Programación no disponible",
-  'Next: {title} ({p})': "Después: {title} ({p})",
+      "Ainda não existem canais favoritos — prima Baixo enquanto vê um para adicionar.",
+  'Updating…': "A atualizar…",
+  'No program data': "Sem dados de programação",
+  'No program data available': "Sem dados de programação disponíveis",
+  'Next: {title} ({p})': "A seguir: {title} ({p})",
   'Focus a program to see details':
-      "Selecciona un programa para ver los detalles",
-  'Space': "Espacio",
-  'Loading EPG…': "Cargando guía…",
+      "Foque um programa para ver detalhes",
+  'Space': "Espaço",
+  'Loading EPG…': "A carregar EPG…",
 
   // ── Welcome ──────────────────────────────────────────────────────────
-  'Hey beautiful Human,': "Hola, hermoso humano,",
-  'Hey beautiful Human': "Hola, hermoso humano",
-  'Welcome to VesperTV': "Bienvenido a VesperTV",
-  'Add your first playlist?': "¿Añadir tu primera lista?",
+  'Hey beautiful Human,': "Olá, belo ser humano,",
+  'Hey beautiful Human': "Olá, belo ser humano",
+  'Welcome to VesperTV': "Bem-vindo ao VesperTV",
+  'Add your first playlist?': "Adicionar a sua primeira lista de reprodução?",
   'Add a playlist to kick things off, or skip for now if you just want to browse and discover the app without content.':
-      "Añade una lista para empezar, u omítelo por ahora si solo quieres recorrer y descubrir la app sin contenido.",
+      "Adicione uma lista de reprodução para começar, ou ignore por agora se quiser apenas explorar e descobrir a aplicação sem conteúdo.",
 
   // ── Add playlist ─────────────────────────────────────────────────────
-  'Add Playlist': "Añadir lista",
-  'Paste some text first.': "Primero pega algún texto.",
+  'Add Playlist': "Adicionar lista de reprodução",
+  'Paste some text first.': "Cole primeiro algum texto.",
   "Couldn't find anything usable in that text.":
-      "No se encontró nada útil en ese texto.",
+      "Não foi possível encontrar nada utilizável nesse texto.",
   'Received from your phone — check the details, then press Add Playlist.':
-      "Recibido desde tu teléfono: revisa los datos y pulsa «Añadir lista».",
+      "Recebido do seu telemóvel — verifique os detalhes e prima Adicionar lista de reprodução.",
   'Scan the code with your phone and send the form first.':
-      "Primero escanea el código con tu teléfono y envía el formulario.",
-  'Playlist name is required.': "El nombre de la lista es obligatorio.",
+      "Digitalize o código com o seu telemóvel e envie primeiro o formulário.",
+  'Playlist name is required.': "O nome da lista de reprodução é obrigatório.",
   'Server, username, and password are all required.':
-      "Servidor, usuario y contraseña son obligatorios.",
-  'M3U playlist URL is required.': "La URL de la lista M3U es obligatoria.",
-  'Playlist updated.': "Lista actualizada.",
-  'Playlist added.': "Lista añadida.",
-  'Download content': "Descargar contenido",
+      "O servidor, o nome de utilizador e a palavra-passe são todos obrigatórios.",
+  'M3U playlist URL is required.': "O URL da lista de reprodução M3U é obrigatório.",
+  'Playlist updated.': "Lista de reprodução atualizada.",
+  'Playlist added.': "Lista de reprodução adicionada.",
+  'Download content': "Transferir conteúdo",
   'This provider has a large catalog. Download everything in the background, or choose which groups to include first?':
-      "Este proveedor tiene un catálogo grande. ¿Descargar todo en segundo plano o elegir primero qué grupos incluir?",
-  'Choose Groups First': "Elegir grupos",
-  'Download All': "Descargar todo",
-  'Edit Playlist': "Editar lista",
-  'Playlist source': "Origen de la lista",
+      "Este fornecedor tem um catálogo grande. Transferir tudo em segundo plano ou escolher primeiro que grupos incluir?",
+  'Choose Groups First': "Escolher grupos primeiro",
+  'Download All': "Transferir tudo",
+  'Edit Playlist': "Editar lista de reprodução",
+  'Playlist source': "Origem da lista de reprodução",
   'M3U URL': "URL M3U",
   'Xtream Codes': "Xtream Codes",
-  'Smart Add': "Añadido inteligente",
-  'From phone': "Desde el teléfono",
-  'Playlist name': "Nombre de la lista",
-  'Name': "Nombre",
-  'e.g. My Provider, or 8kStrong': "p. ej. Mi proveedor, o 8kStrong",
-  'M3U Playlist URL': "URL de la lista M3U",
-  'EPG (XMLTV) URL': "URL de la guía (XMLTV)",
+  'Smart Add': "Adição inteligente",
+  'From phone': "A partir do telemóvel",
+  'Playlist name': "Nome da lista de reprodução",
+  'Name': "Nome",
+  'e.g. My Provider, or 8kStrong': "p. ex. O meu fornecedor, ou 8kStrong",
+  'M3U Playlist URL': "URL da lista de reprodução M3U",
+  'EPG (XMLTV) URL': "URL do EPG (XMLTV)",
   'Paste the message your provider sent you — we\'ll pull out the server, username, and password.':
-      "Pega el mensaje que te envió tu proveedor; sacaremos el servidor, el usuario y la contraseña.",
-  'Paste provider message': "Pegar mensaje del proveedor",
-  'Parse': "Analizar",
-  'Confirm the server': "Confirmar el servidor",
+      "Cole a mensagem que o seu fornecedor lhe enviou — extrairemos o servidor, o nome de utilizador e a palavra-passe.",
+  'Paste provider message': "Colar mensagem do fornecedor",
+  'Parse': "Analisar",
+  'Confirm the server': "Confirmar o servidor",
   'No server URL found in that text — enter it below.':
-      "No hay URL de servidor en ese texto; escríbela abajo.",
+      "Não foi encontrado nenhum URL de servidor nesse texto — introduza-o abaixo.",
   'Server URL (e.g. http://host:port)':
-      "URL del servidor (p. ej. http://host:puerto)",
-  'Username': "Usuario",
-  'Password': "Contraseña",
-  'Custom EPG (XMLTV) URL — optional': "URL de guía propia (XMLTV) — opcional",
+      "URL do servidor (p. ex. http://host:porta)",
+  'Username': "Nome de utilizador",
+  'Password': "Palavra-passe",
+  'Custom EPG (XMLTV) URL — optional': "URL de EPG personalizado (XMLTV) — opcional",
   'Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.':
-      "Déjalo vacío para usar el xmltv.php del panel. Rellénalo si la guía de tu proveedor está vacía o no es fiable (p. ej. una fuente externa como EPGgenius); solo completa un canal si los ID de esa fuente coinciden con los del panel.",
-  'Paste different text': "Pegar otro texto",
+      "Deixe em branco para usar o xmltv.php do painel. Defina isto se o EPG do seu fornecedor estiver vazio ou não for fiável (p. ex. um feed de terceiros como o EPGgenius) — apenas preenche um canal se os IDs desse feed corresponderem aos deste painel.",
+  'Paste different text': "Colar texto diferente",
   'Status': "Estado",
-  'Failed to add playlist: {p}': "No se pudo añadir la lista: {p}",
-  'Save Changes': "Guardar cambios",
+  'Failed to add playlist: {p}': "Falha ao adicionar lista de reprodução: {p}",
+  'Save Changes': "Guardar alterações",
   'Fill in the form on the left, then press {p} above.':
-      "Rellena el formulario de la izquierda y pulsa «{p}» arriba.",
-  'Unexpected Xtream API response': "Respuesta inesperada de la API Xtream",
+      "Preencha o formulário à esquerda e prima {p} acima.",
+  'Unexpected Xtream API response': "Resposta inesperada da API Xtream",
   'Invalid Xtream username/password':
-      "Usuario o contraseña de Xtream no válidos",
+      "Nome de utilizador ou palavra-passe Xtream inválidos",
   'Xtream account is not active (status: {status})':
-      "La cuenta Xtream no está activa (estado: {status})",
+      "A conta Xtream não está ativa (estado: {status})",
 
   // ── Phone pairing ────────────────────────────────────────────────────
-  'Code expired': "Código caducado",
-  'Add from your phone': "Añadir desde tu teléfono",
+  'Code expired': "Código expirado",
+  'Add from your phone': "Adicionar a partir do telemóvel",
   'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.':
-      "Escribir una contraseña larga con el control remoto es un fastidio. Escanea este código con la cámara del teléfono y rellena el formulario allí; aparecerá aquí para que lo revises y lo añadas.",
+      "Escrever uma palavra-passe longa com um telecomando é penoso. Digitalize este código com a câmara do telemóvel e preencha o formulário aí — aparece aqui para verificar e adicionar.",
   'Scan with your phone (mobile data is fine).':
-      "Escanea con tu teléfono (los datos móviles sirven).",
+      "Digitalize com o telemóvel (os dados móveis servem).",
   'Connect your phone to the same Wi-Fi as this TV, then scan.':
-      "Conecta tu teléfono al mismo Wi-Fi que esta TV y luego escanea.",
+      "Ligue o telemóvel à mesma rede Wi-Fi desta TV e depois digitalize.",
   'Fill in the form and tap Send to TV.':
-      "Rellena el formulario y toca «Send to TV».",
+      "Preencha o formulário e toque em Enviar para a TV.",
   'Check the details here, then press Add Playlist.':
-      "Revisa los datos aquí y pulsa «Añadir lista».",
-  'Waiting for your phone…': "Esperando a tu teléfono…",
-  'Or open on the phone:': "O abre en el teléfono:",
+      "Verifique os detalhes aqui e prima Adicionar lista de reprodução.",
+  'Waiting for your phone…': "A aguardar pelo telemóvel…",
+  'Or open on the phone:': "Ou abra no telemóvel:",
   'Your details are encrypted on the phone; the relay only passes along scrambled data and deletes it.':
-      "Tus datos se cifran en el teléfono; el relé solo transmite datos cifrados y luego los borra.",
-  'New code': "Nuevo código",
+      "Os seus detalhes são encriptados no telemóvel; o retransmissor apenas transmite dados cifrados e elimina-os.",
+  'New code': "Novo código",
   'Phone on this Wi-Fi? Use the Wi-Fi code':
-      "¿Teléfono en este Wi-Fi? Usa el código Wi-Fi",
+      "Telemóvel nesta rede Wi-Fi? Use o código Wi-Fi",
   'Phone not on this Wi-Fi? Use the other code':
-      "¿Teléfono fuera de este Wi-Fi? Usa el otro código",
+      "Telemóvel fora desta rede Wi-Fi? Use o outro código",
 
   // ── Channel linking / EPG matching ───────────────────────────────────
   'Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.':
-      "Primero añade y activa una segunda lista: un enlace une un canal de una lista con su equivalente en otra.",
-  'Auto-Pair Channels': "Emparejar auto.",
-  'Unpair Channels': "Desemparejar",
+      "Adicione e ative primeiro uma segunda lista de reprodução — uma ligação associa um canal numa lista ao equivalente noutra.",
+  'Auto-Pair Channels': "Emparelhar canais auto.",
+  'Unpair Channels': "Desemparelhar canais",
   'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead':
-      "Revisando canales emparejados auto. ({reviewFilter}): escribe para buscar en todos",
-  'Search your channels': "Buscar en tus canales",
-  'Not linked': "Sin enlazar",
+      "A rever canais emparelhados auto. ({reviewFilter}) — escreva para pesquisar todos",
+  'Search your channels': "Pesquisar nos seus canais",
+  'Not linked': "Não associado",
   'Linked channel no longer available':
-      "El canal enlazado ya no está disponible",
-  'Linked to {p}: {name}': "Enlazado a {p}: {name}",
-  'Clear link': "Quitar enlace",
-  'Link "{name}"': "Enlazar «{name}»",
-  'Search other playlists\' channels': "Buscar en los canales de otras listas",
-  'No matches.': "Sin coincidencias.",
+      "Canal associado já não disponível",
+  'Linked to {p}: {name}': "Associado a {p}: {name}",
+  'Clear link': "Limpar associação",
+  'Link "{name}"': "Associar «{name}»",
+  'Search other playlists\' channels': "Pesquisar canais de outras listas de reprodução",
+  'No matches.': "Sem correspondências.",
   'No EPG feed has been loaded yet this session — run "Update EPG Now" first so there\'s a channel directory to match against.':
-      "Aún no se cargó ninguna guía en esta sesión: ejecuta primero «Act. guía» para tener un directorio de canales.",
+      "Ainda não foi carregado nenhum feed EPG nesta sessão — execute primeiro «Atualizar EPG agora» para existir um diretório de canais para correspondência.",
   'No EPG feed has been loaded yet this session — run "Update EPG Now" above first so there\'s a channel directory to search.':
-      "Aún no se cargó ninguna guía en esta sesión: ejecuta primero «Act. guía» (arriba) para tener un directorio de canales.",
-  'Assigned: {p}': "Asignado: {p}",
-  'Matched automatically': "Asociado automáticamente",
-  'Clear assignment': "Quitar asignación",
-  'Assign "{channelName}"': "Asignar «{channelName}»",
-  'Search the EPG feed\'s channels': "Buscar en los canales de la guía",
+      "Ainda não foi carregado nenhum feed EPG nesta sessão — execute primeiro «Atualizar EPG agora» acima para existir um diretório de canais para pesquisar.",
+  'Assigned: {p}': "Atribuído: {p}",
+  'Matched automatically': "Correspondência automática",
+  'Clear assignment': "Limpar atribuição",
+  'Assign "{channelName}"': "Atribuir «{channelName}»",
+  'Search the EPG feed\'s channels': "Pesquisar nos canais do feed EPG",
   'No EPG feed has been loaded yet this app session — go back and run "Update EPG Now" first.':
-      "Aún no se cargó ninguna guía en esta sesión: vuelve atrás y ejecuta primero «Act. guía».",
-  'Now: {title}': "Ahora: {title}",
-  'No current program data': "Sin programa actual",
-  'Channels are pairing, please wait…': "Emparejando canales, espera…",
+      "Ainda não foi carregado nenhum feed EPG nesta sessão da aplicação — volte atrás e execute primeiro «Atualizar EPG agora».",
+  'Now: {title}': "Agora: {title}",
+  'No current program data': "Sem dados do programa atual",
+  'Channels are pairing, please wait…': "A emparelhar canais, aguarde…",
   'No new matches found — anything still unmatched needs a manual pick.':
-      "No hay nuevas coincidencias; lo que falte hay que elegirlo a mano.",
+      "Nenhuma nova correspondência encontrada — o que continuar sem correspondência requer escolha manual.",
   'Paired {paired} channel{s} automatically.':
-      "Canales emparejados automáticamente: {paired}.",
-  'Review': "Revisar",
+      "Emparelhados automaticamente: {paired} canal{s}.",
+  'Review': "Rever",
   'Continue': "Continuar",
   'Nothing was auto-paired — there\'s nothing to undo.':
-      "No se emparejó nada automáticamente; no hay nada que deshacer.",
+      "Nada foi emparelhado automaticamente — não há nada para anular.",
   'Undo {autoPairedCount} automatic pairing{s}? Anything you\'ve set by hand is kept.':
-      "¿Deshacer los emparejamientos automáticos ({autoPairedCount})? Lo que hiciste a mano se conserva.",
-  'Unpair': "Desemparejar",
+      "Anular {autoPairedCount} emparelhamento{s} automático? Tudo o que definiu manualmente é mantido.",
+  'Unpair': "Desemparelhar",
 
   // ── Check for updates ────────────────────────────────────────────────
   'Couldn\'t open the download link.':
-      "No se pudo abrir el enlace de descarga.",
-  'Allow installing updates': "Permitir instalar actualizaciones",
+      "Não foi possível abrir a ligação de descarga.",
+  'Allow installing updates': "Permitir instalar atualizações",
   'Android needs one-time permission for VesperTV to install an update it downloaded. The next screen is Android\'s own settings — turn the toggle on, then come back here and press Install again.':
-      "Android necesita un permiso único para que VesperTV instale una actualización descargada. La siguiente pantalla es de los ajustes de Android: activa la opción, vuelve aquí y pulsa Instalar otra vez.",
-  'Check for Updates': "Buscar actualizaciones",
-  'Current version: —': "Versión actual: —",
-  'Current version: {currentVersion}': "Versión actual: {currentVersion}",
-  'Checking...': "Comprobando…",
-  'You\'re on the latest version.': "Tienes la última versión.",
-  'Check Again': "Volver a comprobar",
-  'Version {version} is available': "La versión {version} está disponible",
+      "O Android precisa de permissão única para o VesperTV instalar uma atualização transferida. O ecrã seguinte é das definições do Android — ative o interruptor, volte aqui e prima Instalar novamente.",
+  'Check for Updates': "Verificar atualizações",
+  'Current version: —': "Versão atual: —",
+  'Current version: {currentVersion}': "Versão atual: {currentVersion}",
+  'Checking...': "A verificar…",
+  'You\'re on the latest version.': "Tem a versão mais recente.",
+  'Check Again': "Verificar novamente",
+  'Version {version} is available': "A versão {version} está disponível",
   'Open Download Page': "Abrir página de descarga",
   'Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.':
-      "Se abre en tu navegador: descomprime la descarga y ejecuta VesperTV.exe para actualizar, reemplazando la carpeta anterior.",
+      "Abre no navegador — extraia a transferência e execute VesperTV.exe para atualizar, substituindo a pasta antiga.",
   "Opens in your browser — open the downloaded file and drag VesperTV into Applications, replacing the old one.":
-      "Se abre en tu navegador: abre el archivo descargado y arrastra VesperTV a Aplicaciones, reemplazando la versión anterior.",
-  'Download & Install': "Descargar e instalar",
-  'Downloading update... {p}%': "Descargando actualización… {p} %",
-  'Download complete.': "Descarga completa.",
+      "Abre no navegador — abra o ficheiro transferido e arraste o VesperTV para Aplicações, substituindo o anterior.",
+  'Download & Install': "Transferir e instalar",
+  'Downloading update... {p}%': "A transferir atualização… {p}%",
+  'Download complete.': "Transferência concluída.",
   'Install': "Instalar",
   'Android will ask you to confirm the install — that\'s normal, not every app can skip it.':
-      "Android te pedirá que confirmes la instalación; es normal, no todas las apps pueden saltarse ese paso.",
-  'Something went wrong: {p}': "Algo salió mal: {p}",
-  'unknown error': "error desconocido",
-  'Try Again': "Reintentar",
+      "O Android vai pedir para confirmar a instalação — é normal, nem todas as aplicações podem ignorar este passo.",
+  'Something went wrong: {p}': "Algo correu mal: {p}",
+  'unknown error': "erro desconhecido",
+  'Try Again': "Tentar novamente",
   'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minute.':
-      "GitHub está limitando temporalmente las comprobaciones desde esta red; vuelve a intentarlo en {n} minuto aprox.",
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente dentro de cerca de {n} minuto.",
   'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minutes.':
-      "GitHub está limitando temporalmente las comprobaciones desde esta red; vuelve a intentarlo en {n} minutos aprox.",
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente dentro de cerca de {n} minutos.",
   'GitHub is temporarily rate-limiting update checks from this network — try again shortly.':
-      "GitHub está limitando temporalmente las comprobaciones desde esta red; vuelve a intentarlo en un rato.",
+      "O GitHub está a limitar temporariamente as verificações de atualização desta rede — tente novamente em breve.",
 
   // ── EPG settings ─────────────────────────────────────────────────────
   'No EPG URL set yet — add a playlist first.':
-      "Todavía no hay URL de guía; primero añade una lista.",
-  'Cache cleared.': "Caché borrada.",
-  'EPG': "Guía (EPG)",
-  'General': "General",
-  'EPG Matching': "Asoc. de guía",
-  'Channel Pairing': "Emparejar canales",
-  'Auto-refresh interval': "Intervalo de act. automática",
+      "Ainda não foi definido nenhum URL de EPG — adicione primeiro uma lista de reprodução.",
+  'Cache cleared.': "Cache limpa.",
+  'EPG': "EPG",
+  'General': "Geral",
+  'EPG Matching': "Correspondência EPG",
+  'Channel Pairing': "Emparelhamento de canais",
+  'Auto-refresh interval': "Intervalo de atualização automática",
   '{p} hours': "{p} horas",
-  'EPG never updated': "La guía nunca se actualizó",
-  'EPG last updated: {p}': "Última act. de la guía: {p}",
-  'Update EPG Now': "Act. guía",
-  'Clear Cache': "Borrar caché",
+  'EPG never updated': "EPG nunca atualizado",
+  'EPG last updated: {p}': "Última atualização do EPG: {p}",
+  'Update EPG Now': "Atualizar EPG agora",
+  'Clear Cache': "Limpar cache",
   'Clears the cached EPG and catalog data — playlist source, favorites, and group visibility are kept.':
-      "Borra la guía y el catálogo en caché; se conservan el origen de las listas, los favoritos y la visibilidad de los grupos.",
+      "Limpa os dados em cache do EPG e do catálogo — a origem da lista de reprodução, os favoritos e a visibilidade dos grupos são mantidos.",
   'Fixes a channel with no program data by manually assigning it to an entry in the loaded EPG feed — useful when a provider\'s own id doesn\'t match a third-party source.':
-      "Arregla un canal sin programación asignándolo a mano a una entrada de la guía cargada; útil cuando el ID del proveedor no coincide con una fuente externa.",
+      "Corrige um canal sem dados de programação atribuindo-o manualmente a uma entrada do feed EPG carregado — útil quando o ID do próprio fornecedor não corresponde a uma fonte de terceiros.",
   'Links a channel on one playlist to its equivalent on another. If a live channel fails to load, or you switch to it yourself from the player, playback can fall back to the paired channel on the other playlist instead.':
-      "Une un canal de una lista con su equivalente en otra. Si un canal en vivo no carga, o cambias tú desde el reproductor, la reproducción puede pasar al canal emparejado de la otra lista.",
+      "Associa um canal numa lista de reprodução ao equivalente noutra. Se um canal em direto falhar ao carregar, ou se mudar manualmente a partir do reprodutor, a reprodução pode recorrer ao canal emparelhado na outra lista.",
 
   // ── General settings ─────────────────────────────────────────────────
   'Clear search & channel history?':
-      "¿Borrar el historial de búsqueda y canales?",
+      "Limpar histórico de pesquisa e canais?",
   'Removes your recent searches and the History list of live channels.':
-      "Elimina tus búsquedas recientes y el historial de canales en vivo.",
+      "Remove as suas pesquisas recentes e a lista de Histórico de canais em direto.",
   'Search and channel history cleared.':
-      "Historial de búsqueda y canales borrado.",
+      "Histórico de pesquisa e canais limpo.",
   'Clear Movies & TV Shows history?':
-      "¿Borrar el historial de películas y series?",
+      "Limpar histórico de Filmes e Séries?",
   'Removes Continue Watching and the saved progress of every movie and episode.':
-      "Elimina Seguir viendo y el progreso guardado de cada película y episodio.",
+      "Remove Continuar a ver e o progresso guardado de cada filme e episódio.",
   'Movies & TV Shows history cleared.':
-      "Historial de películas y series borrado.",
+      "Histórico de Filmes e Séries limpo.",
   'Language': "Idioma",
-  'Follows the device language': "Usa el idioma del dispositivo",
+  'Follows the device language': "Segue o idioma do dispositivo",
   'Automatic': "Automático",
-  "Fallback": "Respaldo",
-  'Startup': "Inicio",
+  "Fallback": "Alternativa",
+  'Startup': "Arranque",
   'Resume last channel in full screen':
-      "Reanudar el último canal en pantalla completa",
+      "Retomar último canal em ecrã inteiro",
   'Opens the last live channel full screen after the splash.':
-      "Abre el último canal en vivo en pantalla completa tras la pantalla de inicio.",
+      "Abre o último canal em direto em ecrã inteiro após o ecrã inicial.",
   'Resume last channel with the guide open':
-      "Reanudar el último canal con la guía abierta",
+      "Retomar último canal com o guia aberto",
   'Plays the last live channel in the small preview, with the channel list.':
-      "Reproduce el último canal en vivo en la vista previa pequeña, con la lista de canales.",
+      "Reproduz o último canal em direto na pequena pré-visualização, com a lista de canais.",
   'Both off: nothing plays at startup (a "Hold > to resume" reminder instead).':
-      "Ambos desactivados: no se reproduce nada al iniciar (un aviso «Mantén > para reanudar» en su lugar).",
-  'Tabs': "Pestañas",
-  'Hide Movies and TV Shows': "Ocultar Películas y Series",
+      "Ambos desativados: nada reproduz no arranque (um lembrete «Mantenha premido > para retomar» em vez disso).",
+  'Tabs': "Separadores",
+  'Hide Movies and TV Shows': "Ocultar Filmes e Séries",
   'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
-      "Quita ambas pestañas y sus resultados de búsqueda, p. ej. si ves películas y series en otro lugar.",
+      "Remove ambos os separadores e os respetivos resultados de pesquisa, p. ex. se vir filmes e séries noutro local.",
   'Favorite channels are in the TV tab, under Favourites.':
-      "Los canales favoritos están en la pestaña TV, en Favoritos.",
-  'Show the Multiview tip': "Mostrar el consejo de Multivista",
+      "Os canais favoritos estão no separador TV, em Favoritos.",
+  'Show the Multiview tip': "Mostrar a dica da Multivista",
   'The connections reminder shown when opening Multiview.':
-      "El aviso sobre conexiones al abrir la Multivista.",
-  'Resume reminder': "Aviso para reanudar",
+      "O lembrete de ligações apresentado ao abrir a Multivista.",
+  'Resume reminder': "Lembrete de retoma",
   'Show the "Hold > to resume" reminder':
-      "Mostrar el aviso «Mantén > para reanudar»",
+      "Mostrar o lembrete «Mantenha premido > para retomar»",
   'The pill at the bottom while a channel plays in the background. Off: hidden.':
-      "La píldora de abajo mientras un canal suena en segundo plano. Desactivado: oculta.",
+      "A barra inferior enquanto um canal reproduz em segundo plano. Desativado: oculta.",
   'The pill at the bottom while a channel plays in the background. Off: hidden — holding Right still resumes.':
-      "La píldora de abajo mientras un canal suena en segundo plano. Desactivado: oculta; mantener Derecha sigue reanudando.",
-  'Clear search & channel history': "Borrar historial de búsqueda y canales",
+      "A barra inferior enquanto um canal reproduz em segundo plano. Desativado: oculta — manter premido Direita continua a retomar.",
+  'Clear search & channel history': "Limpar histórico de pesquisa e canais",
   'Recent searches and the live channel History':
-      "Búsquedas recientes e historial de canales en vivo",
-  'Clear Movies & TV Shows history': "Borrar historial de películas y series",
-  'Continue Watching and saved progress': "«Seguir viendo» y progreso guardado",
+      "Pesquisas recentes e o Histórico de canais em direto",
+  'Clear Movies & TV Shows history': "Limpar histórico de Filmes e Séries",
+  'Continue Watching and saved progress': "Continuar a ver e progresso guardado",
 
   // ── Group management / hidden channels ───────────────────────────────
-  'Leave group selection?': "¿Salir de la selección de grupos?",
+  'Leave group selection?': "Sair da seleção de grupos?",
   'Your show/hide choices are saved, and anything still visible will start downloading — same as pressing Done.':
-      "Tus elecciones de mostrar/ocultar se guardan y todo lo visible empezará a descargarse, igual que al pulsar Listo.",
-  'Leave': "Salir",
-  'Save playlist?': "¿Guardar la lista?",
+      "As suas escolhas de mostrar/ocultar são guardadas e tudo o que continuar visível iniciará a transferência — tal como premir Concluído.",
+  'Leave': "Sair",
+  'Save playlist?': "Guardar lista de reprodução?",
   'Your playlist will be saved with the selected groups. You can always add or remove groups later in Settings > Group Management.':
-      "Tu lista se guardará con los grupos elegidos. Siempre puedes añadir o quitar grupos después en Ajustes > Gestión de grupos.",
+      "A sua lista de reprodução será guardada com os grupos selecionados. Pode sempre adicionar ou remover grupos mais tarde em Definições > Gestão de grupos.",
   'Confirm': "Confirmar",
-  'Group Management': "Gestión de grupos",
-  'Done': "Listo",
+  'Group Management': "Gestão de grupos",
+  'Done': "Concluído",
   'If you are done selecting your groups, press Confirm below.\n\nIf you are not done yet, press Left to go back to your categories.':
-      "Si terminaste de elegir tus grupos, pulsa Confirmar abajo.\n\nSi aún no, pulsa Izquierda para volver a tus categorías.",
+      "Se terminou de selecionar os seus grupos, prima Confirmar abaixo.\n\nSe ainda não terminou, prima Esquerda para voltar às categorias.",
   'No categories yet — load a playlist first.':
-      "Aún no hay categorías; primero carga una lista.",
+      "Ainda não existem categorias — carregue primeiro uma lista de reprodução.",
   'Search groups': 'Buscar grupos',
   "Countries": "Países",
-  "Countries and prefixes": "Países y prefijos",
+  "Countries and prefixes": "Países e prefixos",
   "{count} hidden": "{count} ocultos",
-  "Shown groups": "Grupos visibles",
+  "Shown groups": "Grupos visíveis",
   "Hidden groups": "Grupos ocultos",
-  "No groups here.": "No hay grupos aquí.",
-  "Hide every group": "Ocultar todos los grupos",
-  "Then select the countries to keep.": "Luego elige los países que quieres conservar.",
-  "All hidden. Select the countries to keep.": "Todo oculto. Elige los países que quieres conservar.",
-  "Found at the start of the group names. Select one to show or hide all its groups at once.": "Encontrados al principio de los nombres de grupo. Elige uno para mostrar u ocultar todos sus grupos a la vez.",
+  "No groups here.": "Nenhum grupo aqui.",
+  "Hide every group": "Ocultar todos os grupos",
+  "Then select the countries to keep.": "Em seguida, selecione os países a manter.",
+  "All hidden. Select the countries to keep.": "Tudo oculto. Selecione os países a manter.",
+  "Found at the start of the group names. Select one to show or hide all its groups at once.": "Encontrados no início dos nomes dos grupos. Selecione um para mostrar ou ocultar todos os grupos de uma vez.",
   "1 group": "1 grupo",
   "{count} groups": "{count} grupos",
-  "{shown} of {total} shown": "{shown} de {total} visibles",
-  "Groups without a country": "Grupos sin país",
+  "{shown} of {total} shown": "{shown} de {total} visíveis",
+  "Groups without a country": "Grupos sem país",
   '{shown} of {total} groups': '{shown} de {total} grupos',
   'Show results': 'Mostrar resultados',
   'Hide results': 'Ocultar resultados',
-  'No groups start with "{query}".': 'Ningún grupo empieza por «{query}».',
+  'No groups start with "{query}".': 'Nenhum grupo começa por «{query}».',
   'Show All': "Mostrar todo",
   'Hide All': "Ocultar todo",
-  'Hidden channels': "Canales ocultos",
+  'Hidden channels': "Canais ocultos",
   'No channels are individually hidden. Hide one from its row in the Live TV list.':
-      "No hay canales ocultos individualmente. Oculta uno desde su fila en la lista de TV en vivo.",
+      "Nenhum canal está oculto individualmente. Oculte um a partir da respetiva linha na lista de TV em direto.",
   'Unhide': "Mostrar",
   'Show group': "Mostrar grupo",
   'Hide group': "Ocultar grupo",
