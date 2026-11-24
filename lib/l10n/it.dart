@@ -3834,6 +3834,16 @@ const Map<String, String> kIt = {
       "Su nel lettore",
   "Down in the player":
       "Giù nel lettore",
+  "Hold Left in the player":
+      "Sinistra nel lettore (tenuto premuto)",
+  "Hold Right in the player":
+      "Destra nel lettore (tenuto premuto)",
+  "Hold Up in the player":
+      "Su nel lettore (tenuto premuto)",
+  "Hold Down in the player":
+      "Giù nel lettore (tenuto premuto)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Tenuto premuto circa mezzo secondo. Con un'azione scelta, la pressione normale aspetta che lasci il tasto.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "Nel lettore a schermo intero su un canale in diretta, senza nulla sullo schermo.",
   "Reset remote buttons":

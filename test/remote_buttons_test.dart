@@ -148,6 +148,28 @@ void main() {
     expect(buttons.isCustomised, isFalse);
   });
 
+  test('a hold on an arrow is saved beside its press, and reset clears it',
+      () async {
+    // Owner, 2026-11-21: Left = guide, hold Left = side drawer.
+    expect(buttons.arrowHold(PlayerArrow.left), 'none');
+    await buttons.setArrow(PlayerArrow.left, 'back');
+    await buttons.setArrowHold(PlayerArrow.left, 'panel');
+    expect(buttons.arrowAction(PlayerArrow.left), 'back');
+    expect(buttons.arrowHold(PlayerArrow.left), 'panel');
+    expect(buttons.arrowHold(PlayerArrow.right), 'none');
+    final json = storage.getPlayerArrows();
+    expect(RemoteButtons.decodeArrowHolds(json), {PlayerArrow.left: 'panel'});
+    // An older version reads the same JSON: it keeps the press, skips the hold.
+    expect(RemoteButtons.decodeArrows(json), {PlayerArrow.left: 'back'});
+    await buttons.setArrow(PlayerArrow.left, 'panel');
+    expect(buttons.isCustomised, isTrue, reason: 'the hold is still set');
+    await buttons.setArrowHold(PlayerArrow.left, 'none');
+    expect(storage.getPlayerArrows(), isNull);
+    await buttons.setArrowHold(PlayerArrow.up, 'bar');
+    await buttons.reset();
+    expect(buttons.arrowHold(PlayerArrow.up), 'none');
+  });
+
   test('stored JSON with unknown actions is dropped', () {
     final decoded = RemoteButtons.decodeBindings(
         '{"$_bookmarkId": {"s": "guide", "h": "teleport"}, "x": {"s": "stop"}}');

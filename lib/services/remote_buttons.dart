@@ -146,6 +146,11 @@ enum PlayerArrow {
   final String label;
   final String defaultAction;
 
+  /// Holding the arrow ~0.5 s: nothing by default (owner, 2026-11-21: Left
+  /// = guide, hold Left = side drawer). Stored as `<name>Hold`.
+  static const defaultHold = 'none';
+  String get holdKey => '${name}Hold';
+
   /// The choices, in order: id + English UI label.
   static const actions = <(String, String)>[
     ('panel', 'Side drawer'),
@@ -250,6 +255,7 @@ class RemoteButtons {
   int _cacheGen = -1;
   Map<int, RemoteBinding> _bindings = const {};
   Map<PlayerArrow, String> _arrows = const {};
+  Map<PlayerArrow, String> _holds = const {};
 
   void _load() {
     final storage = _storage;
@@ -258,6 +264,7 @@ class RemoteButtons {
     _cacheGen = storage.viewerGeneration;
     _bindings = decodeBindings(storage.getRemoteButtons());
     _arrows = decodeArrows(storage.getPlayerArrows());
+    _holds = decodeArrowHolds(storage.getPlayerArrows());
     RemoteKeys._take(_bindings.keys);
   }
 
@@ -285,6 +292,24 @@ class RemoteButtons {
       return {
         for (final arrow in PlayerArrow.values)
           if (map[arrow.name] case final String v when ids.contains(v))
+            arrow: v,
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// The hold actions, from the same JSON as [decodeArrows] (`leftHold`...;
+  /// older versions ignore those keys).
+  static Map<PlayerArrow, String> decodeArrowHolds(String? json) {
+    if (json == null || json.isEmpty) return const {};
+    try {
+      final map = jsonDecode(json);
+      if (map is! Map) return const {};
+      final ids = {for (final a in PlayerArrow.actions) a.$1};
+      return {
+        for (final arrow in PlayerArrow.values)
+          if (map[arrow.holdKey] case final String v when ids.contains(v))
             arrow: v,
       };
     } catch (_) {
@@ -344,21 +369,47 @@ class RemoteButtons {
       next[arrow] = action;
     }
     _arrows = next;
-    await _storage?.setPlayerArrows(next.isEmpty
-        ? null
-        : jsonEncode({for (final e in next.entries) e.key.name: e.value}));
+    await _saveArrows();
+  }
+
+  /// What holding [arrow] does ('none' = nothing: the arrow acts at once,
+  /// as before; set, its normal action waits for the release).
+  String arrowHold(PlayerArrow arrow) {
+    _load();
+    return _holds[arrow] ?? PlayerArrow.defaultHold;
+  }
+
+  Future<void> setArrowHold(PlayerArrow arrow, String action) async {
+    _load();
+    final next = Map<PlayerArrow, String>.of(_holds);
+    if (action == PlayerArrow.defaultHold) {
+      next.remove(arrow);
+    } else {
+      next[arrow] = action;
+    }
+    _holds = next;
+    await _saveArrows();
+  }
+
+  Future<void> _saveArrows() async {
+    final json = {
+      for (final e in _arrows.entries) e.key.name: e.value,
+      for (final e in _holds.entries) e.key.holdKey: e.value,
+    };
+    await _storage?.setPlayerArrows(json.isEmpty ? null : jsonEncode(json));
     changes.value++;
   }
 
   bool get isCustomised {
     _load();
-    return _bindings.isNotEmpty || _arrows.isNotEmpty;
+    return _bindings.isNotEmpty || _arrows.isNotEmpty || _holds.isNotEmpty;
   }
 
   Future<void> reset() async {
     _bindings = const {};
     RemoteKeys._take(const []);
     _arrows = const {};
+    _holds = const {};
     await _storage?.setRemoteButtons(null);
     await _storage?.setPlayerArrows(null);
     changes.value++;

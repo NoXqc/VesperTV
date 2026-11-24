@@ -35,6 +35,15 @@ the section sits in **Backup & devices** (owner: a remote is a device), not Play
   synced but kept by a backup** (`_transferOnlySkipPrefixes`, new list: `_transferSkipPrefixes` also
   skips backups).
 - Arrow actions other than zap run once per press (400 ms debounce: a held Left repeats).
+- **Hold on an arrow** (owner, 2026-11-21: "Left -> guide and hold Left -> side drawer"): Settings
+  rows "Hold Left / Right / Up / Down in the player" (default Nothing), stored in the same
+  `vesper_player_arrows` JSON as `leftHold`... (older versions ignore those keys). With a hold set,
+  `_runArrow` starts `_startArrowHold`: the normal action waits for the release (a
+  `HardwareKeyboard` handler that only observes the arrow's key up), and 550 ms held runs the hold
+  action instead (the release then does nothing; the arrow's repeats meanwhile are ignored).
+  Without a hold, the arrow acts on key down as before (a held Up / Down still zaps fast).
+  Tests: `test/remote_buttons_test.dart` (storage), `test/player_arrow_remap_test.dart` (quick Left
+  = guide, held Left = drawer).
 - Android player only; Windows' `DesktopPlayerScreen` arrows are unchanged.
 
 ## Not verified

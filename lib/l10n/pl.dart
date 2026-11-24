@@ -3397,6 +3397,16 @@ const Map<String, String> kPl = {
   "Right in the player": "Prawo w odtwarzaczu",
   "Up in the player": "Góra w odtwarzaczu",
   "Down in the player": "Dół w odtwarzaczu",
+  "Hold Left in the player":
+      "Lewo w odtwarzaczu (przytrzymane)",
+  "Hold Right in the player":
+      "Prawo w odtwarzaczu (przytrzymane)",
+  "Hold Up in the player":
+      "Góra w odtwarzaczu (przytrzymane)",
+  "Hold Down in the player":
+      "Dół w odtwarzaczu (przytrzymane)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Przytrzymane około pół sekundy. Gdy wybrano akcję, zwykłe naciśnięcie czeka, aż puścisz.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "W odtwarzaczu pełnoekranowym na kanale na żywo, gdy nic nie jest wyświetlane na ekranie.",
   "Reset remote buttons": "Zresetuj przyciski pilota",

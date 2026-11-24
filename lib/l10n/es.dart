@@ -3827,6 +3827,16 @@ const Map<String, String> kEs = {
       "Arriba en el reproductor",
   "Down in the player":
       "Abajo en el reproductor",
+  "Hold Left in the player":
+      "Izquierda en el reproductor (mantenido)",
+  "Hold Right in the player":
+      "Derecha en el reproductor (mantenido)",
+  "Hold Up in the player":
+      "Arriba en el reproductor (mantenido)",
+  "Hold Down in the player":
+      "Abajo en el reproductor (mantenido)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Mantenido medio segundo. Con una acción elegida, la pulsación normal espera a que sueltes.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "En el reproductor a pantalla completa en un canal en directo, sin nada en pantalla.",
   "Reset remote buttons":

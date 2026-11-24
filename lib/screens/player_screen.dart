@@ -1517,7 +1517,67 @@ class _PlayerScreenState extends State<PlayerScreen>
     // The Sources drawer (or its search) is opening or open: keys pressed
     // meanwhile reached the player and changed the channel (owner, +816).
     if (_sourceDrawerOpen) return;
-    final action = RemoteButtons.instance.arrowAction(arrow);
+    final buttons = RemoteButtons.instance;
+    if (buttons.arrowHold(arrow) != PlayerArrow.defaultHold) {
+      // A hold is set: press or hold is known at the release (or after
+      // _arrowHoldTime); the arrow's repeats meanwhile change nothing.
+      if (_heldArrow != arrow) _startArrowHold(arrow);
+      return;
+    }
+    _runArrowAction(buttons.arrowAction(arrow));
+  }
+
+  /// Remote buttons > Hold Left / Right / Up / Down in the player (owner,
+  /// 2026-11-21: Left = guide, hold Left = side drawer). The arrow being
+  /// held, its timer, and whether its hold action already ran.
+  static const _arrowHoldTime = Duration(milliseconds: 550);
+  PlayerArrow? _heldArrow;
+  Timer? _arrowHoldTimer;
+  bool _arrowHoldRan = false;
+
+  void _startArrowHold(PlayerArrow arrow) {
+    _endArrowHold();
+    _heldArrow = arrow;
+    _arrowHoldRan = false;
+    // Observes the release only (never handles it): the shortcuts that
+    // call _runArrow see key downs.
+    HardwareKeyboard.instance.addHandler(_onArrowHoldKey);
+    _arrowHoldTimer = Timer(_arrowHoldTime, () {
+      if (!mounted || _heldArrow != arrow) return;
+      _arrowHoldRan = true;
+      _runArrowAction(RemoteButtons.instance.arrowHold(arrow));
+    });
+  }
+
+  bool _onArrowHoldKey(KeyEvent event) {
+    final arrow = _heldArrow;
+    if (arrow == null || event is! KeyUpEvent) return false;
+    final key = switch (arrow) {
+      PlayerArrow.left => LogicalKeyboardKey.arrowLeft,
+      PlayerArrow.right => LogicalKeyboardKey.arrowRight,
+      PlayerArrow.up => LogicalKeyboardKey.arrowUp,
+      PlayerArrow.down => LogicalKeyboardKey.arrowDown,
+    };
+    if (event.logicalKey != key) return false;
+    final held = _arrowHoldRan;
+    _endArrowHold();
+    if (!held && mounted) {
+      _runArrowAction(RemoteButtons.instance.arrowAction(arrow));
+    }
+    return false;
+  }
+
+  void _endArrowHold() {
+    _arrowHoldTimer?.cancel();
+    _arrowHoldTimer = null;
+    if (_heldArrow != null) {
+      HardwareKeyboard.instance.removeHandler(_onArrowHoldKey);
+    }
+    _heldArrow = null;
+  }
+
+  void _runArrowAction(String action) {
+    if (_sourceDrawerOpen) return;
     if (action == 'channel_up') {
       _zapChannel(-1);
       return;
@@ -1749,6 +1809,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       if (shouldStopVod) unawaited(_playback.stop());
       _playback.setFullscreenActive(false);
     });
+    _endArrowHold();
     _hideTimer?.cancel();
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();

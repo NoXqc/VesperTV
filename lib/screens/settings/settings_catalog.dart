@@ -1706,7 +1706,7 @@ class SettingsCatalog {
               'Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.'),
           value: count == 0 ? null : '$count',
           page: (_) => const RemoteButtonsScreen()),
-      for (final arrow in PlayerArrow.values)
+      for (final arrow in PlayerArrow.values) ...[
         SettingsChoice(
             id: 'player_arrow_${arrow.name}',
             icon: switch (arrow) {
@@ -1730,6 +1730,29 @@ class SettingsCatalog {
             ],
             selected: buttons.arrowAction(arrow),
             onPick: (v) => _saveViewer(() => buttons.setArrow(arrow, v))),
+        // Owner, 2026-11-21: Left = guide, hold Left = side drawer.
+        SettingsChoice(
+            id: 'player_arrow_${arrow.holdKey}',
+            icon: Icons.touch_app_outlined,
+            title: tr(switch (arrow) {
+              PlayerArrow.left => 'Hold Left in the player',
+              PlayerArrow.right => 'Hold Right in the player',
+              PlayerArrow.up => 'Hold Up in the player',
+              PlayerArrow.down => 'Hold Down in the player',
+            }),
+            help: tr(
+                'Held about half a second. With one set, the normal press waits until you let go.'),
+            options: [
+              SettingsOption(PlayerArrow.defaultHold,
+                  playerArrowLabel(PlayerArrow.defaultHold),
+                  subtitle: tr('Default')),
+              for (final (id, _) in PlayerArrow.actions)
+                if (id != PlayerArrow.defaultHold)
+                  SettingsOption(id, playerArrowLabel(id)),
+            ],
+            selected: buttons.arrowHold(arrow),
+            onPick: (v) => _saveViewer(() => buttons.setArrowHold(arrow, v))),
+      ],
       if (buttons.isCustomised)
         SettingsAction(
             id: 'remote_reset',

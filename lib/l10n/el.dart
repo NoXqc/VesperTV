@@ -3788,6 +3788,16 @@ const Map<String, String> kEl = {
       "Πάνω στην αναπαραγωγή",
   "Down in the player":
       "Κάτω στην αναπαραγωγή",
+  "Hold Left in the player":
+      "Αριστερά στην αναπαραγωγή (κράτημα)",
+  "Hold Right in the player":
+      "Δεξιά στην αναπαραγωγή (κράτημα)",
+  "Hold Up in the player":
+      "Πάνω στην αναπαραγωγή (κράτημα)",
+  "Hold Down in the player":
+      "Κάτω στην αναπαραγωγή (κράτημα)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Κρατημένο περίπου μισό δευτερόλεπτο. Όταν έχει οριστεί, το κανονικό πάτημα περιμένει να αφήσετε το πλήκτρο.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "Στην αναπαραγωγή πλήρους οθόνης σε ζωντανό κανάλι, χωρίς τίποτα στην οθόνη.",
   "Reset remote buttons":

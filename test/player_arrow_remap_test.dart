@@ -42,6 +42,7 @@ void main() {
   Future<void> open(WidgetTester tester,
       {required Map<PlayerArrow, String> arrows,
       required Future<void> Function(PlaybackService playback) check,
+      Map<PlayerArrow, String> holds = const {},
       bool overGuide = false}) async {
     final navigator = GlobalKey<NavigatorState>();
     final previousPlatform = VideoPlayerPlatform.instance;
@@ -57,6 +58,9 @@ void main() {
     await buttons.reset();
     for (final e in arrows.entries) {
       await buttons.setArrow(e.key, e.value);
+    }
+    for (final e in holds.entries) {
+      await buttons.setArrowHold(e.key, e.value);
     }
     final prefs = AppPreferences(storage);
     await prefs.init();
@@ -144,6 +148,42 @@ void main() {
       expect(find.byType(PlayerScreen), findsNothing);
       expect(find.byType(PlayerSidePanel), findsNothing);
       expect(find.text('The guide'), findsOneWidget);
+    });
+  });
+
+  // Owner, 2026-11-21: Left = guide, hold Left = side drawer.
+  testWidgets('with a hold set, a quick Left goes back to the guide',
+      (tester) async {
+    await open(tester,
+        overGuide: true,
+        arrows: {PlayerArrow.left: 'back'},
+        holds: {PlayerArrow.left: 'panel'}, check: (_) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(find.byType(PlayerScreen), findsOneWidget,
+          reason: 'nothing until the release');
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayerScreen), findsNothing);
+      expect(find.text('The guide'), findsOneWidget);
+    });
+  });
+
+  testWidgets('holding Left opens the side drawer instead', (tester) async {
+    await open(tester,
+        overGuide: true,
+        arrows: {PlayerArrow.left: 'back'},
+        holds: {PlayerArrow.left: 'panel'}, check: (_) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowLeft);
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowLeft);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayerSidePanel), findsOneWidget);
+      expect(find.byType(PlayerScreen), findsOneWidget,
+          reason: 'the release after a hold does not go back too');
     });
   });
 }

@@ -3369,6 +3369,16 @@ const Map<String, String> kUk = {
   "Right in the player": "Праворуч у плеєрі",
   "Up in the player": "Вгору в плеєрі",
   "Down in the player": "Вниз у плеєрі",
+  "Hold Left in the player":
+      "Ліворуч у плеєрі (утримання)",
+  "Hold Right in the player":
+      "Праворуч у плеєрі (утримання)",
+  "Hold Up in the player":
+      "Вгору в плеєрі (утримання)",
+  "Hold Down in the player":
+      "Вниз у плеєрі (утримання)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Утримання близько пів секунди. Якщо вибрано дію, звичайне натискання чекає, доки ви відпустите.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "У повноекранному плеєрі на каналі в ефірі, коли на екрані нічого немає.",
   "Reset remote buttons": "Скинути кнопки пульта",

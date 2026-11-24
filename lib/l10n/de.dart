@@ -3729,6 +3729,16 @@ const Map<String, String> kDe = {
       "Hoch im Player",
   "Down in the player":
       "Runter im Player",
+  "Hold Left in the player":
+      "Links im Player (gehalten)",
+  "Hold Right in the player":
+      "Rechts im Player (gehalten)",
+  "Hold Up in the player":
+      "Hoch im Player (gehalten)",
+  "Hold Down in the player":
+      "Runter im Player (gehalten)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Etwa eine halbe Sekunde gehalten. Ist eine Aktion gewählt, wartet der normale Druck, bis du loslässt.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "Im Vollbild-Player auf einem Live-Sender, wenn nichts eingeblendet ist.",
   "Reset remote buttons":

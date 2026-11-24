@@ -3840,6 +3840,16 @@ const Map<String, String> kFr = {
       "Haut dans le lecteur",
   "Down in the player":
       "Bas dans le lecteur",
+  "Hold Left in the player":
+      "Gauche dans le lecteur (maintenu)",
+  "Hold Right in the player":
+      "Droite dans le lecteur (maintenu)",
+  "Hold Up in the player":
+      "Haut dans le lecteur (maintenu)",
+  "Hold Down in the player":
+      "Bas dans le lecteur (maintenu)",
+  "Held about half a second. With one set, the normal press waits until you let go.":
+      "Maintenu environ une demi-seconde. Quand une action est choisie, l'appui normal attend que vous relâchiez.",
   "In the full-screen player on a live channel, with nothing on screen.":
       "Dans le lecteur plein écran sur une chaîne en direct, sans rien à l'écran.",
   "Reset remote buttons":
