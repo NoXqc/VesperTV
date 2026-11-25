@@ -33,6 +33,12 @@ final class StreamStats implements TransferListener {
   final java.util.concurrent.atomic.AtomicInteger reconnects =
       new java.util.concurrent.atomic.AtomicInteger();
   @Nullable volatile String lastReconnect;
+  /** TsSplice: programs changed under the open stream (a Tuliprox source switch). */
+  final java.util.concurrent.atomic.AtomicInteger tsSplices =
+      new java.util.concurrent.atomic.AtomicInteger();
+  /** TsSplice: timestamp jumps smoothed over (the picture would have stood still). */
+  final java.util.concurrent.atomic.AtomicInteger tsJumps =
+      new java.util.concurrent.atomic.AtomicInteger();
   /**
    * Tuliprox's {@code X-Tuliprox-Fallback} on the latest response ({@code
    * provider_connections_exhausted}, {@code user_connections_exhausted}, ...): the stream is the

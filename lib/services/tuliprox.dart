@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import 'storage_service.dart';
+
+part 'tuliprox_player_extras.dart';
 
 /// Tuliprox (github.com/euzu/tuliprox): an IPTV proxy whose **failover
 /// groups** (develop builds, 3.3.2xx) merge the same channel from several
@@ -175,7 +179,11 @@ class TuliproxMember {
       required this.input,
       this.hasArchive = false,
       this.quality,
-      this.failing = false});
+      this.failing = false,
+      this.degraded = false,
+      this.qos24h,
+      this.qos7d,
+      this.retryAfterSecs});
   final int vid;
   final String title;
 
@@ -190,6 +198,34 @@ class TuliproxMember {
 
   /// The server's breaker has this source paused after repeated failures.
   final bool failing;
+
+  /// Probing, failures counted or a failure streak (`health.state:
+  /// degraded`): it plays, but not reliably.
+  final bool degraded;
+
+  /// Rolling quality-of-service scores, 0..100 (`qos_24h`, `qos_7d`).
+  final int? qos24h;
+  final int? qos7d;
+
+  /// Seconds until the server tries a failing source again.
+  final int? retryAfterSecs;
+}
+
+/// A source's Sources label: quality, how reliable it has been, or why it
+/// can't be picked now (Player API `health`, Tuliprox 3.3.206).
+String? tuliproxMemberLabel(TuliproxMember m) {
+  if (m.failing) {
+    final retry = m.retryAfterSecs;
+    return retry != null && retry > 0
+        ? tr('Not working right now · tried again in {n} s', {'n': '$retry'})
+        : tr('Not working right now');
+  }
+  final parts = [
+    if (m.degraded) tr('Unstable'),
+    if (m.quality != null) m.quality!,
+    if (m.qos24h != null) tr('{n} % reliable', {'n': '${m.qos24h}'}),
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 /// [health] (the player routes' redacted member health) as a short label.
@@ -248,13 +284,18 @@ class TuliproxGroup {
       final vid = _int(m['member_vid']);
       if (vid == null) continue;
       final health = m['health'];
+      final state = health is Map ? health['state'] : null;
       members.add(TuliproxMember(
         vid: vid,
         title: '${m['title'] ?? ''}',
         input: '${m['input_name'] ?? ''}',
         hasArchive: m['has_archive'] == true,
         quality: tuliproxHealthLabel(health),
-        failing: health is Map && health['state'] == 'failing',
+        failing: state == 'failing',
+        degraded: state == 'degraded',
+        qos24h: health is Map ? _int(health['qos_24h']) : null,
+        qos7d: health is Map ? _int(health['qos_7d']) : null,
+        retryAfterSecs: health is Map ? _int(health['retry_after_secs']) : null,
       ));
     }
     var current = _int(j['current_member_vid']);
@@ -308,19 +349,88 @@ class TuliproxCapabilities {
       {this.sourceSwitch = false,
       this.joinable = false,
       this.maxConnections = 0,
-      this.activeConnections = 0});
+      this.activeConnections = 0,
+      this.streamSplit = false,
+      this.watchProgress = false,
+      this.eventStream = false,
+      this.recording = 'none',
+      this.recordingEnabled = false,
+      this.permissions = const {},
+      this.maxRecordingRules,
+      this.freeSharedJoins = false,
+      this.maxFreeSharedJoins = 0,
+      this.freeSharedJoinsInUse = 0,
+      this.sharedJoins = 0,
+      this.shareLiveStreams = false,
+      this.targetName});
   final bool sourceSwitch;
   final bool joinable;
   final int maxConnections;
   final int activeConnections;
 
-  static TuliproxCapabilities fromJson(Map<String, dynamic> j) =>
-      TuliproxCapabilities(
-        sourceSwitch: j['source_switch'] == true,
-        joinable: j['joinable_streams'] == true,
-        maxConnections: _int(j['max_connections']) ?? 0,
-        activeConnections: _int(j['active_connections']) ?? 0,
-      );
+  /// `POST /me/streams/{uid}/split` (a shared stream on its own connection).
+  final bool streamSplit;
+  final bool watchProgress;
+
+  /// The personal event WebSocket (`/me/events`).
+  final bool eventStream;
+
+  /// The DVR level: `none`, `read`, `private` or `shared`.
+  final String recording;
+
+  /// The server's DVR is switched on (`video.recording.enabled`).
+  final bool recordingEnabled;
+
+  /// `recording.read` / `.create` / `.manage` / `.delete` / `.share`.
+  final Set<String> permissions;
+  final int? maxRecordingRules;
+  final bool freeSharedJoins;
+  final int maxFreeSharedJoins;
+  final int freeSharedJoinsInUse;
+  final int sharedJoins;
+  final bool shareLiveStreams;
+
+  /// The playlist's target on the server, when the server says it (it
+  /// doesn't: 3.3.207's one-off recording needs it, newer servers fill it
+  /// in; see [Tuliprox.recordOnServer]).
+  final String? targetName;
+
+  /// Server recordings can be listed / played here.
+  bool get canReadRecordings =>
+      recordingEnabled &&
+      recording != 'none' &&
+      (permissions.isEmpty || permissions.contains('recording.read'));
+
+  /// This user may ask the server to record.
+  bool get canRecord =>
+      recordingEnabled &&
+      (recording == 'private' || recording == 'shared') &&
+      (permissions.isEmpty || permissions.contains('recording.create'));
+
+  static TuliproxCapabilities fromJson(Map<String, dynamic> j) {
+    final target = j['target_name'] ?? j['target'];
+    return TuliproxCapabilities(
+      sourceSwitch: j['source_switch'] == true,
+      joinable: j['joinable_streams'] == true,
+      maxConnections: _int(j['max_connections']) ?? 0,
+      activeConnections: _int(j['active_connections']) ?? 0,
+      streamSplit: j['stream_split'] == true,
+      watchProgress: j['watch_progress'] == true,
+      eventStream: j['event_stream'] == true,
+      recording: '${j['recording'] ?? 'none'}',
+      recordingEnabled: j['recording_enabled'] == true,
+      permissions: {
+        for (final p in (j['effective_permissions'] as List? ?? const [])) '$p'
+      },
+      maxRecordingRules: _int(j['max_recording_rules']),
+      freeSharedJoins: j['free_shared_joins'] == true,
+      maxFreeSharedJoins: _int(j['max_free_shared_joins']) ?? 0,
+      freeSharedJoinsInUse: _int(j['free_shared_joins_in_use']) ?? 0,
+      sharedJoins: _int(j['shared_joins']) ?? 0,
+      shareLiveStreams: j['share_live_streams'] == true,
+      targetName: target is String && target.isNotEmpty ? target : null,
+    );
+  }
 }
 
 /// One of the playlist user's own open streams (`GET /api/v1/me/streams`).
@@ -331,7 +441,9 @@ class TuliproxOwnStream {
       this.groupVirtualId,
       this.memberVid,
       this.startedAt = 0,
-      this.userAgent = ''});
+      this.userAgent = '',
+      this.shared = false,
+      this.protocol = ''});
   final int uid;
   final int virtualId;
   final int? groupVirtualId;
@@ -340,6 +452,12 @@ class TuliproxOwnStream {
   /// Unix seconds.
   final int startedAt;
   final String userAgent;
+
+  /// Shared with other viewers on the server (one provider connection).
+  final bool shared;
+
+  /// `ts`, `hls` or `dash`.
+  final String protocol;
 
   bool isOf(int id) => virtualId == id || groupVirtualId == id;
 
@@ -354,6 +472,8 @@ class TuliproxOwnStream {
       memberVid: _int(j['member_vid']),
       startedAt: _int(j['started_at']) ?? 0,
       userAgent: '${j['user_agent'] ?? ''}',
+      shared: j['shared'] == true,
+      protocol: '${j['protocol'] ?? ''}',
     );
   }
 }
@@ -857,6 +977,14 @@ class Tuliprox {
       _fallbackOf.clear();
       _joinable = const [];
       _joinableFor = null;
+      _playing.clear();
+      _splittable.clear();
+      _targets.clear();
+      _progressSentAt.clear();
+      _progressRead.clear();
+      _ownSwitchAt = null;
+      _eventsIdle?.cancel();
+      await _closeEvents();
     }
     await _storage
         ?.setTuliprox(value == null ? '' : jsonEncode(value.toJson()));
@@ -1048,6 +1176,8 @@ class Tuliprox {
     final url = channel.url;
     final at = DateTime.now();
     _playStart[url] = at;
+    _playing[url] = channel;
+    _eventsIdle?.cancel();
     _ownUid.remove(url);
     _fallbackOf.remove(url);
     if (_joinableFor == url) {
@@ -1059,7 +1189,9 @@ class Tuliprox {
       if (_ownUid.containsKey(url)) return; // the stream said it
       try {
         final l = await playerLogin(ref);
-        if (l == null || await _capsOf(l) == null) return;
+        final caps = l == null ? null : await _capsOf(l);
+        if (l == null || caps == null) return;
+        _ensureEvents(l, caps);
         final own = await _ownStream(l, ref, url);
         if (_playStart[url] != at || own == null) return;
         _ownUid[url] = own.uid;
@@ -1081,6 +1213,7 @@ class Tuliprox {
     final ref = refOf(channel);
     if (ref == null || (uid == null && !started)) {
       _playStart.remove(url);
+      _forget(url);
       return;
     }
     try {
@@ -1100,7 +1233,21 @@ class Tuliprox {
       debugPrint('Tuliprox: release of stream $uid failed ($e)');
     } finally {
       _playStart.remove(url);
+      _forget(url);
     }
+  }
+
+  /// [url] no longer plays: the event stream closes a minute after the last
+  /// channel of the server left (a zap opens the next one at once).
+  void _forget(String url) {
+    _playing.remove(url);
+    _splittable.remove(url);
+    // Only with an event stream open: nothing else waits on it.
+    if (_playing.isNotEmpty || _events == null) return;
+    _eventsIdle?.cancel();
+    _eventsIdle = Timer(const Duration(minutes: 1), () {
+      if (_playing.isEmpty) unawaited(_closeEvents());
+    });
   }
 
   /// Tuliprox served [channel] its fallback for [reason] (a refusal or its
@@ -1211,6 +1358,18 @@ class Tuliprox {
       return (usable: false, group: null);
     }
     final own = await _ownStream(l, ref, channel.url);
+    _ensureEvents(l, caps);
+    // Shared with other viewers: it can get its own provider connection
+    // (Player API split; MPEG-TS only), then switch just for this viewer.
+    if (own != null &&
+        caps.streamSplit &&
+        own.shared &&
+        own.protocol != 'hls' &&
+        own.protocol != 'dash') {
+      _splittable[channel.url] = true;
+    } else {
+      _splittable.remove(channel.url);
+    }
     if (own == null) {
       debugPrint('Tuliprox: no own open stream of $ref');
       // Playing without a stream of its own on the server = Tuliprox's
@@ -1305,6 +1464,7 @@ class Tuliprox {
     final player = pick.player;
     if (player != null) {
       // Only this viewer's stream; Tuliprox refuses a stream others share.
+      _ownSwitchAt = DateTime.now();
       await api
           .switchOwn(player, pick.uid, pick.member.vid)
           .timeout(const Duration(seconds: 12));
@@ -1320,6 +1480,498 @@ class Tuliprox {
         '${pick.member.vid} (${pick.member.input})');
     return pick.member.title;
   }
+
+  // --- Split: a shared stream on its own connection (Player API 4.13) ---
+
+  /// Live channels playing now, by URL ([noteStarted] .. [release]).
+  final Map<String, Channel> _playing = {};
+
+  /// Channel URLs whose own stream is shared and can be split off
+  /// ([_playerGroup]).
+  final Map<String, bool> _splittable = {};
+
+  /// Marks the Sources row "Your own connection" ([split]).
+  static const splitMark = '#tuliprox-split';
+
+  /// [playing]'s stream is shared with other viewers and can get its own
+  /// provider connection (then a source switch is just for this viewer).
+  bool canSplit(Channel playing) => _splittable[playing.url] == true;
+
+  /// [c] is the "Your own connection" Sources row.
+  bool isSplit(Channel c) => c.url.endsWith(splitMark);
+
+  /// The same server stream: a channel and its own-connection copy
+  /// (`?dedicated=1`).
+  static bool sameStream(String a, String b) =>
+      a == b || _undedicated(a) == _undedicated(b);
+
+  static String _undedicated(String url) => url
+      .replaceFirst(RegExp(r'[?&]dedicated=1(?=&|#|$)'), '')
+      .replaceFirst(RegExp(r'[?&]$'), '');
+
+  /// Splits [playing]'s shared stream off onto its own provider connection
+  /// and returns the address to open instead (the old one must close
+  /// first: the player releases it). Contains the playlist password, like
+  /// every stream address: never logged. Throws [TuliproxSwitchRefused].
+  Future<String> split(Channel playing) async {
+    final ref = refOf(playing);
+    if (ref == null) throw TuliproxSwitchRefused('not_tuliprox');
+    final l = await playerLogin(ref);
+    if (l == null) throw TuliproxSwitchRefused('no_player_api');
+    final uid =
+        _ownUid[playing.url] ?? (await _ownStream(l, ref, playing.url))?.uid;
+    if (uid == null) {
+      throw TuliproxSwitchRefused('stream not found', status: 404);
+    }
+    final path = await api.split(l, uid);
+    _splittable.remove(playing.url);
+    debugPrint('Tuliprox: stream $uid of $ref split off to its own '
+        'connection');
+    // Server-relative: the playlist's own address (any reverse-proxy
+    // prefix kept) + the route.
+    final root = tuliproxServerRoot(playing.url) ?? hostOf(playing.url);
+    return '$root${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  // --- Event stream (Player API 4.12) ---
+
+  TuliproxEventSocket? _events;
+  String? _eventsKey;
+  Timer? _eventsIdle;
+  DateTime? _ownSwitchAt;
+
+  /// A server event for the channel playing: the player shows [text]
+  /// ([url] = the channel's address).
+  final eventNotice = ValueNotifier<({String url, String text})?>(null);
+
+  /// Bumped when the server's recordings changed (a recording finished,
+  /// one was added / removed here, or the event stream says resync).
+  final recordingsChanged = ValueNotifier<int>(0);
+
+  void _ensureEvents(TuliproxLogin l, TuliproxCapabilities caps) {
+    if (!caps.eventStream) return;
+    final key = '${l.base}|${l.username}';
+    // Same user: kept (also when it gave up: it says so once per run).
+    if (_eventsKey == key && _events != null) return;
+    unawaited(_closeEvents());
+    _eventsKey = key;
+    final socket = TuliproxEventSocket(l, (e) => _onEvent(l, e));
+    _events = socket;
+    unawaited(socket.open());
+  }
+
+  Future<void> _closeEvents() async {
+    final old = _events;
+    _events = null;
+    _eventsKey = null;
+    await old?.close();
+  }
+
+  /// The playing channels of [l]'s playlist user.
+  Iterable<Channel> _playingOf(TuliproxLogin l) sync* {
+    for (final c in _playing.values) {
+      final ref = refOf(c);
+      if (ref != null && ref.base == l.base && ref.username == l.username) {
+        yield c;
+      }
+    }
+  }
+
+  @visibleForTesting
+  void onEventForTest(TuliproxLogin l, Map<String, dynamic> e) =>
+      _onEvent(l, e);
+
+  void _onEvent(TuliproxLogin l, Map<String, dynamic> e) {
+    // Send log: what the server said (ids and reasons only; owner,
+    // 2026-11-24: "moved this channel" with nothing to trace it by).
+    debugPrint('Tuliprox: event ${e['type']} ${{
+      for (final k in const [
+        'uid',
+        'virtual_id',
+        'reason',
+        'group_virtual_id',
+        'from_member_vid',
+        'to_member_vid',
+        'state',
+        'max_connections',
+      ])
+        if (e[k] != null) k: e[k]
+    }}');
+    switch (e['type']) {
+      case 'connection_denied':
+        // The computers' player can't read X-Tuliprox-Fallback: the event
+        // says the account is full (Android reads the header too; the
+        // same reason twice is said once).
+        for (final c in _playingOf(l).toList()) {
+          unawaited(noteFallback(c, 'user_connections_exhausted'));
+        }
+      case 'stream_ended':
+        final uid = _int(e['uid']);
+        final reason = '${e['reason'] ?? ''}';
+        String? url;
+        for (final entry in _ownUid.entries) {
+          if (entry.value == uid) url = entry.key;
+        }
+        final channel = url == null ? null : _playing[url];
+        if (channel == null) return;
+        debugPrint('Tuliprox: stream $uid ended on the server ($reason)');
+        if (reason == 'kicked') {
+          eventNotice.value = (
+            url: channel.url,
+            text: tr('Another device on your account took over this stream.'),
+          );
+        } else if (reason == 'preempted') {
+          unawaited(noteFallback(channel, 'low_priority_preempted'));
+        }
+      case 'failover_member_switched':
+        final group = _int(e['group_virtual_id']);
+        final mine = _ownSwitchAt;
+        if (mine != null &&
+            DateTime.now().difference(mine) < const Duration(seconds: 20)) {
+          return; // our own switch
+        }
+        for (final c in _playingOf(l)) {
+          if (refOf(c)?.id != group) continue;
+          debugPrint('Tuliprox: the server moved $group to another source');
+          eventNotice.value = (
+            url: c.url,
+            text: tr('Tuliprox moved this channel to another of its sources.'),
+          );
+        }
+      case 'recording_finished':
+        recordingsChanged.value++;
+        final failed = e['state'] == 'failed';
+        eventNotice.value = (
+          url: '',
+          text: failed
+              ? tr('A recording on the Tuliprox server failed.')
+              : tr('A recording on the Tuliprox server is ready.'),
+        );
+      case 'resync_required':
+        recordingsChanged.value++;
+    }
+  }
+
+  // --- DVR: recordings on the server (Player API 4.6 - 4.10) ---
+
+  /// Target names learned from the server (capabilities or own rules), by
+  /// `base|user`: a one-off recording request needs it.
+  final Map<String, String> _targets = {};
+
+  /// [channel]'s playlist user on a Tuliprox whose DVR it may use, with
+  /// what it may do; null otherwise (not Tuliprox, no Player API, DVR off).
+  Future<
+      ({
+        TuliproxLogin login,
+        TuliproxCapabilities caps,
+        TuliproxChannelRef ref
+      })?> dvrFor(Channel channel) async {
+    final ref = refOf(channel);
+    if (ref == null) return null;
+    try {
+      final l = await playerLogin(ref);
+      if (l == null) return null;
+      final caps = await _capsOf(l);
+      if (caps == null || !caps.canReadRecordings) return null;
+      return (login: l, caps: caps, ref: ref);
+    } catch (e) {
+      debugPrint('Tuliprox: DVR not available ($e)');
+      return null;
+    }
+  }
+
+  /// [dvrFor] only when it is already known (capabilities read in the last
+  /// 5 minutes): menus that open at once use it; [dvrFor] warms it.
+  bool canRecordNow(Channel channel) {
+    final ref = refOf(channel);
+    if (ref == null) return false;
+    final cached = _caps['${ref.base}|${ref.username}'];
+    return cached?.caps?.canRecord ?? false;
+  }
+
+  Future<String?> _targetOf(TuliproxLogin l, TuliproxCapabilities caps) async {
+    final key = '${l.base}|${l.username}';
+    final known = caps.targetName ?? _targets[key];
+    if (known != null) return _targets[key] = known;
+    try {
+      for (final r in await api.recordingRules(l)) {
+        if (r.own && r.targetId.isNotEmpty) return _targets[key] = r.targetId;
+      }
+    } catch (_) {
+      // No rules (or none readable): left empty, the server fills it in.
+    }
+    return null;
+  }
+
+  /// Asks the server to record [title] on [channel] from [start] to [end]
+  /// (a minute before, five after). The request names the target when it
+  /// is known, else leaves it empty: Tuliprox after 3.3.207 (PR #1004)
+  /// fills in the caller's own one. 3.3.207 refuses an empty one
+  /// (`recording_invalid_source`): then its MCP tool `me_record_program`
+  /// (fills it in), else [TuliproxRecordingError] `recording_needs_target`.
+  Future<void> recordOnServer(Channel channel,
+      {required String title,
+      required DateTime start,
+      required DateTime end}) async {
+    final dvr = await dvrFor(channel);
+    if (dvr == null || !dvr.caps.canRecord) {
+      throw TuliproxRecordingError('recording_forbidden', status: 403);
+    }
+    final l = dvr.login;
+    final vid = dvr.ref.id;
+    var pre = const Duration(minutes: 1);
+    var post = const Duration(minutes: 5);
+    final target = await _targetOf(l, dvr.caps);
+    Future<void> rest() => api.createRecording(l,
+        targetId: target ?? '',
+        vid: vid,
+        title: title,
+        start: start,
+        end: end,
+        preRoll: pre,
+        postRoll: post,
+        channelId: channel.epgId,
+        channelName: channel.name,
+        idempotencyKey: 'vesper-$vid-${start.millisecondsSinceEpoch ~/ 1000}-'
+            '${end.millisecondsSinceEpoch ~/ 1000}');
+    try {
+      try {
+        await rest();
+      } on TuliproxRecordingError catch (e) {
+        // The server allows less padding: the show itself, then.
+        if (e.code != 'recording_padding_limit_exceeded') rethrow;
+        pre = post = Duration.zero;
+        await rest();
+      }
+    } on TuliproxRecordingError catch (e) {
+      // An empty target on 3.3.207: not filled in there yet.
+      if (target != null || e.code != 'recording_invalid_source') rethrow;
+      debugPrint('Tuliprox: this server needs the target named, asking its '
+          'MCP tool');
+      final text = await api.mcpTool(l, 'me_record_program', {
+        'vid': vid,
+        'program_start': start.millisecondsSinceEpoch ~/ 1000,
+        'program_end': end.millisecondsSinceEpoch ~/ 1000,
+        'title': title,
+        'pre_roll_secs': pre.inSeconds,
+        'post_roll_secs': post.inSeconds,
+      });
+      if (text == null) throw TuliproxRecordingError('recording_needs_target');
+    }
+    debugPrint('Tuliprox: server recording asked for ${dvr.ref}');
+    recordingsChanged.value++;
+  }
+
+  /// Records [channel] every week at [start]'s weekday and time for
+  /// [duration], in this device's time zone (IANA; UTC when unknown).
+  Future<TuliproxRecordingRule?> recordWeeklyOnServer(Channel channel,
+      {required DateTime start, required Duration duration}) async {
+    final dvr = await dvrFor(channel);
+    if (dvr == null || !dvr.caps.canRecord) {
+      throw TuliproxRecordingError('recording_forbidden', status: 403);
+    }
+    final zone = await deviceTimeZone();
+    final at = zone == null ? start.toUtc() : start.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final rule = await api.createRecordingRule(dvr.login,
+        vid: dvr.ref.id,
+        weekday: at.weekday,
+        start: '${two(at.hour)}:${two(at.minute)}',
+        duration: duration,
+        timezone: zone ?? 'UTC',
+        preRoll: const Duration(minutes: 1),
+        postRoll: const Duration(minutes: 5),
+        channelId: channel.epgId);
+    if (rule != null && rule.targetId.isNotEmpty) {
+      _targets['${dvr.login.base}|${dvr.login.username}'] = rule.targetId;
+    }
+    debugPrint('Tuliprox: weekly server recording for ${dvr.ref}');
+    recordingsChanged.value++;
+    return rule;
+  }
+
+  /// The device's IANA time zone (Android); null elsewhere.
+  static Future<String?> deviceTimeZone() async {
+    if (kIsWeb || !Platform.isAndroid) return null;
+    try {
+      final id = await const MethodChannel('com.nox.nox_iptv/device_type')
+          .invokeMethod<String>('timeZoneId');
+      return id == null || id.isEmpty ? null : id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// The server recordings of every Tuliprox playlist among [channels]
+  /// (one channel per playlist is enough): per playlist user, its
+  /// recordings snapshot and weekly rules.
+  Future<List<TuliproxServerRecordings>> serverRecordings(
+      Iterable<Channel> channels) async {
+    final seen = <String>{};
+    final out = <TuliproxServerRecordings>[];
+    for (final c in channels) {
+      final ref = refOf(c);
+      if (ref == null || !seen.add('${ref.base}|${ref.username}')) continue;
+      final dvr = await dvrFor(c);
+      if (dvr == null) continue;
+      try {
+        final snapshot = await api.recordingSnapshot(dvr.login);
+        var rules = const <TuliproxRecordingRule>[];
+        try {
+          rules = await api.recordingRules(dvr.login);
+        } catch (_) {}
+        out.add(TuliproxServerRecordings(
+            login: dvr.login,
+            caps: dvr.caps,
+            server: hostOf(dvr.login.base),
+            snapshot: snapshot,
+            rules: rules,
+            channel: c));
+      } catch (e) {
+        debugPrint('Tuliprox: recordings of ${hostOf(dvr.login.base)} not '
+            'read ($e)');
+      }
+    }
+    return out;
+  }
+
+  /// A finished server recording as something to play (Range + the
+  /// account's token; never logged).
+  Channel recordingChannel(TuliproxServerRecordings at, TuliproxRecording r) =>
+      Channel(
+        id: '${at.channel.playlistId}::tpxrec_${r.id}',
+        rawId: 'tpxrec_${r.id}',
+        playlistId: at.channel.playlistId,
+        name: r.title.isEmpty ? r.channelName : r.title,
+        group: tr('Recordings'),
+        url: api.recordingPlaybackUrl(at.login, r.id),
+        httpHeaders: api.recordingHeaders(at.login),
+        onDemand: true,
+      );
+
+  // --- Watch progress (Player API 4.11) ---
+
+  final Map<String, DateTime> _progressSentAt = {};
+  final Map<String, ({DateTime at, Map<String, TuliproxProgress> items})>
+      _progressRead = {};
+
+  /// [channel] as a Tuliprox movie or episode: the playlist user and the
+  /// kind + Xtream id the progress routes take.
+  ({TuliproxChannelRef ref, String kind})? vodRefOf(Channel channel) {
+    final u = Uri.tryParse(channel.url);
+    if (u == null || u.host.isEmpty) return null;
+    final segs = u.pathSegments.where((s) => s.isNotEmpty).toList();
+    final at = segs.indexWhere((s) => s == 'movie' || s == 'series');
+    if (at < 0 || segs.length != at + 4) return null;
+    final id = int.tryParse(segs[at + 3].split('.').first);
+    if (id == null || id <= 0) return null;
+    final l = login.value;
+    var base = l != null &&
+            Uri.tryParse(l.base)?.host.toLowerCase() == u.host.toLowerCase()
+        ? l.base
+        : _found[u.host.toLowerCase()];
+    if (base == null) return null;
+    return (
+      ref: TuliproxChannelRef(
+          username: Uri.decodeComponent(segs[at + 1]),
+          password: Uri.decodeComponent(segs[at + 2]),
+          id: id,
+          base: base),
+      kind: segs[at] == 'movie' ? 'movie' : 'episode',
+    );
+  }
+
+  /// The player is at [position] of [duration] in [channel]: stored on the
+  /// server too (every 30 s, and [done] when it stops), so another app or
+  /// device on the account resumes there.
+  Future<void> noteVodProgress(
+      Channel channel, Duration position, Duration duration,
+      {bool done = false}) async {
+    final vod = vodRefOf(channel);
+    if (vod == null || duration <= Duration.zero) return;
+    final now = DateTime.now();
+    final last = _progressSentAt[channel.url];
+    if (!done &&
+        last != null &&
+        now.difference(last) < const Duration(seconds: 30)) {
+      return;
+    }
+    _progressSentAt[channel.url] = now;
+    try {
+      final l = await playerLogin(vod.ref);
+      if (l == null) return;
+      final caps = await _capsOf(l);
+      if (caps == null || !caps.watchProgress) return;
+      await api.saveProgress(l, vod.kind, vod.ref.id,
+          positionSecs: position.inSeconds,
+          durationSecs: duration.inSeconds,
+          seriesId: channel.seriesId);
+      _progressRead.remove('${l.base}|${l.username}');
+    } catch (e) {
+      debugPrint('Tuliprox: progress not saved (${e.runtimeType})');
+    }
+  }
+
+  /// Positions the server keeps for [items] (movies / episodes of a
+  /// Tuliprox) that never played here: written to [storage] so their
+  /// Resume shows. Watched ones are marked watched. True when any changed.
+  Future<bool> pullVodProgress(
+      Iterable<Channel> items, StorageService storage) async {
+    var changed = false;
+    for (final c in items) {
+      if (storage.getLastPosition(c.id) > 0) continue;
+      final vod = vodRefOf(c);
+      if (vod == null) continue;
+      try {
+        final l = await playerLogin(vod.ref);
+        if (l == null) continue;
+        final caps = await _capsOf(l);
+        if (caps == null || !caps.watchProgress) continue;
+        final key = '${l.base}|${l.username}';
+        var read = _progressRead[key];
+        if (read == null ||
+            DateTime.now().difference(read.at) > const Duration(minutes: 1)) {
+          final list = await api.progressList(l);
+          read = (
+            at: DateTime.now(),
+            items: {for (final p in list) '${p.kind}:${p.itemId}': p},
+          );
+          _progressRead[key] = read;
+        }
+        final p = read.items['${vod.kind}:${vod.ref.id}'];
+        if (p == null || p.positionSecs <= 0) continue;
+        final duration = p.durationSecs ?? 0;
+        final position = p.watched && duration > 0 ? duration : p.positionSecs;
+        await storage.setLastPosition(c.id, position * 1000);
+        if (duration > 0) await storage.setLastDuration(c.id, duration * 1000);
+        changed = true;
+      } catch (e) {
+        debugPrint('Tuliprox: progress not read (${e.runtimeType})');
+      }
+    }
+    return changed;
+  }
+}
+
+/// One playlist user's recordings on a Tuliprox ([Tuliprox.serverRecordings]).
+class TuliproxServerRecordings {
+  const TuliproxServerRecordings(
+      {required this.login,
+      required this.caps,
+      required this.server,
+      required this.snapshot,
+      required this.rules,
+      required this.channel});
+  final TuliproxLogin login;
+  final TuliproxCapabilities caps;
+
+  /// `https://host` for the section title.
+  final String server;
+  final TuliproxRecordingSnapshot snapshot;
+  final List<TuliproxRecordingRule> rules;
+
+  /// A channel of that playlist (its id names recordings to play).
+  final Channel channel;
 }
 
 /// Tuliprox's own address in [url] (a playlist download or a stream):
@@ -1349,6 +2001,26 @@ String? tuliproxServerRoot(String url) {
 /// added by ExoPlayerEventListener.describeCause), or null.
 String? tuliproxReasonOf(String raw) =>
     RegExp(r'\[Tuliprox ([a-z_]+)\]').firstMatch(raw)?.group(1);
+
+/// Why Tuliprox didn't split a stream off ([Tuliprox.split]), in words.
+String tuliproxSplitRefusalText(Object error) {
+  if (error is! TuliproxSwitchRefused) {
+    return tr("Tuliprox couldn't give this channel its own connection.");
+  }
+  final code = error.message;
+  if (code.contains('stream_not_shared')) {
+    return tr(
+        "You're the only one watching it on the server: pick the source you want directly.");
+  }
+  if (code.contains('unsupported_protocol')) {
+    return tr(
+        'Only a .ts stream can get its own connection. This one plays as HLS.');
+  }
+  if (error.status == 429 || code.contains('cooldown')) {
+    return tr('Wait a moment before switching again.');
+  }
+  return tr("Tuliprox couldn't give this channel its own connection.");
+}
 
 /// What a Tuliprox fallback [reason] means for the viewer (Player API docs,
 /// "X-Tuliprox-Fallback values"); null for one it doesn't know.
@@ -1393,16 +2065,28 @@ String? tuliproxFallbackMessage(String reason) {
   ].join('\n');
 }
 
+/// Tuliprox tried [error]'s switch and went back to the source before
+/// (502 "Failed to open target member; returned to current member"): that
+/// source was opened again, so the stream jumps when it reaches the screen
+/// and ExoPlayer can freeze there (owner, 2026-11-24, Homatics: picture
+/// stuck 21 s after the refusal, the sound on).
+bool tuliproxSwitchReopened(Object error) =>
+    error is TuliproxSwitchRefused &&
+    (error.status == 502 || error.message.contains('returned to current'));
+
 /// What to tell the viewer when Tuliprox refused a player-route switch
 /// (`TuliproxSwitchRefused.message` = the server's reason code).
-String tuliproxRefusalText(Object error) {
+String tuliproxRefusalText(Object error, {bool canSplit = false}) {
   if (error is! TuliproxSwitchRefused) {
     return tr("Tuliprox didn't switch the source.");
   }
   final code = error.message;
   if (code.contains('shared_stream')) {
-    return tr(
-        "Someone else is watching this channel on the server, so its source can't be switched just for you.");
+    return canSplit
+        ? tr(
+            "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.")
+        : tr(
+            "Someone else is watching this channel on the server, so its source can't be switched just for you.");
   }
   if (code.contains('in_progress')) {
     return tr('Tuliprox is already switching. Try again in a moment.');

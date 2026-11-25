@@ -754,6 +754,31 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           ? _queue[_currentIndex + 1]
           : null;
 
+  /// Tuliprox gave this channel its busy video or refused it: on a
+  /// computer only the event stream says why (mpv can't read the header).
+  void _onTuliproxFallback() {
+    final n = Tuliprox.instance.fallbackNotice.value;
+    if (n == null ||
+        !mounted ||
+        !Tuliprox.sameStream(_currentChannel.url, n.url)) {
+      return;
+    }
+    final text = tuliproxFallbackMessage(n.reason);
+    if (text != null) {
+      TopNotice.show(text, duration: const Duration(seconds: 8));
+    }
+  }
+
+  /// See PlayerScreen._onTuliproxEvent.
+  void _onTuliproxEvent() {
+    final n = Tuliprox.instance.eventNotice.value;
+    if (n == null || !mounted) return;
+    if (n.url.isNotEmpty && !Tuliprox.sameStream(_currentChannel.url, n.url)) {
+      return;
+    }
+    TopNotice.show(n.text, duration: const Duration(seconds: 6));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -767,6 +792,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
     DesktopPlayerControl.register(_control);
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
+    Tuliprox.instance.fallbackNotice.addListener(_onTuliproxFallback);
+    Tuliprox.instance.eventNotice.addListener(_onTuliproxEvent);
     _armWatchTimer();
     _progress = DesktopVodProgress(context.read<StorageService>());
     _history = context.read<PlaybackService>();
@@ -1333,6 +1360,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    Tuliprox.instance.fallbackNotice.removeListener(_onTuliproxFallback);
+    Tuliprox.instance.eventNotice.removeListener(_onTuliproxEvent);
     _touchHide?.cancel();
     _fitPillTimer?.cancel();
     if (_touch) {

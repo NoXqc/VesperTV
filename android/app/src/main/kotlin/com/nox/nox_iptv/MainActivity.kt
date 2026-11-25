@@ -323,6 +323,10 @@ class MainActivity : FlutterActivity() {
                 result.success(isTvUiMode || hasLeanback)
             } else if (call.method == "sdkInt") {
                 result.success(Build.VERSION.SDK_INT)
+            } else if (call.method == "timeZoneId") {
+                // IANA name (Tuliprox weekly server recordings keep the
+                // device's wall-clock time across daylight saving).
+                result.success(java.util.TimeZone.getDefault().id)
             } else if (call.method == "moveTaskToBack") {
                 // Warm exit (AppExit.warm): like the remote's Home key, the
                 // process and engine stay, so the next launch is instant.

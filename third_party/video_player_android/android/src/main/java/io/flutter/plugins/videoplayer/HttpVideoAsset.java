@@ -123,7 +123,9 @@ final class HttpVideoAsset extends VideoAsset {
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, http);
     DefaultMediaSourceFactory factory =
         new DefaultMediaSourceFactory(
-            dataSourceFactory, MatroskaAtmos.wrap(liveCaptionExtractors()));
+            dataSourceFactory,
+            // Live MPEG-TS through a splicing server: continuous times, a new program's PIDs.
+            TsSplice.wrap(MatroskaAtmos.wrap(liveCaptionExtractors()), stats));
     if (drm != null) factory.setDrmSessionManagerProvider(drm.sessionManagers(initialFactory));
     return factory;
   }

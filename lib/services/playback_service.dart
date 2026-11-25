@@ -39,6 +39,7 @@ import 'archive_playback_sources.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
+import 'live_freeze_guard.dart';
 import 'live_reconnect_log.dart';
 import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
@@ -97,6 +98,7 @@ class PlaybackService extends ChangeNotifier {
     }
     _reconnectLog.start();
     _vodStallLog.start();
+    _freezeGuard.start();
   }
 
   /// Send log lines for the native player's silent live reconnects.
@@ -104,6 +106,44 @@ class PlaybackService extends ChangeNotifier {
     final c = controller;
     return currentChannel?.isLive == true ? c : null;
   });
+
+  /// A live picture stuck while the sound plays: Pause/Play, then a reload
+  /// ([LiveFreezeGuard]). Not during catch-up, a reload, a source-switch
+  /// watch (it nudges on its own) or with the app in the background (no
+  /// picture drawn there).
+  late final _freezeGuard = LiveFreezeGuard(
+    target: () {
+      final c = controller;
+      final ch = currentChannel;
+      if (c == null ||
+          ch == null ||
+          !ch.isLive ||
+          !c.value.isInitialized ||
+          catchup != null ||
+          _reloadingCurrentChannel ||
+          _switchWatches > 0 ||
+          SchedulerBinding.instance.lifecycleState !=
+              AppLifecycleState.resumed) {
+        return null;
+      }
+      return (
+        player: c,
+        key: '${identityHashCode(c)}|${ch.url}',
+        playing: c.value.isPlaying,
+        buffering: c.value.isBuffering,
+      );
+    },
+    stats: (p) => _statsChannel.invokeMapMethod<Object?, Object?>('getStats',
+        {'playerId': SubtitleTracks.playerIdOf(p as VideoPlayerHdrController)}),
+    nudge: () async {
+      final c = controller;
+      if (c == null) return;
+      await c.pause();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (controller == c) await c.play();
+    },
+    reload: reloadCurrentChannel,
+  );
 
   /// Send log lines for movie / episode buffering.
   late final _vodStallLog = VodStallLog(() {
@@ -841,6 +881,9 @@ class PlaybackService extends ChangeNotifier {
         final duration = c.value.duration;
         if (duration > Duration.zero) {
           _storage.setLastDuration(ch.id, duration.inMilliseconds);
+          // A Tuliprox movie / episode: its server keeps it too.
+          unawaited(Tuliprox.instance
+              .noteVodProgress(ch, c.value.position, duration));
           // Auto-advance a season/series near the end (Settings >
           // Playback > Up Next; a user missed every episode's last seconds,
           // 1.0.51).
@@ -1046,6 +1089,12 @@ class PlaybackService extends ChangeNotifier {
 
   int _serverSwitchGen = 0;
 
+  /// The newest [watchSourceSwitch]; older ones stop.
+  int _switchWatchGen = 0;
+
+  /// [watchSourceSwitch]es running ([_freezeGuard] waits for them).
+  int _switchWatches = 0;
+
   /// When the viewer last paused (Play/Pause), so [watchSourceSwitch]
   /// never undoes their own pause.
   DateTime? _viewerPausedAt;
@@ -1057,15 +1106,30 @@ class PlaybackService extends ChangeNotifier {
   /// once the buffered video has played (often ~25 s), and its timestamps
   /// jump there. ExoPlayer was then left paused, or with the picture stuck
   /// while the sound went on, until Pause/Play (owner, 2026-11-19, Homatics).
-  /// From the expected arrival on, this gives a stuck picture one Pause/Play
-  /// and a pause the viewer didn't ask for a Play (no reconnect: the old
-  /// automatic reload fought the provider's connection limit). Returns true
-  /// once the picture moves after the arrival, false when the channel or
-  /// player changed or nothing settled in time. Android only.
+  /// From the switch on, this gives a stuck picture one Pause/Play and a
+  /// pause the viewer didn't ask for a Play (no reconnect: the old automatic
+  /// reload fought the provider's connection limit). Also a refused switch
+  /// the server undid (it opened the old source again: the same jump) and,
+  /// before the expected arrival, a jump from an earlier try: owner,
+  /// 2026-11-24, Tuliprox 3.3.207, picture stuck 21 s after a refused
+  /// switch, 10 s into the next one's watch. A newer watch replaces this
+  /// one. Returns true once the picture moves after the arrival, false when
+  /// the channel or player changed, a newer watch began or nothing settled
+  /// in time. Android only.
   Future<bool> watchSourceSwitch() async {
+    _switchWatches++;
+    try {
+      return await _watchSourceSwitch();
+    } finally {
+      _switchWatches--;
+    }
+  }
+
+  Future<bool> _watchSourceSwitch() async {
     final c = controller;
     final ch = currentChannel;
     if (c == null || ch == null || kIsWeb || !Platform.isAndroid) return false;
+    final gen = ++_switchWatchGen;
     final start = clock();
     final id = SubtitleTracks.playerIdOf(c);
     Future<Map<Object?, Object?>?> stats() async {
@@ -1089,18 +1153,26 @@ class PlaybackService extends ChangeNotifier {
     var nudges = 0;
     while (clock().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (gen != _switchWatchGen) return false;
       if (controller != c || currentChannel?.id != ch.id) return false;
       final now = clock();
       final m = await stats();
       final frames = (m?['rendered'] as num?)?.toInt();
+      final known = frames != null && lastFrames != null;
       final moved = frames != null && lastFrames != null && frames > lastFrames;
       lastFrames = frames ?? lastFrames;
-      // Before the switch reaches the screen the old source plays on.
-      if (now.isBefore(arrival.subtract(const Duration(seconds: 1)))) continue;
       final viewerPaused =
           _viewerPausedAt != null && _viewerPausedAt!.isAfter(start);
       if (viewerPaused) return false;
+      // Before the expected arrival only a picture stuck while playing
+      // counts (the source landed early): not playing there is the old
+      // source buffering.
+      final early = now.isBefore(arrival.subtract(const Duration(seconds: 1)));
       if (!c.value.isPlaying) {
+        if (early) {
+          stuckPolls = movingPolls = 0;
+          continue;
+        }
         if (nudges >= 3) return false;
         nudges++;
         debugPrint('SourceSwitch: paused on its own, Play');
@@ -1120,10 +1192,12 @@ class PlaybackService extends ChangeNotifier {
         continue;
       }
       movingPolls = 0;
+      if (!known) continue;
       if (++stuckPolls >= 3 && nudges < 3) {
         nudges++;
         stuckPolls = 0;
-        debugPrint('SourceSwitch: picture stuck, Pause/Play');
+        debugPrint('SourceSwitch: picture stuck'
+            '${early ? ' (landed early)' : ''}, Pause/Play');
         await c.pause();
         await Future<void>.delayed(const Duration(milliseconds: 200));
         if (controller != c) return false;
@@ -2019,6 +2093,8 @@ class PlaybackService extends ChangeNotifier {
       final duration = old.value.duration;
       if (duration > Duration.zero) {
         await _storage.setLastDuration(ch.id, duration.inMilliseconds);
+        unawaited(Tuliprox.instance
+            .noteVodProgress(ch, old.value.position, duration, done: true));
         // Watched / paused at, for Trakt/Simkl (Media Hub titles only).
         unawaited(
             WatchTracker.instance.stopped(ch.id, old.value.position, duration));
@@ -2066,6 +2142,7 @@ class PlaybackService extends ChangeNotifier {
   void dispose() {
     _reconnectLog.dispose();
     _vodStallLog.dispose();
+    _freezeGuard.dispose();
     _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     _teardown();

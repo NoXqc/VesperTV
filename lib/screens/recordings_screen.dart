@@ -3,11 +3,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../services/network_files.dart';
+import '../services/playlist_manager.dart';
 import '../services/recording_service.dart';
+import '../services/tuliprox.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
 import '../utils/tv_theme.dart';
@@ -18,6 +21,7 @@ import '../utils/image_urls.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../widgets/tv_dialog_option.dart';
 import 'player_screen.dart';
 import '../widgets/ink_layer.dart';
 
@@ -43,14 +47,62 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   String? _netError;
   bool _netLoading = false;
 
+  /// Recordings on the Tuliprox servers of the playlists (their DVR,
+  /// Player API), per playlist user.
+  List<TuliproxServerRecordings> _server = const [];
+
+  /// Weekly rules' channel names from the playlist, by server channel id.
+  Map<String, String> _ruleNames = const {};
+
   @override
   void initState() {
     super.initState();
     _service.addListener(_changed);
+    Tuliprox.instance.recordingsChanged.addListener(_serverChanged);
     unawaited(_service.init().then((_) async {
       await _service.refreshStatus();
       await _loadNetwork();
     }));
+    unawaited(_loadServer());
+  }
+
+  void _serverChanged() => unawaited(_loadServer());
+
+  /// One channel per playlist tells whether it plays from a Tuliprox (its
+  /// first channel decides: never a parse of every channel).
+  Future<void> _loadServer() async {
+    final manager = context.read<PlaylistManager>();
+    await manager.ensureLiveChannelsLoaded();
+    if (!mounted) return;
+    final checked = <String>{};
+    final tuliprox = <Channel>[];
+    for (final c in manager.visibleChannels(category: 'tv')) {
+      if (!checked.add(c.playlistId)) continue;
+      if (Tuliprox.instance.refOf(c) != null) tuliprox.add(c);
+    }
+    if (tuliprox.isEmpty) return;
+    final list = await Tuliprox.instance.serverRecordings(tuliprox);
+    if (!mounted) return;
+    // A weekly rule names its channel by the server's id (and guide id):
+    // the playlist's own channel name instead ("ADDIKTV.CA", owner's box).
+    final want = {
+      for (final s in list)
+        for (final r in s.rules) r.virtualId
+    };
+    final names = <String, String>{};
+    if (want.isNotEmpty) {
+      final playlists = {for (final s in list) s.channel.playlistId};
+      for (final c in manager.visibleChannels(category: 'tv')) {
+        if (!playlists.contains(c.playlistId)) continue;
+        final id = Tuliprox.instance.refOf(c)?.id;
+        if (id != null && want.contains('$id')) names['$id'] ??= c.name;
+        if (names.length == want.length) break;
+      }
+    }
+    setState(() {
+      _server = list;
+      _ruleNames = names;
+    });
   }
 
   Future<void> _loadNetwork() async {
@@ -68,6 +120,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   @override
   void dispose() {
     _service.removeListener(_changed);
+    Tuliprox.instance.recordingsChanged.removeListener(_serverChanged);
     super.dispose();
   }
 
@@ -370,6 +423,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (all.isEmpty &&
                 series.isEmpty &&
                 offered.isEmpty &&
+                _server.isEmpty &&
                 !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
@@ -388,6 +442,11 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (done.isNotEmpty) section(tr('Recorded'), done),
             if (_service.settings.network != null)
               _networkSection(offered, autofocus: first),
+            for (final at in _server)
+              if (_serverSection(at,
+                      autofocus: first, several: _server.length > 1)
+                  case final section?)
+                section,
             if (all.isNotEmpty)
               Text(
                 [
@@ -406,6 +465,253 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         ),
       ),
     );
+  }
+
+  /// "On the Tuliprox server": what the server records for this playlist
+  /// user (its DVR, even with this box off) and its weekly rules. Null when
+  /// there is nothing to show.
+  Widget? _serverSection(TuliproxServerRecordings at,
+      {required bool autofocus, required bool several}) {
+    final tasks = [
+      for (final r in at.snapshot.tasks)
+        if (r.status != 'cancelled') r
+    ]..sort((a, b) => (b.programStart ?? b.completedAt ?? DateTime(0))
+        .compareTo(a.programStart ?? a.completedAt ?? DateTime(0)));
+    final rules = [
+      for (final r in at.rules)
+        if (r.own) r
+    ];
+    if (tasks.isEmpty && rules.isEmpty) return null;
+    final limit = at.snapshot.privateLimitBytes;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              (several
+                      ? tr('On the Tuliprox server ({server})',
+                          {'server': at.server})
+                      : tr('On the Tuliprox server'))
+                  .toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
+          const SizedBox(height: 8),
+          Wrap(children: [
+            for (var i = 0; i < rules.length; i++)
+              _RecordingCard(
+                entry: _ruleEntry(rules[i],
+                    channelName: _ruleNames[rules[i].virtualId]),
+                autofocus: autofocus && i == 0,
+                status: tr('Weekly'),
+                onTap: () => _ruleMenu(at, rules[i]),
+                onHold: () => _ruleMenu(at, rules[i]),
+              ),
+            for (var i = 0; i < tasks.length; i++)
+              _RecordingCard(
+                entry: _serverEntry(tasks[i]),
+                autofocus: autofocus && rules.isEmpty && i == 0,
+                status: _serverStatus(tasks[i]),
+                onTap: () => _serverOpen(at, tasks[i]),
+                onHold: () => _serverMenu(at, tasks[i]),
+              ),
+          ]),
+          if (at.snapshot.privateUsedBytes > 0)
+            Text(
+                limit == null
+                    ? tr('{used} used on the server', {
+                        'used': _size(at.snapshot.privateUsedBytes),
+                      })
+                    : tr('{used} of {cap} used on the server', {
+                        'used': _size(at.snapshot.privateUsedBytes),
+                        'cap': _size(limit),
+                      }),
+                style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  /// A server recording drawn like a channel recording.
+  static RecordingEntry _serverEntry(TuliproxRecording r) {
+    final start = r.programStart ?? r.completedAt ?? DateTime.now();
+    return RecordingEntry(
+      id: 'tpx:${r.id}',
+      title: r.title,
+      league: '',
+      gameKey: '',
+      leagueId: '',
+      gameStart: start,
+      startAt: start,
+      endAt: r.programEnd ?? start,
+      channelId: '',
+      channelName: r.channelName.isEmpty ? 'Tuliprox' : r.channelName,
+      playlistId: '',
+      url: '',
+      path: '',
+      program: r.title,
+      bytes: r.transferredBytes,
+      state: r.completed
+          ? RecState.done
+          : r.running
+              ? RecState.recording
+              : r.status == 'failed'
+                  ? RecState.failed
+                  : RecState.scheduled,
+    );
+  }
+
+  /// A weekly server rule drawn like a channel recording.
+  static RecordingEntry _ruleEntry(TuliproxRecordingRule r,
+      {String? channelName}) {
+    final day = DateFormat('EEEE')
+        .format(DateTime(2024, 1, 1).add(Duration(days: r.weekday - 1)));
+    return RecordingEntry(
+      id: 'tpxrule:${r.id}',
+      title: day,
+      league: '',
+      gameKey: '',
+      leagueId: '',
+      gameStart: DateTime.now(),
+      startAt: DateTime.now(),
+      endAt: DateTime.now(),
+      channelId: '',
+      channelName: channelName ??
+          (r.channelId.isNotEmpty
+              ? r.channelId
+              : tr('Channel {id}', {'id': r.virtualId})),
+      playlistId: '',
+      url: '',
+      path: '',
+      program:
+          tr('Every {day} at {time}', {'day': day, 'time': r.localStartTime}),
+      seriesId: r.id,
+      state: RecState.scheduled,
+    );
+  }
+
+  String _serverStatus(TuliproxRecording r) {
+    if (r.completed) {
+      final at = r.completedAt ?? r.programStart;
+      return [
+        if (at != null) DateFormat('EEE d MMM').format(at),
+        if (r.transferredBytes > 0) _size(r.transferredBytes),
+      ].join(' · ');
+    }
+    if (r.running) {
+      return tr('REC · {size}', {'size': _size(r.transferredBytes)});
+    }
+    return switch (r.status) {
+      'failed' => tr('Failed'),
+      'cancelling' => tr('Stopping'),
+      'waiting_for_capacity' => tr('Waiting for a connection'),
+      _ => r.programStart == null
+          ? tr('Scheduled')
+          : TimeFormat.dayTime(r.programStart!),
+    };
+  }
+
+  Future<void> _serverOpen(TuliproxServerRecordings at, TuliproxRecording r) =>
+      r.completed
+          ? _push(Tuliprox.instance.recordingChannel(at, r))
+          : _serverMenu(at, r);
+
+  /// Play / Stop / Cancel / Delete, as the server allows now.
+  Future<void> _serverMenu(
+      TuliproxServerRecordings at, TuliproxRecording r) async {
+    final action = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(r.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+          children: [
+            if (r.completed)
+              TvDialogOption(
+                autofocus: true,
+                onPressed: () => Navigator.of(context).pop('play'),
+                child: Text(tr('Play')),
+              ),
+            if (r.actions.contains('cancel'))
+              TvDialogOption(
+                autofocus: !r.completed,
+                onPressed: () => Navigator.of(context).pop('cancel'),
+                child: Text(
+                    r.running ? tr('Stop recording') : tr('Cancel recording')),
+              ),
+            if (r.actions.contains('remove'))
+              TvDialogOption(
+                onPressed: () => Navigator.of(context).pop('remove'),
+                child: Text(tr('Delete from the server')),
+              ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(tr('Close')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (action == 'play') {
+      await _push(Tuliprox.instance.recordingChannel(at, r));
+      return;
+    }
+    String? error;
+    try {
+      if (action == 'cancel') {
+        await Tuliprox.instance.api.cancelRecording(at.login, r.id);
+      } else if (action == 'remove') {
+        await Tuliprox.instance.api.deleteRecording(at.login, r.id);
+      }
+    } catch (e) {
+      error = tuliproxRecordingErrorText(e);
+    }
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+    }
+    Tuliprox.instance.recordingsChanged.value++;
+  }
+
+  /// Stop a weekly server rule; the recordings it made stay unless asked.
+  Future<void> _ruleMenu(
+      TuliproxServerRecordings at, TuliproxRecordingRule r) async {
+    final action = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(_ruleEntry(r).program,
+              maxLines: 2, overflow: TextOverflow.ellipsis),
+          children: [
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop('retain'),
+              child: Text(tr('Stop weekly recording')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('cancel'),
+              child: Text(tr('Stop it and cancel the ones coming up')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(tr('Close')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    try {
+      await Tuliprox.instance.api.deleteRecordingRule(at.login, r.id,
+          cancelFuture: action == 'cancel');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tuliproxRecordingErrorText(e))));
+      }
+    }
+    Tuliprox.instance.recordingsChanged.value++;
   }
 
   /// "Network folder": what other devices saved there. OK = Copy to this
@@ -441,13 +747,22 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                   autofocus: autofocus && i == 0,
                   status: _size(files[i].size),
                   icon: Icons.folder_shared_outlined,
-                  onTap: () => networkFileMenu(context, files[i]),
-                  onHold: () => networkFileMenu(context, files[i]),
+                  onTap: () => _openNetworkFile(files[i]),
+                  onHold: () => _openNetworkFile(files[i]),
                 ),
             ]),
         ],
       ),
     );
+  }
+
+  Future<void> _openNetworkFile(NetworkFile f) async {
+    if (!await networkFileMenu(context, f) || !mounted) return;
+    setState(() => _netFiles = [
+          for (final n in _netFiles)
+            if (n.path != f.path) n
+        ]);
+    unawaited(_loadNetwork());
   }
 
   /// A network file drawn like a download card (poster, title, show).

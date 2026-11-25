@@ -4,6 +4,7 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../services/programme_reminders.dart';
 import '../services/recording_service.dart';
+import '../services/tuliprox.dart';
 import '../utils/time_format.dart';
 import 'glass_menu.dart';
 import 'hold_to_activate.dart';
@@ -348,6 +349,35 @@ class _ProgrammeActionsState extends State<_ProgrammeActions> {
                                                     widget.maxConnections),
                                             tr('Could not schedule recording. Check recording storage and try again.'));
                                       }),
+                                // The channel's Tuliprox server records
+                                // it (its DVR, even with this box off).
+                                if (Tuliprox.instance
+                                        .canRecordNow(widget.channel) &&
+                                    p.stop.isAfter(widget.reminders.now()))
+                                  TvMenuTile(
+                                      key: const ValueKey(
+                                          'programme-server-record'),
+                                      enabled: !_busy,
+                                      icon: Icons.dns_outlined,
+                                      title: tr('Record on the server'),
+                                      subtitle: tr(
+                                          'Tuliprox records it, even with this box off.'),
+                                      onTap: () => _run(() async {
+                                            try {
+                                              await Tuliprox.instance
+                                                  .recordOnServer(
+                                                      widget.channel,
+                                                      title: p.title,
+                                                      start: p.start,
+                                                      end: p.stop);
+                                              return tr(
+                                                  'The server records {title}.',
+                                                  {'title': p.title});
+                                            } catch (e) {
+                                              return tuliproxRecordingErrorText(
+                                                  e);
+                                            }
+                                          }, '')),
                                 if (_error != null)
                                   Padding(
                                       padding: const EdgeInsets.all(8),

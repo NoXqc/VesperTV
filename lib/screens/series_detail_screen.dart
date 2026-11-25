@@ -24,6 +24,7 @@ import '../services/episode_alerts.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../services/tuliprox.dart';
 import '../services/tracker_api.dart';
 import '../services/tracker_sync.dart';
 import '../services/watch_tracker.dart';
@@ -229,10 +230,18 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           .where((s) => result.episodes[s]!.isNotEmpty)
           .toList()
         ..sort();
+      // Tuliprox episodes: where the account stopped elsewhere (Player
+      // API watch progress), for the ones that never played here.
+      final episodes = [for (final s in seasons) ...result.episodes[s]!];
+      unawaited(Tuliprox.instance
+          .pullVodProgress(episodes, context.read<StorageService>())
+          .then((changed) {
+        if (changed && mounted) setState(() {});
+      }));
       setState(() {
         _data = result;
         _seasons = seasons;
-        _allEpisodes = [for (final s in seasons) ...result.episodes[s]!];
+        _allEpisodes = episodes;
         for (final s in seasons) {
           for (final e in result.episodes[s]!) {
             _seasonOfEpisode[e.id] = s;

@@ -4327,4 +4327,100 @@ const Map<String, String> kEl = {
       "Λήψη…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Για να χρησιμοποιήσετε κουμπιά όπως TV, YouTube ή Prime, προσθέστε το δωρεάν πρόσθετο «{name}», μια μικρή ξεχωριστή εφαρμογή. Πατήστε OK για λήψη και εγκατάσταση.",
+  "A recording on the Tuliprox server failed.":
+      "Μια εγγραφή στον διακομιστή Tuliprox απέτυχε.",
+  "A recording on the Tuliprox server is ready.":
+      "Μια εγγραφή στον διακομιστή Tuliprox είναι έτοιμη.",
+  "Another device on your account took over this stream.":
+      "Μια άλλη συσκευή του λογαριασμού σας πήρε αυτή τη ροή.",
+  "Channel {id}":
+      "Κανάλι {id}",
+  "Delete from the server":
+      "Διαγραφή από τον διακομιστή",
+  "Every {day} at {time}":
+      "Κάθε {day} στις {time}",
+  "Not working right now · tried again in {n} s":
+      "Δεν λειτουργεί τώρα · νέα δοκιμή σε {n} δ",
+  "On the Tuliprox server":
+      "Στον διακομιστή Tuliprox",
+  "On the Tuliprox server ({server})":
+      "Στον διακομιστή Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Είστε τώρα στη δική σας σύνδεση. Επιλέξτε πηγή στις Πηγές για να αλλάξετε μόνο για εσάς.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Μόνο μια ροή .ts μπορεί να έχει δική της σύνδεση. Αυτή παίζει ως HLS.",
+  "Record on the server":
+      "Εγγραφή στον διακομιστή",
+  "Record weekly on the server":
+      "Εβδομαδιαία εγγραφή στον διακομιστή",
+  "Recording is switched off on this server.":
+      "Η εγγραφή είναι απενεργοποιημένη σε αυτόν τον διακομιστή.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Κάποιος άλλος βλέπει αυτό το κανάλι στον διακομιστή. Επιλέξτε πρώτα «Η δική σας σύνδεση» στις Πηγές και μετά την πηγή.",
+  "Stop it and cancel the ones coming up":
+      "Διακοπή και ακύρωση των επόμενων",
+  "Stop weekly recording":
+      "Διακοπή εβδομαδιαίας εγγραφής",
+  "Stopping":
+      "Διακόπτεται",
+  "The server didn't take the recording.":
+      "Ο διακομιστής δεν δέχτηκε την εγγραφή.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Ο διακομιστής ήδη γράφει όσες εκπομπές επιτρέπεται εκείνη την ώρα.",
+  "The server is already recording this show.":
+      "Ο διακομιστής ήδη γράφει αυτή την εκπομπή.",
+  "The server records {title} every week.":
+      "Ο διακομιστής θα γράφει το {title} κάθε εβδομάδα.",
+  "The server records {title}.":
+      "Ο διακομιστής θα γράψει το {title}.",
+  "The server's disk is full.":
+      "Ο δίσκος του διακομιστή είναι γεμάτος.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Αυτή η έκδοση του Tuliprox γράφει μόνο εβδομαδιαία. Μια μεμονωμένη εγγραφή χρειάζεται νεότερο Tuliprox.",
+  "This account may not record on the server.":
+      "Αυτός ο λογαριασμός δεν μπορεί να γράψει στον διακομιστή.",
+  "This show has already ended or has no times in the guide.":
+      "Αυτή η εκπομπή έχει ήδη τελειώσει ή δεν έχει ώρες στον οδηγό.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Το Tuliprox δεν μπόρεσε να δώσει δική του σύνδεση σε αυτό το κανάλι.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Το Tuliprox μετέφερε αυτό το κανάλι σε άλλη πηγή του.",
+  "Tuliprox records it, even with this box off.":
+      "Το Tuliprox το γράφει, ακόμα και με αυτή τη συσκευή κλειστή.",
+  "Unstable":
+      "Ασταθής",
+  "Uses one more provider connection":
+      "Χρησιμοποιεί μία ακόμη σύνδεση παρόχου",
+  "Waiting for a connection":
+      "Αναμονή για σύνδεση",
+  "Weekly":
+      "Εβδομαδιαία",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Έχετε ήδη όσες εβδομαδιαίες εγγραφές επιτρέπονται στον διακομιστή.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Μόνο εσείς το βλέπετε στον διακομιστή: επιλέξτε απευθείας την πηγή που θέλετε.",
+  "Your own connection":
+      "Η δική σας σύνδεση",
+  "Your recording space on the server is full.":
+      "Ο χώρος εγγραφών σας στον διακομιστή είναι γεμάτος.",
+  "{n} % reliable":
+      "{n} % αξιόπιστο",
+  "{title} · every {day} at {time}":
+      "{title} · κάθε {day} στις {time}",
+  "{used} of {cap} used on the server":
+      "{used} από {cap} σε χρήση στον διακομιστή",
+  "{used} used on the server":
+      "{used} σε χρήση στον διακομιστή",
+  "Delete from the network folder":
+      "Διαγραφή από τον φάκελο δικτύου",
+  "Gone for every device that uses this folder.":
+      "Χάνεται από όλες τις συσκευές που χρησιμοποιούν αυτόν τον φάκελο.",
+  "Delete {title} from the network folder?":
+      "Διαγραφή του {title} από τον φάκελο δικτύου;",
+  "Keep it":
+      "Να μείνει",
+  "Deleted from the network folder.":
+      "Διαγράφηκε από τον φάκελο δικτύου.",
+  "Couldn't delete it from the network folder.":
+      "Δεν ήταν δυνατή η διαγραφή από τον φάκελο δικτύου.",
 };

@@ -481,14 +481,16 @@ Future<void> playDownloadChannel(BuildContext context, Channel channel) async {
 }
 
 /// A video in the network folder that another device saved: copy it to
-/// this device (offline: a trip, the car) or play it from the share.
-Future<void> networkFileMenu(BuildContext context, NetworkFile f) async {
+/// this device (offline: a trip, the car), play it from the share or
+/// delete it there (asked twice: every device loses it). True when it was
+/// deleted, so the list reads the folder again.
+Future<bool> networkFileMenu(BuildContext context, NetworkFile f) async {
+  final name = f.group.isEmpty ? f.title : '${f.group} · ${f.title}';
   final action = await showGlassMenu<String>(
     context: context,
     builder: (context) => SwallowHeldActivate(
       child: GlassMenuDialog(
-        title: Text(f.group.isEmpty ? f.title : '${f.group} · ${f.title}',
-            maxLines: 2, overflow: TextOverflow.ellipsis),
+        title: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
         content: SizedBox(
           width: 460,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -505,20 +507,67 @@ Future<void> networkFileMenu(BuildContext context, NetworkFile f) async {
               title: tr('Play from the network folder'),
               onTap: () => Navigator.of(context).pop('play'),
             ),
+            TvMenuTile(
+              icon: Icons.delete_outline,
+              title: tr('Delete from the network folder'),
+              subtitle: tr('Gone for every device that uses this folder.'),
+              onTap: () => Navigator.of(context).pop('delete'),
+            ),
           ]),
         ),
       ),
     ),
   );
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   switch (action) {
     case 'copy':
       await RecordingService.instance.copyToDevice(f);
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
               Text(tr('Copying to this device. It shows under Downloading.'))));
     case 'play':
       await playDownloadChannel(context, f.toChannel());
+    case 'delete':
+      return _deleteNetworkFile(context, f, name);
   }
+  return false;
+}
+
+Future<bool> _deleteNetworkFile(
+    BuildContext context, NetworkFile f, String name) async {
+  final sure = await showGlassMenu<bool>(
+    context: context,
+    builder: (context) => SwallowHeldActivate(
+      child: GlassMenuDialog(
+        title: Text(
+            tr('Delete {title} from the network folder?', {'title': name})),
+        content: SizedBox(
+          width: 460,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TvMenuTile(
+              autofocus: true,
+              icon: Icons.close,
+              title: tr('Keep it'),
+              onTap: () => Navigator.of(context).pop(false),
+            ),
+            TvMenuTile(
+              icon: Icons.delete_outline,
+              title: tr('Delete'),
+              subtitle: _size(f.size),
+              onTap: () => Navigator.of(context).pop(true),
+            ),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if (sure != true || !context.mounted) return false;
+  final ok = await RecordingService.instance.deleteNetworkFile(f);
+  if (!context.mounted) return ok;
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? tr('Deleted from the network folder.')
+          : tr("Couldn't delete it from the network folder."))));
+  return ok;
 }

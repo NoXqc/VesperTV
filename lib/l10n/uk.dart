@@ -3837,4 +3837,100 @@ const Map<String, String> kUk = {
       "Завантаження…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Щоб користуватися кнопками TV, YouTube чи Prime, додайте безкоштовний додаток «{name}» — невеликий окремий застосунок. Натисніть OK, щоб завантажити й установити його.",
+  "A recording on the Tuliprox server failed.":
+      "Запис на сервері Tuliprox не вдався.",
+  "A recording on the Tuliprox server is ready.":
+      "Запис на сервері Tuliprox готовий.",
+  "Another device on your account took over this stream.":
+      "Інший пристрій вашого облікового запису перехопив цей потік.",
+  "Channel {id}":
+      "Канал {id}",
+  "Delete from the server":
+      "Видалити з сервера",
+  "Every {day} at {time}":
+      "Щоразу {day} о {time}",
+  "Not working right now · tried again in {n} s":
+      "Зараз не працює · нова спроба через {n} с",
+  "On the Tuliprox server":
+      "На сервері Tuliprox",
+  "On the Tuliprox server ({server})":
+      "На сервері Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Тепер у вас власне з’єднання. Виберіть джерело в Джерелах, щоб перемкнути лише для себе.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Власне з’єднання може мати лише потік .ts. Цей відтворюється як HLS.",
+  "Record on the server":
+      "Записати на сервері",
+  "Record weekly on the server":
+      "Записувати щотижня на сервері",
+  "Recording is switched off on this server.":
+      "Запис на цьому сервері вимкнено.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Хтось інший дивиться цей канал на сервері. Спершу виберіть «Власне з’єднання» в Джерелах, потім джерело.",
+  "Stop it and cancel the ones coming up":
+      "Зупинити й скасувати наступні",
+  "Stop weekly recording":
+      "Зупинити щотижневий запис",
+  "Stopping":
+      "Зупиняється",
+  "The server didn't take the recording.":
+      "Сервер не прийняв запис.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Сервер уже записує стільки програм, скільки вам дозволено в цей час.",
+  "The server is already recording this show.":
+      "Сервер уже записує цю програму.",
+  "The server records {title} every week.":
+      "Сервер записуватиме {title} щотижня.",
+  "The server records {title}.":
+      "Сервер запише {title}.",
+  "The server's disk is full.":
+      "Диск сервера заповнений.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Ця версія Tuliprox записує лише щотижня. Для одноразового запису потрібен новіший Tuliprox.",
+  "This account may not record on the server.":
+      "Цей обліковий запис не може записувати на сервері.",
+  "This show has already ended or has no times in the guide.":
+      "Ця програма вже закінчилась або не має часу в телегіді.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Tuliprox не зміг дати цьому каналу власне з’єднання.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Tuliprox переключив цей канал на інше своє джерело.",
+  "Tuliprox records it, even with this box off.":
+      "Tuliprox запише це, навіть коли цей пристрій вимкнено.",
+  "Unstable":
+      "Нестабільне",
+  "Uses one more provider connection":
+      "Використовує ще одне з’єднання провайдера",
+  "Waiting for a connection":
+      "Очікує з’єднання",
+  "Weekly":
+      "Щотижня",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "У вас уже стільки щотижневих записів на сервері, скільки дозволено.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Лише ви дивитеся це на сервері: виберіть потрібне джерело напряму.",
+  "Your own connection":
+      "Власне з’єднання",
+  "Your recording space on the server is full.":
+      "Ваше місце для записів на сервері заповнене.",
+  "{n} % reliable":
+      "{n} % надійності",
+  "{title} · every {day} at {time}":
+      "{title} · щоразу {day} о {time}",
+  "{used} of {cap} used on the server":
+      "{used} з {cap} зайнято на сервері",
+  "{used} used on the server":
+      "{used} зайнято на сервері",
+  "Delete from the network folder":
+      "Видалити з мережевої папки",
+  "Gone for every device that uses this folder.":
+      "Зникне на всіх пристроях, що користуються цією папкою.",
+  "Delete {title} from the network folder?":
+      "Видалити {title} з мережевої папки?",
+  "Keep it":
+      "Залишити",
+  "Deleted from the network folder.":
+      "Видалено з мережевої папки.",
+  "Couldn't delete it from the network folder.":
+      "Не вдалося видалити з мережевої папки.",
 };

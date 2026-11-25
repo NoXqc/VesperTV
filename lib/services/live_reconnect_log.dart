@@ -25,6 +25,8 @@ class LiveReconnectLog {
   int _seen = 0;
   String? _lastNote;
   int _stallsSeen = 0;
+  int _splicesSeen = 0;
+  int _jumpsSeen = 0;
   bool? _slow;
   int _polls = 0;
 
@@ -66,6 +68,22 @@ class LiveReconnectLog {
     if (++_polls % 6 == 0) debugPrint('LiveBuffer: $state');
   }
 
+  /// The native TS reader's source switches (a new program under the open
+  /// stream, e.g. Tuliprox) and timestamp jumps it smoothed over.
+  void _logSplices(Map<Object?, Object?> m) {
+    final splices = (m['tsSplices'] as num?)?.toInt() ?? 0;
+    final jumps = (m['tsJumps'] as num?)?.toInt() ?? 0;
+    if (splices < _splicesSeen || jumps < _jumpsSeen) {
+      _splicesSeen = 0;
+      _jumpsSeen = 0;
+    }
+    if (splices == _splicesSeen && jumps == _jumpsSeen) return;
+    debugPrint('TsSplice: $splices source switch(es), $jumps time jump(s) '
+        'smoothed over on this stream');
+    _splicesSeen = splices;
+    _jumpsSeen = jumps;
+  }
+
   Future<void> _poll() async {
     final c = _current();
     if (c == null || !c.value.isInitialized) return;
@@ -80,8 +98,11 @@ class LiveReconnectLog {
         _seen = 0;
         _stallsSeen = 0;
         _slow = null;
+        _splicesSeen = 0;
+        _jumpsSeen = 0;
       }
-      _logBuffer(m!);
+      _logSplices(m!);
+      _logBuffer(m);
       // A failed attempt doesn't count, but changes the note.
       final note = m['lastReconnect'] as String?;
       if (count > _seen || (note != null && note != _lastNote)) {

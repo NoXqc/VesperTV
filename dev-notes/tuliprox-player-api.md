@@ -62,6 +62,16 @@ All in `lib/services/tuliprox.dart` (`Tuliprox` singleton, `TuliproxApi`).
    switched source shows that late (owner +971: 35 s). Set to 4 on the owner's VPS (2026-11-23). A
    reconnect after the switch does not help: a new connection is ranked again (health, quality,
    order), not the picked member.
+   2026-11-24 on 3.3.207 (burst secs 3): faster. Two freezes on the Homatics (+988), both from a REFUSED switch:
+   502 `Failed to open target member; returned to current member` (lab providers allow 1 connection) means Tuliprox
+   opened the old member again, so the stream jumps (audio `Unexpected audio track timestamp discontinuity`, PTS
+   15-19 s back) once the buffer has played (~21 s), and the picture stuck with the sound on (Amlogic VDA: all 16
+   output buffers held by the client). `watchSourceSwitch` only ran after a successful switch and only from its
+   estimated arrival. +990: it also runs after that refusal (`tuliproxSwitchReopened`, no message), acts on a picture
+   stuck while playing from the start (an earlier try's jump), and a newer watch replaces the older one.
+   +993: the real fix in the player: `TsSplice.java` (vendored video_player_android, CLAUDE.md §9) keeps live TS
+   timestamps continuous across a splice and maps a new source's PIDs onto the first PMT's (Tuliprox's splice
+   keeps PIDs and PTS, aligner.rs). The Dart guards (`watchSourceSwitch`, `LiveFreezeGuard`) stay as backstops.
 
 8. **Messages roll down from the top (+974).** The busy message, "Changing source to…", "Source
    changed to…", refusals and "That source is already on the list." use `TopNotice.show`
@@ -80,7 +90,59 @@ All in `lib/services/tuliprox.dart` (`Tuliprox` singleton, `TuliproxApi`).
     (`/m3u-stream/live/{u}/{p}/{id}.ts`, `/m3u-stream/{u}/{p}/{id}/live.m3u8`) and prefixed paths. Existing M3U
     playlists learn it at their next download (Update Content). `test/tuliprox_m3u_discovery_test.dart`.
 
+11. **Everything else in the merged API (3.3.206 / 3.3.207, develop 2026-11-24; owner: "Add them all for future
+    proofing")**, `claude/tuliprox-api-extras`. Routes in `lib/services/tuliprox_player_extras.dart` (a `part` of
+    tuliprox.dart: `extension TuliproxPlayerApi on TuliproxApi`), orchestration in `Tuliprox`:
+    - **Capabilities** read whole (`stream_split`, `watch_progress`, `event_stream`, `recording`, `recording_enabled`,
+      `effective_permissions`, rule / join limits; `target_name` if a later server sends it).
+    - **Split** (4.13): `_playerGroup` marks a channel `_splittable` when its own stream is `shared`, MPEG-TS and
+      `stream_split` is on; Sources then shows **Your own connection** under the channel (`Tuliprox.splitMark`).
+      Picking it: `POST /me/streams/{uid}/split`, the server-relative `url` (contains the playlist password: never
+      logged) joined to the playlist's own root (`tuliproxServerRoot`, keeps a reverse-proxy prefix), played as a
+      source of the channel (the old stream is released first by `_playChannel`). The `?dedicated=1` copy is the same
+      channel for Sources (`Tuliprox.sameStream`; `_tuliproxRows` asks `groupFor(playing)`). A shared-stream switch
+      refusal points at the row (`tuliproxRefusalText(canSplit:)`).
+    - **Member health** (4.2): `degraded`, `qos_24h` / `qos_7d`, `retry_after_secs` -> `tuliproxMemberLabel`
+      ("Unstable · 1080p · H.264 · 5.5 Mbit/s · 92 % reliable", "Not working right now · tried again in 30 s").
+      `channelMembers` (`/me/channels/{vid}/failover-members`, before playback): API only.
+    - **Event stream** (4.12): `TuliproxEventSocket` (dart:io WebSocket, Bearer header, ping 30 s, growing retry, stops
+      on 1008), opened by `noteStarted` / `_playerGroup` when `event_stream` is on, closed a minute after the last
+      channel of the server left (`_forget`). `connection_denied` -> `noteFallback(user_connections_exhausted)` (the
+      computers' mpv can't read X-Tuliprox-Fallback), `stream_ended` kicked -> "Another device…", preempted ->
+      `low_priority_preempted`, `failover_member_switched` (not within 20 s of our own switch) -> "Tuliprox moved this
+      channel…", `recording_finished` / `resync_required` -> `recordingsChanged`. `eventNotice` +
+      `fallbackNotice` are shown by both players (`DesktopPlayerScreen` listens now too).
+    - **DVR** (4.6 - 4.10): `recordOnServer` (one-off, 1 min before / 5 after, `Idempotency-Key`, retried without
+      padding on `recording_padding_limit_exceeded`), `recordWeeklyOnServer` (`weekly_timeslot` in the device's IANA zone
+      from Android `device_type.timeZoneId`, UTC elsewhere), cancel / delete / edit, rules list / create / delete,
+      conflicts preview, availability, media URLs (`Authorization: Bearer`), and the **recordings snapshot over the
+      binary `/ws` socket** (byte 4, `{"Auth": token}`, `"RecordingSnapshotRequest"`). **Target:** a one-off request
+      carries `source.target_id`; a playlist user is never told it. Sent: an own rule's `source.target_id` when
+      known, else empty: Tuliprox after 3.3.207 (PR #1004, uzumaki 2026-11-24) fills in the caller's own target for a
+      player token (also `target_name` in conflicts preview; a foreign one = 400 `recording_invalid_source`; the
+      Idempotency-Key replays either way). 3.3.207 answers an empty one with `recording_invalid_source`: then the MCP
+      tool `me_record_program` (fills it in; needs `mcp.enabled` + player tools `write`), else
+      `recording_needs_target` ("only weekly"). Drop the MCP fallback once 3.3.207 servers are gone. UI: Timeline / list
+      hold menu **Record on the server** + **Record weekly on the server** (`canRecordNow`: capabilities cached; the menu
+      waits up to 0.9 s to read them once), Channel schedule **Record on the server**, Recordings **On the Tuliprox
+      server** (tasks + weekly rules as cards; OK plays a finished one, hold = Stop / Cancel / Delete as
+      `allowed_actions` say; rules: stop, optionally cancel the coming ones; space used). Finished recordings are also
+      the Xtream VOD category `Recordings` (2000000000), so they show in Movies without anything here.
+    - **Watch progress** (4.11): `noteVodProgress` (Android's 5 s save + the stop save, the computer's
+      `DesktopVodProgress.save`; at most every 30 s, always at stop) PUTs `movie` / `episode` + Xtream id
+      (`vodRefOf`: `/movie|series/{u}/{p}/{id}.{ext}`). `pullVodProgress` (movie page, show page): one
+      `GET /me/progress` per user (1 min), writes position + duration for titles that never played here (watched =
+      at the end); a position from this device always wins (no local timestamps to compare).
+    - **Channels / EPG / bouquet** (4.4, 4.5): `searchChannels`, `epg`, `categories`, `bouquet`, `setBouquet`: API
+      only (VesperTV has its own search, guide and groups). MCP: `mcpTool` (used for the record fallback).
+    - Not box-tested: the owner's VPS has no `video.recording` / `mcp` block (DVR and MCP off), so the DVR is tested
+      against fakes only (`test/tuliprox_player_extras_test.dart`, 19 tests: split, labels, DVR paths, `/ws` snapshot on a
+      real loopback socket, the event socket, progress, channels / EPG / bouquet).
+
 ## Not done / open
+
+- One-off server recordings on 3.3.207 need the target name (above): fixed in Tuliprox PR #1004 (open on 2026-11-24,
+  next dev image); VesperTV already sends it empty.
 
 - The lab's grouping splits channels: `strip_regex` misses U+02B0 (the ʰ of ʰᵉᵛᶜ), and
   SPORT/SPORTS differ (`aliases`). Proposed to the owner, not applied (lab ids may change).

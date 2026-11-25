@@ -106,6 +106,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       long fileSize = stats.fileSizeBytes.get();
       if (fileSize > 0) m.put("fileSizeBytes", fileSize);
       m.put("reconnects", stats.reconnects.get());
+      m.put("tsSplices", stats.tsSplices.get());
+      m.put("tsJumps", stats.tsJumps.get());
       String last = stats.lastReconnect;
       if (last != null) m.put("lastReconnect", last);
       String fallback = stats.fallback;

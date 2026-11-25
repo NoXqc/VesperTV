@@ -12,7 +12,7 @@ import 'package:flutter/rendering.dart'
     show RenderAbstractViewport, ScrollCacheExtent;
 import 'package:flutter/scheduler.dart' show SchedulerBinding, SchedulerPhase;
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' show NumberFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -44,6 +44,7 @@ import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
 import '../services/user_groups.dart';
 import '../services/storage_service.dart';
+import '../services/tuliprox.dart';
 import '../services/viewer_profile_service.dart';
 import '../utils/scroll_safety.dart';
 import '../utils/live_group_sort.dart';
@@ -1090,6 +1091,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// hold has only ever meant one thing.
   Future<void> _showChannelOptions(Channel channel) async {
     if (_selection.value != null) return _showSelectionOptions();
+    // A Tuliprox channel: whether its server records for this account
+    // (Player API DVR), read once and kept 5 minutes.
+    if (Tuliprox.instance.refOf(channel) != null &&
+        !Tuliprox.instance.canRecordNow(channel)) {
+      try {
+        await Tuliprox.instance
+            .dvrFor(channel)
+            .timeout(const Duration(milliseconds: 900));
+      } catch (_) {
+        // Slow server: the menu opens without the server rows.
+      }
+      if (!mounted) return;
+    }
     final playlist = context.read<PlaylistManager>();
     final menuViewer = context.read<StorageService>().getActiveViewerId();
     final isFavorited = channel.isFavorite;
@@ -1151,6 +1165,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final seriesRule = seriesSource == null
         ? null
         : recordings.seriesFor(channel, seriesSource.title);
+    // The Tuliprox server records too (its DVR, even with this box off):
+    // the show held (or on now), and weekly at that time.
+    final serverRecords =
+        channel.isLive && Tuliprox.instance.canRecordNow(channel);
+    final serverShow = !serverRecords
+        ? null
+        : held != null && held.stop.isAfter(nowTime)
+            ? held
+            : context.read<EpgService>().getCurrentProgram(channel.epgId);
     final showEnds = onNow == null
         ? tr('No guide for this channel: stops after 2 hours')
         : tr('{title} · stops at {time}', {
@@ -1286,6 +1309,24 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ],
           if (upcoming == null)
             if (seriesOption(context) case final option?) option,
+          if (serverShow != null) ...[
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('serverRecord'),
+              child: twoLines(tr('Record on the server'),
+                  '${serverShow.title} · ${TimeFormat.dayTime(serverShow.start)}'),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('serverWeekly'),
+              child: twoLines(
+                  tr('Record weekly on the server'),
+                  tr('{title} · every {day} at {time}', {
+                    'title': serverShow.title,
+                    'day':
+                        DateFormat('EEEE').format(serverShow.start.toLocal()),
+                    'time': TimeFormat.hm.format(serverShow.start.toLocal()),
+                  })),
+            ),
+          ],
           TvDialogOption(
             onPressed: () => Navigator.of(context).pop('settings'),
             child: Text(tr('Settings')),
@@ -1319,6 +1360,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (upcomingEntry != null) await _cancelUpcoming(upcomingEntry);
       case 'series':
         if (seriesSource != null) await _recordSeries(channel, seriesSource);
+      case 'serverRecord':
+      case 'serverWeekly':
+        if (serverShow != null) {
+          await _recordOnServer(channel, serverShow,
+              weekly: choice == 'serverWeekly');
+        }
       case 'stopSeries':
         if (seriesRule != null) {
           await recordings.stopSeries(seriesRule);
@@ -1369,6 +1416,31 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         }
         _toggleHiddenWithFeedback(context, channel);
     }
+  }
+
+  /// Asks the channel's Tuliprox server to record [show] (once, or every
+  /// week at that time): it records even with this box off, and the
+  /// recording shows in Recordings and in the server's Recordings movies.
+  Future<void> _recordOnServer(Channel channel, EpgProgram show,
+      {required bool weekly}) async {
+    String text;
+    try {
+      if (weekly) {
+        await Tuliprox.instance.recordWeeklyOnServer(channel,
+            start: show.start, duration: show.stop.difference(show.start));
+        text =
+            tr('The server records {title} every week.', {'title': show.title});
+      } else {
+        await Tuliprox.instance.recordOnServer(channel,
+            title: show.title, start: show.start, end: show.stop);
+        text = tr('The server records {title}.', {'title': show.title});
+      }
+    } catch (e) {
+      text = tuliproxRecordingErrorText(e);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 4)));
   }
 
   Future<void> _sortFavoriteChannels(String viewer) async {

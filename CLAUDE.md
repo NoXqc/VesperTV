@@ -210,6 +210,14 @@ in between → `stop()` + error `[RESTART_LOOP n in 60 s: reason xN]`. Dart
 `PlaybackService._watchRestartLoop` logs it (native restarts never reach Send log otherwise), shows
 Reconnecting..., waits 3 s and runs `reloadCurrentChannel` once per channel per 2 min; else the
 error screen. User video: guide preview flashing after Back from full screen until a channel change.
+Test +991 (2026-11-24): **`LiveFreezeGuard`** (`lib/services/live_freeze_guard.dart`, main player, Android):
+a live picture stuck 3 s while it plays with >= 1 s buffered (timestamps jumped: a server switch or a
+reopened source, a provider encoder restart; Homatics held every frame, sound on) → Pause/Play, still
+stuck 3 s later → `reloadCurrentChannel`, at most 2 reloads per 5 min. Only after the channel showed
+frames (radio / starting never), not paused / buffering / catch-up / background / during
+`watchSourceSwitch` (which nudges itself, also after a Tuliprox 502 "returned to current member"). Log
+`LiveFreeze:`. +995: also no frame for 10 s with < 1 s buffered while >= 2 MB arrived (`bytes` stat) = a reload
+(the player waiting for good on one silent track: "Target buffer size reached with less than 500ms").
 Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
 `setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
 time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
@@ -237,6 +245,25 @@ reads it). The format waits for that frame like the TS reader's. The wrapper mus
 factory's subtitle setters or MKV subtitles break. TrueHD too (owner, 2026-11-09): the first frame's
 major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as MediaInfo reads it)
 = codecs `truehd-atmos`, which `VideoPlayer.audioCodec` passes to Dart. `MatroskaAtmosTest` (12).
+Test +993 (2026-11-24): **`TsSplice.java`** (`HttpVideoAsset`: `TsSplice.wrap(MatroskaAtmos.wrap(...), stats)`,
+wraps `TsExtractor`, live input only = no length; files pass through). A splicing server (Tuliprox failover
+switch / reopen, provider encoder restart) starts the next source at a new PAT/PMT + keyframe with its own
+PIDs and timestamps (Tuliprox aligner.rs: versions continued, discontinuity flag, NO PID/PTS rewrite);
+media3's single-PMT TsExtractor reads PAT/PMT once and keeps one time base: a jump back moved the audio clock
+while decoded frames waited (picture still, sound on, as long as the jump: 14-19 s on the owner's Homatics),
+other PIDs were never read. `FilterInput` hands the reader whole checked packets; `ProgramFollower` follows
+PAT/PMT (CRC-checked, single program, single-packet sections) and maps a new program's streams onto the first
+PMT's PIDs by resolved stream type in order (others -> 0x1FFF; packets of a new PAT dropped until its PMT);
++994: a type with no match (another codec: owner's HEVC -> H.264 pick froze picture then sound on 993) =
+`SPLIT`: the old reader gets END_OF_INPUT at that PMT (flushes), a fresh TsExtractor (`freshTs`, same factory
+setup) starts there with the program's PAT copied in front, `Rejoin` maps its n-th track of a type to the first
+reader's (extras discarded; endTracks/seekMap ignored), the renderer swaps decoders on the new format;
+`Timeline` keeps A/V times continuous: one shared offset, a jump = back from the track's last sample (audio 1
+s, video 1.5 s; after a program change 0.25 / 0.6 s) or ahead of the newest sample of any track (5 s / 1.5 s),
+continued at newest + one sample; a track still on the old offset keeps it for samples that continue it.
+`StreamStats.tsSplices/tsJumps` -> StatsBridge -> Dart `LiveReconnectLog` "TsSplice: N source switch(es), M
+time jump(s)"; native log tag `TsSplice`. `TsSpliceTest` (10, incl. stock media3 jumping back / losing other
+PIDs). Native suite 281 (JDK 21 at C:/Program Files/Microsoft/jdk-21.0.13.21-hotspot).
 Unreleased (2026-11-12, `claude/live-subtitles`): **`SubtitleBridge` picture subtitles** — DVB (European live
 channels), PGS and VobSub tracks are listed (`image`) and their bitmap cues go to Flutter as PNG bytes + place
 (`images` in the cue event; `SubtitleOverlay._pictures`). `mimeOf`: subtitles parsed during extraction say
@@ -503,6 +530,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-24 - Tuliprox Player API extras (`claude/tuliprox-api-extras`, worktree `VesperTV-claude-tpxextras`,
+  from main dc1f3c2):** uzumaki merged the Player API into develop (3.3.206/207, the VPS runs 3.3.207); owner: "Add them
+  all for future proofing". Sources: **Your own connection** (split a shared stream, then switch just for you), member
+  health labels (Unstable, % reliable, retry in N s). Event socket (`/me/events`): busy reasons on computers too, "another
+  device took over", "the server moved this channel", recordings refresh. **Server DVR**: hold menu Record on the server /
+  weekly, Channel schedule, Recordings "On the Tuliprox server" (snapshot over the binary `/ws`). Watch progress to /
+  from the server for Tuliprox movies / episodes. Channels / EPG / bouquet / MCP: API only. One-off recordings send an
+  empty target (Tuliprox after 3.3.207 fills it in); 3.3.207 refuses it -> MCP fallback. Details: dev-notes/tuliprox-player-api.md item 11; remote.html
+  "Sources on a Tuliprox channel", "Record on the Tuliprox server". test/tuliprox_player_extras_test.dart (18).
 - **Claude, 2026-11-24 - kids adult groups, profile switch speed, Search typing (`claude/kids-adult-speed`, worktree
   `VesperTV-claude-kidsadult`, from main b05fd52):** wile.e.coyote's log LOG-GT8TZG (Onn 4K, 1.0.74-dev.980, 277k movies,
   68k channels; saved in Logs/). (1) Kids search still found adult movies: the profile allowed almost everything (Show

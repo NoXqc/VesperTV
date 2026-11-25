@@ -4365,4 +4365,100 @@ const Map<String, String> kEs = {
       "Descargando…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Para usar botones como TV, YouTube o Prime, añade el complemento gratuito «{name}», una pequeña app aparte. Pulsa OK para descargarlo e instalarlo.",
+  "A recording on the Tuliprox server failed.":
+      "Falló una grabación en el servidor Tuliprox.",
+  "A recording on the Tuliprox server is ready.":
+      "Una grabación en el servidor Tuliprox está lista.",
+  "Another device on your account took over this stream.":
+      "Otro dispositivo de tu cuenta tomó esta transmisión.",
+  "Channel {id}":
+      "Canal {id}",
+  "Delete from the server":
+      "Eliminar del servidor",
+  "Every {day} at {time}":
+      "Cada {day} a las {time}",
+  "Not working right now · tried again in {n} s":
+      "No funciona ahora · nuevo intento en {n} s",
+  "On the Tuliprox server":
+      "En el servidor Tuliprox",
+  "On the Tuliprox server ({server})":
+      "En el servidor Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Ahora estás en tu propia conexión. Elige una fuente en Fuentes para cambiar solo para ti.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Solo una transmisión .ts puede tener su propia conexión. Esta se reproduce como HLS.",
+  "Record on the server":
+      "Grabar en el servidor",
+  "Record weekly on the server":
+      "Grabar cada semana en el servidor",
+  "Recording is switched off on this server.":
+      "La grabación está desactivada en este servidor.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Otra persona está viendo este canal en el servidor. Elige primero «Tu propia conexión» en Fuentes y luego la fuente.",
+  "Stop it and cancel the ones coming up":
+      "Detenerla y cancelar las próximas",
+  "Stop weekly recording":
+      "Detener la grabación semanal",
+  "Stopping":
+      "Deteniendo",
+  "The server didn't take the recording.":
+      "El servidor no aceptó la grabación.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "El servidor ya está grabando tantos programas como tienes permitido a esa hora.",
+  "The server is already recording this show.":
+      "El servidor ya está grabando este programa.",
+  "The server records {title} every week.":
+      "El servidor grabará {title} cada semana.",
+  "The server records {title}.":
+      "El servidor grabará {title}.",
+  "The server's disk is full.":
+      "El disco del servidor está lleno.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Esta versión de Tuliprox solo graba cada semana. Una grabación única necesita un Tuliprox más reciente.",
+  "This account may not record on the server.":
+      "Esta cuenta no puede grabar en el servidor.",
+  "This show has already ended or has no times in the guide.":
+      "Este programa ya terminó o no tiene horario en la guía.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Tuliprox no pudo darle a este canal su propia conexión.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Tuliprox pasó este canal a otra de sus fuentes.",
+  "Tuliprox records it, even with this box off.":
+      "Tuliprox lo graba, incluso con este aparato apagado.",
+  "Unstable":
+      "Inestable",
+  "Uses one more provider connection":
+      "Usa una conexión más del proveedor",
+  "Waiting for a connection":
+      "Esperando una conexión",
+  "Weekly":
+      "Cada semana",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Ya tienes tantas grabaciones semanales en el servidor como se permite.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Solo tú lo ves en el servidor: elige directamente la fuente que quieras.",
+  "Your own connection":
+      "Tu propia conexión",
+  "Your recording space on the server is full.":
+      "Tu espacio de grabación en el servidor está lleno.",
+  "{n} % reliable":
+      "{n} % fiable",
+  "{title} · every {day} at {time}":
+      "{title} · cada {day} a las {time}",
+  "{used} of {cap} used on the server":
+      "{used} de {cap} usados en el servidor",
+  "{used} used on the server":
+      "{used} usados en el servidor",
+  "Delete from the network folder":
+      "Eliminar de la carpeta de red",
+  "Gone for every device that uses this folder.":
+      "Desaparece en todos los dispositivos que usan esta carpeta.",
+  "Delete {title} from the network folder?":
+      "¿Eliminar {title} de la carpeta de red?",
+  "Keep it":
+      "Conservarlo",
+  "Deleted from the network folder.":
+      "Eliminado de la carpeta de red.",
+  "Couldn't delete it from the network folder.":
+      "No se pudo eliminar de la carpeta de red.",
 };

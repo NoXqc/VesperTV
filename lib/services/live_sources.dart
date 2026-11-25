@@ -27,10 +27,43 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> liveSourceRows(
   // the server come right under the channel, they join without a new
   // connection (Player API joinable streams).
   final joins = _tuliproxJoinRows(manager, playing);
-  if (joins.isEmpty || list.rows.isEmpty) return list;
+  // Shared with other viewers on the server: "Your own connection" splits
+  // it off, then a source switch is just for this viewer (Player API split).
+  final split = _tuliproxSplitRow(playing);
+  if ((joins.isEmpty && split == null) || list.rows.isEmpty) return list;
   return (
-    rows: [list.rows.first, ...joins, ...list.rows.skip(1)],
+    rows: [
+      list.rows.first,
+      if (split != null) split,
+      ...joins,
+      ...list.rows.skip(1)
+    ],
     canAdd: list.canAdd
+  );
+}
+
+/// The "Your own connection" row when [playing]'s Tuliprox stream is
+/// shared and can be split off ([Tuliprox.canSplit]).
+LiveSourceRow? _tuliproxSplitRow(Channel playing) {
+  if (!Tuliprox.instance.canSplit(playing)) return null;
+  final row = Channel(
+    id: playing.id,
+    rawId: playing.rawId,
+    playlistId: playing.playlistId,
+    name: tr('Your own connection'),
+    group: playing.group,
+    url: '${playing.url}${Tuliprox.splitMark}',
+    logoUrl: playing.logoUrl,
+    httpHeaders: playing.httpHeaders,
+  );
+  return (
+    row,
+    LiveSourceEntry(
+      channel: row,
+      playlist:
+          ['Tuliprox', tr('Uses one more provider connection')].join(' · '),
+      current: false,
+    )
   );
 }
 
@@ -49,7 +82,8 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> _liveSourceRows(
             manager.playlistNameFor(c.playlistId).trim(),
             if (manager.isEditorFallback(sources.first, c)) tr('Fallback'),
           ].where((s) => s.isNotEmpty).join(' · '),
-          current: c.url == playing.url,
+          // Its own-connection copy (Tuliprox split) is still it.
+          current: Tuliprox.sameStream(c.url, playing.url),
           // What it really played at (stream test, Multiview, full
           // screen) beats what its name claims.
           quality: manager.measuredOf(c)?.label,
@@ -161,10 +195,12 @@ Future<({List<LiveSourceRow> rows, bool canAdd})> _liveSourceRows(
 Future<List<LiveSourceRow>?> _tuliproxRows(
     List<LiveSourceRow> app, Channel playing, DispatcharrSources mode) async {
   final own = app.first.$1;
-  if (Tuliprox.instance.refOf(own) == null || playing.url != own.url) {
+  if (Tuliprox.instance.refOf(own) == null ||
+      !Tuliprox.sameStream(playing.url, own.url)) {
     return null;
   }
-  final group = await Tuliprox.instance.groupFor(own);
+  // The stream playing (on its own connection after a split, its URL).
+  final group = await Tuliprox.instance.groupFor(playing);
   if (group == null || group.members.length < 2) return null;
   final first = app.first.$2;
   final rows = <LiveSourceRow>[
@@ -205,7 +241,7 @@ Future<List<LiveSourceRow>?> _tuliproxRows(
             tr('Source {n}', {'n': '$n'}),
         ].join(' · '),
         current: m.vid == group.currentVid,
-        quality: m.failing ? tr('Not working right now') : m.quality,
+        quality: tuliproxMemberLabel(m),
       )
     ));
   }
@@ -260,7 +296,7 @@ List<LiveSourceRow> _tuliproxJoinRows(
 Future<String?> playPickedLiveSource(
     Channel playing, Channel source, Future<void> Function(Channel source) play,
     {Future<void> Function(Channel channel)? playChannel,
-    void Function(String name)? onServerSwitch,
+    void Function(String? name)? onServerSwitch,
     Future<void> Function(Duration after, String name, ServerHold hold)?
         reconnect}) async {
   // A channel already playing on the Tuliprox server: a channel change
@@ -268,6 +304,19 @@ Future<String?> playPickedLiveSource(
   if (Tuliprox.instance.isJoin(source)) {
     await (playChannel ?? play)(Tuliprox.instance.joinTarget(source));
     return null;
+  }
+  // Its own provider connection: the server splits the shared stream off,
+  // the player opens the new address (the old stream ends first).
+  if (Tuliprox.instance.isSplit(source)) {
+    try {
+      final url = await Tuliprox.instance.split(playing);
+      await play(playing.copyWith(url: url));
+      return tr(
+          'On your own connection now. Pick a source in Sources to switch just for you.');
+    } catch (e) {
+      debugPrint('Tuliprox: split refused ($e)');
+      return tuliproxSplitRefusalText(e);
+    }
   }
   // A Tuliprox source: the server splices it into the open stream, the
   // player keeps its connection (no play).
@@ -280,7 +329,12 @@ Future<String?> playPickedLiveSource(
       return tr('Changing source to {stream}…', {'stream': name});
     } catch (e) {
       debugPrint('Tuliprox: switch refused ($e)');
-      return tuliproxRefusalText(e);
+      // It tried, then went back to the source before: the stream still
+      // jumps once the buffer has played, the player watches that too (no
+      // name: nothing changed to say).
+      if (tuliproxSwitchReopened(e)) onServerSwitch?.call(null);
+      return tuliproxRefusalText(e,
+          canSplit: Tuliprox.instance.canSplit(playing));
     }
   }
   final channel = await Dispatcharr.instance.switchChannelTo(source);
