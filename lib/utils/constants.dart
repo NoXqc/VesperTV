@@ -694,6 +694,12 @@ class AppConstants {
   /// viewer). Supersedes [keyCompactUi], which still seeds it when unset.
   static const String keyUiSize = 'vesper_ui_size';
 
+  /// Settings > Appearance > Column lines (per viewer; owner, 2026-11-25:
+  /// users want the lines between the TV home's columns in a colour, not
+  /// background colours): '' = the theme's, 'accent' = the palette colour,
+  /// 'white', or a `GroupColor` id.
+  static const String keyColumnLines = 'vesper_column_lines';
+
   /// Media Hub rows folded away with their eye (Continue watching,
   /// Recently watched), per viewer.
   static const String keyHubHiddenRows = 'vesper_hub_hidden_rows';

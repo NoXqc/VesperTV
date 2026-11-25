@@ -4067,4 +4067,11 @@ const Map<String, String> kPl = {
       "Szukaj meczów w ukrytych grupach",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "Kanały meczów mogą pochodzić też z ukrytych grup na żywo: grupa ukryta dla porządku w TV nadal daje swoje mecze. Kanały ukryte pojedynczo pozostają pominięte. Nigdy w profilu dziecięcym. Zapisane dla tego widza.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Biały",
+  "Column lines":
+      "Linie kolumn",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Kolor linii między kolumnami i w przewodniku. Tylko dla tego profilu.",
 };

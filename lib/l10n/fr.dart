@@ -4486,4 +4486,11 @@ const Map<String, String> kFr = {
       "Chercher les matchs dans les groupes masqués",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "Les chaînes des matchs peuvent aussi venir des groupes en direct que vous avez masqués : un groupe masqué pour garder la télé en ordre garde ses matchs. Les chaînes masquées une à une restent exclues. Jamais sur un profil Enfants. Enregistré pour ce spectateur.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Blanc",
+  "Column lines":
+      "Lignes des colonnes",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "La couleur des lignes entre les colonnes et dans le guide. Pour ce profil seulement.",
 };

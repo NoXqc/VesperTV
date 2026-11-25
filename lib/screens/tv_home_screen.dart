@@ -4495,6 +4495,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _wideBrowseCards = prefs.wideCards && !_compact;
     _compactUi = prefs.compactUi;
     _largeUi = prefs.largeUi;
+    _columnLineColor =
+        columnLineColorOf(prefs.columnLines, Theme.of(context).colorScheme);
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     // Home has no content page: it is the second one (owner, 2026-11-13:
@@ -4863,7 +4865,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                         _fullArt) &&
                                                     _focusDepth > 0
                                                 ? Colors.transparent
-                                                : null),
+                                                : _columnLineColor),
                                         if (_tab == 'Home')
                                           Expanded(child: _homeScope())
                                         else ...[
@@ -4887,7 +4889,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                       _focusDepth > 1 &&
                                                       !groupsHeld
                                                   ? Colors.transparent
-                                                  : null),
+                                                  : _columnLineColor),
                                           Expanded(
                                               child: _SlideSteadyWidth(
                                                   enabled: prefs.isTelevision,
@@ -5527,7 +5529,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               collapsed: collapsed,
               onTap: _openSports,
             ),
-          const Divider(height: 16, color: Colors.white24),
+          Divider(height: 16, color: _columnLineColor ?? Colors.white24),
           for (final tab in _visibleTabs)
             _SelectableRow(
               icon: _tabIcons[tab]!,
@@ -5555,7 +5557,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   MaterialPageRoute(builder: (_) => const RecordingsScreen())),
             ),
         ],
-        const Divider(height: 16, color: Colors.white24),
+        Divider(height: 16, color: _columnLineColor ?? Colors.white24),
         // Vesper AI, under the tabs (Settings > Vesper AI > Vesper shortcut, on by default).
         if (context.watch<AppPreferences>().vesperShortcut)
           _SelectableRow(
@@ -5579,7 +5581,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           collapsed: collapsed,
           onTap: _openSettings,
         ),
-        const Divider(height: 16, color: Colors.white24),
+        Divider(height: 16, color: _columnLineColor ?? Colors.white24),
         // Windows only — the app always launches fullscreen there now
         // (see main.dart's WindowOptions) with the title bar hidden
         // entirely, so there's no OS minimize *or* close button at all
@@ -7022,7 +7024,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             ? [
                 if (_timelineFilterActive) ...[
                   SizedBox(height: 64, child: previewRow),
-                  const Divider(height: 12),
+                  Divider(height: 12, color: _columnLineColor),
                 ],
                 Expanded(child: guide),
               ]
@@ -7030,7 +7032,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                     context.read<AppPreferences>().isTelevision
                 ? [
                     SizedBox(height: 200, child: previewRow),
-                    const Divider(height: 12),
+                    Divider(height: 12, color: _columnLineColor),
                     Expanded(child: _fullVideoScrim(guide)),
                   ]
                 // Target platform, like the preview row's width above.
@@ -7050,7 +7052,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         // directly as still too small even after the preview
                         // itself got real video in it.
                         Expanded(flex: 1, child: previewRow),
-                        const Divider(height: 12),
+                        Divider(height: 12, color: _columnLineColor),
                         Expanded(flex: 1, child: guide),
                       ]
                     : _fullVideo
@@ -7103,7 +7105,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             SizedBox(
                                 height: _shortScreen ? 100 : 160,
                                 child: previewRow),
-                            const Divider(height: 12),
+                            Divider(height: 12, color: _columnLineColor),
                             Expanded(child: _fullVideoScrim(guide)),
                           ],
       );
@@ -8584,7 +8586,7 @@ class _PlaylistDividerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (collapsed) {
-      return const Divider(height: 16, color: Colors.white24);
+      return Divider(height: 16, color: _columnLineColor ?? Colors.white24);
     }
     final scheme = Theme.of(context).colorScheme;
     return Padding(
@@ -8815,16 +8817,16 @@ class _GroupRowState extends State<_GroupRow> {
     final backgroundColor = (_focused || widget.selected)
         ? Colors.transparent
         : Colors.white.withValues(alpha: 0.04);
-    // The group's own colour, only at rest (owner: it "still gets
-    // highlighted normally when I get on it").
-    final tint = highlighted || widget.moving ? null : widget.tint;
-    final foregroundColor =
-        highlighted ? focusedForeground : (tint ?? Colors.white);
+    // The group's own colour as a fine fade behind the row (owner,
+    // 2026-11-25: a gradient instead of an outline and coloured name),
+    // whenever the remote isn't on it: on it, the usual highlight.
+    final tint = _focused || widget.moving ? null : widget.tint;
+    final foregroundColor = highlighted ? focusedForeground : Colors.white;
     // `scheme.tertiary` — a dedicated icon/symbol-glyph accent, separate
     // from the text/border/gradient accent (`focusedForeground`) — see
     // `buildPaletteColorScheme`'s own doc comment for why (Habs: white
     // contour/text, blue icons).
-    final iconColor = highlighted ? scheme.tertiary : (tint ?? Colors.white70);
+    final iconColor = highlighted ? scheme.tertiary : Colors.white70;
 
     // Compact UI: one size smaller (see _SelectableRow).
     final fontSize = _compactUi ? (widget.fontSize ?? 14) - 1 : widget.fontSize;
@@ -8913,61 +8915,69 @@ class _GroupRowState extends State<_GroupRow> {
                             ? BorderSide(color: scheme.primary, width: 2.5)
                             : widget.selected
                                 ? BorderSide(color: scheme.primary, width: 1.5)
-                                : tint != null
-                                    ? BorderSide(color: tint, width: 1.5)
-                                    : BorderSide.none,
+                                : BorderSide.none,
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 12, vertical: _rowInnerPadding),
-                    child: widget.collapsed
-                        ? Center(child: iconWidget)
-                        : Row(
-                            children: [
-                              iconWidget,
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  widget.label,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: foregroundColor,
-                                    fontSize: fontSize,
-                                    fontWeight: highlighted
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                  // Its own layer, always there: the Refined finish paints
+                  // over the row's own decoration, and the tree keeps one
+                  // shape whatever the colour.
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: tint == null ? null : groupColorFade(tint),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 12, vertical: _rowInnerPadding),
+                      child: widget.collapsed
+                          ? Center(child: iconWidget)
+                          : Row(
+                              children: [
+                                iconWidget,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    widget.label,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: foregroundColor,
+                                      fontSize: fontSize,
+                                      fontWeight: highlighted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (widget.count case final n?
-                                  when !widget.moving) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  NumberFormat.decimalPattern().format(n),
-                                  style: TextStyle(
-                                    color: highlighted
-                                        ? foregroundColor
-                                        : tint?.withValues(alpha: 0.75) ??
-                                            Colors.white54,
-                                    fontSize: (fontSize ?? 14) * 0.85,
+                                if (widget.count case final n?
+                                    when !widget.moving) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    NumberFormat.decimalPattern().format(n),
+                                    style: TextStyle(
+                                      color: highlighted
+                                          ? foregroundColor
+                                          : Colors.white54,
+                                      fontSize: (fontSize ?? 14) * 0.85,
+                                    ),
                                   ),
-                                ),
+                                ],
+                                // Mouse/touch equivalents of the remote's
+                                // Up/Down/Select while moving — not
+                                // focusable, so they never steal the row's
+                                // focus from the remote.
+                                if (widget.moving) ...[
+                                  _moveTapIcon(Icons.keyboard_arrow_up,
+                                      () => widget.onMove?.call(-1), iconColor),
+                                  _moveTapIcon(Icons.keyboard_arrow_down,
+                                      () => widget.onMove?.call(1), iconColor),
+                                  _moveTapIcon(
+                                      Icons.check,
+                                      () => widget.onMoveDone?.call(),
+                                      iconColor),
+                                ],
                               ],
-                              // Mouse/touch equivalents of the remote's
-                              // Up/Down/Select while moving — not
-                              // focusable, so they never steal the row's
-                              // focus from the remote.
-                              if (widget.moving) ...[
-                                _moveTapIcon(Icons.keyboard_arrow_up,
-                                    () => widget.onMove?.call(-1), iconColor),
-                                _moveTapIcon(Icons.keyboard_arrow_down,
-                                    () => widget.onMove?.call(1), iconColor),
-                                _moveTapIcon(Icons.check,
-                                    () => widget.onMoveDone?.call(), iconColor),
-                              ],
-                            ],
-                          ),
+                            ),
+                    ),
                   ),
                 ),
               ),
@@ -9021,6 +9031,11 @@ bool _compactUi = false;
 /// Home, Settings and the player are unchanged. Set each TV home build.
 bool _largeUi = false;
 const double _largeUiTextScale = 1.2;
+
+/// Settings > Appearance > Column lines (per viewer): the colour of the
+/// lines between the columns and the guide's own; null = the theme's. Set
+/// each TV home build, like [_largeUi].
+Color? _columnLineColor;
 
 /// Tab / group / live-list row metrics for the three interface sizes.
 double get _rowIconSize => _compactUi ? 18 : (_largeUi ? 26 : 20);
@@ -11814,7 +11829,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                 focusNode: widget.filterFocusNode,
                 onPressed: widget.onFilterToggle,
               ),
-              const VerticalDivider(width: 1),
+              VerticalDivider(width: 1, color: _columnLineColor),
               Expanded(
                 child: Stack(
                   children: [
@@ -11851,7 +11866,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
             ],
           ),
         ),
-        const Divider(height: 1),
+        Divider(height: 1, color: _columnLineColor),
         Expanded(
           // Always a Stack (the rows keep their place in the tree): the
           // open details card sits over the gap.
@@ -11908,7 +11923,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                       ),
                     ),
                   ),
-                  const VerticalDivider(width: 1),
+                  VerticalDivider(width: 1, color: _columnLineColor),
                   Expanded(
                     child: FocusScope(
                       node: _gridFocusScope,
@@ -13384,12 +13399,16 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                               stops: const [0.0, 0.5, 1.0],
                             )
                           : null,
+                      // Column lines (Settings > Appearance) colour the
+                      // grid's outlines too; the focused cell keeps its own.
                       border: Border.all(
                         color: _focused
                             ? accent
                             : widget.isNow
-                                ? accent.withValues(alpha: 0.85)
-                                : Colors.white24,
+                                ? (_columnLineColor ?? accent)
+                                    .withValues(alpha: 0.85)
+                                : _columnLineColor?.withValues(alpha: 0.45) ??
+                                    Colors.white24,
                         width: _focused ? 2 : (widget.isNow ? 1.5 : 1),
                       ),
                       borderRadius: BorderRadius.circular(6),

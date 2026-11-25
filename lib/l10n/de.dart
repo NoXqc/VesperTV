@@ -4376,4 +4376,11 @@ const Map<String, String> kDe = {
       "Spiele in ausgeblendeten Gruppen finden",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "Kanäle für Spiele können auch aus den Live-Gruppen kommen, die du ausgeblendet hast: Eine Gruppe, die du für ein aufgeräumtes TV ausgeblendet hast, liefert weiter ihre Spiele. Einzeln ausgeblendete Kanäle bleiben außen vor. Nie in einem Kinderprofil. Für diesen Zuschauer gespeichert.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Weiß",
+  "Column lines":
+      "Spaltenlinien",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Die Farbe der Linien zwischen den Spalten und im Programmführer. Nur für dieses Profil.",
 };

@@ -3945,4 +3945,11 @@ const Map<String, String> kUk = {
       "Шукати матчі в прихованих групах",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "Канали матчів можуть братися й із прихованих груп наживо: група, прихована для порядку в ТБ, і далі дає свої матчі. Канали, приховані поодинці, залишаються поза пошуком. Ніколи в дитячому профілі. Збережено для цього глядача.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Білий",
+  "Column lines":
+      "Лінії колонок",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Колір ліній між колонками та в програмі передач. Лише для цього профілю.",
 };

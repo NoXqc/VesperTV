@@ -545,7 +545,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
   5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
   on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);
-  `_GroupRow.tint` = outline + name + icon at rest only. Per viewer + playlist like the group star
+  `_GroupRow.tint` = a fine fade behind the row when the remote is elsewhere (was outline + name in 996; owner
+  asked for a gradient instead, `claude/group-colour-gradient`). Same branch: Settings > Appearance > Look > **Column lines** (the column dividers
+  + the guide's, Default / Theme color / White / the 8 presets, per viewer, `columnLineColorOf`). Per viewer + playlist like the group star
   (`vesper_group_colors_<playlist|own>`), synced, follows a rename, in `liveViewSignature`. Details:
   dev-notes/group-colours.md. Tests: group_colors_test, tv_group_colors_test.
 - **Claude, 2026-11-24 - Tuliprox Player API extras (`claude/tuliprox-api-extras`, worktree `VesperTV-claude-tpxextras`,

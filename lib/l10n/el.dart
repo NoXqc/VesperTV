@@ -4435,4 +4435,11 @@ const Map<String, String> kEl = {
       "Εύρεση αγώνων σε κρυφές ομάδες",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "Τα κανάλια των αγώνων μπορούν να έρθουν και από τις ζωντανές ομάδες που κρύψατε: μια ομάδα κρυμμένη για να μένει τακτοποιημένη η τηλεόραση εξακολουθεί να δίνει τους αγώνες της. Τα κανάλια που κρύψατε ένα-ένα μένουν έξω. Ποτέ σε προφίλ Παιδιών. Αποθηκεύεται για αυτόν τον θεατή.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Λευκό",
+  "Column lines":
+      "Γραμμές στηλών",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Το χρώμα των γραμμών ανάμεσα στις στήλες και στον οδηγό. Μόνο για αυτό το προφίλ.",
 };

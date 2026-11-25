@@ -4480,4 +4480,11 @@ const Map<String, String> kIt = {
       "Cerca le partite nei gruppi nascosti",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
       "I canali delle partite possono venire anche dai gruppi in diretta che hai nascosto: un gruppo nascosto per tenere in ordine la TV porta ancora le sue partite. I canali nascosti uno per uno restano esclusi. Mai su un profilo Bambini. Salvato per questo spettatore.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Bianco",
+  "Column lines":
+      "Linee delle colonne",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Il colore delle linee tra le colonne e nella guida. Solo per questo profilo.",
 };

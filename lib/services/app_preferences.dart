@@ -65,6 +65,10 @@ class AppPreferences extends ChangeNotifier {
   /// groups and channel rows), 'normal' or 'large' (bigger text and rows,
   /// for viewers who need it easier to read).
   late String uiSize;
+
+  /// The lines between the TV home's columns (per viewer): '' = the
+  /// theme's, else `columnLineColorOf`'s ids.
+  late String columnLines;
   bool get compactUi => uiSize == 'compact';
   bool get largeUi => uiSize == 'large';
 
@@ -531,6 +535,7 @@ class AppPreferences extends ChangeNotifier {
     guideTwoLineNames = _storage.getGuideTwoLineNames();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
+    columnLines = _storage.getColumnLines();
     guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
     wideCards = _storage.getWideCards();
@@ -601,6 +606,7 @@ class AppPreferences extends ChangeNotifier {
     guideTwoLineNames = _storage.getGuideTwoLineNames();
     guideCompact = _storage.getGuideCompact();
     uiSize = _storage.getUiSize();
+    columnLines = _storage.getColumnLines();
     guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
@@ -691,6 +697,12 @@ class AppPreferences extends ChangeNotifier {
   void setUiSize(String value) {
     uiSize = value;
     _storage.setUiSize(value);
+    notifyListeners();
+  }
+
+  void setColumnLines(String value) {
+    columnLines = value;
+    _storage.setColumnLines(value);
     notifyListeners();
   }
 
