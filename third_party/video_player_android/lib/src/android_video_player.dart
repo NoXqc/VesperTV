@@ -153,9 +153,13 @@ class AndroidVideoPlayer extends VideoPlayerPlatform {
     //  default agent dates back to the original ExoPlayer implementation of the
     //  plugin, but it's not clear why the default isn't null, which would let
     //  ExoPlayer use its own default value.
-    const defaultUserAgent = 'ExoPlayer';
     return httpHeaders[userAgentKey] ?? defaultUserAgent;
   }
+
+  /// VesperTV patch: the User-Agent of a stream that doesn't set its own
+  /// (was the constant 'ExoPlayer'). VesperTV sets its own name at startup
+  /// (`PlayerUserAgent`), so servers like Tuliprox show which app plays.
+  static String defaultUserAgent = 'ExoPlayer';
 
   /// Returns the player instance for [playerId], creating it if it doesn't
   /// already exist.

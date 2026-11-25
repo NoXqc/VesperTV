@@ -54,6 +54,7 @@ import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'models/sports.dart';
 import 'services/playback_service.dart';
+import 'services/player_user_agent.dart';
 import 'services/guide_key.dart';
 import 'services/profile_gate.dart';
 import 'services/archive_ready_watch.dart';
@@ -874,6 +875,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       if (Platform.isAndroid) {
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
+        await PlayerUserAgent.init();
       }
       await DeviceDefaults.load(_storage.getDeviceDefaults());
       // Network + a prefs write: after the quiet period (StartupQuiet).

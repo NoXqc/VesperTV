@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:video_player_android/video_player_android.dart'
+    show AndroidVideoPlayer;
 
 /// Native video surface (beta, Android, [AppPreferences.nativeVideoSurface]).
 ///
@@ -39,8 +41,12 @@ class NativeVideoSurface {
 
   static Future<Map<String, Object?>?> replaceLive(int playerId, String url,
           {required bool hls}) =>
-      _channel.invokeMapMethod<String, Object?>(
-          'replaceLive', {'playerId': playerId, 'url': url, 'hls': hls});
+      _channel.invokeMapMethod<String, Object?>('replaceLive', {
+        'playerId': playerId,
+        'url': url,
+        'hls': hls,
+        'userAgent': AndroidVideoPlayer.defaultUserAgent,
+      });
 
   static final _holes = <_NativeVideoHoleState>[];
   static bool _hooked = false;

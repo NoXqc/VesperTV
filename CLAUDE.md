@@ -530,6 +530,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - the Android player says VesperTV (`claude/vesper-user-agent`, worktree `VesperTV-claude-useragent`,
+  from main 84c3eb6):** owner: Tuliprox's player column showed iMPlayer / TiviMate and "ExoPlayer" for us. Every Android stream
+  without its own User-Agent now sends `VesperTV/<version> (Linux; Android) ExoPlayerLib/1.9.2` (`services/player_user_agent.dart`,
+  set at startup into the vendored plugin's `AndroidVideoPlayer.defaultUserAgent`, which was the constant 'ExoPlayer'); the native
+  zap (`NativeVideoSurface.replaceLive`) sent none (Android's `Dalvik/...`) and now passes the same one. Playlist / channel
+  User-Agents still win. Computers keep `kDesktopStreamUserAgent` (libmpv is blocked by some panels); recordings / downloads keep
+  `VesperTV (Linux;Android X) ExoPlayerLib/1.4.1`. test/player_user_agent_test.dart; NativeVideoSurfaceTest passes.
 - **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
   5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
   on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);
