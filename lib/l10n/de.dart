@@ -4383,4 +4383,18 @@ const Map<String, String> kDe = {
       "Spaltenlinien",
   "The colour of the lines between the columns and in the guide. Just for this profile.":
       "Die Farbe der Linien zwischen den Spalten und im Programmführer. Nur für dieses Profil.",
+  "Back {seconds} s":
+      "{seconds} s zurück",
+  "Ahead {seconds} s":
+      "{seconds} s vor",
+  "◀ Rewind":
+      "◀ Zurück",
+  "Skip buttons":
+      "Sprungtasten",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Wie weit ein Druck auf die Zurück- / Vor-Tasten und auf Zurückspulen / Vorspulen der Fernbedienung springt, bei Filmen, Folgen, Catch-up und pausiertem Live-TV. Gedrückt halten springt immer weiter.",
+  "Pause & rewind live TV":
+      "Live-TV pausieren und zurückspulen",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Live-Sender behalten beim Zuschauen ihre letzten Minuten auf diesem Gerät, über dieselbe Verbindung: Pause hält das Bild an, nicht den Stream, und Wiedergabe macht dort weiter, wo du angehalten hast. Die Zurück- / Vor-Tasten und Zurückspulen bewegen sich darin (eine Wiederholung), LIVE springt zu jetzt. Belegt beim Zuschauen Speicher (etwa 2 GB für 30 Minuten eines HD-Senders, beim Senderwechsel gelöscht); bei wenig freiem Speicher bleiben etwa 30 Sekunden im Arbeitsspeicher. Sender im HLS-Format (.m3u8) haben es nicht. Gilt ab dem nächsten Sender.",
 };

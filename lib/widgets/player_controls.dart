@@ -38,6 +38,8 @@ import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 import '../utils/app_store.dart';
 import '../utils/scrub_steps.dart';
+import '../utils/skip_step.dart';
+import '../services/live_timeshift.dart';
 import '../utils/video_fit.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
@@ -896,6 +898,8 @@ class PlayerControls extends StatelessWidget {
       onSchedule: onSchedule,
       onActivity: onActivity,
       badges: [
+        if (playback != null && playback.controller == controller)
+          TimeshiftBehindTag(playback: playback),
         _QualityBadge(controller: controller, gold: true),
         _AudioChannelBadge(controller: controller, gold: true),
       ],
@@ -909,25 +913,73 @@ class PlayerControls extends StatelessWidget {
                   fill: accent,
                   timeStyle: LiveInfoBar.timeStyle)
               : const SizedBox.shrink(),
-      playPause: ValueListenableBuilder<VideoPlayerHdrValue>(
-        valueListenable: _value,
-        builder: (context, value, _) => LiveInfoBar.playPauseButton(
-          playing: value.isPlaying,
-          focusNode: playFocusNode,
-          // The service's toggle: pausing a live channel with catch-up
-          // is a timeshift.
-          onPressed: () {
-            onActivity?.call();
-            if (playback != null && playback.controller == controller) {
-              playback.togglePlayPause();
-            } else if (value.isPlaying) {
-              controller.pause();
-            } else {
-              controller.play();
-            }
-          },
+      playPause: _withTimeshift(
+        playback,
+        ValueListenableBuilder<VideoPlayerHdrValue>(
+          valueListenable: _value,
+          builder: (context, value, _) => LiveInfoBar.playPauseButton(
+            playing: value.isPlaying,
+            focusNode: playFocusNode,
+            // The service's toggle: pausing a live channel with catch-up
+            // is a timeshift.
+            onPressed: () {
+              onActivity?.call();
+              if (playback != null && playback.controller == controller) {
+                playback.togglePlayPause();
+              } else if (value.isPlaying) {
+                controller.pause();
+              } else {
+                controller.play();
+              }
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  /// Live pause & rewind on: -N / Play-Pause / +N, and LIVE when behind.
+  Widget _withTimeshift(PlaybackService? playback, Widget playPause) {
+    if (playback == null || playback.controller != controller) {
+      return playPause;
+    }
+    return ValueListenableBuilder<TimeshiftState?>(
+      valueListenable: playback.timeshift,
+      builder: (context, ts, _) {
+        if (ts == null || !ts.on) return playPause;
+        void nudge(int sign) {
+          onActivity?.call();
+          playback.timeshiftNudge(SkipStep.tap * sign);
+        }
+
+        return Row(mainAxisSize: MainAxisSize.min, children: [
+          LiveInfoBar.roundButton(
+            label: tr('Back {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+            onPressed: () => nudge(-1),
+            child:
+                const SkipIcon(forward: false, size: 24, color: Colors.white),
+          ),
+          const SizedBox(width: 8),
+          playPause,
+          const SizedBox(width: 8),
+          LiveInfoBar.roundButton(
+            label: tr('Ahead {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+            onPressed: () => nudge(1),
+            child: const SkipIcon(forward: true, size: 24, color: Colors.white),
+          ),
+          if (!ts.atLive) ...[
+            const SizedBox(width: 8),
+            LiveInfoBar.textButton(
+              label: tr('LIVE'),
+              icon: Icons.fast_forward,
+              onPressed: () {
+                onActivity?.call();
+                playback.timeshiftToLive();
+              },
+            ),
+          ],
+        ]);
+      },
     );
   }
 
@@ -1062,10 +1114,19 @@ class PlayerControls extends StatelessWidget {
                             ),
                           if (catchup != null)
                             ..._catchupLeading(context, playback!, catchup),
-                          // Skip/fast-seek only makes sense for VOD.
+                          // Skip/fast-seek only makes sense for VOD — and
+                          // for live with Live pause & rewind on.
+                          if (!showSeek &&
+                              isLive &&
+                              ownsPlayer &&
+                              catchup == null)
+                            TimeshiftSkipButton(
+                                playback: playback!,
+                                forward: false,
+                                onActivity: onActivity),
                           if (showSeek)
                             SkipHoldButton(
-                              icon: Icons.replay_10,
+                              forward: false,
                               onSeek: (amount) {
                                 onActivity?.call();
                                 final target = position - amount;
@@ -1090,7 +1151,7 @@ class PlayerControls extends StatelessWidget {
                           ),
                           if (showSeek)
                             SkipHoldButton(
-                              icon: Icons.forward_10,
+                              forward: true,
                               onSeek: (amount) {
                                 onActivity?.call();
                                 final target = position + amount;
@@ -1098,6 +1159,17 @@ class PlayerControls extends StatelessWidget {
                                     target > duration ? duration : target);
                               },
                             ),
+                          if (!showSeek &&
+                              isLive &&
+                              ownsPlayer &&
+                              catchup == null) ...[
+                            TimeshiftSkipButton(
+                                playback: playback!,
+                                forward: true,
+                                onActivity: onActivity),
+                            TimeshiftToLiveButton(
+                                playback: playback, onActivity: onActivity),
+                          ],
                           if (onNext != null)
                             RingIconButton(
                               icon: Icons.skip_next,
@@ -1416,12 +1488,21 @@ class PlayerTouchTransport extends StatelessWidget {
         final position = value.position;
         final duration = value.duration;
         final showSeek = !isLive && duration.inMilliseconds > 0;
+        final shift = isLive && ownsPlayer;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (shift)
+              TimeshiftSkipButton(
+                  playback: playback!,
+                  forward: false,
+                  iconSize: 34,
+                  disc: true,
+                  gapAfter: 40,
+                  onActivity: onActivity),
             if (showSeek) ...[
               _disc(SkipHoldButton(
-                icon: Icons.replay_10,
+                forward: false,
                 iconSize: 34,
                 onSeek: (amount) {
                   onActivity?.call();
@@ -1454,7 +1535,7 @@ class PlayerTouchTransport extends StatelessWidget {
             if (showSeek) ...[
               const SizedBox(width: 40),
               _disc(SkipHoldButton(
-                icon: Icons.forward_10,
+                forward: true,
                 iconSize: 34,
                 onSeek: (amount) {
                   onActivity?.call();
@@ -1463,6 +1544,14 @@ class PlayerTouchTransport extends StatelessWidget {
                 },
               )),
             ],
+            if (shift)
+              TimeshiftSkipButton(
+                  playback: playback!,
+                  forward: true,
+                  iconSize: 34,
+                  disc: true,
+                  gapBefore: 40,
+                  onActivity: onActivity),
           ],
         );
       },
@@ -2782,6 +2871,33 @@ class LiveInfoBar extends StatelessWidget {
   /// The start / end times of line 2 (line 3 lines up with them).
   static const timeStyle = TextStyle(color: Colors.white70, fontSize: 13);
 
+  /// Line 3's round button with [child] (Live pause & rewind's -N / +N).
+  static Widget roundButton(
+          {required String label,
+          required VoidCallback onPressed,
+          required Widget child}) =>
+      _InfoBarButton(
+          round: true, label: label, onPressed: onPressed, child: child);
+
+  /// Line 3's text button (Live pause & rewind's LIVE).
+  static Widget textButton(
+          {required String label,
+          required IconData icon,
+          required VoidCallback onPressed}) =>
+      _InfoBarButton(
+        label: label,
+        onPressed: onPressed,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 17, color: Colors.amber),
+          const SizedBox(width: 6),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700)),
+        ]),
+      );
+
   /// Line 3's round Play / Pause.
   static Widget playPauseButton(
           {required bool playing,
@@ -3599,10 +3715,43 @@ class _LiveTimelineState extends State<_LiveTimeline> {
   Timer? _commit;
 
   @override
+  void initState() {
+    super.initState();
+    widget.playback.timeshift.addListener(_onShift);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LiveTimeline old) {
+    super.didUpdateWidget(old);
+    if (old.playback != widget.playback) {
+      old.playback.timeshift.removeListener(_onShift);
+      widget.playback.timeshift.addListener(_onShift);
+    }
+  }
+
+  void _onShift() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    widget.playback.timeshift.removeListener(_onShift);
     _commit?.cancel();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Live pause & rewind's copy, when it runs: the bar rewinds inside it
+  /// (and past it through catch-up on a catch-up channel).
+  TimeshiftState? get _shift {
+    final ts = widget.playback.timeshift.value;
+    return ts != null && ts.on ? ts : null;
+  }
+
+  /// The time on screen: now, or behind it in the copy.
+  DateTime _playingAt(DateTime now) {
+    final ts = _shift;
+    return ts == null || ts.atLive ? now : now.subtract(ts.behind);
   }
 
   void _move(int sign, {required bool repeat}) {
@@ -3610,9 +3759,12 @@ class _LiveTimelineState extends State<_LiveTimeline> {
     final step = _steps.next(repeat: repeat);
     if (step == null) return;
     final now = DateTime.now();
-    final from = _target ?? now;
+    final from = _target ?? _playingAt(now);
     var next = from.add(step * sign);
-    final oldest = CatchupSession.oldest(widget.channel, now);
+    final ts = _shift;
+    final oldest = widget.channel.hasCatchup
+        ? CatchupSession.oldest(widget.channel, now)
+        : now.subtract(ts?.available ?? Duration.zero);
     if (next.isBefore(oldest)) next = oldest;
     if (next.isAfter(now)) next = now;
     setState(() => _target = next);
@@ -3625,10 +3777,13 @@ class _LiveTimelineState extends State<_LiveTimeline> {
     final target = _target;
     _steps.reset();
     if (mounted) setState(() => _target = null);
-    if (target == null ||
-        DateTime.now().difference(target) < CatchupSession.liveEdge) {
+    if (target == null) return;
+    if (_shift != null) {
+      unawaited(
+          widget.playback.timeshiftGoTo(DateTime.now().difference(target)));
       return;
     }
+    if (DateTime.now().difference(target) < CatchupSession.liveEdge) return;
     unawaited(widget.playback.playCatchup(widget.channel, target));
   }
 
@@ -3671,8 +3826,11 @@ class _LiveTimelineState extends State<_LiveTimeline> {
         (t.difference(programme.start).inSeconds / span).clamp(0.0, 1.0);
     final scheme = Theme.of(context).colorScheme;
     final focused = _focus.hasFocus;
-    final canScrub = widget.channel.hasCatchup;
+    final shift = _shift;
+    final canScrub = widget.channel.hasCatchup || shift != null;
     final target = _target;
+    final playing = _playingAt(now);
+    final behind = shift != null && !shift.atLive;
     final hm = TimeFormat.hm;
     final bar = SizedBox(
       height: 18,
@@ -3695,9 +3853,9 @@ class _LiveTimelineState extends State<_LiveTimeline> {
                         ? scheme.primary
                         : widget.fill ?? Colors.white70,
                     borderRadius: BorderRadius.circular(3))),
-            if (target != null || focused)
+            if (target != null || focused || behind)
               Positioned(
-                left: (w * at(target ?? now)) - (focused ? 8 : 6),
+                left: (w * at(target ?? playing)) - (focused ? 8 : 6),
                 child: Container(
                   width: focused ? 16 : 12,
                   height: focused ? 16 : 12,
@@ -3730,7 +3888,12 @@ class _LiveTimelineState extends State<_LiveTimeline> {
               '(−${_ScrubBarState._clock(now.difference(target))})',
         )
       else if (focused)
-        _FloatingNote(at: 1, text: tr('◀ Catch-up'), color: scheme.primary),
+        _FloatingNote(
+            at: behind ? at(playing) : 1,
+            text: shift != null && !widget.channel.hasCatchup
+                ? tr('◀ Rewind')
+                : tr('◀ Catch-up'),
+            color: scheme.primary),
     ]);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -3752,16 +3915,17 @@ class _LiveTimelineState extends State<_LiveTimeline> {
 class SkipHoldButton extends StatefulWidget {
   const SkipHoldButton(
       {super.key,
-      required this.icon,
+      required this.forward,
       required this.onSeek,
       this.iconSize = 28});
 
-  final IconData icon;
+  /// +N (forward) or -N; N = [SkipStep.seconds] (Settings > Skip buttons).
+  final bool forward;
 
   /// 28 in the bar; bigger in [PlayerTouchTransport].
   final double iconSize;
 
-  /// Called once with a 10-second amount for a normal tap/click, or
+  /// Called once with [SkipStep.tap] for a normal tap/click, or
   /// repeatedly with a growing amount for as long as it's held.
   final void Function(Duration amount) onSeek;
 
@@ -3775,7 +3939,6 @@ class _SkipButtonState extends State<SkipHoldButton> {
   bool _heldPastTap = false;
   bool _focused = false;
 
-  static const _tapAmount = Duration(seconds: 10);
   static const _holdInterval = Duration(milliseconds: 400);
 
   // Reported directly, and confirmed by exactly how it was reproduced —
@@ -3810,16 +3973,17 @@ class _SkipButtonState extends State<SkipHoldButton> {
         timer.cancel();
         _holdTimer = null;
       }
-      // Accelerates the longer it's held: 10s, 10s, 10s, then 20s a tick,
-      // then 30s a tick, and so on — not just a constant fast-seek speed.
-      widget.onSeek(Duration(seconds: 10 * (1 + _tick ~/ 3)));
+      // Accelerates the longer it's held: one step (10 s by default), three
+      // times, then two steps a tick, then three, and so on — not just a
+      // constant fast-seek speed.
+      widget.onSeek(Duration(seconds: SkipStep.seconds * (1 + _tick ~/ 3)));
     });
   }
 
   void _endHold() {
     _holdTimer?.cancel();
     _holdTimer = null;
-    if (!_heldPastTap) widget.onSeek(_tapAmount);
+    if (!_heldPastTap) widget.onSeek(SkipStep.tap);
   }
 
   /// Same cleanup as [_endHold], minus the tap-fallback seek — losing
@@ -3877,7 +4041,8 @@ class _SkipButtonState extends State<SkipHoldButton> {
           // separate from the border/gradient accent (`scheme.primary`)
           // — see `buildPaletteColorScheme`'s own doc comment for why
           // (Habs: white contour, blue icons).
-          child: Icon(widget.icon,
+          child: SkipIcon(
+              forward: widget.forward,
               color: _focused ? scheme.tertiary : Colors.white,
               size: widget.iconSize),
         ),
@@ -4001,4 +4166,109 @@ class _Still<T> implements ValueListenable<T> {
 
   @override
   void removeListener(VoidCallback listener) {}
+}
+
+/// Live pause & rewind's -N / +N on the bar and the phone transport: only
+/// while the copy runs ([PlaybackService.timeshift]); presses gather and
+/// land as one jump ([PlaybackService.timeshiftNudge]).
+class TimeshiftSkipButton extends StatelessWidget {
+  const TimeshiftSkipButton({
+    super.key,
+    required this.playback,
+    required this.forward,
+    this.onActivity,
+    this.iconSize = 28,
+    this.disc = false,
+    this.gapBefore = 0,
+    this.gapAfter = 0,
+  });
+
+  final PlaybackService playback;
+  final bool forward;
+  final VoidCallback? onActivity;
+  final double iconSize;
+
+  /// The phone transport's dark disc behind the button.
+  final bool disc;
+  final double gapBefore;
+  final double gapAfter;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<TimeshiftState?>(
+        valueListenable: playback.timeshift,
+        builder: (context, ts, _) {
+          if (ts == null || !ts.on) return const SizedBox.shrink();
+          Widget button = SkipHoldButton(
+            forward: forward,
+            iconSize: iconSize,
+            onSeek: (amount) {
+              onActivity?.call();
+              playback.timeshiftNudge(forward ? amount : -amount);
+            },
+          );
+          if (disc) {
+            button = DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.35),
+              ),
+              child: button,
+            );
+          }
+          return Row(mainAxisSize: MainAxisSize.min, children: [
+            if (gapBefore > 0) SizedBox(width: gapBefore),
+            button,
+            if (gapAfter > 0) SizedBox(width: gapAfter),
+          ]);
+        },
+      );
+}
+
+/// LIVE on the bar while Live pause & rewind is behind live.
+class TimeshiftToLiveButton extends StatelessWidget {
+  const TimeshiftToLiveButton(
+      {super.key, required this.playback, this.onActivity});
+
+  final PlaybackService playback;
+  final VoidCallback? onActivity;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<TimeshiftState?>(
+        valueListenable: playback.timeshift,
+        builder: (context, ts, _) => ts == null || !ts.on || ts.atLive
+            ? const SizedBox.shrink()
+            : BackToLiveButton(onPressed: () {
+                onActivity?.call();
+                playback.timeshiftToLive();
+              }),
+      );
+}
+
+/// "−1:23" on the bar while the picture is behind live (Live pause &
+/// rewind), or where the gathered skip presses will land.
+class TimeshiftBehindTag extends StatelessWidget {
+  const TimeshiftBehindTag({super.key, required this.playback});
+
+  final PlaybackService playback;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Duration?>(
+        valueListenable: playback.timeshiftTarget,
+        builder: (context, target, _) =>
+            ValueListenableBuilder<TimeshiftState?>(
+          valueListenable: playback.timeshift,
+          builder: (context, ts, _) {
+            if (ts == null || !ts.on) return const SizedBox.shrink();
+            final behind = target ?? ts.behind;
+            if (target == null && ts.atLive) return const SizedBox.shrink();
+            return GoldTag(
+              label: behind <= TimeshiftState.liveEdge
+                  ? tr('LIVE')
+                  : LiveTimeshift.behindLabel(behind),
+              fontSize: 12,
+              margin: const EdgeInsets.only(left: 8),
+            );
+          },
+        ),
+      );
 }

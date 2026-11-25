@@ -4074,4 +4074,18 @@ const Map<String, String> kPl = {
       "Linie kolumn",
   "The colour of the lines between the columns and in the guide. Just for this profile.":
       "Kolor linii między kolumnami i w przewodniku. Tylko dla tego profilu.",
+  "Back {seconds} s":
+      "Wstecz {seconds} s",
+  "Ahead {seconds} s":
+      "Naprzód {seconds} s",
+  "◀ Rewind":
+      "◀ Cofnij",
+  "Skip buttons":
+      "Przyciski przeskoku",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Jak daleko przeskakuje jedno naciśnięcie przycisków wstecz / naprzód oraz Przewiń do tyłu / do przodu na pilocie, w filmach, odcinkach, catch-upie i wstrzymanej telewizji na żywo. Przytrzymanie przeskakuje coraz dalej.",
+  "Pause & rewind live TV":
+      "Pauza i cofanie telewizji na żywo",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Kanały na żywo zachowują ostatnie minuty na tym urządzeniu podczas oglądania, przez to samo połączenie: Pauza zatrzymuje obraz, nie strumień, a Odtwórz wznawia od miejsca pauzy. Przyciski wstecz / naprzód i Przewiń do tyłu poruszają się w nim (powtórka), NA ŻYWO wraca do teraz. Zajmuje pamięć podczas oglądania (około 2 GB na 30 minut kanału HD, usuwane przy zmianie kanału); przy małej ilości wolnego miejsca zachowuje około 30 sekund w pamięci RAM. Kanały w formacie HLS (.m3u8) tego nie mają. Działa od następnego kanału.",
 };

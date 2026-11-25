@@ -211,15 +211,23 @@
     "id": "8cbb5cdcb9ad93b1",
     "category": "Full screen",
     "title": "Skip back and forward",
-    "answer": "In full screen, on a movie, an episode or a catch-up replay, each press skips 10 seconds like the -10 / +10 buttons; keep pressing or hold to skip further (up to 5 minutes a step). The video jumps once you stop. On a live channel with catch-up, Rewind goes back in minutes from now.",
+    "answer": "In full screen, on a movie, an episode or a catch-up replay, each press skips 10 seconds like the -10 / +10 buttons; keep pressing or hold to skip further (up to 5 minutes a step). The video jumps once you stop. Settings > Playback > Player > Skip buttons changes the 10 seconds to 5, 15, 30 or 60 (the buttons show the new number). On a live channel with Pause & rewind live TV on, Rewind and Fast-forward move in what the box kept; on a live channel with catch-up and nothing kept, Rewind goes back in minutes from now.",
     "controls": "Android · remote ⏪ Rewind / ⏩ Fast-forward",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "140dca14f3547071",
+    "category": "Full screen",
+    "title": "Pause & rewind live TV (replay)",
+    "answer": "Live channels keep their last 30 minutes on your box while you watch, using the same connection (no second connection on your provider). Pause stops the picture, not the stream: Play carries on from the paused frame, even after a long pause. The back / ahead buttons beside Play/Pause and the remote's Rewind / Fast-forward jump in it (a replay of the goal you just missed); a gold tag shows how far behind live you are (−1:23) and the gold LIVE button jumps back to now. Up from the buttons reaches the time bar: Left / Right move in it too, and further back than the box kept on a catch-up channel goes on through catch-up. Settings > Playback > Live TV > Pause & rewind live TV: Off, 10, 30 or 60 minutes. It uses storage while you watch (about 2 GB for 30 minutes of an HD channel), deleted when you change channel; with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) and Multiview screens don't have it; on Windows, Mac and Apple TV, not yet.",
+    "controls": "Android · live channel · ⏯ Pause, ⏪ / ⏩, the back / ahead buttons LIVE · ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "bcaeb49b92f5b885",
     "category": "Full screen",
     "title": "Pause live TV and resume",
-    "answer": "You can pause live TV on a channel that supports catch-up, then press Play to resume from where you paused. Short pauses use the existing buffer; after more than 90 seconds VesperTV uses the provider's catch-up feed (timeshift). Availability still depends on the provider's replay window. Use the gold LIVE button in full screen when you want to return to live.",
+    "answer": "You can pause live TV on a channel that supports catch-up, then press Play to resume from where you paused. With Pause & rewind live TV on (the default), the box keeps the stream and Play carries on from there. Otherwise short pauses use the existing buffer, and after more than 90 seconds VesperTV uses the provider's catch-up feed (timeshift). Availability still depends on the provider's replay window. Use the gold LIVE button in full screen when you want to return to live.",
     "controls": "Android catch-up channel · remote ⏯ or player Play/Pause",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },

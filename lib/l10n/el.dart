@@ -4442,4 +4442,18 @@ const Map<String, String> kEl = {
       "Γραμμές στηλών",
   "The colour of the lines between the columns and in the guide. Just for this profile.":
       "Το χρώμα των γραμμών ανάμεσα στις στήλες και στον οδηγό. Μόνο για αυτό το προφίλ.",
+  "Back {seconds} s":
+      "Πίσω {seconds} δ",
+  "Ahead {seconds} s":
+      "Μπροστά {seconds} δ",
+  "◀ Rewind":
+      "◀ Επιστροφή",
+  "Skip buttons":
+      "Κουμπιά μεταπήδησης",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Πόσο μεταπηδά ένα πάτημα στα κουμπιά πίσω / μπροστά και στα Γρήγορη επιστροφή / Γρήγορη προώθηση του τηλεχειριστηρίου, σε ταινίες, επεισόδια, catch-up και ζωντανή TV σε παύση. Κρατώντας τα πατημένα πηγαίνει όλο και πιο μακριά.",
+  "Pause & rewind live TV":
+      "Παύση και επιστροφή στη ζωντανή TV",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Τα ζωντανά κανάλια κρατούν τα τελευταία τους λεπτά σε αυτή τη συσκευή όσο βλέπετε, με την ίδια σύνδεση: η Παύση σταματά την εικόνα, όχι τη ροή, και η Αναπαραγωγή συνεχίζει από εκεί που σταματήσατε. Τα κουμπιά πίσω / μπροστά και η Γρήγορη επιστροφή κινούνται μέσα σε αυτά (επανάληψη), το ΖΩΝΤΑΝΑ πηγαίνει στο τώρα. Χρησιμοποιεί αποθηκευτικό χώρο όσο βλέπετε (περίπου 2 GB για 30 λεπτά ενός καναλιού HD, διαγράφεται όταν αλλάζετε κανάλι)· με λίγο ελεύθερο χώρο κρατά περίπου 30 δευτερόλεπτα στη μνήμη. Τα κανάλια σε μορφή HLS (.m3u8) δεν το έχουν. Ισχύει από το επόμενο κανάλι.",
 };

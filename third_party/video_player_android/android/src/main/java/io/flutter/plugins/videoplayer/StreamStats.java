@@ -51,6 +51,8 @@ final class StreamStats implements TransferListener {
   @Nullable volatile String streamUid;
   /** Big movie files: several connections + a memory ring (HttpVideoAsset, progressive only). */
   @Nullable volatile ReadAhead readAhead;
+  /** Live pause & rewind: the rolling copy of a live stream (HttpVideoAsset, progressive only). */
+  @Nullable volatile Timeshift timeshift;
 
   /**
    * The player's first network requests ({sent ns, answered ns, ended ns, byte position, bytes}),
