@@ -185,8 +185,8 @@ class MultiviewSports {
     }
     final matcher = SportsChannelMatcher.shared(epg);
     await playlist.ensureLiveChannelsLoaded();
-    await matcher.prepare(playlist.visibleChannels(category: 'tv'),
-        hidden: playlist.hiddenLiveChannels());
+    await matcher.prepare(playlist.sportsChannels(),
+        hidden: playlist.sportsHiddenChannels());
     final matches =
         await matcher.matchDay(games, SportsChannelPicks.load(storage));
     return [

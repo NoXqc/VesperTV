@@ -4327,4 +4327,133 @@ const Map<String, String> kEl = {
       "Λήψη…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Για να χρησιμοποιήσετε κουμπιά όπως TV, YouTube ή Prime, προσθέστε το δωρεάν πρόσθετο «{name}», μια μικρή ξεχωριστή εφαρμογή. Πατήστε OK για λήψη και εγκατάσταση.",
+  "A recording on the Tuliprox server failed.":
+      "Μια εγγραφή στον διακομιστή Tuliprox απέτυχε.",
+  "A recording on the Tuliprox server is ready.":
+      "Μια εγγραφή στον διακομιστή Tuliprox είναι έτοιμη.",
+  "Another device on your account took over this stream.":
+      "Μια άλλη συσκευή του λογαριασμού σας πήρε αυτή τη ροή.",
+  "Channel {id}":
+      "Κανάλι {id}",
+  "Delete from the server":
+      "Διαγραφή από τον διακομιστή",
+  "Every {day} at {time}":
+      "Κάθε {day} στις {time}",
+  "Not working right now · tried again in {n} s":
+      "Δεν λειτουργεί τώρα · νέα δοκιμή σε {n} δ",
+  "On the Tuliprox server":
+      "Στον διακομιστή Tuliprox",
+  "On the Tuliprox server ({server})":
+      "Στον διακομιστή Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Είστε τώρα στη δική σας σύνδεση. Επιλέξτε πηγή στις Πηγές για να αλλάξετε μόνο για εσάς.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Μόνο μια ροή .ts μπορεί να έχει δική της σύνδεση. Αυτή παίζει ως HLS.",
+  "Record on the server":
+      "Εγγραφή στον διακομιστή",
+  "Record weekly on the server":
+      "Εβδομαδιαία εγγραφή στον διακομιστή",
+  "Recording is switched off on this server.":
+      "Η εγγραφή είναι απενεργοποιημένη σε αυτόν τον διακομιστή.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Κάποιος άλλος βλέπει αυτό το κανάλι στον διακομιστή. Επιλέξτε πρώτα «Η δική σας σύνδεση» στις Πηγές και μετά την πηγή.",
+  "Stop it and cancel the ones coming up":
+      "Διακοπή και ακύρωση των επόμενων",
+  "Stop weekly recording":
+      "Διακοπή εβδομαδιαίας εγγραφής",
+  "Stopping":
+      "Διακόπτεται",
+  "The server didn't take the recording.":
+      "Ο διακομιστής δεν δέχτηκε την εγγραφή.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Ο διακομιστής ήδη γράφει όσες εκπομπές επιτρέπεται εκείνη την ώρα.",
+  "The server is already recording this show.":
+      "Ο διακομιστής ήδη γράφει αυτή την εκπομπή.",
+  "The server records {title} every week.":
+      "Ο διακομιστής θα γράφει το {title} κάθε εβδομάδα.",
+  "The server records {title}.":
+      "Ο διακομιστής θα γράψει το {title}.",
+  "The server's disk is full.":
+      "Ο δίσκος του διακομιστή είναι γεμάτος.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Αυτή η έκδοση του Tuliprox γράφει μόνο εβδομαδιαία. Μια μεμονωμένη εγγραφή χρειάζεται νεότερο Tuliprox.",
+  "This account may not record on the server.":
+      "Αυτός ο λογαριασμός δεν μπορεί να γράψει στον διακομιστή.",
+  "This show has already ended or has no times in the guide.":
+      "Αυτή η εκπομπή έχει ήδη τελειώσει ή δεν έχει ώρες στον οδηγό.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Το Tuliprox δεν μπόρεσε να δώσει δική του σύνδεση σε αυτό το κανάλι.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Το Tuliprox μετέφερε αυτό το κανάλι σε άλλη πηγή του.",
+  "Tuliprox records it, even with this box off.":
+      "Το Tuliprox το γράφει, ακόμα και με αυτή τη συσκευή κλειστή.",
+  "Unstable":
+      "Ασταθής",
+  "Uses one more provider connection":
+      "Χρησιμοποιεί μία ακόμη σύνδεση παρόχου",
+  "Waiting for a connection":
+      "Αναμονή για σύνδεση",
+  "Weekly":
+      "Εβδομαδιαία",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Έχετε ήδη όσες εβδομαδιαίες εγγραφές επιτρέπονται στον διακομιστή.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Μόνο εσείς το βλέπετε στον διακομιστή: επιλέξτε απευθείας την πηγή που θέλετε.",
+  "Your own connection":
+      "Η δική σας σύνδεση",
+  "Your recording space on the server is full.":
+      "Ο χώρος εγγραφών σας στον διακομιστή είναι γεμάτος.",
+  "{n} % reliable":
+      "{n} % αξιόπιστο",
+  "{title} · every {day} at {time}":
+      "{title} · κάθε {day} στις {time}",
+  "{used} of {cap} used on the server":
+      "{used} από {cap} σε χρήση στον διακομιστή",
+  "{used} used on the server":
+      "{used} σε χρήση στον διακομιστή",
+  "Delete from the network folder":
+      "Διαγραφή από τον φάκελο δικτύου",
+  "Gone for every device that uses this folder.":
+      "Χάνεται από όλες τις συσκευές που χρησιμοποιούν αυτόν τον φάκελο.",
+  "Delete {title} from the network folder?":
+      "Διαγραφή του {title} από τον φάκελο δικτύου;",
+  "Keep it":
+      "Να μείνει",
+  "Deleted from the network folder.":
+      "Διαγράφηκε από τον φάκελο δικτύου.",
+  "Couldn't delete it from the network folder.":
+      "Δεν ήταν δυνατή η διαγραφή από τον φάκελο δικτύου.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Πορτοκαλί",
+  "Purple": "Μωβ",
+  "Pink": "Ροζ",
+  "No colour": "Χωρίς χρώμα",
+  "Colour…": "Χρώμα…",
+  "Group colour": "Χρώμα ομάδας",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Εύρεση αγώνων σε κρυφές ομάδες",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Τα κανάλια των αγώνων μπορούν να έρθουν και από τις ζωντανές ομάδες που κρύψατε: μια ομάδα κρυμμένη για να μένει τακτοποιημένη η τηλεόραση εξακολουθεί να δίνει τους αγώνες της. Τα κανάλια που κρύψατε ένα-ένα μένουν έξω. Ποτέ σε προφίλ Παιδιών. Αποθηκεύεται για αυτόν τον θεατή.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Λευκό",
+  "Column lines":
+      "Γραμμές στηλών",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Το χρώμα των γραμμών ανάμεσα στις στήλες και στον οδηγό. Μόνο για αυτό το προφίλ.",
+  "Back {seconds} s":
+      "Πίσω {seconds} δ",
+  "Ahead {seconds} s":
+      "Μπροστά {seconds} δ",
+  "◀ Rewind":
+      "◀ Επιστροφή",
+  "Skip buttons":
+      "Κουμπιά μεταπήδησης",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Πόσο μεταπηδά ένα πάτημα στα κουμπιά πίσω / μπροστά και στα Γρήγορη επιστροφή / Γρήγορη προώθηση του τηλεχειριστηρίου, σε ταινίες, επεισόδια, catch-up και ζωντανή TV σε παύση. Κρατώντας τα πατημένα πηγαίνει όλο και πιο μακριά.",
+  "Pause & rewind live TV":
+      "Παύση και επιστροφή στη ζωντανή TV",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Τα ζωντανά κανάλια κρατούν τα τελευταία τους λεπτά σε αυτή τη συσκευή όσο βλέπετε, με την ίδια σύνδεση: η Παύση σταματά την εικόνα, όχι τη ροή, και η Αναπαραγωγή συνεχίζει από εκεί που σταματήσατε. Τα κουμπιά πίσω / μπροστά και η Γρήγορη επιστροφή κινούνται μέσα σε αυτά (επανάληψη), το ΖΩΝΤΑΝΑ πηγαίνει στο τώρα. Χρησιμοποιεί αποθηκευτικό χώρο όσο βλέπετε (περίπου 2 GB για 30 λεπτά ενός καναλιού HD, διαγράφεται όταν αλλάζετε κανάλι)· με λίγο ελεύθερο χώρο κρατά περίπου 30 δευτερόλεπτα στη μνήμη. Τα κανάλια σε μορφή HLS (.m3u8) δεν το έχουν. Ισχύει από το επόμενο κανάλι.",
 };

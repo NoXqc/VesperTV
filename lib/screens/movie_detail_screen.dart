@@ -16,6 +16,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../services/tuliprox.dart';
 import '../services/tracker_api.dart';
 import '../services/tracker_sync.dart';
 import '../services/watch_tracker.dart';
@@ -103,6 +104,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     });
     _load(playlist);
     unawaited(_syncTrackers());
+    unawaited(_pullServerProgress());
+  }
+
+  /// A Tuliprox movie that never played here: where the account stopped
+  /// in another app or on another device (Player API watch progress).
+  Future<void> _pullServerProgress() async {
+    final changed = await Tuliprox.instance
+        .pullVodProgress([widget.channel], context.read<StorageService>());
+    if (changed && mounted) setState(() {});
   }
 
   /// Trakt / Simkl by the provider's TMDB id: the play is reported, and a

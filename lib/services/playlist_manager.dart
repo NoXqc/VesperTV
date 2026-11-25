@@ -13,6 +13,7 @@ import '../models/xtream_series.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import '../utils/favorite_live_sort.dart';
+import '../utils/group_colors.dart';
 import 'catalog_database.dart';
 import 'channel_name_events.dart';
 import 'epg_service.dart';
@@ -297,6 +298,7 @@ class PlaylistManager extends ChangeNotifier {
       _favoriteSeriesIds = _storage.getFavoriteSeries();
       _activeViewerRestricted = _activeViewerIsRestricted();
       _myGroups.load(_storage.getMyGroups());
+      _myGroupColors = _storage.getGroupColors(GroupColor.ownScope);
       _logFavorites('start');
 
       _sessions
@@ -454,6 +456,7 @@ class PlaylistManager extends ChangeNotifier {
     _savedLiveChecked.clear();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
     _myGroups.load(_storage.getMyGroups());
+    _myGroupColors = _storage.getGroupColors(GroupColor.ownScope);
     for (final session in _sessions) {
       session.reloadViewerState();
       session.restampFavorites();
@@ -1718,6 +1721,48 @@ class PlaylistManager extends ChangeNotifier {
       ? const []
       : _enabledSessionsSorted.expand((s) => s.hiddenLiveChannels()).toList();
 
+  /// Whether Sports Trak also looks in hidden groups: Settings > Sports
+  /// Trak > Find games in hidden groups, never on a kids profile (what it
+  /// can't see stays out of its games too).
+  bool get sportsSearchesHiddenGroups =>
+      !_activeViewerRestricted && _storage.getSportsSearchHiddenGroups();
+
+  /// The live channels Sports Trak works with (game matching, its pickers
+  /// and Networks, Multiview's Live now, the player's This game, Vesper's
+  /// game tools): [visibleChannels], plus the channels of hidden groups
+  /// when [sportsSearchesHiddenGroups] (owner, 2026-11-25: a group hidden
+  /// to keep the TV tidy can still carry the games). Channels hidden one
+  /// by one stay out.
+  List<Channel> sportsChannels() {
+    if (!sportsSearchesHiddenGroups) return visibleChannels(category: 'tv');
+    return List.of(_visibleCache['tv/sports'] ??= () {
+      final visible = visibleChannels(category: 'tv');
+      final ids = {for (final c in visible) c.id};
+      return [
+        ...visible,
+        for (final s in _enabledSessionsSortedFor('tv'))
+          for (final c in s.liveChannelsOfHiddenGroups())
+            if (ids.add(c.id)) c,
+      ];
+    }());
+  }
+
+  /// Whether live [c] is in a group the viewer hid: with hidden groups
+  /// searched, Sports Trak lists such channels with a Hidden tag
+  /// (`HiddenChannelTag`).
+  bool isInHiddenGroup(Channel c) {
+    final s = _sessionFor(c.playlistId);
+    return s != null && s.hiddenGroups.contains(s.liveGroupOf(c));
+  }
+
+  /// [hiddenLiveChannels] as Sports Trak sees them (for "only on a hidden
+  /// channel"): with hidden groups searched, the channels hidden one by one.
+  List<Channel> sportsHiddenChannels() => sportsSearchesHiddenGroups
+      ? _enabledSessionsSorted
+          .expand((s) => s.hiddenLiveChannels(groups: false))
+          .toList()
+      : hiddenLiveChannels();
+
   List<XtreamSeries> visibleSeries({String? playlistId, String? categoryName}) {
     if (playlistId != null)
       return _sessionFor(playlistId)?.visibleSeries(categoryName) ?? const [];
@@ -2504,6 +2549,34 @@ class PlaylistManager extends ChangeNotifier {
       _sessionFor(playlistId)?.setGroupFavorited(title, favorited) ??
       Future.value();
 
+  /// Hold OK on a live group > Colour… (`GroupColor`): the colour id of
+  /// group [title] of [playlistId], or of the viewer's own group [title]
+  /// when [playlistId] is null. Null = none.
+  String? groupColorOf(String? playlistId, String title) => playlistId == null
+      ? _myGroupColors[title]
+      : _sessionFor(playlistId)?.groupColors[title];
+
+  /// [colorId] null = no colour.
+  Future<void> setGroupColor(
+      String? playlistId, String title, String? colorId) async {
+    if (playlistId != null) {
+      await _sessionFor(playlistId)?.setGroupColor(title, colorId);
+      return;
+    }
+    final next = {..._myGroupColors};
+    if (colorId == null) {
+      next.remove(title);
+    } else {
+      next[title] = colorId;
+    }
+    _myGroupColors = next;
+    await _storage.setGroupColors(GroupColor.ownScope, next);
+    notifyListeners();
+  }
+
+  /// The viewer's own groups' colours (title -> colour id).
+  Map<String, String> _myGroupColors = {};
+
   /// See [PlaylistSession.moveGroup].
   Future<int?> moveGroup(
           String playlistId, String type, String title, int delta,
@@ -3120,6 +3193,12 @@ class PlaylistManager extends ChangeNotifier {
       'guideLinks': Object.hashAll([
         for (final s in _enabledSessionsSortedFor('tv')) s.guideLinksVersion,
       ]),
+      // Hold OK > Colour…: the groups column shows it at once.
+      'groupColors': Object.hashAll([
+        identityHashCode(_myGroupColors),
+        for (final s in _enabledSessionsSortedFor('tv'))
+          identityHashCode(s.groupColors),
+      ]),
       'init': _initializing.hashCode,
       'error': error.hashCode,
       'merge': _storage.getMergePlaylists().hashCode,
@@ -3281,6 +3360,12 @@ class PlaylistManager extends ChangeNotifier {
     if (to == title) return title;
     if (groupNameTaken(to)) return null;
     _myGroups.rename(title, to);
+    if (_myGroupColors[title] case final color?) {
+      _myGroupColors = {..._myGroupColors}
+        ..remove(title)
+        ..[to] = color;
+      await _storage.setGroupColors(GroupColor.ownScope, _myGroupColors);
+    }
     await _saveMyGroups();
     return to;
   }
@@ -3329,8 +3414,12 @@ class PlaylistManager extends ChangeNotifier {
       [for (final g in _sessionFor(playlistId)?.tvGroups ?? const []) g.title];
 
   /// Deletes own group [title]; its channels go back to their groups.
-  Future<void> deleteUserGroup(String title) {
+  Future<void> deleteUserGroup(String title) async {
     _myGroups.delete(title);
+    if (_myGroupColors.containsKey(title)) {
+      _myGroupColors = {..._myGroupColors}..remove(title);
+      await _storage.setGroupColors(GroupColor.ownScope, _myGroupColors);
+    }
     return _saveMyGroups();
   }
 

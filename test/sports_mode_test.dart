@@ -698,6 +698,34 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('See all grid: hold on a game opens its menu (issue #16)',
+      (tester) async {
+    await open(tester);
+    await tester.tap(find.text('See all'));
+    await tester.pumpAndSettle();
+    expect(find.text('Later today · 18'), findsOneWidget);
+    // The test font is far wider than a real one: the focused card's hold
+    // hint overflows the grid card here (clipped on a device).
+    final opened = tester.takeException();
+    expect(opened == null || '$opened'.contains('overflowed'), isTrue);
+    final gameDialog = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_GameDialog');
+    expect(gameDialog, findsNothing);
+    // Hold on a game of the grid: its menu, the grid stays (it went back to
+    // the row, the way OK does).
+    await tester.longPress(find.text('H2').hitTestable().first);
+    await tester.pumpAndSettle();
+    expect(gameDialog, findsOneWidget);
+    expect(find.text('Later today · 18'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(gameDialog, findsNothing);
+    expect(find.text('Later today · 18'), findsOneWidget);
+    final closed = tester.takeException();
+    expect(closed == null || '$closed'.contains('overflowed'), isTrue);
+    await disposePage(tester);
+  });
+
   for (final mode in [false, true]) {
     testWidgets('populated matchup stats fit TV large text (mode=$mode)',
         (tester) async {
@@ -1083,8 +1111,8 @@ void main() {
         // The zoom's ticker starts on the frame after the focus one.
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 300));
-        final zoom = find.descendant(
-            of: card, matching: find.byType(AnimatedScale));
+        final zoom =
+            find.descendant(of: card, matching: find.byType(AnimatedScale));
         final frame = tester.getRect(
             find.descendant(of: zoom, matching: find.byType(Container)).first);
         final unzoomed = tester.getRect(zoom);
@@ -1189,8 +1217,7 @@ void main() {
     // A tablet keeps the title and the chips on one row.
     await disposePage(tester);
     await open(tester, feed: _Feed([]), size: const Size(1000, 700));
-    final tvTitle =
-        tester.getRect(find.text(AppConstants.sportsTabName).first);
+    final tvTitle = tester.getRect(find.text(AppConstants.sportsTabName).first);
     final tvAll = tester.getRect(find.text('All').first);
     expect(tvAll.top, lessThan(tvTitle.bottom));
     expect(tester.takeException(), isNull);

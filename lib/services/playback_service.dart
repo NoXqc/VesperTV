@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
@@ -36,10 +37,14 @@ import 'device_memory_service.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
 import 'archive_playback_sources.dart';
+import 'player_user_agent.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
+import 'live_freeze_guard.dart';
 import 'live_reconnect_log.dart';
+import 'live_timeshift.dart';
+import '../utils/skip_step.dart';
 import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
@@ -92,11 +97,14 @@ class PlaybackService extends ChangeNotifier {
     try {
       unawaited(VodBuffering.setLiveBufferDefault(_storage.getLiveBufferMs()));
       VodBuffering.readAhead = _storage.getReadAhead();
+      LiveTimeshift.minutes = _storage.getLiveRewindMinutes();
+      SkipStep.seconds = _storage.getSkipSeconds();
     } catch (_) {
       // Storage not initialised (tests): the 500 ms default stays.
     }
     _reconnectLog.start();
     _vodStallLog.start();
+    _freezeGuard.start();
   }
 
   /// Send log lines for the native player's silent live reconnects.
@@ -104,6 +112,52 @@ class PlaybackService extends ChangeNotifier {
     final c = controller;
     return currentChannel?.isLive == true ? c : null;
   });
+
+  /// A live picture stuck while the sound plays: Pause/Play, then a reload
+  /// ([LiveFreezeGuard]). Not during catch-up, a reload, a source-switch
+  /// watch (it nudges on its own) or with the app in the background (no
+  /// picture drawn there).
+  late final _freezeGuard = LiveFreezeGuard(
+    target: () {
+      final c = controller;
+      final ch = currentChannel;
+      if (c == null ||
+          ch == null ||
+          !ch.isLive ||
+          !c.value.isInitialized ||
+          catchup != null ||
+          _reloadingCurrentChannel ||
+          _switchWatches > 0 ||
+          SchedulerBinding.instance.lifecycleState !=
+              AppLifecycleState.resumed) {
+        return null;
+      }
+      return (
+        player: c,
+        key: '${identityHashCode(c)}|${ch.url}',
+        playing: c.value.isPlaying,
+        buffering: c.value.isBuffering,
+      );
+    },
+    stats: (p) => _statsChannel.invokeMapMethod<Object?, Object?>('getStats',
+        {'playerId': SubtitleTracks.playerIdOf(p as VideoPlayerHdrController)}),
+    nudge: () async {
+      final c = controller;
+      if (c == null) return;
+      // Live pause & rewind on: Play no longer resets the live load (the
+      // native player keeps the paused picture), so a jump of 0 s does the
+      // same flush at the same spot.
+      if (_timeshiftPlayer == c && timeshift.value != null) {
+        debugPrint('Timeshift: picture stuck, reloading at the same spot');
+        await LiveTimeshift.jump(c, Duration.zero);
+        return;
+      }
+      await c.pause();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (controller == c) await c.play();
+    },
+    reload: reloadCurrentChannel,
+  );
 
   /// Send log lines for movie / episode buffering.
   late final _vodStallLog = VodStallLog(() {
@@ -629,6 +683,7 @@ class PlaybackService extends ChangeNotifier {
     // both share one provider connection.
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
+    if (channel.isLive) debugPrint(livePlayLogLine(channel, openUrl));
 
     // Leaving a Tuliprox stream: it ends on the server first, so the new
     // channel finds a one-connection account free instead of waiting for
@@ -713,6 +768,7 @@ class PlaybackService extends ChangeNotifier {
       if (session != null) _catchupStarted(session, newController);
       await VodBuffering.configure(newController, channel);
       if (controller != newController) return;
+      if (session == null) unawaited(_startTimeshift(newController, channel));
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -841,6 +897,9 @@ class PlaybackService extends ChangeNotifier {
         final duration = c.value.duration;
         if (duration > Duration.zero) {
           _storage.setLastDuration(ch.id, duration.inMilliseconds);
+          // A Tuliprox movie / episode: its server keeps it too.
+          unawaited(Tuliprox.instance
+              .noteVodProgress(ch, c.value.position, duration));
           // Auto-advance a season/series near the end (Settings >
           // Playback > Up Next; a user missed every episode's last seconds,
           // 1.0.51).
@@ -1046,6 +1105,12 @@ class PlaybackService extends ChangeNotifier {
 
   int _serverSwitchGen = 0;
 
+  /// The newest [watchSourceSwitch]; older ones stop.
+  int _switchWatchGen = 0;
+
+  /// [watchSourceSwitch]es running ([_freezeGuard] waits for them).
+  int _switchWatches = 0;
+
   /// When the viewer last paused (Play/Pause), so [watchSourceSwitch]
   /// never undoes their own pause.
   DateTime? _viewerPausedAt;
@@ -1057,15 +1122,30 @@ class PlaybackService extends ChangeNotifier {
   /// once the buffered video has played (often ~25 s), and its timestamps
   /// jump there. ExoPlayer was then left paused, or with the picture stuck
   /// while the sound went on, until Pause/Play (owner, 2026-11-19, Homatics).
-  /// From the expected arrival on, this gives a stuck picture one Pause/Play
-  /// and a pause the viewer didn't ask for a Play (no reconnect: the old
-  /// automatic reload fought the provider's connection limit). Returns true
-  /// once the picture moves after the arrival, false when the channel or
-  /// player changed or nothing settled in time. Android only.
+  /// From the switch on, this gives a stuck picture one Pause/Play and a
+  /// pause the viewer didn't ask for a Play (no reconnect: the old automatic
+  /// reload fought the provider's connection limit). Also a refused switch
+  /// the server undid (it opened the old source again: the same jump) and,
+  /// before the expected arrival, a jump from an earlier try: owner,
+  /// 2026-11-24, Tuliprox 3.3.207, picture stuck 21 s after a refused
+  /// switch, 10 s into the next one's watch. A newer watch replaces this
+  /// one. Returns true once the picture moves after the arrival, false when
+  /// the channel or player changed, a newer watch began or nothing settled
+  /// in time. Android only.
   Future<bool> watchSourceSwitch() async {
+    _switchWatches++;
+    try {
+      return await _watchSourceSwitch();
+    } finally {
+      _switchWatches--;
+    }
+  }
+
+  Future<bool> _watchSourceSwitch() async {
     final c = controller;
     final ch = currentChannel;
     if (c == null || ch == null || kIsWeb || !Platform.isAndroid) return false;
+    final gen = ++_switchWatchGen;
     final start = clock();
     final id = SubtitleTracks.playerIdOf(c);
     Future<Map<Object?, Object?>?> stats() async {
@@ -1089,18 +1169,26 @@ class PlaybackService extends ChangeNotifier {
     var nudges = 0;
     while (clock().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (gen != _switchWatchGen) return false;
       if (controller != c || currentChannel?.id != ch.id) return false;
       final now = clock();
       final m = await stats();
       final frames = (m?['rendered'] as num?)?.toInt();
+      final known = frames != null && lastFrames != null;
       final moved = frames != null && lastFrames != null && frames > lastFrames;
       lastFrames = frames ?? lastFrames;
-      // Before the switch reaches the screen the old source plays on.
-      if (now.isBefore(arrival.subtract(const Duration(seconds: 1)))) continue;
       final viewerPaused =
           _viewerPausedAt != null && _viewerPausedAt!.isAfter(start);
       if (viewerPaused) return false;
+      // Before the expected arrival only a picture stuck while playing
+      // counts (the source landed early): not playing there is the old
+      // source buffering.
+      final early = now.isBefore(arrival.subtract(const Duration(seconds: 1)));
       if (!c.value.isPlaying) {
+        if (early) {
+          stuckPolls = movingPolls = 0;
+          continue;
+        }
         if (nudges >= 3) return false;
         nudges++;
         debugPrint('SourceSwitch: paused on its own, Play');
@@ -1120,10 +1208,12 @@ class PlaybackService extends ChangeNotifier {
         continue;
       }
       movingPolls = 0;
+      if (!known) continue;
       if (++stuckPolls >= 3 && nudges < 3) {
         nudges++;
         stuckPolls = 0;
-        debugPrint('SourceSwitch: picture stuck, Pause/Play');
+        debugPrint('SourceSwitch: picture stuck'
+            '${early ? ' (landed early)' : ''}, Pause/Play');
         await c.pause();
         await Future<void>.delayed(const Duration(milliseconds: 200));
         if (controller != c) return false;
@@ -1152,7 +1242,14 @@ class PlaybackService extends ChangeNotifier {
     }
     final pausedAt = _livePausedAt;
     _livePausedAt = null;
-    if (ch != null &&
+    // Live pause & rewind kept everything since the pause: Play carries on
+    // from the paused frame, no catch-up request.
+    final ts = timeshift.value;
+    final kept = ts != null &&
+        pausedAt != null &&
+        clock().difference(pausedAt) < ts.window - const Duration(seconds: 10);
+    if (!kept &&
+        ch != null &&
         ch.hasCatchup &&
         pausedAt != null &&
         clock().difference(pausedAt) > timeshiftAfter) {
@@ -1161,6 +1258,170 @@ class PlaybackService extends ChangeNotifier {
     }
     await c.play();
     notifyListeners();
+  }
+
+  // ------------------------------------------------ Live pause & rewind
+
+  /// Live pause & rewind on the playing live channel ([LiveTimeshift]):
+  /// where the picture is, null when off (not live, HLS, the setting, not
+  /// Android). Polled every second while it's on.
+  final timeshift = ValueNotifier<TimeshiftState?>(null);
+
+  /// While skip presses gather: how far behind live the picture will land.
+  final timeshiftTarget = ValueNotifier<Duration?>(null);
+
+  VideoPlayerHdrController? _timeshiftPlayer;
+  Timer? _timeshiftPoll;
+  Timer? _timeshiftCommit;
+  Duration? _timeshiftFrom;
+  Duration _timeshiftDelta = Duration.zero;
+  String? _timeshiftNoteSaid;
+
+  Future<void> _startTimeshift(
+      VideoPlayerHdrController c, Channel channel) async {
+    _stopTimeshift();
+    if (!LiveTimeshift.supported ||
+        !channel.isLive ||
+        channel.transientPlayback ||
+        catchup != null) {
+      return;
+    }
+    if (LiveTimeshift.minutes <= 0) {
+      debugPrint('Timeshift: off (setting)');
+      return;
+    }
+    final why = await LiveTimeshift.arm(c);
+    if (controller != c || currentChannel?.id != channel.id) return;
+    if (why != null) {
+      debugPrint('Timeshift: off ($why)');
+      return;
+    }
+    debugPrint('Timeshift: on, ${LiveTimeshift.minutes} min kept');
+    _timeshiftPlayer = c;
+    _timeshiftNoteSaid = null;
+    _timeshiftPoll = Timer.periodic(
+        const Duration(seconds: 1), (_) => unawaited(_pollTimeshift()));
+  }
+
+  Future<void> _pollTimeshift() async {
+    final c = _timeshiftPlayer;
+    if (c == null || controller != c || catchup != null) {
+      _stopTimeshift();
+      return;
+    }
+    final s = await LiveTimeshift.state(c);
+    if (_timeshiftPlayer != c) return;
+    timeshift.value = s != null && s.on ? s : null;
+    final note = s?.note;
+    if (note != null && note != _timeshiftNoteSaid) {
+      _timeshiftNoteSaid = note;
+      debugPrint('Timeshift: $note');
+    }
+  }
+
+  void _stopTimeshift() {
+    _timeshiftPoll?.cancel();
+    _timeshiftPoll = null;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftPlayer = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    timeshiftTarget.value = null;
+    timeshift.value = null;
+  }
+
+  /// A skip press on a live channel with the copy on: [delta] back (negative)
+  /// or ahead. Presses gather for 700 ms ([timeshiftTarget] shows where it
+  /// lands), then one jump: each jump restarts the player's load. Past the
+  /// copy on a channel with catch-up, it goes on through catch-up.
+  void timeshiftNudge(Duration delta) {
+    final s = timeshift.value;
+    if (s == null || _timeshiftPlayer == null) return;
+    final from = _timeshiftFrom ??= s.behind;
+    _timeshiftDelta += delta;
+    final live = liveChannel;
+    final most = live != null && live.hasCatchup && live.catchupDays > 0
+        ? Duration(days: live.catchupDays)
+        : s.available;
+    var target = from - _timeshiftDelta;
+    if (target > most) target = most;
+    if (target < Duration.zero) target = Duration.zero;
+    _timeshiftDelta = from - target;
+    timeshiftTarget.value = target;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = Timer(
+        const Duration(milliseconds: 700), () => unawaited(_commitTimeshift()));
+  }
+
+  Future<void> _commitTimeshift() async {
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    final target = timeshiftTarget.value;
+    final delta = _timeshiftDelta;
+    final c = _timeshiftPlayer;
+    final s = timeshift.value;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    if (target == null || c == null || controller != c || s == null) {
+      timeshiftTarget.value = null;
+      return;
+    }
+    await _timeshiftLand(c, s, target, delta);
+  }
+
+  /// The picture to [behind] live (the live timeline's scrub): inside the
+  /// copy, past it through catch-up (a catch-up channel), else as far as
+  /// the copy goes.
+  Future<void> timeshiftGoTo(Duration behind) async {
+    final c = _timeshiftPlayer;
+    final s = timeshift.value;
+    if (c == null || s == null || controller != c) return;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    await _timeshiftLand(c, s, behind, s.behind - behind);
+  }
+
+  Future<void> _timeshiftLand(VideoPlayerHdrController c, TimeshiftState s,
+      Duration target, Duration delta) async {
+    final live = liveChannel;
+    if (target > s.available + const Duration(seconds: 5) &&
+        live != null &&
+        live.hasCatchup) {
+      timeshiftTarget.value = null;
+      debugPrint('Timeshift: ${target.inSeconds} s back is past the copy '
+          '(${s.available.inSeconds} s), catch-up');
+      await playCatchup(live, clock().subtract(target), toProgrammeEnd: false);
+      return;
+    }
+    final toLive = target <= TimeshiftState.liveEdge;
+    final next =
+        await LiveTimeshift.jump(c, toLive ? const Duration(days: 1) : delta);
+    timeshiftTarget.value = null;
+    debugPrint('Timeshift: jump ${delta.inSeconds} s -> '
+        '${next?.behind.inSeconds ?? '?'} s behind live');
+    if (next != null && next.on && _timeshiftPlayer == c) {
+      timeshift.value = next;
+    }
+  }
+
+  /// Back to live inside the copy (Live pause & rewind).
+  Future<void> timeshiftToLive() async {
+    final c = _timeshiftPlayer;
+    if (c == null) return;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    timeshiftTarget.value = null;
+    final next = await LiveTimeshift.jump(c, const Duration(days: 1));
+    debugPrint('Timeshift: back to live');
+    if (next != null && next.on && _timeshiftPlayer == c) {
+      timeshift.value = next;
+    }
+    if (controller == c && !c.value.isPlaying) await c.play();
   }
 
   PlaylistProfile? _profileFor(String playlistId) {
@@ -1431,6 +1692,7 @@ class PlaybackService extends ChangeNotifier {
       unawaited(_recordRealResolution(c, channel));
       unawaited(DisplayMatch.start(_storage, c,
           () => controller == c && currentChannel?.id == channel.id));
+      unawaited(_startTimeshift(c, channel));
       debugPrint('NativeSurface: reused live player for channel zap');
       unawaited(NativeVideoSurface.logDiagnostics());
       notifyListeners();
@@ -1917,6 +2179,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _stopTimeshift();
     _nativeZapGeneration++;
     _playGen++;
     _catchupGen++;
@@ -1968,8 +2231,8 @@ class PlaybackService extends ChangeNotifier {
     }
     final first = _sniffedUrls.add(channel.url);
     final sniff = await sniffStream(channel.url, headers: {
-      // The Android player's own default (video_player_android).
-      'User-Agent': 'ExoPlayer',
+      // What the Android player sends (PlayerUserAgent).
+      'User-Agent': PlayerUserAgent.value,
       ...StreamDrm.withoutDrm(channel.httpHeaders),
     });
     final what = channel.isLive
@@ -2019,6 +2282,8 @@ class PlaybackService extends ChangeNotifier {
       final duration = old.value.duration;
       if (duration > Duration.zero) {
         await _storage.setLastDuration(ch.id, duration.inMilliseconds);
+        unawaited(Tuliprox.instance
+            .noteVodProgress(ch, old.value.position, duration, done: true));
         // Watched / paused at, for Trakt/Simkl (Media Hub titles only).
         unawaited(
             WatchTracker.instance.stopped(ch.id, old.value.position, duration));
@@ -2064,8 +2329,10 @@ class PlaybackService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _stopTimeshift();
     _reconnectLog.dispose();
     _vodStallLog.dispose();
+    _freezeGuard.dispose();
     _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     _teardown();
@@ -2327,4 +2594,26 @@ bool _streamUsesHls(String url) {
       (_hlsHosts.contains(uri.host) &&
           uri.path.toLowerCase().endsWith('.ts') &&
           !_notHlsUrls.contains(url));
+}
+
+/// Send log, every live play: which copy of a channel started (dajokahn,
+/// 2026-11-25, LOG-5MXR4H: TNT Sports 4 froze from a Sports Trak card but
+/// "the same channel" played fine from the guide, and the log only had the
+/// name). `stream` = a short hash of the address (no host or login in the
+/// log), so two plays of one copy show the same tag; `tap` = the recorder's
+/// local copy.
+@visibleForTesting
+String livePlayLogLine(Channel channel, String openUrl) {
+  final path = Uri.tryParse(channel.url)?.path.toLowerCase() ?? '';
+  final kind = path.endsWith('.m3u8')
+      ? 'm3u8'
+      : path.endsWith('.ts')
+          ? 'ts'
+          : 'other';
+  final tag =
+      sha256.convert(utf8.encode(channel.url)).toString().substring(0, 8);
+  return 'LivePlay: ${channel.name} | group ${channel.group} | '
+      'playlist ${channel.playlistId} | stream $tag $kind'
+      '${openUrl != channel.url ? ' | tap' : ''}'
+      '${channel.httpHeaders.isNotEmpty ? ' | headers' : ''}';
 }

@@ -1,8 +1,13 @@
+import 'dart:math' as math;
+
+import 'skip_step.dart';
+
 /// How far one remote press moves a movie's seek target (the player's seek
 /// bar and the Fast-forward / Rewind keys).
 ///
-/// A tap is always 10 s. A held key grows the step with how long it has been
-/// held (10 s, then 30 s, 1, 2, 5 min) and moves at most 5 times a second.
+/// A tap is the Skip buttons setting ([SkipStep], 10 s by default). A held
+/// key grows the step with how long it has been held (10 s, then 30 s, 1, 2,
+/// 5 min; never less than a tap) and moves at most 5 times a second.
 /// The steps used to grow with the number of presses: the remote's key repeat
 /// (up to 20 a second) raced the target hours ahead in a few seconds, and
 /// taps in a row grew too (owner, 2026-11-17: the seek line jumped minutes).
@@ -32,21 +37,22 @@ class ScrubSteps {
     if (!held || _holdStart == null) {
       _holdStart = now;
       _lastStep = now;
-      return const Duration(seconds: 10);
+      return SkipStep.tap;
     }
     if (now.difference(_lastStep!) < minGap) return null;
     _lastStep = now;
     final ms = now.difference(_holdStart!).inMilliseconds;
-    return Duration(
-        seconds: ms < 1500
-            ? 10
-            : ms < 3000
-                ? 30
-                : ms < 4500
-                    ? 60
-                    : ms < 6500
-                        ? 120
-                        : 300);
+    final ladder = ms < 1500
+        ? 10
+        : ms < 3000
+            ? 30
+            : ms < 4500
+                ? 60
+                : ms < 6500
+                    ? 120
+                    : 300;
+    // A tap is the Skip buttons setting; holding never moves less.
+    return Duration(seconds: math.max(SkipStep.seconds, ladder));
   }
 
   /// The seek landed (or the scrub ended): the next press is a fresh tap.

@@ -98,9 +98,7 @@ final _gameChannelTool = VesperTool(
     }
     if (raw.length > 40) throw VesperToolError('At most 40 games per call.');
     await box.playlist.ensureLiveChannelsLoaded();
-    final visible = {
-      for (final c in box.playlist.visibleChannels(category: 'tv')) c.id
-    };
+    final visible = {for (final c in box.playlist.sportsChannels()) c.id};
     // By game: the last pick for a game given twice wins.
     final todo = <String, (SportsGame, Channel)>{};
     final problems = <Map<String, Object?>>[];

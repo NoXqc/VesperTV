@@ -4372,4 +4372,133 @@ const Map<String, String> kIt = {
       "Download in corso…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Per usare tasti come TV, YouTube o Prime, aggiungi il componente gratuito “{name}”, una piccola app separata. Premi OK per scaricarlo e installarlo.",
+  "A recording on the Tuliprox server failed.":
+      "Una registrazione sul server Tuliprox non è riuscita.",
+  "A recording on the Tuliprox server is ready.":
+      "Una registrazione sul server Tuliprox è pronta.",
+  "Another device on your account took over this stream.":
+      "Un altro dispositivo del tuo account ha preso questo flusso.",
+  "Channel {id}":
+      "Canale {id}",
+  "Delete from the server":
+      "Elimina dal server",
+  "Every {day} at {time}":
+      "Ogni {day} alle {time}",
+  "Not working right now · tried again in {n} s":
+      "Non funziona ora · nuovo tentativo tra {n} s",
+  "On the Tuliprox server":
+      "Sul server Tuliprox",
+  "On the Tuliprox server ({server})":
+      "Sul server Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Ora sei sulla tua connessione. Scegli una fonte in Fonti per cambiare solo per te.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Solo un flusso .ts può avere una connessione propria. Questo è riprodotto come HLS.",
+  "Record on the server":
+      "Registra sul server",
+  "Record weekly on the server":
+      "Registra ogni settimana sul server",
+  "Recording is switched off on this server.":
+      "La registrazione è disattivata su questo server.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Qualcun altro sta guardando questo canale sul server. Scegli prima «La tua connessione» in Fonti, poi la fonte.",
+  "Stop it and cancel the ones coming up":
+      "Interrompila e annulla le prossime",
+  "Stop weekly recording":
+      "Interrompi la registrazione settimanale",
+  "Stopping":
+      "Interruzione in corso",
+  "The server didn't take the recording.":
+      "Il server non ha accettato la registrazione.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Il server sta già registrando tutti i programmi consentiti a quell'ora.",
+  "The server is already recording this show.":
+      "Il server sta già registrando questo programma.",
+  "The server records {title} every week.":
+      "Il server registrerà {title} ogni settimana.",
+  "The server records {title}.":
+      "Il server registrerà {title}.",
+  "The server's disk is full.":
+      "Il disco del server è pieno.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Questa versione di Tuliprox registra solo ogni settimana. Una registrazione singola richiede un Tuliprox più recente.",
+  "This account may not record on the server.":
+      "Questo account non può registrare sul server.",
+  "This show has already ended or has no times in the guide.":
+      "Questo programma è già finito o non ha orari nella guida.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Tuliprox non è riuscito a dare a questo canale una connessione propria.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Tuliprox ha spostato questo canale su un'altra delle sue fonti.",
+  "Tuliprox records it, even with this box off.":
+      "Tuliprox lo registra, anche con questo box spento.",
+  "Unstable":
+      "Instabile",
+  "Uses one more provider connection":
+      "Usa una connessione del provider in più",
+  "Waiting for a connection":
+      "In attesa di una connessione",
+  "Weekly":
+      "Ogni settimana",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Hai già tutte le registrazioni settimanali consentite sul server.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Lo stai guardando solo tu sul server: scegli direttamente la fonte che vuoi.",
+  "Your own connection":
+      "La tua connessione",
+  "Your recording space on the server is full.":
+      "Il tuo spazio di registrazione sul server è pieno.",
+  "{n} % reliable":
+      "affidabile al {n} %",
+  "{title} · every {day} at {time}":
+      "{title} · ogni {day} alle {time}",
+  "{used} of {cap} used on the server":
+      "{used} di {cap} usati sul server",
+  "{used} used on the server":
+      "{used} usati sul server",
+  "Delete from the network folder":
+      "Elimina dalla cartella di rete",
+  "Gone for every device that uses this folder.":
+      "Sparisce per tutti i dispositivi che usano questa cartella.",
+  "Delete {title} from the network folder?":
+      "Eliminare {title} dalla cartella di rete?",
+  "Keep it":
+      "Tienilo",
+  "Deleted from the network folder.":
+      "Eliminato dalla cartella di rete.",
+  "Couldn't delete it from the network folder.":
+      "Impossibile eliminarlo dalla cartella di rete.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Arancione",
+  "Purple": "Viola",
+  "Pink": "Rosa",
+  "No colour": "Nessun colore",
+  "Colour…": "Colore…",
+  "Group colour": "Colore del gruppo",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Cerca le partite nei gruppi nascosti",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "I canali delle partite possono venire anche dai gruppi in diretta che hai nascosto: un gruppo nascosto per tenere in ordine la TV porta ancora le sue partite. I canali nascosti uno per uno restano esclusi. Mai su un profilo Bambini. Salvato per questo spettatore.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Bianco",
+  "Column lines":
+      "Linee delle colonne",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Il colore delle linee tra le colonne e nella guida. Solo per questo profilo.",
+  "Back {seconds} s":
+      "Indietro {seconds} s",
+  "Ahead {seconds} s":
+      "Avanti {seconds} s",
+  "◀ Rewind":
+      "◀ Indietro",
+  "Skip buttons":
+      "Pulsanti di salto",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Di quanto salta una pressione dei pulsanti indietro / avanti e di Riavvolgi / Avanti veloce del telecomando, su film, episodi, catch-up e TV in diretta in pausa. Tenendoli premuti salta sempre di più.",
+  "Pause & rewind live TV":
+      "Pausa e riavvolgi la TV in diretta",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "I canali in diretta tengono gli ultimi minuti su questo dispositivo mentre guardi, con la stessa connessione: Pausa ferma l'immagine, non lo stream, e Play riprende da dove eri. I pulsanti indietro / avanti e Riavvolgi si muovono al suo interno (un replay), LIVE torna al presente. Usa spazio di archiviazione mentre guardi (circa 2 GB per 30 minuti di un canale HD, cancellato al cambio canale); con poco spazio libero tiene circa 30 secondi in memoria. I canali in formato HLS (.m3u8) non lo hanno. Vale dal canale successivo.",
 };

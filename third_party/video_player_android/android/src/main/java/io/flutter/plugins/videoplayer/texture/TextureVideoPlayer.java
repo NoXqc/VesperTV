@@ -17,6 +17,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import io.flutter.plugins.videoplayer.DtsSoftwareDecoders;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
 import io.flutter.plugins.videoplayer.VideoAsset;
 import io.flutter.plugins.videoplayer.VideoPlayer;
@@ -111,8 +112,10 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
             }
           }
           builder.setLoadControl(loadControlBuilder.build());
+          // Stock selection, except DTS decoded by FFmpeg keeps the box decoder's rank
+          // (DtsSoftwareDecoders).
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
-              new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
+              new DtsSoftwareDecoders.TrackSelector(context);
           // Same audio setup as PlatformViewVideoPlayer.create() — see that
           // class's own doc comment for the full HDMI-passthrough/
           // setVolume() story. This class didn't need it when every
@@ -174,6 +177,8 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
           // using the hardware decoder).
           renderersFactory.setExtensionRendererMode(
               DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+          // DTS to FFmpeg — see PlatformViewVideoPlayer.
+          renderersFactory.setMediaCodecSelector(DtsSoftwareDecoders.INSTANCE);
           // Next decoder on a failed start — see PlatformViewVideoPlayer.
           renderersFactory.setEnableDecoderFallback(true);
           // A frozen live tile (playing, clock not advancing) is failed after 4 s instead of

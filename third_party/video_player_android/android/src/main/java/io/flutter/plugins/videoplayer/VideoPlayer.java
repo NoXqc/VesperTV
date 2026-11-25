@@ -31,6 +31,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import io.flutter.view.TextureRegistry.SurfaceProducer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A class responsible for managing video playback using {@link ExoPlayer}.
@@ -261,6 +262,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
       trackSelector.setParameters(trackSelector.buildUponParameters()
           .clearOverrides().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true));
     }
+    releaseTimeshift();
     streamStats = asset.streamStats();
     if (streamStats != null) streamStats.allowReconnect = reconnectLiveStreams();
     frameRateProbe = new FrameRateProbe();
@@ -350,8 +352,23 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   @Override
   public void seekTo(long position) {
+    if (timeshiftHoldsSeek()) return;
     vodTrace.seekRequested(position);
     exoPlayer.seekTo(position);
+  }
+
+  /**
+   * Live pause & rewind: the Dart controller's play() seeks a live stream to 0 (its position is
+   * clamped to its unknown duration, 0). That reset threw away what the player held since the
+   * pause and carried on near live (emulator, +1010: Play after a 60 s pause showed "now");
+   * without the copy it reconnected to "now". With the copy on, Play carries on from the paused
+   * frame; jumps go through {@link #timeshiftJump}.
+   */
+  private boolean timeshiftHoldsSeek() {
+    StreamStats stats = streamStats;
+    Timeshift t = stats == null ? null : stats.timeshift;
+    return t != null && t.isActive() && !stats.onDemand && !stats.finite
+        && exoPlayer.isCurrentMediaItemLive();
   }
 
   /** LiveReconnectDataSource: reconnect live streams underneath this player. */
@@ -361,7 +378,10 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   /** Called by the plugin after creation (and by replaceNativeStream). */
   void attachStreamStats(@Nullable StreamStats stats) {
-    if (stats != streamStats) releaseReadAhead();
+    if (stats != streamStats) {
+      releaseReadAhead();
+      releaseTimeshift();
+    }
     streamStats = stats;
     if (stats != null) stats.allowReconnect = reconnectLiveStreams();
   }
@@ -528,6 +548,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     if (streamStats != null) streamStats.onDemand = on;
     if (on) dropLiveCopies();
     if (!on) releaseReadAhead();
+    if (on) releaseTimeshift();
   }
 
   /**
@@ -557,6 +578,69 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   private void releaseReadAhead() {
     ReadAhead readAhead = readAhead();
     if (readAhead != null) readAhead.release();
+  }
+
+  // ---------------------------------------------------------------- live pause & rewind
+
+  @Nullable
+  Timeshift timeshift() {
+    StreamStats stats = streamStats;
+    return stats == null ? null : stats.timeshift;
+  }
+
+  /**
+   * Live pause & rewind for this live channel: a rolling copy of [minutes] (0 = off). Null when
+   * on, else why not. Main player, live, progressive only (Dart asks for live channels).
+   */
+  @Nullable
+  String setTimeshift(boolean on, int minutes) {
+    StreamStats stats = streamStats;
+    Timeshift t = stats == null ? null : stats.timeshift;
+    if (t == null) return "not a single stream (HLS)";
+    if (!on || minutes <= 0) {
+      t.release();
+      return "switched off";
+    }
+    if (!reconnectLiveStreams()) return "not the main player";
+    if (stats.onDemand || stats.finite) return "not live";
+    return t.arm(minutes);
+  }
+
+  /**
+   * Moves the picture by [deltaMs] in the copy (negative = back, far ahead = live): the next load
+   * starts there and the current one is reset. Returns the state after, or null (nothing to
+   * jump in).
+   */
+  @Nullable
+  Map<String, Object> timeshiftJump(long deltaMs) {
+    Timeshift t = timeshift();
+    if (t == null || isDisposed) return null;
+    long behind = t.jump(deltaMs, exoPlayer.getTotalBufferedDuration());
+    if (behind < 0) return null;
+    // A live progressive stream can't seek: any seek resets its load, which reopens the copy at
+    // the jump's offset. At position 0 the seek would be dropped as "already there" (just after
+    // another jump): a re-prepare does the same reset.
+    if (exoPlayer.getCurrentPosition() == 0) {
+      exoPlayer.stop();
+      exoPlayer.prepare();
+    } else {
+      exoPlayer.seekTo(0);
+    }
+    Map<String, Object> m = t.state(0);
+    m.put("behindMs", behind);
+    return m;
+  }
+
+  @Nullable
+  Map<String, Object> timeshiftState() {
+    Timeshift t = timeshift();
+    if (t == null || isDisposed) return null;
+    return t.state(exoPlayer.getTotalBufferedDuration());
+  }
+
+  private void releaseTimeshift() {
+    Timeshift t = timeshift();
+    if (t != null) t.release();
   }
 
   @NonNull
@@ -897,5 +981,6 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     exoPlayer.release();
     // After release: no loader reads the ring any more; the file is deleted.
     releaseReadAhead();
+    releaseTimeshift();
   }
 }

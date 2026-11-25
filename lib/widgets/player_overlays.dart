@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../services/live_timeshift.dart';
 
 // Overlays both TV players draw over the picture (Android's PlayerScreen
 // and the Apple TV player, DesktopPlayerScreen): the same card and cue on
@@ -180,6 +181,44 @@ class _FallbackIcon extends StatelessWidget {
 /// Where the remote's Fast-forward / Rewind will land: the target time
 /// and the jump (movies, episodes, catch-up), or how far back from now
 /// (live rewind).
+/// Live pause & rewind: where the gathered skip presses land ("−1:15"
+/// behind live, or LIVE), until the jump.
+class TimeshiftCue extends StatelessWidget {
+  const TimeshiftCue({super.key, required this.target, required this.from});
+
+  /// Behind live after the jump.
+  final Duration target;
+
+  /// Behind live now.
+  final Duration from;
+
+  @override
+  Widget build(BuildContext context) {
+    final back = target > from;
+    final live = target <= TimeshiftState.liveEdge;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(back ? Icons.fast_rewind : Icons.fast_forward,
+              color: Theme.of(context).colorScheme.primary, size: 28),
+          const SizedBox(width: 10),
+          Text(live ? tr('LIVE') : LiveTimeshift.behindLabel(target),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
 class SkipCue extends StatelessWidget {
   const SkipCue(
       {super.key,

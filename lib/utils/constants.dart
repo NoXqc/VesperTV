@@ -149,6 +149,15 @@ class AppConstants {
   /// file (ReadAhead in the vendored player; owner's Homatics, 2026-11-21).
   static const String keyReadAhead = 'vesper_read_ahead';
 
+  /// Device-only (a backup keeps it), 30 by default: Live pause & rewind
+  /// keeps this many minutes of a live channel on the device, 0 = off
+  /// (vendored player's Timeshift, Android).
+  static const String keyLiveRewindMinutes = 'vesper_live_rewind_min';
+
+  /// Seconds one tap of the skip buttons / the remote's Rewind and
+  /// Fast-forward jumps (5, 10, 15, 30 or 60; 10 by default).
+  static const String keySkipSeconds = 'vesper_skip_seconds';
+
   /// Device-only, off by default: the TV tab's "Recently added" group.
   static const String keyRecentChannelsGroup = 'vesper_recent_channels_group';
 
@@ -187,6 +196,13 @@ class AppConstants {
   static const String keyAutoPairedChannelLinks = 'nox_auto_paired_links';
   static const String keyAutoPairedEpgOverrides = 'nox_auto_paired_epg';
   static const String keyFavoritedGroups = 'nox_favorited_groups';
+
+  /// Hold OK on a live group > Colour… (owner, 2026-11-25: "a red contour
+  /// and red lettering to my Sports group"): JSON `{group title: colour
+  /// id}` (`GroupColor.presets`), per playlist and per viewer like the
+  /// group star; the viewer's own groups under the scope
+  /// `GroupColor.ownScope`. Transferred and synced.
+  static const String keyGroupColors = 'vesper_group_colors';
 
   /// User-chosen group order (long-press a group → Move), per playlist and
   /// per viewer, one list per content type ('tv'/'vod'/'series'): the key
@@ -686,6 +702,12 @@ class AppConstants {
   /// Settings > Appearance > Interface size: compact / normal / large (per
   /// viewer). Supersedes [keyCompactUi], which still seeds it when unset.
   static const String keyUiSize = 'vesper_ui_size';
+
+  /// Settings > Appearance > Column lines (per viewer; owner, 2026-11-25:
+  /// users want the lines between the TV home's columns in a colour, not
+  /// background colours): '' = the theme's, 'accent' = the palette colour,
+  /// 'white', or a `GroupColor` id.
+  static const String keyColumnLines = 'vesper_column_lines';
 
   /// Media Hub rows folded away with their eye (Continue watching,
   /// Recently watched), per viewer.

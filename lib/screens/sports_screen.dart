@@ -1,6 +1,7 @@
 import '../widgets/glass_menu.dart';
 import '../widgets/baked_backdrop.dart';
 import '../widgets/gold_tag.dart';
+import '../widgets/hidden_channel_tag.dart';
 import '../utils/refined_finish.dart';
 import '../widgets/sports_league_rail.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -80,6 +81,45 @@ import '../widgets/desktop_video_status.dart';
 // Keep UI and playback routing on the same Flutter target. This also lets
 // Android widget tests on a Windows development PC exercise the TV path.
 bool get _desktopSports => usesMediaKitTarget;
+
+/// [games] grouped by league in [leagues]' order (start order kept inside
+/// each league), so a night of NHL + NBA + NFL reads as blocks with a league
+/// divider between them (user request: "each league on its own row" — kept
+/// as one row per Live / Later / Final instead, so what's live stays first).
+///
+/// [soonestFirst] (games to come: Later today, the next days): the league
+/// whose first game starts soonest leads, the league order only breaks ties.
+/// With the league order alone, tonight's NHL games came before the nine
+/// Champions League games of the early afternoon, which sat far to the right
+/// of the row (dajokahn, 2026-11-25, LOG-5MXR4H).
+@visibleForTesting
+List<SportsGame> sportsGamesByLeague(
+    Iterable<SportsGame> games, List<SportsLeague> leagues,
+    {bool soonestFirst = false}) {
+  final order = {for (final (i, l) in leagues.indexed) l.id: i};
+  final first = <String, DateTime>{};
+  if (soonestFirst) {
+    for (final g in games) {
+      final at = first[g.league.id];
+      if (at == null || g.start.isBefore(at)) first[g.league.id] = g.start;
+    }
+  }
+  final list = games.indexed.toList()
+    ..sort((a, b) {
+      final la = a.$2.league.id, lb = b.$2.league.id;
+      if (la != lb) {
+        if (soonestFirst) {
+          final t = first[la]!.compareTo(first[lb]!);
+          if (t != 0) return t;
+        }
+        final c =
+            (order[la] ?? order.length).compareTo(order[lb] ?? order.length);
+        return c != 0 ? c : la.compareTo(lb);
+      }
+      return a.$1.compareTo(b.$1);
+    });
+  return [for (final e in list) e.$2];
+}
 
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see
@@ -663,8 +703,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    final live = playlist.visibleChannels(category: 'tv');
-    await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
+    final live = playlist.sportsChannels();
+    await _matcher.prepare(live, hidden: playlist.sportsHiddenChannels());
     _picks = SportsChannelPicks.load(_storage);
     final games = _games;
     // The coming days on the 30 s poll: every 5 minutes, their channels
@@ -823,21 +863,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         games.first;
   }
 
-  /// [games] grouped by league in the user's league order (start order
-  /// kept inside each league), so a night of NHL + NBA + NFL reads as
-  /// blocks with a league divider between them (user request: "each league
-  /// on its own row" — kept as one row per Live / Later / Final instead, so
-  /// what's live stays first).
-  List<SportsGame> _byLeague(Iterable<SportsGame> games) {
-    final order = {for (final (i, l) in _leagues.indexed) l.id: i};
-    final list = games.indexed.toList()
-      ..sort((a, b) {
-        final c = (order[a.$2.league.id] ?? order.length)
-            .compareTo(order[b.$2.league.id] ?? order.length);
-        return c != 0 ? c : a.$1.compareTo(b.$1);
-      });
-    return [for (final e in list) e.$2];
-  }
+  /// [sportsGamesByLeague] in the user's league order.
+  List<SportsGame> _byLeague(Iterable<SportsGame> games,
+          {bool soonestFirst = false}) =>
+      sportsGamesByLeague(games, _leagues, soonestFirst: soonestFirst);
 
   List<_Section> get _sections {
     final mode = _modeActive;
@@ -846,13 +875,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final remaining = _games.where((game) => !mode || !_follows.involves(game));
     // My Teams' games first (stable: start order kept within each half),
     // then the rest by league.
-    List<SportsGame> followedFirst(Iterable<SportsGame> games) => [
+    List<SportsGame> followedFirst(Iterable<SportsGame> games,
+            {bool soonestFirst = false}) =>
+        [
           ...games.where(_follows.involves),
-          ..._byLeague(games.where((g) => !_follows.involves(g))),
+          ..._byLeague(games.where((g) => !_follows.involves(g)),
+              soonestFirst: soonestFirst),
         ];
     final live =
         followedFirst(remaining.where((g) => g.state == GameState.live));
-    final pre = followedFirst(remaining.where((g) => g.state == GameState.pre));
+    final pre = followedFirst(remaining.where((g) => g.state == GameState.pre),
+        soonestFirst: true);
     final post = _byLeague(remaining.where((g) => g.state == GameState.post));
     final laterLabel = switch (_dayOffset) {
       0 => tr('Later today'),
@@ -868,7 +901,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (_showsUpcoming)
         for (final (offset, games) in _upcoming)
           if (games.isNotEmpty)
-            _Section('day$offset', _dayLabel(offset), followedFirst(games)),
+            _Section('day$offset', _dayLabel(offset),
+                followedFirst(games, soonestFirst: true)),
       if (post.isNotEmpty) _Section('post', tr('Final'), post),
     ];
   }
@@ -1001,11 +1035,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   /// "See all" on a long row: its games as a grid; OK on one comes back to
-  /// it in the row (selected, like moving there with the remote).
+  /// it in the row (selected, like moving there with the remote). Hold OK
+  /// opens the game's menu right there, like in the row; watching from it
+  /// plays full screen, as from the live list (issue #16: hold did what OK
+  /// does, so the channel couldn't be picked from See all).
   Future<void> _openSectionGrid(_Section s) async {
     final picked = await Navigator.of(context).push<SportsGame>(
       MaterialPageRoute(
-        builder: (_) => _SectionGridScreen(
+        builder: (pageContext) => _SectionGridScreen(
           title: s.label,
           games: s.games,
           cardFor: (g, focusNode, onTap) => _GameCard(
@@ -1018,7 +1055,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             previewing: false,
             onFocus: () {},
             onTap: onTap,
-            onHold: onTap,
+            onHold: () => unawaited(_openGame(
+                g, null, (channel, _) => _watchFromPage(pageContext, channel))),
           ),
         ),
       ),
@@ -1043,6 +1081,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
       _ensureRowVisible(s.id);
     });
+  }
+
+  /// Full screen from a page over Sports Trak (See all grid): Back lands on
+  /// that page, where the stream would keep playing unseen.
+  Future<void> _watchFromPage(BuildContext page, Channel channel) async {
+    await _play(channel, source: page);
+    if (!mounted || usesMediaKit) return;
+    final playback = context.read<PlaybackService>();
+    if (playback.currentChannel?.id == channel.id) await playback.stop();
   }
 
   Future<void> _openLiveList() async {
@@ -1559,8 +1606,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       List<SportsGame> games) async {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
-    await _matcher.prepare(playlist.visibleChannels(category: 'tv'),
-        hidden: playlist.hiddenLiveChannels());
+    await _matcher.prepare(playlist.sportsChannels(),
+        hidden: playlist.sportsHiddenChannels());
     _picks = SportsChannelPicks.load(_storage);
     return _matcher.matchDay(games, _picks);
   }
@@ -1743,6 +1790,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           }
           return;
         }
+        // Which game and channel copy a card started; the next LivePlay line
+        // names the stream (dajokahn's card vs guide stutter, 2026-11-25).
+        if (game != null) {
+          debugPrint('SportsPlay: ${game.league.id} '
+              '${game.away.abbreviation}@${game.home.abbreviation} -> '
+              '${channel.name} | group ${channel.group}');
+        }
         await playback.play(channel);
         // Full screen may reuse the opening session without waiting for the
         // separate ready/buffering reserve or issuing another play request.
@@ -1798,7 +1852,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final store = SportsChannelLists(context.read<StorageService>());
     final saved = store.sourcesFor(game, _gameKey(game));
     var matches = <ChannelMatch>[
-      for (final c in playlist.visibleChannels(category: 'tv'))
+      for (final c in playlist.sportsChannels())
         if (saved.contains(c.id))
           ChannelMatch(c, MatchReason.pick,
               _picks.channelIdFor(game) == c.id ? 1000 : 950,
@@ -1914,9 +1968,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Future<void> _addSources(SportsGame game) async {
     final playlist = context.read<PlaylistManager>();
     final store = SportsChannelLists(context.read<StorageService>());
-    final library = SportsChannelLibrary(
-        playlist.visibleChannels(category: 'tv'),
-        store: store);
+    final library =
+        SportsChannelLibrary(playlist.sportsChannels(), store: store);
     final listId = await showGlassMenu<String>(
         context: context,
         builder: (dialog) =>
@@ -2002,8 +2055,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       viewerLeagues: _leagues,
       matcher: _matcher,
       picks: _picks,
-      channels: playlist.visibleChannels(category: 'tv'),
-      hiddenChannels: playlist.hiddenLiveChannels(),
+      channels: playlist.sportsChannels(),
+      hiddenChannels: playlist.sportsHiddenChannels(),
     );
   }
 
@@ -6399,6 +6452,13 @@ class _GameDialog extends StatelessWidget {
                               ? matches[i].reason.label
                               : '${matches[i].reason.label} · ${matches[i].detail}',
                         ].where((s) => s.isNotEmpty).join(' · '),
+                        // Found in a hidden group (Find games in hidden
+                        // groups).
+                        trailing: context
+                                .read<PlaylistManager>()
+                                .isInHiddenGroup(matches[i].channel)
+                            ? const HiddenChannelTag()
+                            : null,
                         onTap: () => Navigator.of(context)
                             .pop(_WatchAction(matches[i].channel)),
                       ),
@@ -6862,6 +6922,10 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        if (playlists.isInHiddenGroup(c)) ...[
+                                          const HiddenChannelTag(),
+                                          const SizedBox(width: 4),
+                                        ],
                                         if (name.isNotEmpty)
                                           ConstrainedBox(
                                             constraints: const BoxConstraints(

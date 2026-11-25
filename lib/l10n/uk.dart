@@ -3837,4 +3837,133 @@ const Map<String, String> kUk = {
       "Завантаження…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Щоб користуватися кнопками TV, YouTube чи Prime, додайте безкоштовний додаток «{name}» — невеликий окремий застосунок. Натисніть OK, щоб завантажити й установити його.",
+  "A recording on the Tuliprox server failed.":
+      "Запис на сервері Tuliprox не вдався.",
+  "A recording on the Tuliprox server is ready.":
+      "Запис на сервері Tuliprox готовий.",
+  "Another device on your account took over this stream.":
+      "Інший пристрій вашого облікового запису перехопив цей потік.",
+  "Channel {id}":
+      "Канал {id}",
+  "Delete from the server":
+      "Видалити з сервера",
+  "Every {day} at {time}":
+      "Щоразу {day} о {time}",
+  "Not working right now · tried again in {n} s":
+      "Зараз не працює · нова спроба через {n} с",
+  "On the Tuliprox server":
+      "На сервері Tuliprox",
+  "On the Tuliprox server ({server})":
+      "На сервері Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Тепер у вас власне з’єднання. Виберіть джерело в Джерелах, щоб перемкнути лише для себе.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Власне з’єднання може мати лише потік .ts. Цей відтворюється як HLS.",
+  "Record on the server":
+      "Записати на сервері",
+  "Record weekly on the server":
+      "Записувати щотижня на сервері",
+  "Recording is switched off on this server.":
+      "Запис на цьому сервері вимкнено.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Хтось інший дивиться цей канал на сервері. Спершу виберіть «Власне з’єднання» в Джерелах, потім джерело.",
+  "Stop it and cancel the ones coming up":
+      "Зупинити й скасувати наступні",
+  "Stop weekly recording":
+      "Зупинити щотижневий запис",
+  "Stopping":
+      "Зупиняється",
+  "The server didn't take the recording.":
+      "Сервер не прийняв запис.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Сервер уже записує стільки програм, скільки вам дозволено в цей час.",
+  "The server is already recording this show.":
+      "Сервер уже записує цю програму.",
+  "The server records {title} every week.":
+      "Сервер записуватиме {title} щотижня.",
+  "The server records {title}.":
+      "Сервер запише {title}.",
+  "The server's disk is full.":
+      "Диск сервера заповнений.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Ця версія Tuliprox записує лише щотижня. Для одноразового запису потрібен новіший Tuliprox.",
+  "This account may not record on the server.":
+      "Цей обліковий запис не може записувати на сервері.",
+  "This show has already ended or has no times in the guide.":
+      "Ця програма вже закінчилась або не має часу в телегіді.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Tuliprox не зміг дати цьому каналу власне з’єднання.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Tuliprox переключив цей канал на інше своє джерело.",
+  "Tuliprox records it, even with this box off.":
+      "Tuliprox запише це, навіть коли цей пристрій вимкнено.",
+  "Unstable":
+      "Нестабільне",
+  "Uses one more provider connection":
+      "Використовує ще одне з’єднання провайдера",
+  "Waiting for a connection":
+      "Очікує з’єднання",
+  "Weekly":
+      "Щотижня",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "У вас уже стільки щотижневих записів на сервері, скільки дозволено.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Лише ви дивитеся це на сервері: виберіть потрібне джерело напряму.",
+  "Your own connection":
+      "Власне з’єднання",
+  "Your recording space on the server is full.":
+      "Ваше місце для записів на сервері заповнене.",
+  "{n} % reliable":
+      "{n} % надійності",
+  "{title} · every {day} at {time}":
+      "{title} · щоразу {day} о {time}",
+  "{used} of {cap} used on the server":
+      "{used} з {cap} зайнято на сервері",
+  "{used} used on the server":
+      "{used} зайнято на сервері",
+  "Delete from the network folder":
+      "Видалити з мережевої папки",
+  "Gone for every device that uses this folder.":
+      "Зникне на всіх пристроях, що користуються цією папкою.",
+  "Delete {title} from the network folder?":
+      "Видалити {title} з мережевої папки?",
+  "Keep it":
+      "Залишити",
+  "Deleted from the network folder.":
+      "Видалено з мережевої папки.",
+  "Couldn't delete it from the network folder.":
+      "Не вдалося видалити з мережевої папки.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Помаранчевий",
+  "Purple": "Фіолетовий",
+  "Pink": "Рожевий",
+  "No colour": "Без кольору",
+  "Colour…": "Колір…",
+  "Group colour": "Колір групи",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Шукати матчі в прихованих групах",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Канали матчів можуть братися й із прихованих груп наживо: група, прихована для порядку в ТБ, і далі дає свої матчі. Канали, приховані поодинці, залишаються поза пошуком. Ніколи в дитячому профілі. Збережено для цього глядача.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Білий",
+  "Column lines":
+      "Лінії колонок",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Колір ліній між колонками та в програмі передач. Лише для цього профілю.",
+  "Back {seconds} s":
+      "Назад {seconds} с",
+  "Ahead {seconds} s":
+      "Вперед {seconds} с",
+  "◀ Rewind":
+      "◀ Назад",
+  "Skip buttons":
+      "Кнопки перемотки",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "На скільки перескакує одне натискання кнопок назад / вперед і Перемотки назад / вперед на пульті у фільмах, серіях, catch-up і призупиненому прямому ефірі. Якщо утримувати, перескакує все далі.",
+  "Pause & rewind live TV":
+      "Пауза й перемотка прямого ефіру",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Канали прямого ефіру зберігають останні хвилини на цьому пристрої, поки ви дивитеся, через те саме з'єднання: Пауза зупиняє зображення, а не потік, і Відтворення продовжує з місця паузи. Кнопки назад / вперед і Перемотка назад рухаються в ньому (повтор), НАЖИВО повертає до зараз. Займає пам'ять пристрою під час перегляду (близько 2 ГБ на 30 хвилин HD-каналу, видаляється при зміні каналу); якщо вільного місця мало, зберігає близько 30 секунд в оперативній пам'яті. Канали у форматі HLS (.m3u8) цього не мають. Діє з наступного каналу.",
 };

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import '../models/channel.dart';
 import 'archive_ready_watch.dart';
 import 'storage_service.dart';
+import 'tuliprox.dart';
 
 /// Windows uses media_kit rather than PlaybackService's controller. Share the
 /// existing progress keys so detail pages and Continue Watching see its saves.
@@ -53,6 +56,8 @@ class DesktopVodProgress {
           position.inMilliseconds.clamp(0, duration.inMilliseconds)),
       storage.setLastDuration(channel.id, duration.inMilliseconds),
     ];
+    // A Tuliprox movie / episode: its server keeps it too (every 30 s).
+    unawaited(Tuliprox.instance.noteVodProgress(channel, position, duration));
     await Future.wait(writes);
   }
 }

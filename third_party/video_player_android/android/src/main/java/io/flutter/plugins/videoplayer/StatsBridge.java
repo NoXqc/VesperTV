@@ -43,13 +43,16 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     boolean liveBuffer = "setLiveBuffer".equals(call.method);
     boolean thin = "setFrameThinning".equals(call.method);
     boolean readAhead = "setReadAhead".equals(call.method);
+    boolean timeshift = "setTimeshift".equals(call.method)
+        || "timeshiftJump".equals(call.method)
+        || "timeshiftState".equals(call.method);
     if ("setLiveBufferDefault".equals(call.method)) {
       Number ms = call.argument("ms");
       OnDemandLoadControl.setDefaultLiveReserveMs(ms == null ? 0 : ms.longValue());
       result.success(null);
       return;
     }
-    if (!finite && !onDemand && !liveBuffer && !thin && !readAhead
+    if (!finite && !onDemand && !liveBuffer && !thin && !readAhead && !timeshift
         && !"getStats".equals(call.method)) {
       result.notImplemented();
       return;
@@ -86,6 +89,24 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       result.success(null);
       return;
     }
+    if (timeshift) {
+      // Live pause & rewind (Timeshift).
+      if ("setTimeshift".equals(call.method)) {
+        Number minutes = call.argument("minutes");
+        String why = player.setTimeshift(Boolean.TRUE.equals(call.argument("on")),
+            minutes == null ? 0 : minutes.intValue());
+        Map<String, Object> r = new HashMap<>();
+        r.put("on", why == null);
+        if (why != null) r.put("reason", why);
+        result.success(r);
+      } else if ("timeshiftJump".equals(call.method)) {
+        Number ms = call.argument("deltaMs");
+        result.success(player.timeshiftJump(ms == null ? 0 : ms.longValue()));
+      } else {
+        result.success(player.timeshiftState());
+      }
+      return;
+    }
     if (readAhead) {
       boolean on = Boolean.TRUE.equals(call.argument("on"));
       Number mbps = call.argument("fileMbps");
@@ -106,6 +127,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       long fileSize = stats.fileSizeBytes.get();
       if (fileSize > 0) m.put("fileSizeBytes", fileSize);
       m.put("reconnects", stats.reconnects.get());
+      m.put("tsSplices", stats.tsSplices.get());
+      m.put("tsJumps", stats.tsJumps.get());
       String last = stats.lastReconnect;
       if (last != null) m.put("lastReconnect", last);
       String fallback = stats.fallback;

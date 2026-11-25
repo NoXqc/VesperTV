@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
+    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -115,7 +115,7 @@
     "id": "2086cf69a409bc57",
     "category": "Live TV",
     "title": "Your group's menu",
-    "answer": "Move Up / Down, Move to Top, Rename…, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
+    "answer": "Move Up / Down, Move to Top, Rename…, Colour…, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
     "controls": "Hold OK on your own group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -157,6 +157,14 @@
     "title": "Resume the last channel",
     "answer": "What the \"Hold > to resume\" pill means. Works even with the pill turned off in Settings.",
     "controls": "Hold →",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "51cf9906f6abedb4",
+    "category": "Live TV",
+    "title": "Colour the lines between the columns",
+    "answer": "The thin lines between the tabs, groups and channels columns, across the tabs column, under the preview and in the guide (its hours line and the programme outlines) can take a colour: the theme colour, white, or red, orange, yellow, green, aqua, blue, purple or pink. Default keeps the usual lines. Just for this profile.",
+    "controls": "Settings → Appearance → Look → Column lines",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
@@ -203,15 +211,23 @@
     "id": "8cbb5cdcb9ad93b1",
     "category": "Full screen",
     "title": "Skip back and forward",
-    "answer": "In full screen, on a movie, an episode or a catch-up replay, each press skips 10 seconds like the -10 / +10 buttons; keep pressing or hold to skip further (up to 5 minutes a step). The video jumps once you stop. On a live channel with catch-up, Rewind goes back in minutes from now.",
+    "answer": "In full screen, on a movie, an episode or a catch-up replay, each press skips 10 seconds like the -10 / +10 buttons; keep pressing or hold to skip further (up to 5 minutes a step). The video jumps once you stop. Settings > Playback > Player > Skip buttons changes the 10 seconds to 5, 15, 30 or 60 (the buttons show the new number). On a live channel with Pause & rewind live TV on, Rewind and Fast-forward move in what the box kept; on a live channel with catch-up and nothing kept, Rewind goes back in minutes from now.",
     "controls": "Android · remote ⏪ Rewind / ⏩ Fast-forward",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "140dca14f3547071",
+    "category": "Full screen",
+    "title": "Pause & rewind live TV (replay)",
+    "answer": "Live channels keep their last 30 minutes on your box while you watch, using the same connection (no second connection on your provider). Pause stops the picture, not the stream: Play carries on from the paused frame, even after a long pause. The back / ahead buttons beside Play/Pause and the remote's Rewind / Fast-forward jump in it (a replay of the goal you just missed); a gold tag shows how far behind live you are (−1:23) and the gold LIVE button jumps back to now. Up from the buttons reaches the time bar: Left / Right move in it too, and further back than the box kept on a catch-up channel goes on through catch-up. Settings > Playback > Live TV > Pause & rewind live TV: Off, 10, 30 or 60 minutes. It uses storage while you watch (about 2 GB for 30 minutes of an HD channel), deleted when you change channel; with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) and Multiview screens don't have it; on Windows, Mac and Apple TV, not yet.",
+    "controls": "Android · live channel · ⏯ Pause, ⏪ / ⏩, the back / ahead buttons LIVE · ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "bcaeb49b92f5b885",
     "category": "Full screen",
     "title": "Pause live TV and resume",
-    "answer": "You can pause live TV on a channel that supports catch-up, then press Play to resume from where you paused. Short pauses use the existing buffer; after more than 90 seconds VesperTV uses the provider's catch-up feed (timeshift). Availability still depends on the provider's replay window. Use the gold LIVE button in full screen when you want to return to live.",
+    "answer": "You can pause live TV on a channel that supports catch-up, then press Play to resume from where you paused. With Pause & rewind live TV on (the default), the box keeps the stream and Play carries on from there. Otherwise short pauses use the existing buffer, and after more than 90 seconds VesperTV uses the provider's catch-up feed (timeshift). Availability still depends on the provider's replay window. Use the gold LIVE button in full screen when you want to return to live.",
     "controls": "Android catch-up channel · remote ⏯ or player Play/Pause",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -301,6 +317,14 @@
     "title": "More options",
     "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Picture and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
     "controls": "OK then ▼ TV",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "2acc550702f96a60",
+    "category": "Full screen",
+    "title": "Sources on a Tuliprox channel",
+    "answer": "When your playlist comes from a Tuliprox server with the Player API on, Sources lists the server's own sources of the channel with their picture quality and how reliable they have been today; \"Unstable\" marks a shaky one, and a failing one says when the server tries it again. Pick one to switch just your stream. When someone else watches the same channel on the server, a switch only for you needs your own connection first: pick \"Your own connection\" (it uses one more provider connection), then the source. If the server says your account or its provider connections are full, the reason shows on screen and Sources lists channels already playing that you can join. If another device on your account takes the stream, or the server moves the channel to another source, a message says so (computers too).",
+    "controls": "Options row → Sources LIVE · TULIPROX",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
@@ -712,6 +736,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "1ec7c17a66f80a32",
+    "category": "Sports Trak",
+    "title": "Find games in groups you hid",
+    "answer": "Off by default. Turn it on and Sports Trak also looks for game channels in the live groups you hid, so a group hidden to keep the TV tidy (event channels, another country) still carries its games: in Sports Trak, Multiview's Live now, the player's This game and the channel pickers. The groups stay hidden on the TV, and their channels carry a small Hidden tag in those lists. Channels you hid one by one stay out, and a Kids profile never searches hidden groups. Saved for this viewer.",
+    "controls": "Settings → Sports Trak → Find games in hidden groups",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "df3c97fd4b85aa6d",
     "category": "Sports Trak",
     "title": "Prefer matching channels from one playlist",
@@ -856,10 +888,18 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "88f138e48cf6fb6e",
+    "category": "Recordings",
+    "title": "Record on the Tuliprox server",
+    "answer": "When your playlist's Tuliprox server records for your account, a channel's hold menu (Timeline guide or channel list) offers Record on the server for the show held or on now, and Record weekly on the server for that time every week; the player's Channel schedule has Record on the server too. The server records even with this box off. Recordings shows them under On the Tuliprox server: OK on a finished one plays it, hold OK to stop, cancel or delete it, and OK on a weekly one stops it (the recordings it made stay unless you also cancel the ones coming up). Finished recordings also appear in the playlist's Movies under Recordings, on every device. Tuliprox 3.3.207 records once only when it can tell VesperTV your playlist's name on the server; otherwise use weekly.",
+    "controls": "Hold OK on a channel · Record on the server TULIPROX",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
     "id": "dc8a64337840009d",
     "category": "Recordings",
     "title": "Speed, start time, where files go",
-    "answer": "Speed limit: Like watching (about the video's own bitrate, the safest with providers), 10 / 25 / 50 Mbit/s or No limit; downloads always slow down while you watch. Save to this device, a USB drive / SD card, or a network folder: a shared folder on a computer or NAS (\\\\computer\\folder, user name and password; From phone lets you type them on your phone, same Wi-Fi). Recordings can go there too.",
+    "answer": "Speed limit: Like watching (about the video's own bitrate, the safest with providers), 10 / 25 / 50 Mbit/s or No limit; downloads always slow down while you watch. Save to this device, a USB drive / SD card, or a network folder: a shared folder on a computer or NAS (\\\\computer\\folder, user name and password; From phone lets you type them on your phone, same Wi-Fi). Recordings can go there too. In Recordings, OK on a file in the network folder: Copy to this device, Play from the network folder, or Delete from the network folder (gone for every device that uses it).",
     "controls": "Settings → Recordings",
     "url": "https://vespertv.app/remote.html#Recordings"
   },

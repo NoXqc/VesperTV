@@ -259,9 +259,12 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         && io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
       retainCapturedPicture(interruptedPicture);
     }
+    // The same User-Agent the first play of the channel used (it was none
+    // here: Android's "Dalvik/..." after a native zap, "ExoPlayer" before).
+    String userAgent = call.argument("userAgent");
     VideoAsset asset = VideoAsset.fromRemoteUrl(url,
         Boolean.TRUE.equals(call.argument("hls")) ? VideoAsset.StreamingFormat.HTTP_LIVE
-            : VideoAsset.StreamingFormat.UNKNOWN, new HashMap<>(), null);
+            : VideoAsset.StreamingFormat.UNKNOWN, new HashMap<>(), userAgent);
     PendingSwap swap = new PendingSwap(player.getExoPlayer(), result);
     pendingSwap = swap;
     swap.exo.addListener(swap);

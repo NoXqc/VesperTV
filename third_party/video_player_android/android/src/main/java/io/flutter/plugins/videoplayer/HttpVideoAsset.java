@@ -114,16 +114,25 @@ final class HttpVideoAsset extends VideoAsset {
         stats.readAhead = new ReadAhead(initialFactory, stats.fileUri());
       }
       final ReadAhead readAhead = stats.readAhead;
-      http = readAhead == null
+      final DataSource.Factory network = readAhead == null
           ? () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats)
           : () -> new ReadAheadDataSource(
               () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats),
               readAhead);
+      // Live pause & rewind: off until Dart arms it for a live channel (then the player reads a
+      // rolling copy that this stream's one connection fills). Same network chain underneath.
+      if (stats.timeshift == null) {
+        stats.timeshift = new Timeshift(context.getCacheDir(), network, stats);
+      }
+      final Timeshift timeshift = stats.timeshift;
+      http = () -> new TimeshiftDataSource(network, timeshift);
     }
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, http);
     DefaultMediaSourceFactory factory =
         new DefaultMediaSourceFactory(
-            dataSourceFactory, MatroskaAtmos.wrap(liveCaptionExtractors()));
+            dataSourceFactory,
+            // Live MPEG-TS through a splicing server: continuous times, a new program's PIDs.
+            TsSplice.wrap(MatroskaAtmos.wrap(liveCaptionExtractors()), stats));
     if (drm != null) factory.setDrmSessionManagerProvider(drm.sessionManagers(initialFactory));
     return factory;
   }

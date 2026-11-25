@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import io.flutter.plugins.videoplayer.AudioPassthrough;
+import io.flutter.plugins.videoplayer.DtsSoftwareDecoders;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
 import io.flutter.plugins.videoplayer.OnDemandLoadControl;
 import io.flutter.plugins.videoplayer.VideoAsset;
@@ -98,8 +99,10 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               io.flutter.plugins.videoplayer.BufferBudget.onDemandBytes(context),
               /* minBufferUs= */ 90_000_000L); // minBufferMs above
           builder.setLoadControl(policy[0]);
+          // Stock selection, except DTS decoded by FFmpeg keeps the box decoder's rank
+          // (DtsSoftwareDecoders).
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
-              new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
+              new DtsSoftwareDecoders.TrackSelector(context);
           // Root cause of the multiview/mini-player audio bleed-through
           // (confirmed via two A/B diagnostic builds): DefaultAudioSink
           // auto-detects the device's real HDMI passthrough capability
@@ -181,6 +184,9 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           // purely as a fallback for formats hardware truly can't do.
           renderersFactory.setExtensionRendererMode(
               DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+          // DTS always to that FFmpeg decoder: Amlogic boxes list DTS decoders
+          // they have no licence for, which play silent (onn 4K Pro).
+          renderersFactory.setMediaCodecSelector(DtsSoftwareDecoders.INSTANCE);
           // A decoder that fails to start (a Formuler Z10 Max's first HEVC
           // decoder on a 4K HDR channel that TiviMate plays fine on the same
           // box, 2026-10-19) makes ExoPlayer try the next one the device

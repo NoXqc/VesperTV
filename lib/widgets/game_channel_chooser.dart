@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../services/multiview_sports.dart';
+import '../services/playlist_manager.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/storage_service.dart';
+import 'hidden_channel_tag.dart';
 import 'tv_menu_tile.dart';
 
 /// The channel for a live game in the Multiview picker: the only match at
@@ -61,7 +63,10 @@ Future<Channel?> chooseGameChannel(
                       subtitle: m.detail == null
                           ? m.reason.label
                           : '${m.reason.label} · ${m.detail}',
-                      trailing: const SizedBox.shrink(),
+                      trailing:
+                          ctx.read<PlaylistManager>().isInHiddenGroup(m.channel)
+                              ? const HiddenChannelTag()
+                              : const SizedBox.shrink(),
                       onTap: () => Navigator.of(ctx).pop(m.channel),
                     );
                   },

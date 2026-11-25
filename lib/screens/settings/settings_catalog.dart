@@ -22,9 +22,12 @@ import '../../services/remote_buttons.dart';
 import '../../services/storage_service.dart';
 import '../../services/subtitle_tracks.dart';
 import '../../services/vod_buffering.dart';
+import '../../services/live_timeshift.dart';
+import '../../utils/skip_step.dart';
 import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
+import '../../utils/group_colors.dart';
 import '../../widgets/audio_delay_adjuster.dart';
 import '../../widgets/goal_overlay_probe_settings.dart';
 import '../../widgets/goals_alert_overlay.dart';
@@ -399,6 +402,23 @@ class SettingsCatalog {
               ],
               selected: prefs.uiSize,
               onPick: prefs.setUiSize),
+          // Owner, 2026-11-25: users want the lines between the columns in
+          // a colour (not background colours).
+          SettingsChoice(
+              id: 'column_lines',
+              icon: Icons.vertical_split_outlined,
+              title: tr('Column lines'),
+              help: tr(
+                  'The colour of the lines between the columns and in the guide. Just for this profile.'),
+              options: [
+                SettingsOption('', tr('Default')),
+                SettingsOption('accent', tr('Theme color')),
+                SettingsOption('white', tr('White')),
+                for (final c in GroupColor.presets)
+                  SettingsOption(c.id, tr(c.name)),
+              ],
+              selected: prefs.columnLines,
+              onPick: prefs.setColumnLines),
           SettingsChoice(
               id: 'layout',
               icon: Icons.devices_outlined,
@@ -847,6 +867,23 @@ class SettingsCatalog {
               onPick: (v) => prefs.setPlayerOptionsTransparency(int.parse(v)),
               onStep: (dir) => prefs.setPlayerOptionsTransparency(
                   (prefs.playerOptionsTransparency + 5 * dir).clamp(0, 100))),
+          SettingsChoice(
+              id: 'skip_seconds',
+              icon: Icons.replay_10,
+              title: tr('Skip buttons'),
+              help: tr(
+                  'How far one press of the back / ahead buttons and the remote\'s Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.'),
+              options: [
+                for (final sec in SkipStep.choices)
+                  SettingsOption(
+                      '$sec', tr('{seconds} s', {'seconds': '$sec'})),
+              ],
+              selected: '${_storage.getSkipSeconds()}',
+              onPick: (v) => _save(() async {
+                    final sec = int.parse(v);
+                    await _storage.setSkipSeconds(sec);
+                    SkipStep.seconds = sec;
+                  })),
         ]),
         // Windows: the same settings through mpv (DesktopAudio).
         if (player)
@@ -981,6 +1018,25 @@ class SettingsCatalog {
                       await _storage.setLiveBufferMs(ms);
                       await VodBuffering.setLiveBufferDefault(ms);
                     })),
+            // The Android player only (vendored ExoPlayer's Timeshift).
+            if (Platform.isAndroid)
+              SettingsChoice(
+                  id: 'live_rewind',
+                  icon: Icons.history,
+                  title: tr('Pause & rewind live TV'),
+                  help: tr(
+                      'Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don\'t have it. Applies from the next channel.'),
+                  options: [
+                    for (final m in LiveTimeshift.choices)
+                      SettingsOption('$m',
+                          m == 0 ? tr('Off') : tr('{m} min', {'m': '$m'})),
+                  ],
+                  selected: '${_storage.getLiveRewindMinutes()}',
+                  onPick: (v) => _save(() async {
+                        final m = int.parse(v);
+                        await _storage.setLiveRewindMinutes(m);
+                        LiveTimeshift.minutes = m;
+                      })),
             SettingsToggle(
                 id: 'panel_keep_open',
                 icon: Icons.view_sidebar_outlined,
@@ -1209,6 +1265,15 @@ class SettingsCatalog {
                 value: _storage.getSportsPreferQuality(),
                 onChanged: (v) =>
                     _saveViewer(() => _storage.setSportsPreferQuality(v))),
+            SettingsToggle(
+                id: 'sports_hidden_groups',
+                icon: Icons.visibility_off_outlined,
+                title: tr('Find games in hidden groups'),
+                help: tr(
+                    'Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.'),
+                value: _storage.getSportsSearchHiddenGroups(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsSearchHiddenGroups(v))),
             SettingsToggle(
                 id: 'sports_redzone',
                 icon: Icons.sports_football,

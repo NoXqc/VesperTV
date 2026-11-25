@@ -596,6 +596,20 @@ class _PlayerScreenState extends State<PlayerScreen>
     TopNotice.show(text, duration: const Duration(seconds: 8));
   }
 
+  /// Something the Tuliprox server says about this channel (its event
+  /// stream: another device took it, the server moved it to another
+  /// source) or about a recording ([url] empty).
+  void _onTuliproxEvent() {
+    final n = Tuliprox.instance.eventNotice.value;
+    final playing = _playback.currentChannel?.url;
+    if (n == null || !mounted) return;
+    if (n.url.isNotEmpty &&
+        (playing == null || !Tuliprox.sameStream(playing, n.url))) {
+      return;
+    }
+    TopNotice.show(n.text, duration: const Duration(seconds: 6));
+  }
+
   void _onWatchOfferChanged() {
     if (!mounted) return;
     _armWatchTimer();
@@ -848,10 +862,11 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   /// A Tuliprox source switch reaches the screen after the buffer: the
-  /// player watches for it (and unsticks it), then says it changed.
-  void _watchServerSwitch(String name) {
+  /// player watches for it (and unsticks it), then says it changed. No
+  /// [name]: a refused switch the server undid (the same jump, no message).
+  void _watchServerSwitch(String? name) {
     unawaited(_playback.watchSourceSwitch().then((landed) {
-      if (!landed || !mounted) return;
+      if (!landed || !mounted || name == null) return;
       TopNotice.show(tr('Source changed to {stream}.', {'stream': name}));
     }));
   }
@@ -1022,6 +1037,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _skip.addListener(_onSkipChanged);
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
     Tuliprox.instance.fallbackNotice.addListener(_onTuliproxFallback);
+    Tuliprox.instance.eventNotice.addListener(_onTuliproxEvent);
     _armWatchTimer();
     _switchButtonFocus.addListener(_onBarFocusChange);
     _scheduleChipFocus.addListener(_onBarFocusChange);
@@ -1435,6 +1451,16 @@ class _PlayerScreenState extends State<PlayerScreen>
           : next > duration
               ? duration
               : next;
+    } else if (_playback.catchup == null &&
+        _playback.timeshift.value?.on == true) {
+      // Live pause & rewind: steps inside the copy (a tap = the Skip
+      // buttons setting, held = bigger), one jump 700 ms after the last
+      // press; past the copy, catch-up on a catch-up channel.
+      final step = _scrubSteps.next();
+      if (step == null) return;
+      _playback.timeshiftNudge(step * sign);
+      _resetHideTimer();
+      return;
     } else {
       final live = _playback.liveChannel ?? channel;
       if (sign > 0 || !live.isLive || !live.hasCatchup) return;
@@ -1850,6 +1876,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _skipFocus.dispose();
     WatchGameOffer.current.removeListener(_onWatchOfferChanged);
     Tuliprox.instance.fallbackNotice.removeListener(_onTuliproxFallback);
+    Tuliprox.instance.eventNotice.removeListener(_onTuliproxEvent);
     _watchTimer?.cancel();
     _watchFocus.dispose();
     _fileInfoRequests.dispose();
@@ -2546,6 +2573,27 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 ),
                               ),
                             ),
+
+                          // Live pause & rewind: where gathered presses land.
+                          ValueListenableBuilder<Duration?>(
+                            valueListenable: playback.timeshiftTarget,
+                            // Always positioned: a bare non-positioned
+                            // child would size the whole Stack to itself.
+                            builder: (context, target, _) => Positioned.fill(
+                              child: IgnorePointer(
+                                child: target == null
+                                    ? const SizedBox.shrink()
+                                    : Center(
+                                        child: TimeshiftCue(
+                                          target: target,
+                                          from: playback
+                                                  .timeshift.value?.behind ??
+                                              Duration.zero,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
 
                           // Fast-forward / Rewind target until it lands.
                           if (_skipTarget case final target?

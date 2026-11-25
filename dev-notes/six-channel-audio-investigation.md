@@ -340,6 +340,48 @@ confirmed that the receiver still switched to six channels on +932 with passthro
 enabled. The decoder workaround is not needed for that result. With passthrough off,
 the stock Dolby decoder may again produce stereo PCM on this Fire Stick.
 
+## DTS on Amlogic boxes without the licence (2026-11-25)
+
+Discord (dajokahn, onn 4K Pro, Android 14, 1.0.74-dev.987, LOG-33PC25): DTS movies played
+without sound, Surround passthrough off. Both were DTS-HD (`audio/vnd.dts.hd`): A Madea
+Christmas (6ch, 11 Mbit/s, no read-ahead) and Gladiator (DTS:X 7.1 core, 43 Mbit/s, read-ahead
+on); Four Christmases (AC3 5.1) between them played. logcat showed the platform MediaCodec
+audio path ("Creating an asynchronous MediaCodec adapter for track type audio"), never FFmpeg,
+and no audio error; VodBuffer called the freeze "decoder or audio".
+
+Why: with `EXTENSION_RENDERER_MODE_ON` the box's decoders come first and FFmpeg only takes a
+format the box doesn't list. Amlogic firmware lists `c2.amlogic.audio.decoder.dts` / `dtshd` /
+`dtse` / `dtsuhd` whether or not the box ships the DTS licence library behind them (the
+Homatics has `libHwAudio_dtsx.so`); without it the decoder opens and gives silence. Same shape
+as the old silent AC3/E-AC3 on unlicensed boxes (§9 of CLAUDE.md), except Amlogic lists DTS.
+
+Fix: `DtsSoftwareDecoders` (vendored player), a `MediaCodecSelector` on both players'
+`DefaultRenderersFactory`: for `audio/vnd.dts*` it returns no platform decoder when
+`FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mime)`, so FFmpeg's `dca` decodes
+DTS and DTS-HD on every box (one `VesperAudio` log line per type). FFmpeg 1.9.0+1 maps only
+`audio/vnd.dts` and `audio/vnd.dts.hd`: DTS Express (`;profile=lbr`) and DTS:X profile 2
+(`audio/vnd.dts.uhd`) keep the box's decoder, as does everything if the library didn't load.
+Other formats are delegated untouched (the Formuler `realtekFirst` video wrapper still gets them).
+Passthrough never asks the selector (`MediaCodecAudioRenderer` uses the decrypt-only raw decoder
+when the sink takes the encoded format), so DTS bitstream to a receiver is unchanged. A licensed
+box now decodes DTS in software too: same PCM, a little CPU.
+
+Track choice (found on the Homatics +1005 box test, Gladiator II, 9 audio tracks): media3's
+`AudioTrackInfo.compareTo` (1.9.2, read with javap) ranks language, role, default flag, constraints,
+then **usesPrimaryDecoder, usesHardwareAcceleration** and only then object-based audio and
+**channel count**. Amlogic lists its audio decoders without `software-codec`, so Android calls them
+hardware-accelerated; FFmpeg is software. Moved to FFmpeg, a DTS 7.1 track lost to an AC3 track
+(even a 2.0 commentary) that nothing earlier told apart; on the box decoder both were hardware and
+channels won. (Same rule already makes an AC3 5.1 win over a TrueHD Atmos 7.1 decoded by FFmpeg:
+Gladiator II on the Homatics; unchanged here.) So the selector still asks the box for its DTS
+decoder and remembers when it was hardware, and `DtsSoftwareDecoders.TrackSelector` (both players'
+DefaultTrackSelector) marks the FFmpeg renderer's DTS tracks hardware in `selectAudioTrack` only
+then: the pick is what it was with the box decoder. A box without a hardware DTS decoder keeps
+stock ranking (DTS was FFmpeg there already); with passthrough the DTS group sits on the box's
+renderer and is untouched. Tests need `setConstrainAudioChannelCountToDeviceCapabilities(false)`:
+Robolectric isn't a TV, so media3 caps it to stereo. `DtsSoftwareDecodersTest` (8: decoders 4,
+picks 4 incl. stock media3 picking the AC3 2.0).
+
 ## Sources
 
 - Issue: <https://github.com/NoXqc/VesperTV/issues/9>

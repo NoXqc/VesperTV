@@ -121,6 +121,11 @@ class PlaylistSession {
   Set<String> hiddenGroups = {};
   Set<String> favoritedGroups = {};
 
+  /// Live group title -> colour id (hold OK > Colour…, `GroupColor`), the
+  /// active viewer's. A new map on every change: the TV tab's signature
+  /// hashes it.
+  Map<String, String> groupColors = {};
+
   /// User-chosen group order per content type ('tv'/'vod'/'series') — see
   /// [moveGroup]. Missing/empty = provider order.
   Map<String, List<String>> groupOrder = {};
@@ -359,6 +364,11 @@ class PlaylistSession {
       favoritedGroups.add(to);
       await storage.setFavoritedGroups(profile.id, favoritedGroups);
     }
+    if (groupColors[from] case final color?) {
+      groupColors = {...groupColors}..remove(from);
+      groupColors.putIfAbsent(to, () => color);
+      await storage.setGroupColors(profile.id, groupColors);
+    }
     if (channelOrder.remove(from) case final ids?) {
       channelOrder.putIfAbsent(to, () => ids);
       channelOrderVersion++;
@@ -527,6 +537,7 @@ class PlaylistSession {
   /// possibly be in a stored allowlist yet, defaults to hidden for them).
   void _loadViewerScopedState() {
     favoritedGroups = storage.getFavoritedGroups(profile.id);
+    groupColors = storage.getGroupColors(profile.id);
     groupOrder = {
       for (final type in const ['tv', 'vod', 'series'])
         type: storage.getGroupOrder(profile.id, type),
@@ -2280,11 +2291,24 @@ class PlaylistSession {
 
   /// The live channels [visibleChannels] leaves out (hidden groups and
   /// channels): Sports Trak says when a game is only on one of them.
-  List<Channel> hiddenLiveChannels() {
+  /// [groups] false: only the channels hidden one by one (Sports Trak
+  /// searching hidden groups).
+  List<Channel> hiddenLiveChannels({bool groups = true}) {
     final live = isXtream ? liveChannels : m3uEntriesOf('tv');
     return live
         .where((c) =>
-            hiddenGroups.contains(liveGroupOf(c)) || isLiveHidden(c.rawId))
+            (groups && hiddenGroups.contains(liveGroupOf(c))) ||
+            isLiveHidden(c.rawId))
+        .toList();
+  }
+
+  /// The live channels of the hidden groups, minus channels hidden one by
+  /// one and merge duplicates: Sports Trak > Find games in hidden groups.
+  List<Channel> liveChannelsOfHiddenGroups() {
+    if (hiddenGroups.isEmpty) return const [];
+    return allLiveChannels
+        .where((c) =>
+            hiddenGroups.contains(liveGroupOf(c)) && !isLiveHidden(c.rawId))
         .toList();
   }
 
@@ -2542,6 +2566,19 @@ class PlaylistSession {
         .where((e) => !hiddenGroups.contains(e.key))
         .expand((e) => e.value)
         .toList();
+  }
+
+  /// Hold OK > Colour…: [colorId] null = no colour.
+  Future<void> setGroupColor(String title, String? colorId) async {
+    final next = {...groupColors};
+    if (colorId == null) {
+      next.remove(title);
+    } else {
+      next[title] = colorId;
+    }
+    groupColors = next;
+    await storage.setGroupColors(profile.id, next);
+    onNotify();
   }
 
   Future<void> setGroupFavorited(String title, bool favorited) async {

@@ -4378,4 +4378,133 @@ const Map<String, String> kFr = {
       "Téléchargement…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Pour utiliser des boutons comme TV, YouTube ou Prime, ajoutez le module gratuit « {name} », une petite application à part. Appuyez sur OK pour le télécharger et l’installer.",
+  "A recording on the Tuliprox server failed.":
+      "Un enregistrement sur le serveur Tuliprox a échoué.",
+  "A recording on the Tuliprox server is ready.":
+      "Un enregistrement sur le serveur Tuliprox est prêt.",
+  "Another device on your account took over this stream.":
+      "Un autre appareil de votre compte a repris ce flux.",
+  "Channel {id}":
+      "Chaîne {id}",
+  "Delete from the server":
+      "Supprimer du serveur",
+  "Every {day} at {time}":
+      "Chaque {day} à {time}",
+  "Not working right now · tried again in {n} s":
+      "Ne fonctionne pas pour l’instant · nouvel essai dans {n} s",
+  "On the Tuliprox server":
+      "Sur le serveur Tuliprox",
+  "On the Tuliprox server ({server})":
+      "Sur le serveur Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Vous êtes maintenant sur votre propre connexion. Choisissez une source dans Sources pour changer rien que pour vous.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Seul un flux .ts peut avoir sa propre connexion. Celui-ci est lu en HLS.",
+  "Record on the server":
+      "Enregistrer sur le serveur",
+  "Record weekly on the server":
+      "Enregistrer chaque semaine sur le serveur",
+  "Recording is switched off on this server.":
+      "L’enregistrement est désactivé sur ce serveur.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Quelqu’un d’autre regarde cette chaîne sur le serveur. Choisissez d’abord « Votre propre connexion » dans Sources, puis la source.",
+  "Stop it and cancel the ones coming up":
+      "L’arrêter et annuler ceux à venir",
+  "Stop weekly recording":
+      "Arrêter l’enregistrement hebdomadaire",
+  "Stopping":
+      "Arrêt en cours",
+  "The server didn't take the recording.":
+      "Le serveur n’a pas accepté l’enregistrement.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "Le serveur enregistre déjà autant d’émissions que permis à ce moment-là.",
+  "The server is already recording this show.":
+      "Le serveur enregistre déjà cette émission.",
+  "The server records {title} every week.":
+      "Le serveur enregistrera {title} chaque semaine.",
+  "The server records {title}.":
+      "Le serveur enregistrera {title}.",
+  "The server's disk is full.":
+      "Le disque du serveur est plein.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Cette version de Tuliprox n’enregistre que chaque semaine. Un enregistrement ponctuel demande un Tuliprox plus récent.",
+  "This account may not record on the server.":
+      "Ce compte ne peut pas enregistrer sur le serveur.",
+  "This show has already ended or has no times in the guide.":
+      "Cette émission est déjà terminée ou n’a pas d’horaire dans le guide.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "Tuliprox n’a pas pu donner sa propre connexion à cette chaîne.",
+  "Tuliprox moved this channel to another of its sources.":
+      "Tuliprox a passé cette chaîne sur une autre de ses sources.",
+  "Tuliprox records it, even with this box off.":
+      "Tuliprox l’enregistre, même avec ce boîtier éteint.",
+  "Unstable":
+      "Instable",
+  "Uses one more provider connection":
+      "Utilise une connexion fournisseur de plus",
+  "Waiting for a connection":
+      "En attente d’une connexion",
+  "Weekly":
+      "Chaque semaine",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Vous avez déjà autant d’enregistrements hebdomadaires sur le serveur que permis.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "Vous êtes seul à la regarder sur le serveur : choisissez directement la source voulue.",
+  "Your own connection":
+      "Votre propre connexion",
+  "Your recording space on the server is full.":
+      "Votre espace d’enregistrement sur le serveur est plein.",
+  "{n} % reliable":
+      "fiable à {n} %",
+  "{title} · every {day} at {time}":
+      "{title} · chaque {day} à {time}",
+  "{used} of {cap} used on the server":
+      "{used} sur {cap} utilisés sur le serveur",
+  "{used} used on the server":
+      "{used} utilisés sur le serveur",
+  "Delete from the network folder":
+      "Supprimer du dossier réseau",
+  "Gone for every device that uses this folder.":
+      "Supprimé pour tous les appareils qui utilisent ce dossier.",
+  "Delete {title} from the network folder?":
+      "Supprimer {title} du dossier réseau ?",
+  "Keep it":
+      "Le garder",
+  "Deleted from the network folder.":
+      "Supprimé du dossier réseau.",
+  "Couldn't delete it from the network folder.":
+      "Impossible de le supprimer du dossier réseau.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Orange",
+  "Purple": "Violet",
+  "Pink": "Rose",
+  "No colour": "Aucune couleur",
+  "Colour…": "Couleur…",
+  "Group colour": "Couleur du groupe",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Chercher les matchs dans les groupes masqués",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Les chaînes des matchs peuvent aussi venir des groupes en direct que vous avez masqués : un groupe masqué pour garder la télé en ordre garde ses matchs. Les chaînes masquées une à une restent exclues. Jamais sur un profil Enfants. Enregistré pour ce spectateur.",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Blanc",
+  "Column lines":
+      "Lignes des colonnes",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "La couleur des lignes entre les colonnes et dans le guide. Pour ce profil seulement.",
+  "Back {seconds} s":
+      "Reculer de {seconds} s",
+  "Ahead {seconds} s":
+      "Avancer de {seconds} s",
+  "◀ Rewind":
+      "◀ Reculer",
+  "Skip buttons":
+      "Boutons de saut",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Durée d'un saut avec les boutons reculer / avancer et les touches Retour rapide / Avance rapide de la télécommande, sur les films, épisodes, le rattrapage et le direct en pause. En les maintenant, les sauts s'allongent.",
+  "Pause & rewind live TV":
+      "Pause et retour en arrière en direct",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Les chaînes en direct gardent leurs dernières minutes sur cet appareil pendant que vous regardez, sur la même connexion : Pause arrête l'image, pas le flux, et Lecture reprend là où vous étiez. Les boutons reculer / avancer et Retour rapide s'y déplacent (une reprise), EN DIRECT revient au présent. Utilise du stockage pendant le visionnement (environ 2 Go pour 30 minutes d'une chaîne HD, effacé au changement de chaîne); avec peu d'espace libre, environ 30 secondes sont gardées en mémoire. Les chaînes au format HLS (.m3u8) ne l'ont pas. S'applique à partir de la prochaine chaîne.",
 };

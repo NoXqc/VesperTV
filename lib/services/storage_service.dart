@@ -1090,6 +1090,15 @@ class StorageService {
   Future<void> setSportsPreferQuality(bool value) =>
       _prefs.setBool(_vk('vesper_sports_prefer_quality'), value);
 
+  /// Settings > Sports Trak > Find games in hidden groups (owner,
+  /// 2026-11-25): game matching also looks at the live groups the viewer
+  /// hid (`PlaylistManager.sportsChannels`; never on a kids profile). Per
+  /// viewer, off.
+  bool getSportsSearchHiddenGroups() =>
+      _prefs.getBool(_vk('vesper_sports_hidden_groups')) ?? false;
+  Future<void> setSportsSearchHiddenGroups(bool value) =>
+      _prefs.setBool(_vk('vesper_sports_hidden_groups'), value);
+
   /// Empty preserves the existing ranking. Per viewer; Backup/Transfer included.
   List<String> getSportsPreferredCountries() =>
       _prefs.getStringList(_vk(AppConstants.keySportsPreferredCountries)) ??
@@ -1337,6 +1346,12 @@ class StorageService {
         setCompactUi(value == 'compact'),
       ]);
 
+  /// See [AppConstants.keyColumnLines]; '' = the theme's lines.
+  String getColumnLines() =>
+      _prefs.getString(_vk(AppConstants.keyColumnLines)) ?? '';
+  Future<void> setColumnLines(String value) =>
+      _prefs.setString(_vk(AppConstants.keyColumnLines), value);
+
   /// Media Hub rows hidden with their eye (row keys), per viewer.
   Set<String> getHubHiddenRows() =>
       (_prefs.getStringList(_vk(AppConstants.keyHubHiddenRows)) ?? const [])
@@ -1420,6 +1435,15 @@ class StorageService {
   bool getReadAhead() => _prefs.getBool(AppConstants.keyReadAhead) ?? true;
   Future<void> setReadAhead(bool on) =>
       _prefs.setBool(AppConstants.keyReadAhead, on);
+
+  int getLiveRewindMinutes() =>
+      _prefs.getInt(AppConstants.keyLiveRewindMinutes) ?? 30;
+  Future<void> setLiveRewindMinutes(int minutes) =>
+      _prefs.setInt(AppConstants.keyLiveRewindMinutes, minutes);
+
+  int getSkipSeconds() => _prefs.getInt(AppConstants.keySkipSeconds) ?? 10;
+  Future<void> setSkipSeconds(int seconds) =>
+      _prefs.setInt(AppConstants.keySkipSeconds, seconds);
 
   bool getMergePlaylists() =>
       _prefs.getBool(AppConstants.keyMergePlaylists) ?? false;
@@ -1506,6 +1530,31 @@ class StorageService {
   Future<void> setFavoritedGroups(String playlistId, Set<String> groups) =>
       _prefs.setStringList(
           _vkp(AppConstants.keyFavoritedGroups, playlistId), groups.toList());
+
+  /// See [AppConstants.keyGroupColors]: group title -> colour id, for a
+  /// playlist's groups ([scope] = its id) or the viewer's own groups
+  /// (`GroupColor.ownScope`).
+  Map<String, String> getGroupColors(String scope) {
+    final raw = _prefs.getString(_vkp(AppConstants.keyGroupColors, scope));
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map) return {};
+      return {
+        for (final e in map.entries)
+          if (e.value is String) '${e.key}': e.value as String,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setGroupColors(String scope, Map<String, String> colors) {
+    final key = _vkp(AppConstants.keyGroupColors, scope);
+    return colors.isEmpty
+        ? _prefs.remove(key)
+        : _prefs.setString(key, jsonEncode(colors));
+  }
 
   /// [type] is 'tv'/'vod'/'series' — see [AppConstants.keyGroupOrder].
   /// Empty = provider order (nothing moved yet).
@@ -1947,6 +1996,8 @@ class StorageService {
     AppConstants.keyRemoteButtons,
     AppConstants.keyPlayerArrows,
     AppConstants.keyReadAhead,
+    // The room for the copy differs from one device to the next.
+    AppConstants.keyLiveRewindMinutes,
   ];
 
   static bool _transferable(String key) =>
@@ -2008,7 +2059,15 @@ class StorageService {
         bool b => {'t': 'b', 'v': b},
         int i => {'t': 'i', 'v': i},
         double x => {'t': 'd', 'v': x},
-        List<String> l => {'t': 'l', 'v': l},
+        // macOS / iOS / Windows / Linux hand a stored list back as
+        // List<Object?> after a restart (only Android casts it): a
+        // `List<String>` match dropped every list from sync, Transfer
+        // and backups, and the Mac then synced "no favourites" to
+        // every device (LOG-SHHSZH + LOG-2AJK8E, 2026-11-24).
+        List l => {
+            't': 'l',
+            'v': [for (final x in l) '$x']
+          },
         _ => null,
       };
       if (tagged != null) out[key] = tagged;
@@ -2196,6 +2255,7 @@ class StorageService {
     AppConstants.keyFavorites,
     AppConstants.keyFavoriteSeries,
     AppConstants.keyFavoritedGroups,
+    AppConstants.keyGroupColors,
     AppConstants.keyFavoriteLiveOrder,
     AppConstants.keyFavoriteLiveSort,
     AppConstants.keyMyGroups,

@@ -54,6 +54,7 @@ import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'models/sports.dart';
 import 'services/playback_service.dart';
+import 'services/player_user_agent.dart';
 import 'services/guide_key.dart';
 import 'services/profile_gate.dart';
 import 'services/archive_ready_watch.dart';
@@ -710,10 +711,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           .gamesForDay([league], DateTime(start.year, start.month, start.day));
       final game = games.where((g) => g.id == id).firstOrNull;
       if (game == null) return;
-      final live = _playlistManager.visibleChannels(category: 'tv');
+      final live = _playlistManager.sportsChannels();
       final matcher = SportsChannelMatcher.shared(_epgService);
       await matcher.prepare(live,
-          hidden: _playlistManager.hiddenLiveChannels());
+          hidden: _playlistManager.sportsHiddenChannels());
       final picks = SportsChannelPicks.load(_storage);
       final key = SportsChannelPicks.eventKey(game);
       final found = (await matcher.matchDay([game], picks))[key] ?? [];
@@ -756,8 +757,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       viewerLeagues: savedSportsLeagues(_storage),
       matcher: SportsChannelMatcher.shared(_epgService),
       picks: SportsChannelPicks.load(_storage),
-      channels: _playlistManager.visibleChannels(category: 'tv'),
-      hiddenChannels: _playlistManager.hiddenLiveChannels(),
+      channels: _playlistManager.sportsChannels(),
+      hiddenChannels: _playlistManager.sportsHiddenChannels(),
     );
   }
 
@@ -874,6 +875,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       if (Platform.isAndroid) {
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
+        await PlayerUserAgent.init();
       }
       await DeviceDefaults.load(_storage.getDeviceDefaults());
       // Network + a prefs write: after the quiet period (StartupQuiet).

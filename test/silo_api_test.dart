@@ -13,6 +13,9 @@ class _Server {
   final Map<String, http.Response Function(http.Request)> routes = {};
   var accessToken = 'access-1';
 
+  /// Older tokens the server still takes (not expired yet).
+  final stillValid = <String>{};
+
   late final client = MockClient((request) async {
     requests.add(request);
     final key = '${request.method} ${request.url.path}';
@@ -21,7 +24,9 @@ class _Server {
     final auth = request.headers['Authorization'];
     final open = key.startsWith('POST /api/v2/auth/') ||
         key == 'GET /api/v2/system/info';
-    if (!open && auth != 'Bearer $accessToken') {
+    if (!open &&
+        auth != 'Bearer $accessToken' &&
+        !stillValid.any((t) => auth == 'Bearer $t')) {
       return http.Response('{"status":401}', 401);
     }
     return route(request);
@@ -30,6 +35,14 @@ class _Server {
   static http.Response json(Object body, [int status = 200]) =>
       http.Response(jsonEncode(body), status,
           headers: {'content-type': 'application/json; charset=utf-8'});
+}
+
+/// A JWT-shaped access token that runs out at [exp].
+String _jwt(DateTime exp) {
+  String part(Object o) =>
+      base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+  return '${part({'alg': 'HS256'})}.'
+      '${part({'exp': exp.millisecondsSinceEpoch ~/ 1000})}.sig';
 }
 
 ArchiveSource _source({String token = 'access-1'}) => ArchiveSource(
@@ -241,6 +254,12 @@ void main() {
     test('start returns the signed link; stop reports the position', () async {
       final play = await api.startPlayback(_source(), link);
       expect(play.url, 'http://silo.test:8090/api/v2/stream/sess-1?st=abc');
+      // Issue #21: servers before 2026-11-14 (and plays no login session
+      // started) refuse the link without the account: 401 on every try.
+      expect(play.headers['Authorization'], 'Bearer access-1');
+      expect(play.headers['X-Profile-Id'], 'p1');
+      expect(play.headers['X-Silo-Device-Id'], 'dev');
+      expect(play.headers.containsKey('Accept'), isFalse);
       expect(SiloSessions.instance.isSilo(play.url), isTrue);
 
       SiloSessions.instance.stopped(play.url, const Duration(seconds: 61));
@@ -258,6 +277,53 @@ void main() {
           1);
     });
 
+    test('a link on another host (node, media origin) gets no sign-in',
+        () async {
+      server.routes['POST /api/v2/playback/start'] = (_) => _Server.json({
+            'outcome': 'playable',
+            'session_id': 'sess-2',
+            'playback_plan': {
+              'delivery': 'original_http',
+              'stream': {
+                'url': 'https://node.example/stream/grant-xyz',
+                'headers': {'X-Grant': 'g1'},
+              },
+            },
+          }, 201);
+      final play = await api.startPlayback(_source(), link);
+      expect(play.headers, {'X-Grant': 'g1'});
+      SiloSessions.instance.stopped(play.url, Duration.zero);
+    });
+
+    test('a sign-in close to running out is renewed before the play', () async {
+      final old = _jwt(DateTime.now().add(const Duration(hours: 1)));
+      server
+        ..stillValid.add(old)
+        ..accessToken = 'access-2'
+        ..routes['POST /api/v2/auth/refresh'] = ((_) => _Server.json(
+            {'access_token': 'access-2', 'refresh_token': 'refresh-2'}));
+      final play = await api.startPlayback(_source(token: old), link);
+      expect(play.headers['Authorization'], 'Bearer access-2');
+      final start = server.requests
+          .firstWhere((r) => r.url.path.endsWith('/playback/start'));
+      expect(start.headers['Authorization'], 'Bearer access-2');
+      SiloSessions.instance.stopped(play.url, Duration.zero);
+
+      // Hours left: no renewal.
+      final fresh = SiloApi(server.client);
+      final long = _jwt(DateTime.now().add(const Duration(hours: 7)));
+      server.stillValid.add(long);
+      final before = server.requests.length;
+      final second = await fresh.startPlayback(_source(token: long), link);
+      expect(second.headers['Authorization'], 'Bearer $long');
+      expect(
+          server.requests
+              .skip(before)
+              .where((r) => r.url.path.endsWith('/auth/refresh')),
+          isEmpty);
+      SiloSessions.instance.stopped(second.url, Duration.zero);
+    });
+
     test('a refused plan is said, nothing plays', () async {
       server.routes['POST /api/v2/playback/start'] = (_) => _Server.json({
             'outcome': 'adaptation_unavailable',
@@ -272,6 +338,14 @@ void main() {
           throwsA(isA<SiloPlaybackRefusedException>().having(
               (e) => e.message, 'message', 'Too big for this connection')));
     });
+  });
+
+  test('tokenLife reads a JWT expiry; anything else is unknown', () {
+    final now = DateTime(2026, 11, 25, 12);
+    expect(SiloApi.tokenLife(_jwt(now.add(const Duration(hours: 2))), now: now),
+        const Duration(hours: 2));
+    expect(SiloApi.tokenLife('access-1', now: now), isNull);
+    expect(SiloApi.tokenLife('a.%%%.c', now: now), isNull);
   });
 
   test('an expired access token is renewed once and saved', () async {

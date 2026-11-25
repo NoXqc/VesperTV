@@ -971,6 +971,26 @@ class RecordingService extends ChangeNotifier {
     }
   }
 
+  /// Deletes [file] and the details VesperTV wrote beside it from the
+  /// network folder: gone for every device using that folder (owner,
+  /// 2026-11-24: an old test recording couldn't be removed from the box).
+  /// True when the share took it.
+  Future<bool> deleteNetworkFile(NetworkFile file) async {
+    var ok = false;
+    try {
+      ok = await _invoke<bool>('deleteFile', {'path': file.path}) ?? false;
+    } catch (_) {}
+    if (ok) {
+      try {
+        await _invoke<bool>(
+            'deleteFile', {'path': networkDetailsPath(file.path)});
+      } catch (_) {}
+    }
+    debugPrint('RecordingService: network file '
+        '${ok ? 'deleted' : 'not deleted'}');
+    return ok;
+  }
+
   /// The share's videos worth offering here: see [networkFilesToShow].
   List<NetworkFile> networkFilesToOffer(List<NetworkFile> all) =>
       networkFilesToShow(all, ownPaths: {
