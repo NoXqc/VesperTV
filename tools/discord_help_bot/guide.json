@@ -720,6 +720,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "1ec7c17a66f80a32",
+    "category": "Sports Trak",
+    "title": "Find games in groups you hid",
+    "answer": "Off by default. Turn it on and Sports Trak also looks for game channels in the live groups you hid, so a group hidden to keep the TV tidy (event channels, another country) still carries its games: in Sports Trak, Multiview's Live now, the player's This game and the channel pickers. The groups stay hidden on the TV, and their channels carry a small Hidden tag in those lists. Channels you hid one by one stay out, and a Kids profile never searches hidden groups. Saved for this viewer.",
+    "controls": "Settings → Sports Trak → Find games in hidden groups",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "df3c97fd4b85aa6d",
     "category": "Sports Trak",
     "title": "Prefer matching channels from one playlist",

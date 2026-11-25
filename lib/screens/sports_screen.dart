@@ -1,6 +1,7 @@
 import '../widgets/glass_menu.dart';
 import '../widgets/baked_backdrop.dart';
 import '../widgets/gold_tag.dart';
+import '../widgets/hidden_channel_tag.dart';
 import '../utils/refined_finish.dart';
 import '../widgets/sports_league_rail.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -663,8 +664,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    final live = playlist.visibleChannels(category: 'tv');
-    await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
+    final live = playlist.sportsChannels();
+    await _matcher.prepare(live, hidden: playlist.sportsHiddenChannels());
     _picks = SportsChannelPicks.load(_storage);
     final games = _games;
     // The coming days on the 30 s poll: every 5 minutes, their channels
@@ -1572,8 +1573,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       List<SportsGame> games) async {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
-    await _matcher.prepare(playlist.visibleChannels(category: 'tv'),
-        hidden: playlist.hiddenLiveChannels());
+    await _matcher.prepare(playlist.sportsChannels(),
+        hidden: playlist.sportsHiddenChannels());
     _picks = SportsChannelPicks.load(_storage);
     return _matcher.matchDay(games, _picks);
   }
@@ -1811,7 +1812,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final store = SportsChannelLists(context.read<StorageService>());
     final saved = store.sourcesFor(game, _gameKey(game));
     var matches = <ChannelMatch>[
-      for (final c in playlist.visibleChannels(category: 'tv'))
+      for (final c in playlist.sportsChannels())
         if (saved.contains(c.id))
           ChannelMatch(c, MatchReason.pick,
               _picks.channelIdFor(game) == c.id ? 1000 : 950,
@@ -1927,9 +1928,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Future<void> _addSources(SportsGame game) async {
     final playlist = context.read<PlaylistManager>();
     final store = SportsChannelLists(context.read<StorageService>());
-    final library = SportsChannelLibrary(
-        playlist.visibleChannels(category: 'tv'),
-        store: store);
+    final library =
+        SportsChannelLibrary(playlist.sportsChannels(), store: store);
     final listId = await showGlassMenu<String>(
         context: context,
         builder: (dialog) =>
@@ -2015,8 +2015,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       viewerLeagues: _leagues,
       matcher: _matcher,
       picks: _picks,
-      channels: playlist.visibleChannels(category: 'tv'),
-      hiddenChannels: playlist.hiddenLiveChannels(),
+      channels: playlist.sportsChannels(),
+      hiddenChannels: playlist.sportsHiddenChannels(),
     );
   }
 
@@ -6412,6 +6412,13 @@ class _GameDialog extends StatelessWidget {
                               ? matches[i].reason.label
                               : '${matches[i].reason.label} · ${matches[i].detail}',
                         ].where((s) => s.isNotEmpty).join(' · '),
+                        // Found in a hidden group (Find games in hidden
+                        // groups).
+                        trailing: context
+                                .read<PlaylistManager>()
+                                .isInHiddenGroup(matches[i].channel)
+                            ? const HiddenChannelTag()
+                            : null,
                         onTap: () => Navigator.of(context)
                             .pop(_WatchAction(matches[i].channel)),
                       ),
@@ -6875,6 +6882,10 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        if (playlists.isInHiddenGroup(c)) ...[
+                                          const HiddenChannelTag(),
+                                          const SizedBox(width: 4),
+                                        ],
                                         if (name.isNotEmpty)
                                           ConstrainedBox(
                                             constraints: const BoxConstraints(

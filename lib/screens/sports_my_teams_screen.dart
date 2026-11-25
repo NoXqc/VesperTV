@@ -306,7 +306,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     final preferred = picks.preferredChannel(t.leagueId, t.teamId);
     final channel = context
         .read<PlaylistManager>()
-        .visibleChannels(category: 'tv')
+        .sportsChannels()
         .where((c) => c.id == preferred)
         .firstOrNull;
     final action = await showSportsTeamMenu(context,
@@ -356,7 +356,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
             builder: (_) => SportsChannelPicker(
                 title:
                     tr('Preferred channel for {team}', {'team': details.name}),
-                channels: playlist.visibleChannels(category: 'tv'),
+                channels: playlist.sportsChannels(),
                 selected: {if (preferred != null) preferred},
                 multiple: false,
                 allowAutomatic: true)));
@@ -365,9 +365,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     }
     final selected = result.firstOrNull;
     if (selected != null &&
-        !playlist
-            .visibleChannels(category: 'tv')
-            .any((c) => c.id == selected)) {
+        !playlist.sportsChannels().any((c) => c.id == selected)) {
       return;
     }
     await picks.setPreferredChannel(team.leagueId, team.teamId, selected);

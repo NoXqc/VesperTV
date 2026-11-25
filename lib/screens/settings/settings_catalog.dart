@@ -1210,6 +1210,15 @@ class SettingsCatalog {
                 onChanged: (v) =>
                     _saveViewer(() => _storage.setSportsPreferQuality(v))),
             SettingsToggle(
+                id: 'sports_hidden_groups',
+                icon: Icons.visibility_off_outlined,
+                title: tr('Find games in hidden groups'),
+                help: tr(
+                    'Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.'),
+                value: _storage.getSportsSearchHiddenGroups(),
+                onChanged: (v) =>
+                    _saveViewer(() => _storage.setSportsSearchHiddenGroups(v))),
+            SettingsToggle(
                 id: 'sports_redzone',
                 icon: Icons.sports_football,
                 title: tr('NFL RedZone button'),

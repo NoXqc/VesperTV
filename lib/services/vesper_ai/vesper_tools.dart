@@ -1725,9 +1725,9 @@ Future<Map<SportsGame, List<ChannelMatch>>> _gameMatchList(
     VesperToolbox box, List<SportsGame> games) async {
   if (games.isEmpty) return const {};
   await box.playlist.ensureLiveChannelsLoaded();
-  final live = box.playlist.visibleChannels(category: 'tv');
+  final live = box.playlist.sportsChannels();
   final matcher = SportsChannelMatcher.shared(box.epg);
-  await matcher.prepare(live, hidden: box.playlist.hiddenLiveChannels());
+  await matcher.prepare(live, hidden: box.playlist.sportsHiddenChannels());
   final picks = SportsChannelPicks.load(box.storage);
   final found = await matcher.matchDay(games.take(25).toList(), picks);
   final out = <SportsGame, List<ChannelMatch>>{};

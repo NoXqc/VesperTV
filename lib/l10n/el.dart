@@ -4430,4 +4430,9 @@ const Map<String, String> kEl = {
   "No colour": "Χωρίς χρώμα",
   "Colour…": "Χρώμα…",
   "Group colour": "Χρώμα ομάδας",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Εύρεση αγώνων σε κρυφές ομάδες",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Τα κανάλια των αγώνων μπορούν να έρθουν και από τις ζωντανές ομάδες που κρύψατε: μια ομάδα κρυμμένη για να μένει τακτοποιημένη η τηλεόραση εξακολουθεί να δίνει τους αγώνες της. Τα κανάλια που κρύψατε ένα-ένα μένουν έξω. Ποτέ σε προφίλ Παιδιών. Αποθηκεύεται για αυτόν τον θεατή.",
 };

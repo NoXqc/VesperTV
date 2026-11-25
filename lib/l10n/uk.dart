@@ -3940,4 +3940,9 @@ const Map<String, String> kUk = {
   "No colour": "Без кольору",
   "Colour…": "Колір…",
   "Group colour": "Колір групи",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Шукати матчі в прихованих групах",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Канали матчів можуть братися й із прихованих груп наживо: група, прихована для порядку в ТБ, і далі дає свої матчі. Канали, приховані поодинці, залишаються поза пошуком. Ніколи в дитячому профілі. Збережено для цього глядача.",
 };

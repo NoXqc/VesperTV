@@ -1721,6 +1721,48 @@ class PlaylistManager extends ChangeNotifier {
       ? const []
       : _enabledSessionsSorted.expand((s) => s.hiddenLiveChannels()).toList();
 
+  /// Whether Sports Trak also looks in hidden groups: Settings > Sports
+  /// Trak > Find games in hidden groups, never on a kids profile (what it
+  /// can't see stays out of its games too).
+  bool get sportsSearchesHiddenGroups =>
+      !_activeViewerRestricted && _storage.getSportsSearchHiddenGroups();
+
+  /// The live channels Sports Trak works with (game matching, its pickers
+  /// and Networks, Multiview's Live now, the player's This game, Vesper's
+  /// game tools): [visibleChannels], plus the channels of hidden groups
+  /// when [sportsSearchesHiddenGroups] (owner, 2026-11-25: a group hidden
+  /// to keep the TV tidy can still carry the games). Channels hidden one
+  /// by one stay out.
+  List<Channel> sportsChannels() {
+    if (!sportsSearchesHiddenGroups) return visibleChannels(category: 'tv');
+    return List.of(_visibleCache['tv/sports'] ??= () {
+      final visible = visibleChannels(category: 'tv');
+      final ids = {for (final c in visible) c.id};
+      return [
+        ...visible,
+        for (final s in _enabledSessionsSortedFor('tv'))
+          for (final c in s.liveChannelsOfHiddenGroups())
+            if (ids.add(c.id)) c,
+      ];
+    }());
+  }
+
+  /// Whether live [c] is in a group the viewer hid: with hidden groups
+  /// searched, Sports Trak lists such channels with a Hidden tag
+  /// (`HiddenChannelTag`).
+  bool isInHiddenGroup(Channel c) {
+    final s = _sessionFor(c.playlistId);
+    return s != null && s.hiddenGroups.contains(s.liveGroupOf(c));
+  }
+
+  /// [hiddenLiveChannels] as Sports Trak sees them (for "only on a hidden
+  /// channel"): with hidden groups searched, the channels hidden one by one.
+  List<Channel> sportsHiddenChannels() => sportsSearchesHiddenGroups
+      ? _enabledSessionsSorted
+          .expand((s) => s.hiddenLiveChannels(groups: false))
+          .toList()
+      : hiddenLiveChannels();
+
   List<XtreamSeries> visibleSeries({String? playlistId, String? categoryName}) {
     if (playlistId != null)
       return _sessionFor(playlistId)?.visibleSeries(categoryName) ?? const [];

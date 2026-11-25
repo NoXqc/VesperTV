@@ -530,6 +530,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - Sports Trak: Find games in hidden groups (`claude/sports-hidden-groups`, worktree
+  `VesperTV-claude-sportshidden`, from main 84c3eb6):** owner: a toggle so Sports Trak matches channels from hidden groups.
+  Settings > Sports Trak > Channels > **Find games in hidden groups** (per viewer, off). `PlaylistManager.sportsChannels()` /
+  `sportsHiddenChannels()` feed every Sports Trak place (matching, pickers, Networks, Multiview Live now, This game, reminders,
+  Vesper game tools); channels hidden one by one stay out; never on a kids profile. Details: dev-notes/sports-channels.md.
 - **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
   5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
   on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);

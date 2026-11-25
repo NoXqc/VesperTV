@@ -841,6 +841,12 @@ class SportsChannelMatcher {
   List<String>? _hiddenNames;
   Map<String, String> _hiddenByEpgId = {};
 
+  /// Per game ([SportsChannelPicks.eventKey]): the hidden channel whose
+  /// name carries it ('' = none), found once per [prepare]. The scan reads
+  /// every hidden name, and hidden groups can hold most of a provider:
+  /// it ran for each game without a channel on every match (2026-11-25).
+  Map<String, String> _hiddenHits = {};
+
   /// [_hidden]'s names normalized, on first need: hidden groups can hold
   /// most of a provider (every foreign country), and most days every game
   /// has a channel.
@@ -936,6 +942,7 @@ class SportsChannelMatcher {
     _byId = byId;
     _hidden = hidden;
     _hiddenNames = null;
+    _hiddenHits = {};
     _hiddenByEpgId = {
       for (final c in hidden.reversed) normalizeEpgId(c.epgId): c.sourceName,
     };
@@ -1299,9 +1306,17 @@ class SportsChannelMatcher {
       .._hidden = _hidden
       .._hiddenNames = _hiddenNames
       .._hiddenByEpgId = _hiddenByEpgId
+      .._hiddenHits = _hiddenHits
       .._guideCache = _guideCache;
     final result =
         await snapshot._matchDay(List.of(games), picks, limit: limit);
+    // The hidden names the snapshot normalized (to say a game is only on a
+    // hidden channel) stay for the next match while the index is the same:
+    // they were redone on every match, ~190 ms per 60,000 hidden channels
+    // on a PC (2026-11-25).
+    if (identical(_hidden, snapshot._hidden) && _hiddenNames == null) {
+      _hiddenNames = snapshot._hiddenNames;
+    }
     if (identical(_channels, snapshot._channels)) {
       for (final g in games) {
         final key = SportsChannelPicks.eventKey(g);
@@ -1682,14 +1697,21 @@ class SportsChannelMatcher {
       }
       var hiddenChannel = hiddenInGuide;
       if (hiddenChannel == null && _hidden.isNotEmpty && groups.isNotEmpty) {
-        final names = await _hiddenNormalized();
-        final hidden = _hidden;
-        for (var i = 0; i < names.length && i < hidden.length; i++) {
-          if (i % 5000 == 4999) await Future<void>.delayed(Duration.zero);
-          if (groups.every((group) => group.any(names[i].contains))) {
-            hiddenChannel = hidden[i].sourceName;
-            break;
+        final known = _hiddenHits[key];
+        if (known != null) {
+          hiddenChannel = known.isEmpty ? null : known;
+        } else {
+          final hits = _hiddenHits;
+          final names = await _hiddenNormalized();
+          final hidden = _hidden;
+          for (var i = 0; i < names.length && i < hidden.length; i++) {
+            if (i % 5000 == 4999) await Future<void>.delayed(Duration.zero);
+            if (groups.every((group) => group.any(names[i].contains))) {
+              hiddenChannel = hidden[i].sourceName;
+              break;
+            }
           }
+          hits[key] = hiddenChannel ?? '';
         }
       }
       if (hiddenChannel != null) {
