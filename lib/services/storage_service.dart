@@ -1421,6 +1421,15 @@ class StorageService {
   Future<void> setReadAhead(bool on) =>
       _prefs.setBool(AppConstants.keyReadAhead, on);
 
+  int getLiveRewindMinutes() =>
+      _prefs.getInt(AppConstants.keyLiveRewindMinutes) ?? 30;
+  Future<void> setLiveRewindMinutes(int minutes) =>
+      _prefs.setInt(AppConstants.keyLiveRewindMinutes, minutes);
+
+  int getSkipSeconds() => _prefs.getInt(AppConstants.keySkipSeconds) ?? 10;
+  Future<void> setSkipSeconds(int seconds) =>
+      _prefs.setInt(AppConstants.keySkipSeconds, seconds);
+
   bool getMergePlaylists() =>
       _prefs.getBool(AppConstants.keyMergePlaylists) ?? false;
   Future<void> setMergePlaylists(bool value) =>
@@ -1972,6 +1981,8 @@ class StorageService {
     AppConstants.keyRemoteButtons,
     AppConstants.keyPlayerArrows,
     AppConstants.keyReadAhead,
+    // The room for the copy differs from one device to the next.
+    AppConstants.keyLiveRewindMinutes,
   ];
 
   static bool _transferable(String key) =>

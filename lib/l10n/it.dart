@@ -4475,4 +4475,18 @@ const Map<String, String> kIt = {
   "No colour": "Nessun colore",
   "Colour…": "Colore…",
   "Group colour": "Colore del gruppo",
+  "Back {seconds} s":
+      "Indietro {seconds} s",
+  "Ahead {seconds} s":
+      "Avanti {seconds} s",
+  "◀ Rewind":
+      "◀ Indietro",
+  "Skip buttons":
+      "Pulsanti di salto",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Di quanto salta una pressione dei pulsanti indietro / avanti e di Riavvolgi / Avanti veloce del telecomando, su film, episodi, catch-up e TV in diretta in pausa. Tenendoli premuti salta sempre di più.",
+  "Pause & rewind live TV":
+      "Pausa e riavvolgi la TV in diretta",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "I canali in diretta tengono gli ultimi minuti su questo dispositivo mentre guardi, con la stessa connessione: Pausa ferma l'immagine, non lo stream, e Play riprende da dove eri. I pulsanti indietro / avanti e Riavvolgi si muovono al suo interno (un replay), LIVE torna al presente. Usa spazio di archiviazione mentre guardi (circa 2 GB per 30 minuti di un canale HD, cancellato al cambio canale); con poco spazio libero tiene circa 30 secondi in memoria. I canali in formato HLS (.m3u8) non lo hanno. Vale dal canale successivo.",
 };

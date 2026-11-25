@@ -149,6 +149,15 @@ class AppConstants {
   /// file (ReadAhead in the vendored player; owner's Homatics, 2026-11-21).
   static const String keyReadAhead = 'vesper_read_ahead';
 
+  /// Device-only (a backup keeps it), 30 by default: Live pause & rewind
+  /// keeps this many minutes of a live channel on the device, 0 = off
+  /// (vendored player's Timeshift, Android).
+  static const String keyLiveRewindMinutes = 'vesper_live_rewind_min';
+
+  /// Seconds one tap of the skip buttons / the remote's Rewind and
+  /// Fast-forward jumps (5, 10, 15, 30 or 60; 10 by default).
+  static const String keySkipSeconds = 'vesper_skip_seconds';
+
   /// Device-only, off by default: the TV tab's "Recently added" group.
   static const String keyRecentChannelsGroup = 'vesper_recent_channels_group';
 

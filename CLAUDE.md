@@ -530,6 +530,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - Live pause & rewind on one connection + Skip buttons (`claude/live-pause`, worktree
+  `VesperTV-claude-livepause`, from main 84c3eb6):** owner + cillfog (Discord): pause / rewind live without catch-up and
+  without a second connection; then "-30/+30 or -15/+15 ... also our normal -/+10". Vendored `Timeshift.java` +
+  `TimeshiftDataSource.java`: once Dart arms it (live MPEG-TS, main player) the player's connection becomes a writer thread
+  filling a rolling copy (cacheDir/timeshift, 16 MB files; 32 MB memory when storage is short); the player reads the copy;
+  jumps land on a PCR/random-access keyframe via seekTo(0) (a live load reset); a dropped connection reopens under the
+  player (TsSplice). `VideoPlayer.seekTo` ignores Dart seeks on a live stream while it runs: video_player_hdr's play()
+  seeks live to 0 (position clamped to duration 0), which made every Play after a pause reconnect to "now". Dart
+  `LiveTimeshift`, `PlaybackService.timeshift*`, info bar -N / +N / LIVE + "−1:23" tag, timeline scrub (catch-up past
+  the copy), remote Rewind/FF. Settings > Playback > Live TV > Pause & rewind live TV (0/10/30/60 min, default 30) and
+  Player > Skip buttons (5-60 s, `SkipStep` / `SkipIcon`, every skip button incl. desktop). Not HLS / Multiview / mpv yet.
+  dev-notes/live-pause.md; fake provider tools/fake_live_ts. TimeshiftTest (9), live_timeshift_test (14).
 - **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
   5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
   on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);

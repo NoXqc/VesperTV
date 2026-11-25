@@ -41,6 +41,8 @@ import 'vod_buffering.dart';
 import 'live_stream_format.dart';
 import 'live_freeze_guard.dart';
 import 'live_reconnect_log.dart';
+import 'live_timeshift.dart';
+import '../utils/skip_step.dart';
 import 'subtitle_tracks.dart';
 import 'vod_stall_log.dart';
 import 'channel_copy_fallback.dart';
@@ -93,6 +95,8 @@ class PlaybackService extends ChangeNotifier {
     try {
       unawaited(VodBuffering.setLiveBufferDefault(_storage.getLiveBufferMs()));
       VodBuffering.readAhead = _storage.getReadAhead();
+      LiveTimeshift.minutes = _storage.getLiveRewindMinutes();
+      SkipStep.seconds = _storage.getSkipSeconds();
     } catch (_) {
       // Storage not initialised (tests): the 500 ms default stays.
     }
@@ -138,6 +142,14 @@ class PlaybackService extends ChangeNotifier {
     nudge: () async {
       final c = controller;
       if (c == null) return;
+      // Live pause & rewind on: Play no longer resets the live load (the
+      // native player keeps the paused picture), so a jump of 0 s does the
+      // same flush at the same spot.
+      if (_timeshiftPlayer == c && timeshift.value != null) {
+        debugPrint('Timeshift: picture stuck, reloading at the same spot');
+        await LiveTimeshift.jump(c, Duration.zero);
+        return;
+      }
       await c.pause();
       await Future<void>.delayed(const Duration(milliseconds: 200));
       if (controller == c) await c.play();
@@ -753,6 +765,7 @@ class PlaybackService extends ChangeNotifier {
       if (session != null) _catchupStarted(session, newController);
       await VodBuffering.configure(newController, channel);
       if (controller != newController) return;
+      if (session == null) unawaited(_startTimeshift(newController, channel));
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -1226,7 +1239,14 @@ class PlaybackService extends ChangeNotifier {
     }
     final pausedAt = _livePausedAt;
     _livePausedAt = null;
-    if (ch != null &&
+    // Live pause & rewind kept everything since the pause: Play carries on
+    // from the paused frame, no catch-up request.
+    final ts = timeshift.value;
+    final kept = ts != null &&
+        pausedAt != null &&
+        clock().difference(pausedAt) < ts.window - const Duration(seconds: 10);
+    if (!kept &&
+        ch != null &&
         ch.hasCatchup &&
         pausedAt != null &&
         clock().difference(pausedAt) > timeshiftAfter) {
@@ -1235,6 +1255,170 @@ class PlaybackService extends ChangeNotifier {
     }
     await c.play();
     notifyListeners();
+  }
+
+  // ------------------------------------------------ Live pause & rewind
+
+  /// Live pause & rewind on the playing live channel ([LiveTimeshift]):
+  /// where the picture is, null when off (not live, HLS, the setting, not
+  /// Android). Polled every second while it's on.
+  final timeshift = ValueNotifier<TimeshiftState?>(null);
+
+  /// While skip presses gather: how far behind live the picture will land.
+  final timeshiftTarget = ValueNotifier<Duration?>(null);
+
+  VideoPlayerHdrController? _timeshiftPlayer;
+  Timer? _timeshiftPoll;
+  Timer? _timeshiftCommit;
+  Duration? _timeshiftFrom;
+  Duration _timeshiftDelta = Duration.zero;
+  String? _timeshiftNoteSaid;
+
+  Future<void> _startTimeshift(
+      VideoPlayerHdrController c, Channel channel) async {
+    _stopTimeshift();
+    if (!LiveTimeshift.supported ||
+        !channel.isLive ||
+        channel.transientPlayback ||
+        catchup != null) {
+      return;
+    }
+    if (LiveTimeshift.minutes <= 0) {
+      debugPrint('Timeshift: off (setting)');
+      return;
+    }
+    final why = await LiveTimeshift.arm(c);
+    if (controller != c || currentChannel?.id != channel.id) return;
+    if (why != null) {
+      debugPrint('Timeshift: off ($why)');
+      return;
+    }
+    debugPrint('Timeshift: on, ${LiveTimeshift.minutes} min kept');
+    _timeshiftPlayer = c;
+    _timeshiftNoteSaid = null;
+    _timeshiftPoll = Timer.periodic(
+        const Duration(seconds: 1), (_) => unawaited(_pollTimeshift()));
+  }
+
+  Future<void> _pollTimeshift() async {
+    final c = _timeshiftPlayer;
+    if (c == null || controller != c || catchup != null) {
+      _stopTimeshift();
+      return;
+    }
+    final s = await LiveTimeshift.state(c);
+    if (_timeshiftPlayer != c) return;
+    timeshift.value = s != null && s.on ? s : null;
+    final note = s?.note;
+    if (note != null && note != _timeshiftNoteSaid) {
+      _timeshiftNoteSaid = note;
+      debugPrint('Timeshift: $note');
+    }
+  }
+
+  void _stopTimeshift() {
+    _timeshiftPoll?.cancel();
+    _timeshiftPoll = null;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftPlayer = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    timeshiftTarget.value = null;
+    timeshift.value = null;
+  }
+
+  /// A skip press on a live channel with the copy on: [delta] back (negative)
+  /// or ahead. Presses gather for 700 ms ([timeshiftTarget] shows where it
+  /// lands), then one jump: each jump restarts the player's load. Past the
+  /// copy on a channel with catch-up, it goes on through catch-up.
+  void timeshiftNudge(Duration delta) {
+    final s = timeshift.value;
+    if (s == null || _timeshiftPlayer == null) return;
+    final from = _timeshiftFrom ??= s.behind;
+    _timeshiftDelta += delta;
+    final live = liveChannel;
+    final most = live != null && live.hasCatchup && live.catchupDays > 0
+        ? Duration(days: live.catchupDays)
+        : s.available;
+    var target = from - _timeshiftDelta;
+    if (target > most) target = most;
+    if (target < Duration.zero) target = Duration.zero;
+    _timeshiftDelta = from - target;
+    timeshiftTarget.value = target;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = Timer(
+        const Duration(milliseconds: 700), () => unawaited(_commitTimeshift()));
+  }
+
+  Future<void> _commitTimeshift() async {
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    final target = timeshiftTarget.value;
+    final delta = _timeshiftDelta;
+    final c = _timeshiftPlayer;
+    final s = timeshift.value;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    if (target == null || c == null || controller != c || s == null) {
+      timeshiftTarget.value = null;
+      return;
+    }
+    await _timeshiftLand(c, s, target, delta);
+  }
+
+  /// The picture to [behind] live (the live timeline's scrub): inside the
+  /// copy, past it through catch-up (a catch-up channel), else as far as
+  /// the copy goes.
+  Future<void> timeshiftGoTo(Duration behind) async {
+    final c = _timeshiftPlayer;
+    final s = timeshift.value;
+    if (c == null || s == null || controller != c) return;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    await _timeshiftLand(c, s, behind, s.behind - behind);
+  }
+
+  Future<void> _timeshiftLand(VideoPlayerHdrController c, TimeshiftState s,
+      Duration target, Duration delta) async {
+    final live = liveChannel;
+    if (target > s.available + const Duration(seconds: 5) &&
+        live != null &&
+        live.hasCatchup) {
+      timeshiftTarget.value = null;
+      debugPrint('Timeshift: ${target.inSeconds} s back is past the copy '
+          '(${s.available.inSeconds} s), catch-up');
+      await playCatchup(live, clock().subtract(target), toProgrammeEnd: false);
+      return;
+    }
+    final toLive = target <= TimeshiftState.liveEdge;
+    final next =
+        await LiveTimeshift.jump(c, toLive ? const Duration(days: 1) : delta);
+    timeshiftTarget.value = null;
+    debugPrint('Timeshift: jump ${delta.inSeconds} s -> '
+        '${next?.behind.inSeconds ?? '?'} s behind live');
+    if (next != null && next.on && _timeshiftPlayer == c) {
+      timeshift.value = next;
+    }
+  }
+
+  /// Back to live inside the copy (Live pause & rewind).
+  Future<void> timeshiftToLive() async {
+    final c = _timeshiftPlayer;
+    if (c == null) return;
+    _timeshiftCommit?.cancel();
+    _timeshiftCommit = null;
+    _timeshiftFrom = null;
+    _timeshiftDelta = Duration.zero;
+    timeshiftTarget.value = null;
+    final next = await LiveTimeshift.jump(c, const Duration(days: 1));
+    debugPrint('Timeshift: back to live');
+    if (next != null && next.on && _timeshiftPlayer == c) {
+      timeshift.value = next;
+    }
+    if (controller == c && !c.value.isPlaying) await c.play();
   }
 
   PlaylistProfile? _profileFor(String playlistId) {
@@ -1505,6 +1689,7 @@ class PlaybackService extends ChangeNotifier {
       unawaited(_recordRealResolution(c, channel));
       unawaited(DisplayMatch.start(_storage, c,
           () => controller == c && currentChannel?.id == channel.id));
+      unawaited(_startTimeshift(c, channel));
       debugPrint('NativeSurface: reused live player for channel zap');
       unawaited(NativeVideoSurface.logDiagnostics());
       notifyListeners();
@@ -1991,6 +2176,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _stopTimeshift();
     _nativeZapGeneration++;
     _playGen++;
     _catchupGen++;
@@ -2140,6 +2326,7 @@ class PlaybackService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _stopTimeshift();
     _reconnectLog.dispose();
     _vodStallLog.dispose();
     _freezeGuard.dispose();

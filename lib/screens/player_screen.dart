@@ -1451,6 +1451,16 @@ class _PlayerScreenState extends State<PlayerScreen>
           : next > duration
               ? duration
               : next;
+    } else if (_playback.catchup == null &&
+        _playback.timeshift.value?.on == true) {
+      // Live pause & rewind: steps inside the copy (a tap = the Skip
+      // buttons setting, held = bigger), one jump 700 ms after the last
+      // press; past the copy, catch-up on a catch-up channel.
+      final step = _scrubSteps.next();
+      if (step == null) return;
+      _playback.timeshiftNudge(step * sign);
+      _resetHideTimer();
+      return;
     } else {
       final live = _playback.liveChannel ?? channel;
       if (sign > 0 || !live.isLive || !live.hasCatchup) return;
@@ -2563,6 +2573,27 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 ),
                               ),
                             ),
+
+                          // Live pause & rewind: where gathered presses land.
+                          ValueListenableBuilder<Duration?>(
+                            valueListenable: playback.timeshiftTarget,
+                            // Always positioned: a bare non-positioned
+                            // child would size the whole Stack to itself.
+                            builder: (context, target, _) => Positioned.fill(
+                              child: IgnorePointer(
+                                child: target == null
+                                    ? const SizedBox.shrink()
+                                    : Center(
+                                        child: TimeshiftCue(
+                                          target: target,
+                                          from: playback
+                                                  .timeshift.value?.behind ??
+                                              Duration.zero,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
 
                           // Fast-forward / Rewind target until it lands.
                           if (_skipTarget case final target?

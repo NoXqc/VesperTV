@@ -4481,4 +4481,18 @@ const Map<String, String> kFr = {
   "No colour": "Aucune couleur",
   "Colour…": "Couleur…",
   "Group colour": "Couleur du groupe",
+  "Back {seconds} s":
+      "Reculer de {seconds} s",
+  "Ahead {seconds} s":
+      "Avancer de {seconds} s",
+  "◀ Rewind":
+      "◀ Reculer",
+  "Skip buttons":
+      "Boutons de saut",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Durée d'un saut avec les boutons reculer / avancer et les touches Retour rapide / Avance rapide de la télécommande, sur les films, épisodes, le rattrapage et le direct en pause. En les maintenant, les sauts s'allongent.",
+  "Pause & rewind live TV":
+      "Pause et retour en arrière en direct",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Les chaînes en direct gardent leurs dernières minutes sur cet appareil pendant que vous regardez, sur la même connexion : Pause arrête l'image, pas le flux, et Lecture reprend là où vous étiez. Les boutons reculer / avancer et Retour rapide s'y déplacent (une reprise), EN DIRECT revient au présent. Utilise du stockage pendant le visionnement (environ 2 Go pour 30 minutes d'une chaîne HD, effacé au changement de chaîne); avec peu d'espace libre, environ 30 secondes sont gardées en mémoire. Les chaînes au format HLS (.m3u8) ne l'ont pas. S'applique à partir de la prochaine chaîne.",
 };

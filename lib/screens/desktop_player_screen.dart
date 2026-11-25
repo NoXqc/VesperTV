@@ -44,6 +44,7 @@ import '../widgets/player_options_order.dart';
 import '../widgets/player_overlays.dart';
 import '../widgets/desktop_video_status.dart';
 import '../utils/scrub_steps.dart';
+import '../utils/skip_step.dart';
 import '../widgets/live_channel_info_card.dart';
 import '../widgets/audio_delay_adjuster.dart';
 import '../widgets/data_pool_card.dart';
@@ -1785,9 +1786,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               ),
             if (!_isLive || _inCatchup)
               IconButton(
-                tooltip: tr('Back 10 seconds'),
-                icon: const Icon(Icons.replay_10, color: Colors.white),
-                onPressed: () => _skip(const Duration(seconds: -10)),
+                tooltip:
+                    tr('Back {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+                icon: const SkipIcon(forward: false, color: Colors.white),
+                onPressed: () => _skip(-SkipStep.tap),
               ),
             IconButton(
               focusNode: _playPauseFocus,
@@ -1799,9 +1801,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             ),
             if (!_isLive || _inCatchup)
               IconButton(
-                tooltip: tr('Forward 10 seconds'),
-                icon: const Icon(Icons.forward_10, color: Colors.white),
-                onPressed: () => _skip(const Duration(seconds: 10)),
+                tooltip:
+                    tr('Ahead {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+                icon: const SkipIcon(forward: true, color: Colors.white),
+                onPressed: () => _skip(SkipStep.tap),
               ),
             if (_nextEpisode != null)
               IconButton(
@@ -2116,7 +2119,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             ],
             if (seekable)
               SkipHoldButton(
-                icon: Icons.replay_10,
+                forward: false,
                 onSeek: (amount) {
                   _armTvBarIdle();
                   _skip(-amount);
@@ -2130,7 +2133,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             ),
             if (seekable)
               SkipHoldButton(
-                icon: Icons.forward_10,
+                forward: true,
                 onSeek: (amount) {
                   _armTvBarIdle();
                   _skip(amount);
@@ -2664,10 +2667,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               children: [
                 if (seekable) ...[
                   _TouchRoundButton(
-                    icon: Icons.replay_10,
+                    glyph: const SkipIcon(forward: false),
                     size: 32,
-                    tooltip: tr('Back 10 seconds'),
-                    onPressed: () => _skip(const Duration(seconds: -10)),
+                    tooltip: tr(
+                        'Back {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+                    onPressed: () => _skip(-SkipStep.tap),
                   ),
                   const SizedBox(width: 40),
                 ],
@@ -2680,10 +2684,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 if (seekable) ...[
                   const SizedBox(width: 40),
                   _TouchRoundButton(
-                    icon: Icons.forward_10,
+                    glyph: const SkipIcon(forward: true),
                     size: 32,
-                    tooltip: tr('Forward 10 seconds'),
-                    onPressed: () => _skip(const Duration(seconds: 10)),
+                    tooltip: tr('Ahead {seconds} s',
+                        {'seconds': '${SkipStep.seconds}'}),
+                    onPressed: () => _skip(SkipStep.tap),
                   ),
                 ],
               ],
@@ -3017,7 +3022,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               if (_tvRemote) {
                 _tvSkipKey(sign, repeat: event is KeyRepeatEvent);
               } else if (!_isLive || _inCatchup) {
-                _skip(Duration(seconds: 10 * sign));
+                _skip(SkipStep.tap * sign);
                 _flashControls();
               }
               return KeyEventResult.handled;
@@ -3511,13 +3516,17 @@ class _FitPill extends StatelessWidget {
 /// +-10 s), on a dark disc so it reads on bright pictures.
 class _TouchRoundButton extends StatelessWidget {
   const _TouchRoundButton({
-    required this.icon,
+    this.icon,
+    this.glyph,
     required this.size,
     required this.tooltip,
     required this.onPressed,
   });
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Drawn instead of [icon] (the skip buttons' [SkipIcon]).
+  final Widget? glyph;
   final double size;
   final String tooltip;
   final VoidCallback onPressed;
@@ -3533,7 +3542,7 @@ class _TouchRoundButton extends StatelessWidget {
         iconSize: size,
         padding: EdgeInsets.all(size * 0.3),
         color: Colors.white,
-        icon: Icon(icon),
+        icon: glyph ?? Icon(icon),
         onPressed: onPressed,
       ),
     );
