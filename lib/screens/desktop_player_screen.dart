@@ -23,6 +23,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
+import '../services/app_log.dart';
 import '../services/apple_tv_display.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
@@ -1260,6 +1261,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// new open cancels the ask still waiting for the old stream.
   void _matchDisplay(Channel channel) {
     if (!isAppleTv) return;
+    // GitHub #20 (Apple TV 968: movies closed the app): names the open in
+    // the next session's log if the app ends within 10 s; a frame rate ask
+    // replaces it (AppleTvDisplayMatch).
+    final opening = AppLog.step('Player: opening '
+        '${channel.isLive ? 'a live channel' : 'a movie / episode'} on Apple TV');
+    Timer(const Duration(seconds: 10), () => AppLog.stepDone(opening));
     final generation = _openGeneration;
     bool current() =>
         mounted &&

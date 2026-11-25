@@ -410,6 +410,18 @@ class AppUpdateService {
   Future<void> installApk(String filePath) =>
       _channel.invokeMethod('installApk', {'filePath': filePath});
 
+  /// Android: the version handed to the installer before this start that
+  /// never arrived (MainActivity's `UpdateAttempts`: GitHub #22, a Fire TV
+  /// whose installer said "installed" and kept the old version), else null.
+  Future<String?> lastInstallFailure() async {
+    if (_os != 'android') return null;
+    try {
+      return await _channel.invokeMethod<String>('lastInstallFailure');
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Windows' whole update flow — no `MainActivity.kt`-style native
   /// installer channel exists for it (nothing in this repo builds a
   /// signed Windows installer at all yet, just a plain Release folder),

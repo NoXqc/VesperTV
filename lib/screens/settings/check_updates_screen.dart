@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +53,10 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
   String? _downloadedApkPath;
   late UpdateChannel _channel;
 
+  /// The version the last Install handed to Android that never arrived
+  /// (GitHub #22), shown under the current version.
+  String? _lastFailure;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +65,9 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         context.read<StorageService?>()?.getUpdateChannel());
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _currentVersion = info.version);
+    });
+    _updateService.lastInstallFailure().then((version) {
+      if (mounted && version != null) setState(() => _lastFailure = version);
     });
     final start = widget.startWith;
     if (start != null) {
@@ -125,12 +132,15 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
           if (mounted) setState(() => _downloadProgress = fraction);
         },
       );
+      debugPrint('AppUpdate: downloaded ${update.version} '
+          '(${update.apkSizeBytes ~/ (1024 * 1024)} MB)');
       if (!mounted) return;
       setState(() {
         _downloadedApkPath = file.path;
         _status = _Status.readyToInstall;
       });
     } catch (e) {
+      debugPrint('AppUpdate: download of ${update.version} failed: $e');
       if (!mounted) return;
       setState(() {
         _status = _Status.error;
@@ -185,6 +195,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
       if (proceed == true) await _updateService.requestInstallPermission();
       return;
     }
+    debugPrint("AppUpdate: handing ${_update?.version} to Android's installer");
     await _updateService.installApk(path);
   }
 
@@ -206,6 +217,15 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
                             {'currentVersion': _currentVersion}),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (_lastFailure != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      tr("The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.",
+                          {'version': _lastFailure!}),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ..._buildStatusContent(context),
                   const SizedBox(height: 28),

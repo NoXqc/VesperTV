@@ -45,6 +45,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         if (!cleanedUpdateApk) {
             cleanedUpdateApk = true
+            UpdateAttempts(this).checkAtStart()
             try {
                 val leftover = File(cacheDir, "noxplayer_update.apk")
                 if (leftover.isFile && !leftover.delete()) {
@@ -200,7 +201,7 @@ class MainActivity : FlutterActivity() {
         return try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US)
-            am.getHistoricalProcessExitReasons(packageName, 0, 3).map { e ->
+            am.getHistoricalProcessExitReasons(packageName, 0, 5).flatMap { e ->
                 val reason = when (e.reason) {
                     android.app.ApplicationExitInfo.REASON_ANR -> "not responding"
                     android.app.ApplicationExitInfo.REASON_CRASH -> "crash (java)"
@@ -218,13 +219,40 @@ class MainActivity : FlutterActivity() {
                     else -> "unknown ${e.reason}"
                 }
                 val process = if (e.processName == packageName) "" else " ${e.processName}"
-                "${stamp.format(java.util.Date(e.timestamp))}$process $reason" +
-                    " importance=${e.importance}" +
-                    " pss=${e.pss / 1024}MB rss=${e.rss / 1024}MB" +
-                    (e.description?.let { " ($it)" } ?: "")
+                listOf(
+                    "${stamp.format(java.util.Date(e.timestamp))}$process $reason" +
+                        " importance=${e.importance}" +
+                        " pss=${e.pss / 1024}MB rss=${e.rss / 1024}MB" +
+                        (e.description?.let { " ($it)" } ?: "")
+                ) + nativeCrashLines(e)
             }
         } catch (e: Exception) {
             listOf("unavailable: ${e.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Android 12+: where a native crash happened ([TombstoneSummary]), from the crash report
+     * Android keeps for this app. Nothing on older versions or when the report is gone.
+     */
+    private fun nativeCrashLines(e: android.app.ApplicationExitInfo): List<String> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            e.reason != android.app.ApplicationExitInfo.REASON_CRASH_NATIVE
+        ) return emptyList()
+        return try {
+            val bytes = e.traceInputStream?.use { input ->
+                val out = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(64 * 1024)
+                while (out.size() < 4 * 1024 * 1024) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    out.write(buffer, 0, n)
+                }
+                out.toByteArray()
+            } ?: return listOf("  (no crash report kept)")
+            TombstoneSummary.summarize(bytes)
+        } catch (x: Exception) {
+            listOf("  (crash report unreadable: ${x.javaClass.simpleName})")
         }
     }
 
@@ -297,7 +325,11 @@ class MainActivity : FlutterActivity() {
                 // Send log: why the previous processes ended. A low-memory
                 // kill leaves no line in the app's own log (Fire TV Stick,
                 // Media Hub show page right after a 4K episode, 2026-11-16).
-                result.success(lastExits())
+                // Off the main thread: a native crash's report is read too.
+                Thread {
+                    val lines = lastExits()
+                    runOnUiThread { result.success(lines) }
+                }.start()
             } else {
                 result.notImplemented()
             }
@@ -358,6 +390,7 @@ class MainActivity : FlutterActivity() {
                         result.error("STORAGE_CHECK_FAILED", "Storage check failed", null)
                     }
                 }
+                "lastInstallFailure" -> result.success(UpdateAttempts.lastFailure)
                 "canRequestInstalls" -> {
                     // Only a real gate on Android 8 (API 26)+ — earlier
                     // versions have no per-app "unknown sources" toggle at
@@ -392,6 +425,8 @@ class MainActivity : FlutterActivity() {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
+                        UpdateAttempts(this).record(
+                            file, intent.resolveActivity(packageManager)?.packageName)
                         startActivity(intent)
                         result.success(null)
                     } catch (e: Exception) {

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 
 import '../utils/desktop_platform.dart';
+import 'app_log.dart';
 import 'storage_service.dart';
 
 /// Reads one mpv property ('' when it has none yet).
@@ -73,6 +74,13 @@ class AppleTvDisplayMatch {
           '${video.fps.toStringAsFixed(3)} fps after $took ms -> kept');
       return;
     }
+    // GitHub #20: on 968 every movie closed the app and the log ended
+    // before any DisplayMatch line. The TV switches in the seconds after the
+    // answer, so the step stays named for 8 s.
+    final step = AppLog.step('DisplayMatch: asked the TV for '
+        '${wanted.toStringAsFixed(3)} Hz (video ${video.width}x${video.height} '
+        '${video.fps.toStringAsFixed(3)} fps)');
+    Timer(const Duration(seconds: 8), () => AppLog.stepDone(step));
     String? answer;
     try {
       answer = await _channel.invokeMethod<String>('match', {

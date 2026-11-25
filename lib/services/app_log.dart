@@ -41,6 +41,8 @@ class AppLog {
   static IOSink? _sink;
   static int _fileBytes = 0;
   static File? _prev;
+  static File? _stepFile;
+  static int _stepId = 0;
 
   /// Runs [body] (the whole of `main`) with print and uncaught errors
   /// captured. `ensureInitialized` must run inside [body] (same zone as
@@ -93,17 +95,62 @@ class AppLog {
       }
       _prev = prev;
       _sink = current.openWrite();
+      final step = File('${dir.path}/vespertv_step.txt');
+      _stepFile = step;
+      final last = await takeLastStep(step);
+      if (last != null) {
+        add('LastStep: the previous session ended during: $last');
+      }
     } catch (_) {
       _sink = null;
     }
   }
 
+  /// A step that can end the app without any Dart error (a native call that
+  /// may crash, a TV mode switch): written to its own small file at once,
+  /// synchronously, and named in the next session's log (`LastStep:`) if
+  /// the app ends before [stepDone]. The normal log is written
+  /// asynchronously, so its last lines are lost in such a crash (Apple TV
+  /// 968: every movie closed the app and the log ended before it,
+  /// GitHub #20). The latest step wins; returns its id for [stepDone].
+  static int step(String what) {
+    final id = ++_stepId;
+    final file = _stepFile;
+    if (file == null) return id;
+    try {
+      file.writeAsStringSync('${_stamp(DateTime.now())} $what', flush: true);
+    } catch (_) {}
+    return id;
+  }
+
+  /// The step a previous session left in [file] (then removed), or null.
+  @visibleForTesting
+  static Future<String?> takeLastStep(File file) async {
+    try {
+      if (!await file.exists()) return null;
+      final last = (await file.readAsString()).trim();
+      await file.delete();
+      return last.isEmpty ? null : last;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  static set stepFileForTest(File? file) => _stepFile = file;
+
+  /// Ends step [id] (nothing when a later step replaced it).
+  static void stepDone(int id) {
+    if (id != _stepId) return;
+    try {
+      final file = _stepFile;
+      if (file != null && file.existsSync()) file.deleteSync();
+    } catch (_) {}
+  }
+
   /// One log line (or several, newline-separated), timestamped.
   static void add(String line) {
-    final now = DateTime.now();
-    final stamp = '${_two(now.hour)}:${_two(now.minute)}:${_two(now.second)}'
-        '.${now.millisecond.toString().padLeft(3, '0')}';
-    final entry = '$stamp $line';
+    final entry = '${_stamp(DateTime.now())} $line';
     _lines.addLast(entry);
     while (_lines.length > _maxLines) {
       _lines.removeFirst();
@@ -118,6 +165,10 @@ class AppLog {
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');
+
+  static String _stamp(DateTime now) =>
+      '${_two(now.hour)}:${_two(now.minute)}:${_two(now.second)}'
+      '.${now.millisecond.toString().padLeft(3, '0')}';
 
   /// Everything a send would contain, before redaction: device lines,
   /// this session, the previous session's tail, and (Android) logcat.
