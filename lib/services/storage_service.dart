@@ -1337,6 +1337,12 @@ class StorageService {
         setCompactUi(value == 'compact'),
       ]);
 
+  /// See [AppConstants.keyColumnLines]; '' = the theme's lines.
+  String getColumnLines() =>
+      _prefs.getString(_vk(AppConstants.keyColumnLines)) ?? '';
+  Future<void> setColumnLines(String value) =>
+      _prefs.setString(_vk(AppConstants.keyColumnLines), value);
+
   /// Media Hub rows hidden with their eye (row keys), per viewer.
   Set<String> getHubHiddenRows() =>
       (_prefs.getStringList(_vk(AppConstants.keyHubHiddenRows)) ?? const [])

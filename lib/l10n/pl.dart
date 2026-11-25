@@ -4062,4 +4062,11 @@ const Map<String, String> kPl = {
   "No colour": "Bez koloru",
   "Colour…": "Kolor…",
   "Group colour": "Kolor grupy",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Biały",
+  "Column lines":
+      "Linie kolumn",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Kolor linii między kolumnami i w przewodniku. Tylko dla tego profilu.",
 };

@@ -4481,4 +4481,11 @@ const Map<String, String> kFr = {
   "No colour": "Aucune couleur",
   "Colour…": "Couleur…",
   "Group colour": "Couleur du groupe",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Blanc",
+  "Column lines":
+      "Lignes des colonnes",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "La couleur des lignes entre les colonnes et dans le guide. Pour ce profil seulement.",
 };

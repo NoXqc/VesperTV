@@ -18,8 +18,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Hold OK on a group > Colour… (owner, 2026-11-25): the row wears the
-/// colour (outline + name) while the remote is elsewhere and keeps the
-/// usual highlight when the remote is on it.
+/// colour as a fine fade (white name) while the remote is elsewhere and
+/// keeps the usual highlight when the remote is on it.
 class _Groups extends PlaylistManager {
   _Groups(StorageService storage) : super(storage, CatalogDatabase());
 
@@ -64,11 +64,15 @@ void main() {
             (_) async => const StandardMessageCodec().encodeMessage([null]));
   });
 
-  Future<_Groups> pumpHome(WidgetTester tester) async {
+  Future<_Groups> pumpHome(WidgetTester tester,
+      {String columnLines = ''}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues({AppConstants.keyShowClock: false});
+    SharedPreferences.setMockInitialValues({
+      AppConstants.keyShowClock: false,
+      if (columnLines.isNotEmpty) AppConstants.keyColumnLines: columnLines,
+    });
     final storage = StorageService();
     await storage.init();
     final prefs = AppPreferences(storage);
@@ -132,6 +136,19 @@ void main() {
   Color? colorOf(WidgetTester tester, String label) =>
       tester.widget<Text>(rowText(label).first).style?.color;
 
+  /// The colour of the fade behind [label]'s row, if any.
+  Color? fadeOf(WidgetTester tester, String label) {
+    for (final box in tester.widgetList<DecoratedBox>(find.ancestor(
+        of: rowText(label).first, matching: find.byType(DecoratedBox)))) {
+      final d = box.decoration;
+      if (d is BoxDecoration && d.gradient is LinearGradient) {
+        final first = (d.gradient! as LinearGradient).colors.first;
+        if (first.a > 0.3 && first.a < 0.5) return first.withValues(alpha: 1);
+      }
+    }
+    return null;
+  }
+
   testWidgets('Colour… paints the group at rest, the usual highlight on it',
       (tester) async {
     final playlist = await pumpHome(tester);
@@ -156,11 +173,13 @@ void main() {
     expect(playlist.groupColorOf(null, 'Mine'), 'red');
 
     await focusRow(tester, 'Liga');
-    expect(colorOf(tester, 'Mine'), red, reason: 'red lettering at rest');
-    expect(colorOf(tester, 'Liga'), isNot(red));
+    expect(fadeOf(tester, 'Mine'), red, reason: 'a red fade at rest');
+    expect(colorOf(tester, 'Mine'), Colors.white,
+        reason: 'the name stays white');
+    expect(fadeOf(tester, 'Liga'), isNull);
 
     await focusRow(tester, 'Mine');
-    expect(colorOf(tester, 'Mine'), isNot(red),
+    expect(fadeOf(tester, 'Mine'), isNull,
         reason: 'highlighted normally when the remote is on it');
 
     // The picker starts on the current colour; No colour clears it.
@@ -172,6 +191,46 @@ void main() {
     await settle(tester);
     expect(playlist.groupColorOf(null, 'Mine'), isNull);
     await focusRow(tester, 'Liga');
-    expect(colorOf(tester, 'Mine'), Colors.white);
+    expect(fadeOf(tester, 'Mine'), isNull);
+  });
+
+  test('column line colours: theme, accent, white, presets', () {
+    const scheme = ColorScheme.dark(primary: Colors.amber);
+    expect(columnLineColorOf('', scheme), isNull);
+    expect(columnLineColorOf('accent', scheme), Colors.amber);
+    expect(columnLineColorOf('white', scheme), Colors.white70);
+    expect(columnLineColorOf('blue', scheme), GroupColor.of('blue'));
+    expect(columnLineColorOf('mauve', scheme), isNull);
+  });
+
+  testWidgets('Column lines colour the lines between the columns',
+      (tester) async {
+    await pumpHome(tester, columnLines: 'red');
+    final colors = [
+      for (final d
+          in tester.widgetList<VerticalDivider>(find.byType(VerticalDivider)))
+        d.color
+    ];
+    expect(colors, contains(GroupColor.of('red')));
+    // The horizontal lines too (owner's photo: tabs column, under the
+    // preview, under the guide's hours).
+    final across = [
+      for (final d in tester.widgetList<Divider>(find.byType(Divider))) d.color
+    ];
+    expect(across, contains(GroupColor.of('red')));
+  });
+
+  testWidgets("Default keeps the theme's lines", (tester) async {
+    await pumpHome(tester);
+    final colors = [
+      for (final d
+          in tester.widgetList<VerticalDivider>(find.byType(VerticalDivider)))
+        d.color
+    ];
+    expect(colors, isNot(contains(GroupColor.of('red'))));
+    expect(colors.where((c) => c != null && c != Colors.transparent), isEmpty);
+    expect([
+      for (final d in tester.widgetList<Divider>(find.byType(Divider))) d.color
+    ], isNot(contains(GroupColor.of('red'))));
   });
 }

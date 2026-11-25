@@ -25,6 +25,7 @@ import '../../services/vod_buffering.dart';
 import '../../utils/app_store.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
+import '../../utils/group_colors.dart';
 import '../../widgets/audio_delay_adjuster.dart';
 import '../../widgets/goal_overlay_probe_settings.dart';
 import '../../widgets/goals_alert_overlay.dart';
@@ -399,6 +400,23 @@ class SettingsCatalog {
               ],
               selected: prefs.uiSize,
               onPick: prefs.setUiSize),
+          // Owner, 2026-11-25: users want the lines between the columns in
+          // a colour (not background colours).
+          SettingsChoice(
+              id: 'column_lines',
+              icon: Icons.vertical_split_outlined,
+              title: tr('Column lines'),
+              help: tr(
+                  'The colour of the lines between the columns and in the guide. Just for this profile.'),
+              options: [
+                SettingsOption('', tr('Default')),
+                SettingsOption('accent', tr('Theme color')),
+                SettingsOption('white', tr('White')),
+                for (final c in GroupColor.presets)
+                  SettingsOption(c.id, tr(c.name)),
+              ],
+              selected: prefs.columnLines,
+              onPick: prefs.setColumnLines),
           SettingsChoice(
               id: 'layout',
               icon: Icons.devices_outlined,

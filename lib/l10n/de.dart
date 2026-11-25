@@ -4371,4 +4371,11 @@ const Map<String, String> kDe = {
   "No colour": "Keine Farbe",
   "Colour…": "Farbe…",
   "Group colour": "Gruppenfarbe",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Weiß",
+  "Column lines":
+      "Spaltenlinien",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Die Farbe der Linien zwischen den Spalten und im Programmführer. Nur für dieses Profil.",
 };

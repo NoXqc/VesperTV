@@ -3940,4 +3940,11 @@ const Map<String, String> kUk = {
   "No colour": "Без кольору",
   "Colour…": "Колір…",
   "Group colour": "Колір групи",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Білий",
+  "Column lines":
+      "Лінії колонок",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Колір ліній між колонками та в програмі передач. Лише для цього профілю.",
 };

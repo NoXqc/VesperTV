@@ -4468,4 +4468,11 @@ const Map<String, String> kEs = {
   "No colour": "Sin color",
   "Colour…": "Color…",
   "Group colour": "Color del grupo",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Blanco",
+  "Column lines":
+      "Líneas de las columnas",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "El color de las líneas entre las columnas y en la guía. Solo para este perfil.",
 };

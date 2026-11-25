@@ -4475,4 +4475,11 @@ const Map<String, String> kIt = {
   "No colour": "Nessun colore",
   "Colour…": "Colore…",
   "Group colour": "Colore del gruppo",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Bianco",
+  "Column lines":
+      "Linee delle colonne",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Il colore delle linee tra le colonne e nella guida. Solo per questo profilo.",
 };

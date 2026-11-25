@@ -52,6 +52,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyGuideCompact,
     AppConstants.keyCompactUi,
     AppConstants.keyUiSize,
+    AppConstants.keyColumnLines,
   },
 };
 const profileCopyPrefixes = <ProfileCopy, Set<String>>{

@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Colour… (a red outline and name for your Sports group, say: one of 8 colours, shown while the remote is elsewhere), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
+    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -157,6 +157,14 @@
     "title": "Resume the last channel",
     "answer": "What the \"Hold > to resume\" pill means. Works even with the pill turned off in Settings.",
     "controls": "Hold →",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "51cf9906f6abedb4",
+    "category": "Live TV",
+    "title": "Colour the lines between the columns",
+    "answer": "The thin lines between the tabs, groups and channels columns, across the tabs column, under the preview and in the guide (its hours line and the programme outlines) can take a colour: the theme colour, white, or red, orange, yellow, green, aqua, blue, purple or pink. Default keeps the usual lines. Just for this profile.",
+    "controls": "Settings → Appearance → Look → Column lines",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {

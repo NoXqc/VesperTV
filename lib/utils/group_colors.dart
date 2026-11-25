@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 
+/// The fade a coloured group row wears ([groupColorFade]): strongest at the
+/// icon, gone before the count. Fine enough that white text stays easy to
+/// read on every colour.
+LinearGradient groupColorFade(Color color) => LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        color.withValues(alpha: 0.42),
+        color.withValues(alpha: 0.14),
+        color.withValues(alpha: 0),
+      ],
+      stops: const [0, 0.55, 1],
+    );
+
 /// Hold OK on a live group > Colour… (owner, 2026-11-25): a group can wear
-/// one of these colours in the groups column, as its outline and name
-/// while the remote is elsewhere; the focused / open group keeps the usual
+/// one of these colours in the groups column, as a fine fade behind the
+/// row ([groupColorFade]; the first try was an outline + coloured name)
+/// while the remote is elsewhere; the focused group keeps the usual
 /// highlight. Ids are what is saved (`AppConstants.keyGroupColors`), so a
 /// shade can change here without touching anyone's choice; never rename
-/// one. All are bright enough to read on the dark columns of every palette.
+/// one.
 class GroupColor {
   const GroupColor(this.id, this.name, this.color);
 
@@ -42,3 +57,14 @@ class GroupColor {
   /// doesn't know).
   static Color? of(String? id) => byId(id)?.color;
 }
+
+/// Settings > Appearance > Column lines (owner, 2026-11-25): the colour of
+/// the lines between the TV home's columns and the guide's own. '' (or an
+/// unknown id) = the theme's; 'accent' = the palette's colour; 'white';
+/// else one of [GroupColor.presets].
+Color? columnLineColorOf(String id, ColorScheme scheme) => switch (id) {
+      '' => null,
+      'accent' => scheme.primary,
+      'white' => Colors.white70,
+      _ => GroupColor.of(id),
+    };

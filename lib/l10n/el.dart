@@ -4430,4 +4430,11 @@ const Map<String, String> kEl = {
   "No colour": "Χωρίς χρώμα",
   "Colour…": "Χρώμα…",
   "Group colour": "Χρώμα ομάδας",
+  // Settings > Appearance > Column lines (2026-11-25).
+  "White":
+      "Λευκό",
+  "Column lines":
+      "Γραμμές στηλών",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "Το χρώμα των γραμμών ανάμεσα στις στήλες και στον οδηγό. Μόνο για αυτό το προφίλ.",
 };
