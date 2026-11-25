@@ -591,7 +591,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       groupFirst = choice;
     }
     final playlist = context.read<PlaylistManager>();
-    final visible = playlist.visibleChannels(category: 'tv');
+    final visible = playlist.sportsChannels();
     final library = SportsChannelLibrary(visible, store: _store);
     Map<String, List<String>> rules = list?.filters ?? {};
     final chosen = await Navigator.push<Set<String>>(
@@ -956,8 +956,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_dirty || _library == null) {
-      _library = SportsChannelLibrary(_playlist.visibleChannels(category: 'tv'),
-          store: _store);
+      _library =
+          SportsChannelLibrary(_playlist.sportsChannels(), store: _store);
       _rows = _buildRows(_library!);
       _total = {
         for (final r in _rows)

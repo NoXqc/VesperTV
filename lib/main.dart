@@ -710,10 +710,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           .gamesForDay([league], DateTime(start.year, start.month, start.day));
       final game = games.where((g) => g.id == id).firstOrNull;
       if (game == null) return;
-      final live = _playlistManager.visibleChannels(category: 'tv');
+      final live = _playlistManager.sportsChannels();
       final matcher = SportsChannelMatcher.shared(_epgService);
       await matcher.prepare(live,
-          hidden: _playlistManager.hiddenLiveChannels());
+          hidden: _playlistManager.sportsHiddenChannels());
       final picks = SportsChannelPicks.load(_storage);
       final key = SportsChannelPicks.eventKey(game);
       final found = (await matcher.matchDay([game], picks))[key] ?? [];
@@ -756,8 +756,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       viewerLeagues: savedSportsLeagues(_storage),
       matcher: SportsChannelMatcher.shared(_epgService),
       picks: SportsChannelPicks.load(_storage),
-      channels: _playlistManager.visibleChannels(category: 'tv'),
-      hiddenChannels: _playlistManager.hiddenLiveChannels(),
+      channels: _playlistManager.sportsChannels(),
+      hiddenChannels: _playlistManager.sportsHiddenChannels(),
     );
   }
 

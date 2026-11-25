@@ -22,6 +22,7 @@ import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../screens/sports_live_list_screen.dart';
 import '../screens/sports_screen.dart' show pickChannelForGame;
+import 'hidden_channel_tag.dart';
 import 'hold_to_activate.dart';
 import 'sports_widgets.dart';
 
@@ -278,8 +279,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     final matcher = SportsChannelMatcher.shared(context.read<EpgService>());
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    final channels = playlist.visibleChannels(category: 'tv');
-    await matcher.prepare(channels, hidden: playlist.hiddenLiveChannels());
+    final channels = playlist.sportsChannels();
+    await matcher.prepare(channels, hidden: playlist.sportsHiddenChannels());
     if (!mounted) return;
     final picks = SportsChannelPicks.load(storage);
     final wanted = {...team, ...live, ...nearby}.toList();
@@ -752,6 +753,10 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                 _channelLogo(c),
                 const SizedBox(width: 12),
                 Expanded(child: _twoLines(c.name, sub)),
+                if (playlists.isInHiddenGroup(c)) ...[
+                  const SizedBox(width: 6),
+                  const HiddenChannelTag(),
+                ],
                 if (c.id == widget.current.id) ...[
                   const SizedBox(width: 6),
                   _watchingTag(accent),

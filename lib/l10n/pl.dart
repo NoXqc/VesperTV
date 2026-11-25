@@ -4062,4 +4062,9 @@ const Map<String, String> kPl = {
   "No colour": "Bez koloru",
   "Colour…": "Kolor…",
   "Group colour": "Kolor grupy",
+  // Sports Trak > Find games in hidden groups (2026-11-25).
+  "Find games in hidden groups":
+      "Szukaj meczów w ukrytych grupach",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Kanały meczów mogą pochodzić też z ukrytych grup na żywo: grupa ukryta dla porządku w TV nadal daje swoje mecze. Kanały ukryte pojedynczo pozostają pominięte. Nigdy w profilu dziecięcym. Zapisane dla tego widza.",
 };

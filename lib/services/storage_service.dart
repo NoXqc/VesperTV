@@ -1090,6 +1090,15 @@ class StorageService {
   Future<void> setSportsPreferQuality(bool value) =>
       _prefs.setBool(_vk('vesper_sports_prefer_quality'), value);
 
+  /// Settings > Sports Trak > Find games in hidden groups (owner,
+  /// 2026-11-25): game matching also looks at the live groups the viewer
+  /// hid (`PlaylistManager.sportsChannels`; never on a kids profile). Per
+  /// viewer, off.
+  bool getSportsSearchHiddenGroups() =>
+      _prefs.getBool(_vk('vesper_sports_hidden_groups')) ?? false;
+  Future<void> setSportsSearchHiddenGroups(bool value) =>
+      _prefs.setBool(_vk('vesper_sports_hidden_groups'), value);
+
   /// Empty preserves the existing ranking. Per viewer; Backup/Transfer included.
   List<String> getSportsPreferredCountries() =>
       _prefs.getStringList(_vk(AppConstants.keySportsPreferredCountries)) ??
