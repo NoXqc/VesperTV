@@ -3933,4 +3933,11 @@ const Map<String, String> kUk = {
       "Видалено з мережевої папки.",
   "Couldn't delete it from the network folder.":
       "Не вдалося видалити з мережевої папки.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Помаранчевий",
+  "Purple": "Фіолетовий",
+  "Pink": "Рожевий",
+  "No colour": "Без кольору",
+  "Colour…": "Колір…",
+  "Group colour": "Колір групи",
 };

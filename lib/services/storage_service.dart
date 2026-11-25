@@ -1507,6 +1507,31 @@ class StorageService {
       _prefs.setStringList(
           _vkp(AppConstants.keyFavoritedGroups, playlistId), groups.toList());
 
+  /// See [AppConstants.keyGroupColors]: group title -> colour id, for a
+  /// playlist's groups ([scope] = its id) or the viewer's own groups
+  /// (`GroupColor.ownScope`).
+  Map<String, String> getGroupColors(String scope) {
+    final raw = _prefs.getString(_vkp(AppConstants.keyGroupColors, scope));
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map) return {};
+      return {
+        for (final e in map.entries)
+          if (e.value is String) '${e.key}': e.value as String,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setGroupColors(String scope, Map<String, String> colors) {
+    final key = _vkp(AppConstants.keyGroupColors, scope);
+    return colors.isEmpty
+        ? _prefs.remove(key)
+        : _prefs.setString(key, jsonEncode(colors));
+  }
+
   /// [type] is 'tv'/'vod'/'series' — see [AppConstants.keyGroupOrder].
   /// Empty = provider order (nothing moved yet).
   List<String> getGroupOrder(String playlistId, String type) =>
@@ -2204,6 +2229,7 @@ class StorageService {
     AppConstants.keyFavorites,
     AppConstants.keyFavoriteSeries,
     AppConstants.keyFavoritedGroups,
+    AppConstants.keyGroupColors,
     AppConstants.keyFavoriteLiveOrder,
     AppConstants.keyFavoriteLiveSort,
     AppConstants.keyMyGroups,

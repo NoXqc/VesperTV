@@ -530,6 +530,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
+  5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
+  on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);
+  `_GroupRow.tint` = outline + name + icon at rest only. Per viewer + playlist like the group star
+  (`vesper_group_colors_<playlist|own>`), synced, follows a rename, in `liveViewSignature`. Details:
+  dev-notes/group-colours.md. Tests: group_colors_test, tv_group_colors_test.
 - **Claude, 2026-11-24 - Tuliprox Player API extras (`claude/tuliprox-api-extras`, worktree `VesperTV-claude-tpxextras`,
   from main dc1f3c2):** uzumaki merged the Player API into develop (3.3.206/207, the VPS runs 3.3.207); owner: "Add them
   all for future proofing". Sources: **Your own connection** (split a shared stream, then switch just for you), member

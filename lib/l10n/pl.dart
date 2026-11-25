@@ -4055,4 +4055,11 @@ const Map<String, String> kPl = {
       "Usunięto z folderu sieciowego.",
   "Couldn't delete it from the network folder.":
       "Nie udało się usunąć z folderu sieciowego.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Pomarańczowy",
+  "Purple": "Fioletowy",
+  "Pink": "Różowy",
+  "No colour": "Bez koloru",
+  "Colour…": "Kolor…",
+  "Group colour": "Kolor grupy",
 };

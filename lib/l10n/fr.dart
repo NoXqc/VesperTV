@@ -4474,4 +4474,11 @@ const Map<String, String> kFr = {
       "Supprimé du dossier réseau.",
   "Couldn't delete it from the network folder.":
       "Impossible de le supprimer du dossier réseau.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Orange",
+  "Purple": "Violet",
+  "Pink": "Rose",
+  "No colour": "Aucune couleur",
+  "Colour…": "Couleur…",
+  "Group colour": "Couleur du groupe",
 };

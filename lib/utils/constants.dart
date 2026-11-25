@@ -188,6 +188,13 @@ class AppConstants {
   static const String keyAutoPairedEpgOverrides = 'nox_auto_paired_epg';
   static const String keyFavoritedGroups = 'nox_favorited_groups';
 
+  /// Hold OK on a live group > Colour… (owner, 2026-11-25: "a red contour
+  /// and red lettering to my Sports group"): JSON `{group title: colour
+  /// id}` (`GroupColor.presets`), per playlist and per viewer like the
+  /// group star; the viewer's own groups under the scope
+  /// `GroupColor.ownScope`. Transferred and synced.
+  static const String keyGroupColors = 'vesper_group_colors';
+
   /// User-chosen group order (long-press a group → Move), per playlist and
   /// per viewer, one list per content type ('tv'/'vod'/'series'): the key
   /// gets a `_<type>` suffix before the usual playlist/viewer suffixes.

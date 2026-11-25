@@ -65,7 +65,8 @@ const profileCopyPrefixes = <ProfileCopy, Set<String>>{
     '${AppConstants.keyHiddenChannels}_',
     '${AppConstants.keyHiddenPlaylistGroups}_',
     '${AppConstants.keyGroupOrder}_',
-    '${AppConstants.keyChannelOrder}_'
+    '${AppConstants.keyChannelOrder}_',
+    '${AppConstants.keyGroupColors}_',
   },
 };
 bool copyMainKey(String key, Set<ProfileCopy> options) =>

@@ -4468,4 +4468,11 @@ const Map<String, String> kIt = {
       "Eliminato dalla cartella di rete.",
   "Couldn't delete it from the network folder.":
       "Impossibile eliminarlo dalla cartella di rete.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Arancione",
+  "Purple": "Viola",
+  "Pink": "Rosa",
+  "No colour": "Nessun colore",
+  "Colour…": "Colore…",
+  "Group colour": "Colore del gruppo",
 };

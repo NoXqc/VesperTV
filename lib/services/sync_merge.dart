@@ -84,6 +84,7 @@ class _SyncPlaylistRemap {
     AppConstants.keyAutoPairedChannelLinks,
     AppConstants.keyAutoPairedEpgOverrides,
     AppConstants.keyFavoritedGroups,
+    AppConstants.keyGroupColors,
     AppConstants.keyChannelOrder,
     '${AppConstants.keyGroupOrder}_tv',
     '${AppConstants.keyGroupOrder}_vod',

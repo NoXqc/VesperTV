@@ -49,6 +49,7 @@ import '../services/viewer_profile_service.dart';
 import '../utils/scroll_safety.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/favorite_live_sort.dart';
+import '../utils/group_colors.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/display_title.dart';
@@ -687,6 +688,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 ? tr('Remove from Favourites')
                 : tr('Add to Favourites')),
           ),
+          // Live groups (the colour shows in the groups column).
+          if (category == null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('color'),
+              child: Text(tr('Colour…')),
+            ),
           TvDialogOption(
             onPressed: () =>
                 Navigator.of(context).pop(isPending ? 'cancel_hide' : 'hide'),
@@ -762,6 +769,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         });
       case 'favorite':
         playlist.setGroupFavorited(playlistId, title, !isFavorited);
+      case 'color':
+        await _pickGroupColor(playlistId, title);
       case 'hide':
         _startPendingHide(playlistId, title);
       case 'cancel_hide':
@@ -778,6 +787,60 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       case 'settings':
         await _openSettings();
     }
+  }
+
+  /// Hold OK on a live group (or an own group: [playlistId] null) >
+  /// Colour… (owner, 2026-11-25): No colour + `GroupColor.presets`, the
+  /// current one focused and ticked. The row wears it at rest.
+  Future<void> _pickGroupColor(String? playlistId, String title) async {
+    final playlist = context.read<PlaylistManager>();
+    final current = GroupColor.byId(playlist.groupColorOf(playlistId, title));
+    Widget choice(Color? color, String name, bool on) => Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+                border: color == null
+                    ? Border.all(color: Colors.white54, width: 1.5)
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(name,
+                  style: TextStyle(color: color ?? Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
+            if (on) const Icon(Icons.check, size: 18, color: Colors.white),
+          ],
+        );
+    final picked = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        maxWidth: 280,
+        title: Text(tr('Group colour')),
+        children: [
+          TvDialogOption(
+            autofocus: current == null,
+            onPressed: () => Navigator.of(context).pop(''),
+            child: choice(null, tr('No colour'), current == null),
+          ),
+          for (final c in GroupColor.presets)
+            TvDialogOption(
+              autofocus: c == current,
+              onPressed: () => Navigator.of(context).pop(c.id),
+              child: choice(c.color, tr(c.name), c == current),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await playlist.setGroupColor(
+        playlistId, title, picked.isEmpty ? null : picked);
   }
 
   /// Hold OK on a live group > Rename… / Use the provider's name ('').
@@ -896,6 +959,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             child: Text(tr('Rename…')),
           ),
           TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('color'),
+            child: Text(tr('Colour…')),
+          ),
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('new_group'),
             child: Text(tr('New group…')),
           ),
@@ -942,6 +1009,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           if (_selectedGroup == title) _selectedGroup = to;
           _focusGroupKeyOnBuild = _groupKey(_myGroupsId, to);
         });
+      case 'color':
+        await _pickGroupColor(null, title);
       case 'new_group':
         await _createMyGroup();
       case 'settings':
@@ -6030,6 +6099,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         fontSize: _groupFontSize,
                         isFavorited: false,
                         isPendingHide: false,
+                        tint: GroupColor.of(playlist.groupColorOf(null, title)),
                         onTap: () => _onGroupSelected(title),
                         onHighlight: () => _onGroupHighlighted(title),
                         onLongPress: () => _showMyGroupOptions(title),
@@ -6064,6 +6134,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             group.playlistId, group.title),
                         isPendingHide: _pendingHideGroups
                             .contains(_groupKey(group.playlistId, group.title)),
+                        tint: GroupColor.of(playlist.groupColorOf(
+                            group.playlistId, group.title)),
                         onTap: () => _onGroupSelected(group.title,
                             playlistId: group.playlistId),
                         onHighlight: () => _onGroupHighlighted(group.title),
@@ -8573,10 +8645,16 @@ class _GroupRow extends StatefulWidget {
     this.focusOnBuild = false,
     this.onFocusedOnBuild,
     this.onHighlight,
+    this.tint,
   });
 
   final IconData icon;
   final String label;
+
+  /// Hold OK > Colour… (`GroupColor`): the outline, name and icon while the
+  /// row is neither focused nor the open group (those keep the usual
+  /// highlight). Null = the usual white row.
+  final Color? tint;
 
   /// Called when the row gets focus (Show channels while moving through
   /// groups).
@@ -8737,12 +8815,16 @@ class _GroupRowState extends State<_GroupRow> {
     final backgroundColor = (_focused || widget.selected)
         ? Colors.transparent
         : Colors.white.withValues(alpha: 0.04);
-    final foregroundColor = highlighted ? focusedForeground : Colors.white;
+    // The group's own colour, only at rest (owner: it "still gets
+    // highlighted normally when I get on it").
+    final tint = highlighted || widget.moving ? null : widget.tint;
+    final foregroundColor =
+        highlighted ? focusedForeground : (tint ?? Colors.white);
     // `scheme.tertiary` — a dedicated icon/symbol-glyph accent, separate
     // from the text/border/gradient accent (`focusedForeground`) — see
     // `buildPaletteColorScheme`'s own doc comment for why (Habs: white
     // contour/text, blue icons).
-    final iconColor = highlighted ? scheme.tertiary : Colors.white70;
+    final iconColor = highlighted ? scheme.tertiary : (tint ?? Colors.white70);
 
     // Compact UI: one size smaller (see _SelectableRow).
     final fontSize = _compactUi ? (widget.fontSize ?? 14) - 1 : widget.fontSize;
@@ -8831,7 +8913,9 @@ class _GroupRowState extends State<_GroupRow> {
                             ? BorderSide(color: scheme.primary, width: 2.5)
                             : widget.selected
                                 ? BorderSide(color: scheme.primary, width: 1.5)
-                                : BorderSide.none,
+                                : tint != null
+                                    ? BorderSide(color: tint, width: 1.5)
+                                    : BorderSide.none,
                   ),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -8864,7 +8948,8 @@ class _GroupRowState extends State<_GroupRow> {
                                   style: TextStyle(
                                     color: highlighted
                                         ? foregroundColor
-                                        : Colors.white54,
+                                        : tint?.withValues(alpha: 0.75) ??
+                                            Colors.white54,
                                     fontSize: (fontSize ?? 14) * 0.85,
                                   ),
                                 ),

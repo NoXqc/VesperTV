@@ -4461,4 +4461,11 @@ const Map<String, String> kEs = {
       "Eliminado de la carpeta de red.",
   "Couldn't delete it from the network folder.":
       "No se pudo eliminar de la carpeta de red.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Naranja",
+  "Purple": "Morado",
+  "Pink": "Rosa",
+  "No colour": "Sin color",
+  "Colour…": "Color…",
+  "Group colour": "Color del grupo",
 };

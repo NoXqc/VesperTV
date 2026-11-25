@@ -4423,4 +4423,11 @@ const Map<String, String> kEl = {
       "Διαγράφηκε από τον φάκελο δικτύου.",
   "Couldn't delete it from the network folder.":
       "Δεν ήταν δυνατή η διαγραφή από τον φάκελο δικτύου.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Πορτοκαλί",
+  "Purple": "Μωβ",
+  "Pink": "Ροζ",
+  "No colour": "Χωρίς χρώμα",
+  "Colour…": "Χρώμα…",
+  "Group colour": "Χρώμα ομάδας",
 };

@@ -4364,4 +4364,11 @@ const Map<String, String> kDe = {
       "Aus dem Netzwerkordner gelöscht.",
   "Couldn't delete it from the network folder.":
       "Konnte nicht aus dem Netzwerkordner gelöscht werden.",
+  // Hold OK on a group > Colour… (2026-11-25).
+  "Orange": "Orange",
+  "Purple": "Lila",
+  "Pink": "Rosa",
+  "No colour": "Keine Farbe",
+  "Colour…": "Farbe…",
+  "Group colour": "Gruppenfarbe",
 };
