@@ -82,6 +82,45 @@ import '../widgets/desktop_video_status.dart';
 // Android widget tests on a Windows development PC exercise the TV path.
 bool get _desktopSports => usesMediaKitTarget;
 
+/// [games] grouped by league in [leagues]' order (start order kept inside
+/// each league), so a night of NHL + NBA + NFL reads as blocks with a league
+/// divider between them (user request: "each league on its own row" — kept
+/// as one row per Live / Later / Final instead, so what's live stays first).
+///
+/// [soonestFirst] (games to come: Later today, the next days): the league
+/// whose first game starts soonest leads, the league order only breaks ties.
+/// With the league order alone, tonight's NHL games came before the nine
+/// Champions League games of the early afternoon, which sat far to the right
+/// of the row (dajokahn, 2026-11-25, LOG-5MXR4H).
+@visibleForTesting
+List<SportsGame> sportsGamesByLeague(
+    Iterable<SportsGame> games, List<SportsLeague> leagues,
+    {bool soonestFirst = false}) {
+  final order = {for (final (i, l) in leagues.indexed) l.id: i};
+  final first = <String, DateTime>{};
+  if (soonestFirst) {
+    for (final g in games) {
+      final at = first[g.league.id];
+      if (at == null || g.start.isBefore(at)) first[g.league.id] = g.start;
+    }
+  }
+  final list = games.indexed.toList()
+    ..sort((a, b) {
+      final la = a.$2.league.id, lb = b.$2.league.id;
+      if (la != lb) {
+        if (soonestFirst) {
+          final t = first[la]!.compareTo(first[lb]!);
+          if (t != 0) return t;
+        }
+        final c =
+            (order[la] ?? order.length).compareTo(order[lb] ?? order.length);
+        return c != 0 ? c : la.compareTo(lb);
+      }
+      return a.$1.compareTo(b.$1);
+    });
+  return [for (final e in list) e.$2];
+}
+
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see
 /// [SportsChannelMatcher] for how channels are found). Select a game for its
@@ -824,21 +863,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         games.first;
   }
 
-  /// [games] grouped by league in the user's league order (start order
-  /// kept inside each league), so a night of NHL + NBA + NFL reads as
-  /// blocks with a league divider between them (user request: "each league
-  /// on its own row" — kept as one row per Live / Later / Final instead, so
-  /// what's live stays first).
-  List<SportsGame> _byLeague(Iterable<SportsGame> games) {
-    final order = {for (final (i, l) in _leagues.indexed) l.id: i};
-    final list = games.indexed.toList()
-      ..sort((a, b) {
-        final c = (order[a.$2.league.id] ?? order.length)
-            .compareTo(order[b.$2.league.id] ?? order.length);
-        return c != 0 ? c : a.$1.compareTo(b.$1);
-      });
-    return [for (final e in list) e.$2];
-  }
+  /// [sportsGamesByLeague] in the user's league order.
+  List<SportsGame> _byLeague(Iterable<SportsGame> games,
+          {bool soonestFirst = false}) =>
+      sportsGamesByLeague(games, _leagues, soonestFirst: soonestFirst);
 
   List<_Section> get _sections {
     final mode = _modeActive;
@@ -847,13 +875,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final remaining = _games.where((game) => !mode || !_follows.involves(game));
     // My Teams' games first (stable: start order kept within each half),
     // then the rest by league.
-    List<SportsGame> followedFirst(Iterable<SportsGame> games) => [
+    List<SportsGame> followedFirst(Iterable<SportsGame> games,
+            {bool soonestFirst = false}) =>
+        [
           ...games.where(_follows.involves),
-          ..._byLeague(games.where((g) => !_follows.involves(g))),
+          ..._byLeague(games.where((g) => !_follows.involves(g)),
+              soonestFirst: soonestFirst),
         ];
     final live =
         followedFirst(remaining.where((g) => g.state == GameState.live));
-    final pre = followedFirst(remaining.where((g) => g.state == GameState.pre));
+    final pre = followedFirst(remaining.where((g) => g.state == GameState.pre),
+        soonestFirst: true);
     final post = _byLeague(remaining.where((g) => g.state == GameState.post));
     final laterLabel = switch (_dayOffset) {
       0 => tr('Later today'),
@@ -869,7 +901,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (_showsUpcoming)
         for (final (offset, games) in _upcoming)
           if (games.isNotEmpty)
-            _Section('day$offset', _dayLabel(offset), followedFirst(games)),
+            _Section('day$offset', _dayLabel(offset),
+                followedFirst(games, soonestFirst: true)),
       if (post.isNotEmpty) _Section('post', tr('Final'), post),
     ];
   }
@@ -1756,6 +1789,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             await playback.stop();
           }
           return;
+        }
+        // Which game and channel copy a card started; the next LivePlay line
+        // names the stream (dajokahn's card vs guide stutter, 2026-11-25).
+        if (game != null) {
+          debugPrint('SportsPlay: ${game.league.id} '
+              '${game.away.abbreviation}@${game.home.abbreviation} -> '
+              '${channel.name} | group ${channel.group}');
         }
         await playback.play(channel);
         // Full screen may reuse the opening session without waiting for the

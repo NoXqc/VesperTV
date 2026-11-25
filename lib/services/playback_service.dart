@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
@@ -682,6 +683,7 @@ class PlaybackService extends ChangeNotifier {
     // both share one provider connection.
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
+    if (channel.isLive) debugPrint(livePlayLogLine(channel, openUrl));
 
     // Leaving a Tuliprox stream: it ends on the server first, so the new
     // channel finds a one-connection account free instead of waiting for
@@ -2592,4 +2594,26 @@ bool _streamUsesHls(String url) {
       (_hlsHosts.contains(uri.host) &&
           uri.path.toLowerCase().endsWith('.ts') &&
           !_notHlsUrls.contains(url));
+}
+
+/// Send log, every live play: which copy of a channel started (dajokahn,
+/// 2026-11-25, LOG-5MXR4H: TNT Sports 4 froze from a Sports Trak card but
+/// "the same channel" played fine from the guide, and the log only had the
+/// name). `stream` = a short hash of the address (no host or login in the
+/// log), so two plays of one copy show the same tag; `tap` = the recorder's
+/// local copy.
+@visibleForTesting
+String livePlayLogLine(Channel channel, String openUrl) {
+  final path = Uri.tryParse(channel.url)?.path.toLowerCase() ?? '';
+  final kind = path.endsWith('.m3u8')
+      ? 'm3u8'
+      : path.endsWith('.ts')
+          ? 'ts'
+          : 'other';
+  final tag =
+      sha256.convert(utf8.encode(channel.url)).toString().substring(0, 8);
+  return 'LivePlay: ${channel.name} | group ${channel.group} | '
+      'playlist ${channel.playlistId} | stream $tag $kind'
+      '${openUrl != channel.url ? ' | tap' : ''}'
+      '${channel.httpHeaders.isNotEmpty ? ' | headers' : ''}';
 }
