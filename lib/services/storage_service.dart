@@ -2008,7 +2008,15 @@ class StorageService {
         bool b => {'t': 'b', 'v': b},
         int i => {'t': 'i', 'v': i},
         double x => {'t': 'd', 'v': x},
-        List<String> l => {'t': 'l', 'v': l},
+        // macOS / iOS / Windows / Linux hand a stored list back as
+        // List<Object?> after a restart (only Android casts it): a
+        // `List<String>` match dropped every list from sync, Transfer
+        // and backups, and the Mac then synced "no favourites" to
+        // every device (LOG-SHHSZH + LOG-2AJK8E, 2026-11-24).
+        List l => {
+            't': 'l',
+            'v': [for (final x in l) '$x']
+          },
         _ => null,
       };
       if (tagged != null) out[key] = tagged;
