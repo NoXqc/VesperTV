@@ -51,9 +51,17 @@ it into a session: `GET /playback/capabilities` (`installation_id`, once per ser
 `POST /playback/start` (protocol v3, `quality_preference: original`, `allow_alternate_versions:
 false`, `declared` evidence with every codec / container the players handle, deliveries
 `original_http` + `hls` as the server's fallback, `form_factor` tv / mobile / desktop). The plan's
-`stream.url` (`/api/v2/stream/<session>?st=<signed>`) needs no header: ranges work, 410 after the
-stop. A resume never reuses a saved URL for Silo (`_isSilo`), the resume probe is skipped
-(`archive_resume_source.dart`), downloads leave Silo files out (the link belongs to one play).
+`stream.url` (`/api/v2/stream/<session>?st=<signed>`) is opened **with the account headers**
+(`SiloApi.mediaHeaders`: Bearer + X-Profile-Id/Token + device headers, only when the link is on the
+server's own address): ranges work, 410 after the stop. The `st` reference alone is Silo's way in
+for Cast/DLNA receivers that can't send headers (silo-server #4060, 2026-11-14); it is refused (401,
+falls back to "account credential required") on older servers and for plays no login session
+started. Issue #21 (Google TV Streamer, 1.0.73): every request of the player got 401 while browse and
+`/playback/start` worked. The player keeps the token it was handed for the whole play, so a start
+renews a token with under 3 h left first (`playTokenLife`, JWT `exp`; Silo default 8 h). The Send
+log line is `Silo: play <delivery> (<reason>) st=yes|no account=yes|no`. A resume never reuses a
+saved URL for Silo (`_isSilo`), the resume probe is skipped (`archive_resume_source.dart`),
+downloads leave Silo files out (the link belongs to one play).
 
 Sessions end after 5 min without activity (30 paused). `SiloSessions` (same file): both players
 call `playing(url, sampler)` where they call `WatchTracker.started` (PlaybackService.play,
@@ -64,7 +72,8 @@ gone) ends the play with the last position. A refused start (`adaptation_unavail
 `terminal.message`) is shown as "The server can't play this file: …".
 
 ## Tested
-- `test/silo_api_test.dart` (13, MockClient).
+- `test/silo_api_test.dart` (16, MockClient; the account headers, another host's link, the
+  renewal before a play).
 - A real Silo (ghcr.io/silo-server/silo-server:latest, server 1bbc479c, Docker on the owner's PC,
   container `silo-test`, port 8090) from a throwaway test: code approved through the API, browse,
   search, seek, episodes, `original_http` start, 206 range, stop -> 410, a second play = a new

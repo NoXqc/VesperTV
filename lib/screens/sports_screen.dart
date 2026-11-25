@@ -1001,11 +1001,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   /// "See all" on a long row: its games as a grid; OK on one comes back to
-  /// it in the row (selected, like moving there with the remote).
+  /// it in the row (selected, like moving there with the remote). Hold OK
+  /// opens the game's menu right there, like in the row; watching from it
+  /// plays full screen, as from the live list (issue #16: hold did what OK
+  /// does, so the channel couldn't be picked from See all).
   Future<void> _openSectionGrid(_Section s) async {
     final picked = await Navigator.of(context).push<SportsGame>(
       MaterialPageRoute(
-        builder: (_) => _SectionGridScreen(
+        builder: (pageContext) => _SectionGridScreen(
           title: s.label,
           games: s.games,
           cardFor: (g, focusNode, onTap) => _GameCard(
@@ -1018,7 +1021,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             previewing: false,
             onFocus: () {},
             onTap: onTap,
-            onHold: onTap,
+            onHold: () => unawaited(_openGame(
+                g, null, (channel, _) => _watchFromPage(pageContext, channel))),
           ),
         ),
       ),
@@ -1043,6 +1047,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
       _ensureRowVisible(s.id);
     });
+  }
+
+  /// Full screen from a page over Sports Trak (See all grid): Back lands on
+  /// that page, where the stream would keep playing unseen.
+  Future<void> _watchFromPage(BuildContext page, Channel channel) async {
+    await _play(channel, source: page);
+    if (!mounted || usesMediaKit) return;
+    final playback = context.read<PlaybackService>();
+    if (playback.currentChannel?.id == channel.id) await playback.stop();
   }
 
   Future<void> _openLiveList() async {

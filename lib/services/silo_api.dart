@@ -112,8 +112,9 @@ class SiloPlay {
 /// server's `/activate` page (or a password) and picks a household
 /// profile. Libraries are catalogs like a Jellyfin server's; Play asks the
 /// server for the original file (`POST /playback/start`, delivery
-/// `original_http`), which it hands out as a signed link that needs no
-/// header, so both players open it as is. Details: dev-notes/silo.md.
+/// `original_http`), and the players open its link with the account's
+/// headers, as Silo's own apps do ([mediaHeaders]). Details:
+/// dev-notes/silo.md.
 ///
 /// The sign-in is a login session: an 8-hour access token renewed with its
 /// refresh token on a 401 ([onLoginChanged] saves the new pair).
@@ -182,6 +183,50 @@ class SiloApi {
         if (l.profileId != null) 'X-Profile-Id': l.profileId!,
         if (l.profileToken != null) 'X-Profile-Token': l.profileToken!,
       };
+
+  /// What the players send with a play's link: the account and profile,
+  /// as on every API call. Silo's signed `st=` reference in the link only
+  /// stands in for them on servers from 2026-11-14 on and for a play a
+  /// login session started; without them every other server answers 401
+  /// (issue #21). Only for a link on the server's own address: a link on
+  /// another host (a node or media origin the admin set) carries its own
+  /// grant, and the sign-in stays home.
+  static Map<String, String> mediaHeaders(
+    MediaServerLogin l,
+    String baseUrl,
+    String url,
+  ) {
+    final base = Uri.tryParse(baseUrl), link = Uri.tryParse(url);
+    if (base == null ||
+        link == null ||
+        base.scheme != link.scheme ||
+        base.host.toLowerCase() != link.host.toLowerCase() ||
+        base.port != link.port) {
+      return const {};
+    }
+    return Map.of(_headers(l))..remove('Accept');
+  }
+
+  /// How long a sign-in should still last when a play starts: the players
+  /// keep the token they were handed for the whole play (a seek is a new
+  /// request), and Silo's tokens last 8 hours by default.
+  static const playTokenLife = Duration(hours: 3);
+
+  /// Time left on a JWT access token (`exp`); null when it isn't one.
+  static Duration? tokenLife(String token, {DateTime? now}) {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    try {
+      final claims = jsonDecode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+      final exp = claims is Map ? claims['exp'] : null;
+      if (exp is! num) return null;
+      return DateTime.fromMillisecondsSinceEpoch((exp * 1000).round())
+          .difference(now ?? DateTime.now());
+    } catch (_) {
+      return null;
+    }
+  }
 
   static Map<String, dynamic> _map(http.Response r) {
     final body = jsonDecode(utf8.decode(r.bodyBytes));
@@ -806,7 +851,14 @@ class SiloApi {
     final fileId = _fileOf(link);
     if (fileId == null) throw ArchiveApiException('Silo: not a play link');
     final installation = await _installation(s);
-    final login = loginOf(s);
+    var login = loginOf(s);
+    final life = tokenLife(login.token);
+    if (life != null && life < playTokenLife && login.refreshToken != null) {
+      // Renewed now, while it still works: the player gets this token.
+      try {
+        login = await _refresh(s, login);
+      } catch (_) {/* The start below renews or fails on its own. */}
+    }
     final r = await _send(
       s,
       'POST',
@@ -827,11 +879,16 @@ class SiloApi {
         '${t['message'] ?? ''}',
       );
     }
+    // The start may have renewed the sign-in (a 401 on the way).
+    final account = mediaHeaders(loginOf(s), s.baseUrl, url);
     debugPrint(
       'Silo: play ${(plan as Map)['delivery']} '
-      '(${plan['decision_reason']})',
+      '(${plan['decision_reason']}) '
+      'st=${RegExp(r'[?&]st=').hasMatch(url) ? 'yes' : 'no'} '
+      'account=${account.isEmpty ? 'no' : 'yes'}',
     );
     final headers = {
+      ...account,
       if (stream is Map && stream['headers'] is Map)
         for (final e in (stream['headers'] as Map).entries)
           '${e.key}': '${e.value}',
