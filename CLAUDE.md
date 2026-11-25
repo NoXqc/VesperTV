@@ -237,6 +237,12 @@ context-less sink above. Multiview tiles never pass through. Since PR #12 (corpo
 `TextureVideoPlayer`): Fire OS 6 sticks are on Compatibility video by default and their Dolby E-AC-3 decoder
 gives stereo, so 5.1 there needs passthrough. A passthrough player is never handed into Multiview
 (`PlaybackService.canHandOverToMultiview`: it reopens as PCM). Notes: dev-notes/six-channel-audio-investigation.md.
+Unreleased (2026-11-25, `claude/dts-software`): **`DtsSoftwareDecoders.java`** - `setMediaCodecSelector` on both
+players: DTS / DTS-HD (`audio/vnd.dts`, `.hd`) never get a platform decoder while FFmpeg (`dca`) decodes them. Amlogic
+firmware lists DTS decoders without the licence library behind them: silent DTS on an onn 4K Pro (LOG-33PC25). DTS:X
+profile 2 / DTS Express keep the box's; passthrough never asks the selector. `DtsSoftwareDecoders.TrackSelector` (both
+players' track selector) ranks such DTS as the box's hardware decoder did: media3 puts hardware before channel count, so
+a software DTS 7.1 lost to an AC3 2.0. Same note, section "DTS on Amlogic boxes".
 Unreleased (2026-11-09): **`MatroskaAtmos.java`** (`HttpVideoAsset` wraps the extractors factory):
 MatroskaExtractor never flags Atmos (only TS frames and MP4's dec3 do), so Media Hub MKVs showed
 "E-AC-3 5.1". An MKV E-AC-3 track's first frame goes through `Ac3Util.parseAc3SyncframeInfo`; JOC
@@ -542,6 +548,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   zap (`NativeVideoSurface.replaceLive`) sent none (Android's `Dalvik/...`) and now passes the same one. Playlist / channel
   User-Agents still win. Computers keep `kDesktopStreamUserAgent` (libmpv is blocked by some panels); recordings / downloads keep
   `VesperTV (Linux;Android X) ExoPlayerLib/1.4.1`. test/player_user_agent_test.dart; NativeVideoSurfaceTest passes.
+- **Claude, 2026-11-25 - DTS always in software (`claude/dts-software`, worktree `VesperTV-claude-dts`, from main
+  84c3eb6):** dajokahn (Discord, onn 4K Pro, LOG-33PC25): DTS-HD movies silent with passthrough off; the box's
+  Amlogic DTS decoder was used (listed, unlicensed). `DtsSoftwareDecoders` sends DTS / DTS-HD to FFmpeg on every box
+  (§9) and keeps the old track pick (`TrackSelector`: hardware rank for DTS whose box decoder was hardware). Native
+`DtsSoftwareDecodersTest` (8). Homatics +1005: Gladiator II's DTS 5.1 track picked by hand = sound through FFmpeg (owner);
+the track-rank fix is in 1006. Still needs dajokahn's onn (test build).
 - **Claude, 2026-11-25 - group colours (`claude/group-colours`, worktree `VesperTV-claude-groupcolours`, from main
   5856373):** owner: "a red contour and red lettering to my Sports group", still highlighted normally when on it. Hold OK
   on a live group or an own group > **Colour…** > No colour + 8 presets (`utils/group_colors.dart`, stable ids saved);
