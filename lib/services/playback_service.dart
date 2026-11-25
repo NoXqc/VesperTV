@@ -36,6 +36,7 @@ import 'device_memory_service.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
 import 'archive_playback_sources.dart';
+import 'player_user_agent.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
@@ -2042,8 +2043,8 @@ class PlaybackService extends ChangeNotifier {
     }
     final first = _sniffedUrls.add(channel.url);
     final sniff = await sniffStream(channel.url, headers: {
-      // The Android player's own default (video_player_android).
-      'User-Agent': 'ExoPlayer',
+      // What the Android player sends (PlayerUserAgent).
+      'User-Agent': PlayerUserAgent.value,
       ...StreamDrm.withoutDrm(channel.httpHeaders),
     });
     final what = channel.isLive
