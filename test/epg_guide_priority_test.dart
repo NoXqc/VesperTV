@@ -119,4 +119,63 @@ void main() {
     expect(await titles('c.us'), isEmpty);
     s.dispose();
   });
+
+  test('a guide that failed beside one that loaded is retried alone', () async {
+    // Owner's Homatics, 2026-11-26: one guide loaded, the 4K channels' guide
+    // didn't, and the update still counted as done: their rows ran out until
+    // Update EPG by hand.
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final sources = <EpgSource>[
+      (url: 'http://main/x.xml', knownChannelIds: const <String>{}),
+      (url: 'http://extra/ca.xml', knownChannelIds: const <String>{}),
+    ];
+    final service = EpgService(storage, database: epgDb)
+      ..startAutoRefresh(24 * 60, () => sources)
+      ..stopAutoRefresh();
+    final requested = <String>[];
+    var extraUp = false;
+    Future<void> run(Future<void> Function() body) => http.runWithClient(
+        body,
+        () => MockClient((request) async {
+              final url = request.url.toString();
+              requested.add(url);
+              if (url == 'http://extra/ca.xml') {
+                return extraUp
+                    ? http.Response(
+                        feed({'tsn1.ca': 'Extra', 'cbc.ca': 'CBC'},
+                            offsetMin: 30),
+                        200)
+                    : http.Response('down', 502);
+              }
+              return http.Response(feed({'tsn1.ca': 'Main'}), 200);
+            }));
+
+    await run(service.refreshAll);
+    expect(service.debugRetryUrls, {'http://extra/ca.xml'},
+        reason: 'the main guide loaded; the failed one is still retried');
+    expect(await titles('cbc.ca'), isEmpty);
+    final updated = service.lastUpdated;
+    expect(updated, isNotNull);
+
+    // Still down: retried again later, alone.
+    requested.clear();
+    await run(service.debugRunRetry);
+    expect(requested, ['http://extra/ca.xml']);
+    expect(service.debugRetryUrls, {'http://extra/ca.xml'});
+
+    // Back up: its channels fill, the main guide keeps its own.
+    requested.clear();
+    extraUp = true;
+    await run(service.debugRunRetry);
+    expect(requested, ['http://extra/ca.xml'], reason: 'only the failed guide');
+    expect(await titles('cbc.ca'), isNotEmpty);
+    expect((await titles('tsn1.ca')).every((t) => t.startsWith('Main')), isTrue,
+        reason: 'the order of the guides is still the priority in a retry');
+    expect(service.debugRetryUrls, isEmpty);
+    expect(service.lastUpdated, updated,
+        reason: 'a retry leaves the next full update due');
+    service.dispose();
+  });
 }

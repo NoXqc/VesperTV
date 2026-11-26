@@ -429,21 +429,62 @@ class EpgService extends ChangeNotifier {
   /// default), so the guide stayed a day old: an onn 4K Pro went to standby
   /// mid-refresh and the 10-minute limit failed it (LOG-RJQ6N6). Retried
   /// after 15 min, then 30, 60, 120; a success resets it.
+  ///
+  /// Per guide since 2026-11-26: a refresh counted as done when ANY guide
+  /// loaded, so a guide that failed beside one that worked waited the whole
+  /// interval while its listings ran out (owner's Homatics: the 4K channels'
+  /// rows empty, the other guide's channels fine; Update EPG fixed it). Now
+  /// the failed guides alone are downloaded again on that schedule.
   Timer? _retryTimer;
   int _failedRefreshes = 0;
 
-  void _scheduleRetry({required bool failed}) {
+  /// The guides (URLs) the pending retry downloads again.
+  Set<String> _retryUrls = const {};
+
+  void _scheduleRetry(Set<String> failedUrls, {required int of}) {
     _retryTimer?.cancel();
     _retryTimer = null;
-    if (!failed) {
+    _retryUrls = const {};
+    if (failedUrls.isEmpty) {
       _failedRefreshes = 0;
       return;
     }
     if (_sourcesProvider == null) return;
     final minutes = 15 << _failedRefreshes.clamp(0, 3);
     _failedRefreshes++;
-    debugPrint('EpgService: refresh failed, retry in $minutes min');
-    _retryTimer = Timer(Duration(minutes: minutes), refreshAll);
+    _retryUrls = failedUrls;
+    // Hosts only: a guide link carries the account's user and password.
+    final hosts = {for (final u in failedUrls) Uri.tryParse(u)?.host ?? '?'};
+    debugPrint('EpgService: ${failedUrls.length} of $of guide(s) failed '
+        '(${hosts.join(', ')}), retry in $minutes min');
+    _retryTimer =
+        Timer(Duration(minutes: minutes), () => unawaited(_retryFailed()));
+  }
+
+  /// Downloads the guides that failed again ([_scheduleRetry]); the ones
+  /// that loaded keep their rows and their channels.
+  Future<void> _retryFailed() async {
+    final urls = _retryUrls;
+    final provider = _sourcesProvider;
+    // A refresh running now schedules its own retry.
+    if (isLoading || urls.isEmpty || provider == null) return;
+    final sources = provider();
+    if (!sources.any((s) => urls.contains(s.url))) {
+      _scheduleRetry(const {}, of: 0);
+      return;
+    }
+    await _runRefresh(sources, only: urls);
+  }
+
+  /// Tests: the guides the pending retry downloads again.
+  @visibleForTesting
+  Set<String> get debugRetryUrls => _retryUrls;
+
+  /// Tests: the pending retry, now.
+  @visibleForTesting
+  Future<void> debugRunRetry() {
+    _retryTimer?.cancel();
+    return _retryFailed();
   }
 
   /// Refreshes every source [_sourcesProvider] currently returns, one at a
@@ -488,8 +529,11 @@ class EpgService extends ChangeNotifier {
     await _runRefresh(sources, countsAsUpdate: false);
   }
 
+  /// [only]: a retry ([_retryFailed]) downloads just these guides; the
+  /// others keep the channels they filled (the guides' order is still the
+  /// priority) and [lastUpdated] stays (their next update stays due).
   Future<void> _runRefresh(List<EpgSource> sources,
-      {bool countsAsUpdate = true}) async {
+      {bool countsAsUpdate = true, Set<String>? only}) async {
     isLoading = true;
     notifyListeners();
     try {
@@ -521,14 +565,21 @@ class EpgService extends ChangeNotifier {
       // guides), so a second guide only fills the gaps instead of mixing
       // two schedules into one row.
       final covered = <String>{};
+      final failed = <String>{};
       for (final entry in merged.entries) {
+        if (only != null && !only.contains(entry.key)) {
+          covered.addAll(_filledBySource[entry.key] ?? const <String>{});
+          continue;
+        }
         final count = await _refreshOne(entry.key,
             knownChannelIds: entry.value ?? const <String>{}, covered: covered);
-        if (count != null) anySucceeded = true;
+        if (count != null) {
+          anySucceeded = true;
+        } else {
+          failed.add(entry.key);
+        }
       }
-      if (countsAsUpdate) {
-        _scheduleRetry(failed: !anySucceeded && sources.isNotEmpty);
-      }
+      if (countsAsUpdate) _scheduleRetry(failed, of: merged.length);
       if (anySucceeded) {
         final now = DateTime.now();
         await _db.deleteEndedBefore(
@@ -536,7 +587,7 @@ class EpgService extends ChangeNotifier {
             keep: {
               for (final id in _catchupDays.keys) id: _minStopMsFor(id, now)
             });
-        if (countsAsUpdate) {
+        if (countsAsUpdate && only == null) {
           lastUpdated = DateTime.now();
           await _storage.setEpgLastUpdated(lastUpdated!);
         }

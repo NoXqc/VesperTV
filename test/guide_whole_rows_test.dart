@@ -54,7 +54,8 @@ class _Playlist extends PlaylistManager {
 
 /// Every channel: a programme on now, then two-hour ones for two days.
 /// Channel 9's guide ended 40 minutes ago (its only programme is left of
-/// the view, so focusing it scrolls the view sideways).
+/// the view, so focusing it scrolls the view sideways; the rest of its row
+/// is the "No program data available" placeholder).
 class _Epg extends EpgService {
   _Epg(super.storage);
   final Map<String, List<EpgProgram>> _rows = {};
@@ -241,6 +242,10 @@ void main() {
     await key(tester, LogicalKeyboardKey.arrowRight, times: 2);
     expect(focusedScope(), 'timeline-grid');
     await key(tester, LogicalKeyboardKey.arrowDown, times: 9);
+    // Down keeps the time: the placeholder after the guide's end, then
+    // Left to the old programme off the view.
+    expect(focusedTitle(), 'No program data available');
+    await key(tester, LogicalKeyboardKey.arrowLeft);
     expect(focusedTitle(), startsWith('Ended c9'));
     final rows = gridRows();
     expect(rows.pixels % 64, 0,

@@ -536,6 +536,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - guide rows with holes (`claude/guide-holes`, worktree `VesperTV-claude-guideholes`, from main
+  3ad3bb0):** owner's photo (Homatics, Compact UI + compact guide): ESPN 2 4K / ESPN 4K rows blank across the view (the box's own guide had
+  nothing after ~06:30 for them; his iPhone's had: a source refresh failing, see HANDOFF). A row
+  drew "No program data available" only with NO programme in the window; a guide that ended early (or an event-only channel)
+  left every other stretch empty, and Down jumped sideways to the far block. `_TimelineRow._holes` +
+  `_holeBlock`: uncovered stretches >= 5 min get the placeholder (OK = live, registered for Up/Down); on a catch-up row the
+  past part is a catch-up block. test/guide_holes_test.dart; guide_whole_rows_test's Down now lands on the placeholder.
+  **Real cause (owner: "Update EPG fixed it"):** `EpgService._runRefresh` counted an update as done when ANY guide
+  loaded (`lastUpdated`, no retry), so a guide that failed beside one that worked waited the whole interval while its
+  rows ran out. Now the failed guides alone are retried after 15 / 30 / 60 / 120 min (`_scheduleRetry(failedUrls)`,
+  `_retryFailed` -> `_runRefresh(only:)`: the others keep their channels = priority kept, `lastUpdated` unchanged);
+  log `EpgService: N of M guide(s) failed (hosts), retry in X min`. Retry state is in memory (a restart waits the
+  interval). test/epg_guide_priority_test.dart (+1).
 - **Claude, 2026-11-25 - Tabs + Minimalist per profile (`claude/profile-tabs`, worktree `VesperTV-claude-profiletabs`, from
   main 3ad3bb0, APK 1021 built):** owner bug: his wife's profile (Minimalist, Movies / TV Shows hidden, Media Hub on) changed
   his profile too: the Tabs switches + Minimalist were device keys. Now per viewer (`_vk`), reloaded on a switch

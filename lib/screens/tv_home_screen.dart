@@ -13122,7 +13122,89 @@ class _TimelineRow extends StatelessWidget {
               ),
             ),
           for (final g in gaps) _gapBlock(g),
+          // The window's stretches no programme covers: a part-time
+          // channel's guide lists only its events (ESPN 4K: a game at
+          // 9:00), and the rest of its row was empty, nothing to see or
+          // land on (owner's photo, 2026-11-26: two blank rows in the
+          // guide). Same placeholder as an empty row; on a catch-up row,
+          // the past part replays like a catch-up hour.
+          for (final h in _holes(visible, gaps))
+            if (catchupFrom != null &&
+                !h.end.isAfter(now) &&
+                !h.start.isBefore(catchupFrom))
+              _gapBlock(h)
+            else
+              _holeBlock(h),
         ],
+      ),
+    );
+  }
+
+  /// A hole shorter than this stays empty (a guide's rounding between two
+  /// programmes, too thin for a label).
+  static const _minHole = Duration(minutes: 5);
+
+  /// The stretches of the window that neither [listed] nor [gaps] cover,
+  /// each at least [_minHole]; a catch-up row's are split at now (the past
+  /// part replays, the rest is live).
+  List<({DateTime start, DateTime end})> _holes(
+      List<EpgProgram> listed, List<({DateTime start, DateTime end})> gaps) {
+    final spans = <({DateTime start, DateTime end})>[
+      for (final p in listed) (start: p.start, end: p.stop),
+      ...gaps,
+    ]..sort((a, b) => a.start.compareTo(b.start));
+    final found = <({DateTime start, DateTime end})>[];
+    var at = windowStart;
+    for (final s in spans) {
+      if (s.start.difference(at) >= _minHole) {
+        found.add((start: at, end: s.start));
+      }
+      if (s.end.isAfter(at)) at = s.end;
+    }
+    if (windowEnd.difference(at) >= _minHole) {
+      found.add((start: at, end: windowEnd));
+    }
+    if (onOpenCatchup == null || !channel.hasCatchup) return found;
+    final now = DateTime.now();
+    return [
+      for (final h in found)
+        if (h.start.isBefore(now) && h.end.isAfter(now)) ...[
+          if (now.difference(h.start) >= _minHole) (start: h.start, end: now),
+          if (h.end.difference(now) >= _minHole) (start: now, end: h.end),
+        ] else
+          h,
+    ];
+  }
+
+  /// "No program data available" over [h]: OK plays the channel live.
+  Widget _holeBlock(({DateTime start, DateTime end}) h) {
+    final left = _leftOf(h.start);
+    final width = h.end.difference(h.start).inMinutes * pixelsPerMinute;
+    return Positioned(
+      key: ValueKey('hole-${h.start.millisecondsSinceEpoch}'),
+      left: left,
+      width: width,
+      top: 4,
+      bottom: 4,
+      child: _ProgramBlock(
+        program: null,
+        placeholderLabel: tr('No program data available'),
+        isNow: false,
+        ended: !h.end.isAfter(DateTime.now()),
+        translucent: translucent,
+        onOpen: onOpen,
+        onShowOptions: onShowOptions,
+        blockLeft: left,
+        blockWidth: width,
+        hScroll: hScroll,
+        onRegister: (node) => onRegisterBlock(rowIndex, h.start, h.end, node),
+        onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+        onFocusedDispose: () => onFocusedBlockGone?.call(rowIndex),
+        onFocusGained: () {
+          ensureRowVisible?.call(rowIndex);
+          onFocusChanged?.call(channel, null);
+          onFocusTracked?.call(rowIndex, null);
+        },
       ),
     );
   }
