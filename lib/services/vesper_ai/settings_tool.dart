@@ -420,6 +420,7 @@ final List<_AiSetting> _aiSettings = [
         ('de', 'Deutsch'),
         ('pl', 'Polski'),
         ('uk', 'Українська'),
+        ('pt', 'Português (Portugal)'),
       ],
       read: (b) => b.prefs.language,
       write: (b, v) => b.prefs.setLanguage('$v')),

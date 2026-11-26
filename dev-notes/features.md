@@ -175,6 +175,12 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   labels) — translate those at the display site (`Text(tr(tab))`). Québec French, short forms on
   narrow TV labels (MAJ, PJ/V/D/DP, NIP). Data from providers/ESPN (channel, team, league names)
   stays as-is.
+- **European Portuguese (2026-11-26):** `lib/l10n/pt.dart` (`kPt`) by Ricardo Simões (GitHub PR #19, Portugal; 
+  informal "tu", Portugal's terms: ecrã, ligação, fornecedor, comando, Fontes, Diferido), started from es.dart on 11-24; the 76
+  strings added after that were filled in by Claude in his style (marked block at the end of the file, for his review).
+  Wired like Ukrainian: `l10n.dart` (import, `Locale('pt')`, `_dictionaries`, `_ptOrdinal` `2.º`, Sports words), Settings +
+  Vesper AI language pickers (`Português (Portugal)`), `VoiceInput.language` `pt-PT`. A Brazilian device (`pt`) gets it too.
+  test/l10n_portuguese_test.dart (coverage vs French, placeholders, UI + scores).
 - **Polish (2026-11-12, unreleased):** `lib/l10n/pl.dart` (`kPl`, machine-authored, not native-reviewed) mirrors the 2,466 keys of the other
   dictionaries; `test/l10n_polish_test.dart` checks key coverage, placeholders and plurals. Wired in `l10n.dart` (locale, `_dictionaries`,
   `_plOrdinal`, `_sportsLanguages['pl']`), the General-settings picker (`settings_catalog.dart` `languages`), the Vesper AI `language` setting

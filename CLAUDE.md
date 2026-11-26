@@ -533,9 +533,16 @@ Look there before debugging. Still-open items: the **Fire OS stale launcher icon
 old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler) — Windows check pending.
 
 ## 12. Features (details in `dev-notes/features.md`)
-Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
+Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - European Portuguese (`claude/pt-portuguese`, worktree `VesperTV-claude-pt`; owner: "You can complete
+  Ricardo's work"):** GitHub PR #19 (Ricardo-Simoes, pt-PT, `lib/l10n/pt.dart`, 2,829 keys, compiled clean, no placeholder
+  mistakes) merged with his commits kept; the 76 strings added since he started (Tuliprox DVR / own connection, network
+  folder delete, group colours, Skip buttons, Pause & rewind, update-didn't-install, Episodes) filled in his style in a
+  marked block for his review. Wired: `l10n.dart` (`Locale('pt')`, `_dictionaries`, `_ptOrdinal`, Sports words), Settings
+  + Vesper AI pickers `Português (Portugal)`, `VoiceInput.language` `pt-PT` (Ukrainian has none there yet: falls back to
+  en-US). test/l10n_portuguese_test.dart; vesper_profiles / vesper_settings tool tests list it. dev-notes/features.md.
 - **Claude, 2026-11-26 - MKVs whose index is named by a second SeekHead (`claude/timeshift-crash`, same worktree):**
   cillfog (stable + test): every skip in Marshals (provider VOD, MKV) restarted the episode; VLC / browser / the provider's
   app seek fine. LOG-JKB6RY: `seek targetMs=1133600` -> `position reason=2` (seek adjustment) posMs=0 = media3 saw the file

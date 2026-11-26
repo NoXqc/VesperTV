@@ -246,6 +246,7 @@ class SettingsCatalog {
     ('de', 'Deutsch'),
     ('pl', 'Polski'),
     ('uk', 'Українська'),
+    ('pt', 'Português (Portugal)'),
   ];
 
   static String languageLabel(String setting) => setting == 'auto'

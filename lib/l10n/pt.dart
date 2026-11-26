@@ -4365,4 +4365,159 @@ const Map<String, String> kPt = {
       "A transferir…",
   "To use buttons like TV, YouTube or Prime, add the free \"{name}\" add-on, a small separate app. Press OK to download and install it.":
       "Para usar botões como TV, YouTube ou Prime, adiciona o complemento gratuito «{name}», uma pequena aplicação separada. Prime OK para o transferir e instalar.",
+
+  // Strings added to the app after this translation was started (2026-11-24..26),
+  // filled in by the maintainers in the same style: please review.
+  "A recording on the Tuliprox server failed.":
+      "Uma gravação no servidor Tuliprox falhou.",
+  "A recording on the Tuliprox server is ready.":
+      "Uma gravação no servidor Tuliprox está pronta.",
+  "Another device on your account took over this stream.":
+      "Outro dispositivo da tua conta ficou com esta stream.",
+  "Channel {id}":
+      "Canal {id}",
+  "Delete from the server":
+      "Eliminar do servidor",
+  "Every {day} at {time}":
+      "Todas as semanas, {day} às {time}",
+  "Not working right now · tried again in {n} s":
+      "Não está a funcionar agora · nova tentativa daqui a {n} s",
+  "On the Tuliprox server":
+      "No servidor Tuliprox",
+  "On the Tuliprox server ({server})":
+      "No servidor Tuliprox ({server})",
+  "On your own connection now. Pick a source in Sources to switch just for you.":
+      "Agora estás na tua própria ligação. Escolhe uma fonte em Fontes para mudar só para ti.",
+  "Only a .ts stream can get its own connection. This one plays as HLS.":
+      "Só uma stream .ts pode ter a sua própria ligação. Esta é reproduzida em HLS.",
+  "Record on the server":
+      "Gravar no servidor",
+  "Record weekly on the server":
+      "Gravar semanalmente no servidor",
+  "Recording is switched off on this server.":
+      "A gravação está desativada neste servidor.",
+  "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
+      "Outra pessoa está a ver este canal no servidor. Escolhe primeiro «A tua própria ligação» em Fontes e depois a fonte.",
+  "Stop it and cancel the ones coming up":
+      "Parar e cancelar as próximas",
+  "Stop weekly recording":
+      "Parar a gravação semanal",
+  "Stopping":
+      "A parar",
+  "The server didn't take the recording.":
+      "O servidor não aceitou a gravação.",
+  "The server is already recording as many shows as you are allowed at that time.":
+      "O servidor já está a gravar tantos programas quantos te são permitidos nessa altura.",
+  "The server is already recording this show.":
+      "O servidor já está a gravar este programa.",
+  "The server records {title} every week.":
+      "O servidor vai gravar {title} todas as semanas.",
+  "The server records {title}.":
+      "O servidor vai gravar {title}.",
+  "The server's disk is full.":
+      "O disco do servidor está cheio.",
+  "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
+      "Esta versão do Tuliprox só grava semanalmente. Uma gravação única precisa de um Tuliprox mais recente.",
+  "This account may not record on the server.":
+      "Esta conta não pode gravar no servidor.",
+  "This show has already ended or has no times in the guide.":
+      "Este programa já terminou ou não tem horários no guia.",
+  "Tuliprox couldn't give this channel its own connection.":
+      "O Tuliprox não conseguiu dar a este canal a sua própria ligação.",
+  "Tuliprox moved this channel to another of its sources.":
+      "O Tuliprox passou este canal para outra das suas fontes.",
+  "Tuliprox records it, even with this box off.":
+      "O Tuliprox grava-o, mesmo com esta box desligada.",
+  "Unstable":
+      "Instável",
+  "Uses one more provider connection":
+      "Usa mais uma ligação do fornecedor",
+  "Waiting for a connection":
+      "A aguardar uma ligação",
+  "Weekly":
+      "Semanal",
+  "You have as many weekly recordings on the server as you are allowed.":
+      "Já tens no servidor tantas gravações semanais quantas te são permitidas.",
+  "You're the only one watching it on the server: pick the source you want directly.":
+      "És o único a vê-lo no servidor: escolhe diretamente a fonte que queres.",
+  "Your own connection":
+      "A tua própria ligação",
+  "Your recording space on the server is full.":
+      "O teu espaço de gravação no servidor está cheio.",
+  "{n} % reliable":
+      "{n} % fiável",
+  "{title} · every {day} at {time}":
+      "{title} · todas as semanas, {day} às {time}",
+  "{used} of {cap} used on the server":
+      "{used} de {cap} usados no servidor",
+  "{used} used on the server":
+      "{used} usados no servidor",
+  "Delete from the network folder":
+      "Eliminar da pasta de rede",
+  "Gone for every device that uses this folder.":
+      "Desaparece para todos os dispositivos que usam esta pasta.",
+  "Delete {title} from the network folder?":
+      "Eliminar {title} da pasta de rede?",
+  "Keep it":
+      "Manter",
+  "Deleted from the network folder.":
+      "Eliminado da pasta de rede.",
+  "Couldn't delete it from the network folder.":
+      "Não foi possível eliminá-lo da pasta de rede.",
+  "Orange":
+      "Laranja",
+  "Purple":
+      "Roxo",
+  "Pink":
+      "Rosa",
+  "No colour":
+      "Sem cor",
+  "Colour…":
+      "Cor…",
+  "Group colour":
+      "Cor do grupo",
+  "Find games in hidden groups":
+      "Procurar jogos nos grupos ocultos",
+  "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
+      "Os canais dos jogos também podem vir dos grupos em direto que ocultaste, por isso um grupo oculto para manter a TV arrumada continua a ter os seus jogos. Os canais que ocultaste um a um ficam de fora. Nunca num perfil infantil. Guardado para este perfil.",
+  "White":
+      "Branco",
+  "Column lines":
+      "Linhas das colunas",
+  "The colour of the lines between the columns and in the guide. Just for this profile.":
+      "A cor das linhas entre as colunas e no guia. Só para este perfil.",
+  "Back {seconds} s":
+      "Recuar {seconds} s",
+  "Ahead {seconds} s":
+      "Avançar {seconds} s",
+  "◀ Rewind":
+      "◀ Recuar",
+  "Skip buttons":
+      "Botões de salto",
+  "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
+      "Quanto salta um toque nos botões recuar / avançar e nas teclas Recuar / Avançar rápido do comando, em filmes, episódios, diferido e TV em direto em pausa. Mantê-los premidos salta cada vez mais longe.",
+  "Pause & rewind live TV":
+      "Pausa e recuo na TV em direto",
+  "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
+      "Os canais em direto guardam os últimos minutos neste dispositivo enquanto vês, na mesma ligação: Pausa para a imagem, não a stream, e Reproduzir continua onde paraste. Os botões recuar / avançar e Recuar andam para trás e para a frente nela (uma repetição), EM DIRETO salta para agora. Usa armazenamento enquanto vês (cerca de 2 GB por 30 minutos de um canal HD, apagados quando mudas de canal); com pouco espaço livre guarda cerca de 30 segundos em memória. Os canais no formato HLS (.m3u8) não têm isto. Aplica-se a partir do próximo canal.",
+  "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
+      "A atualização para {version} não foi instalada: este dispositivo ainda tem a versão acima. Tenta novamente; se voltar a falhar, liberta espaço ou instala-a com a aplicação Downloader.",
+  "Episodes":
+      "Episódios",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Cima/Baixo: navegar · Esquerda/Direita: temporada · OK: reproduzir · Voltar: fechar",
+  "Up/Down: browse · OK: play · Back: close":
+      "Cima/Baixo: navegar · OK: reproduzir · Voltar: fechar",
+  "Select more groups…":
+      "Selecionar mais grupos…",
+  "Colour for {count} groups":
+      "Cor para {count} grupos",
+  "Choose a colour ({count})":
+      "Escolher uma cor ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK: marcar · Voltar ou Direita: escolher a cor",
+  "My groups":
+      "Os meus grupos",
+  "Skip":
+      "Saltar",
 };

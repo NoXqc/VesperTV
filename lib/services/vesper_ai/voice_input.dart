@@ -98,6 +98,7 @@ class VoiceInput {
         'de' => 'de-DE',
         'el' => 'el-GR',
         'pl' => 'pl-PL',
+        'pt' => 'pt-PT',
         _ => 'en-US',
       };
 

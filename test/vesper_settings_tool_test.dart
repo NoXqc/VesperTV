@@ -7,6 +7,7 @@ import 'package:nox_iptv/l10n/es.dart';
 import 'package:nox_iptv/l10n/fr.dart';
 import 'package:nox_iptv/l10n/it.dart';
 import 'package:nox_iptv/l10n/pl.dart';
+import 'package:nox_iptv/l10n/pt.dart';
 import 'package:nox_iptv/l10n/uk.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
@@ -330,6 +331,7 @@ void main() {
       ('el', kEl),
       ('pl', kPl),
       ('uk', kUk),
+      ('pt', kPt),
     ]) {
       final missing = [
         for (final text in vesperSettingTexts)
