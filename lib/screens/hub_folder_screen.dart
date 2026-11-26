@@ -12,6 +12,7 @@ import '../services/archive_service.dart';
 import '../utils/desktop_platform.dart';
 import '../utils/app_store.dart';
 import '../utils/image_urls.dart';
+import '../widgets/card_trailer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/poster_card.dart';
@@ -66,9 +67,31 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   static const _headerHeight = 34.0;
   static const _rowExtent = _headerHeight + PosterCard.height + 16;
 
-  /// The card held for two seconds: (row key, index, title id).
+  /// The card held for two seconds (0.5 s with card trailers): (row key,
+  /// index, title id).
   (String, int, String)? _expanded;
   Timer? _wideTimer;
+
+  /// One per row: bumped when that row's wide card changes, so only the
+  /// row redraws (like the Media Hub tab; a page setState per widen /
+  /// shrink re-ran every row's catalog title).
+  final Map<String, ValueNotifier<int>> _wideTicks = {};
+  ValueNotifier<int> _wideTickOf(String rowKey) =>
+      _wideTicks.putIfAbsent(rowKey, () => ValueNotifier(0));
+
+  void _setExpanded((String, int, String) card) {
+    final before = _expanded;
+    _expanded = card;
+    if (before != null && before.$1 != card.$1) {
+      _wideTicks[before.$1]?.value++;
+    }
+    _wideTickOf(card.$1).value++;
+  }
+
+  /// Settings > Playback > Trailers on Media Hub cards (owner, 2026-11-26:
+  /// "add it to collections"): the wide card plays the title's trailer.
+  final _cardTrailer = CardTrailerSlot();
+  bool get _cardTrailersOn => CardTrailer.enabledIn(context);
 
   /// TV and computer widths only (a phone row has no room).
   bool get _wideCards => MediaQuery.sizeOf(context).width >= 700;
@@ -89,27 +112,47 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   bool _clearWide() {
     _wideTimer?.cancel();
     _wideTimer = null;
-    final had = _expanded != null;
+    final before = _expanded;
     _expanded = null;
-    return had;
+    if (before != null) _wideTicks[before.$1]?.value++;
+    return before != null;
   }
 
-  /// Card [i] of [row] opens wide after two seconds of focus, when it has
-  /// a backdrop and the page is in front.
+  /// Card [i] of [row] opens wide after two seconds of focus (0.5 s with
+  /// card trailers, whose player starts at 1 s), when it has a backdrop and
+  /// the page is in front.
   void _armWide(ArchiveRow row, int i) {
     _wideTimer?.cancel();
     _wideTimer = null;
     final meta = row.items[i];
-    if (!_wideCards || !(meta.backgroundUrl?.isNotEmpty ?? false)) return;
+    if (!_wideCards || !(meta.backgroundUrl?.isNotEmpty ?? false)) {
+      _cardTrailer.stop();
+      return;
+    }
     final node = _node(row.key, i);
-    _wideTimer = Timer(const Duration(seconds: 2), () {
+    final trailers = _cardTrailersOn;
+    if (trailers) {
+      final source = row.sourceAt(i);
+      _cardTrailer.arm(
+          place: row.key,
+          id: meta.id,
+          stillHere: () =>
+              mounted &&
+              node.hasFocus &&
+              _lastIndex[row.key] == i &&
+              ModalRoute.of(context)?.isCurrent == true,
+          find: () => CardTrailer.findIn(context, meta, source));
+    } else {
+      _cardTrailer.stop();
+    }
+    _wideTimer = Timer(Duration(milliseconds: trailers ? 500 : 2000), () {
       _wideTimer = null;
       if (!mounted ||
           !node.hasFocus ||
           ModalRoute.of(context)?.isCurrent != true) {
         return;
       }
-      setState(() => _expanded = (row.key, i, meta.id));
+      _setExpanded((row.key, i, meta.id));
       // The wider card stays in view.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && node.hasFocus) _reveal(row, i, wide: true);
@@ -135,6 +178,10 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   void dispose() {
     _focusTick.dispose();
     _wideTimer?.cancel();
+    _cardTrailer.dispose();
+    for (final tick in _wideTicks.values) {
+      tick.dispose();
+    }
     _scroll.dispose();
     for (final c in _rowScrolls.values) {
       c.dispose();
@@ -172,8 +219,9 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   /// Scrolls card [i] of [row] in (a lazy row can't focus an unbuilt card)
   /// and focuses it.
   void _focusCard(ArchiveRow row, int i) {
-    // The wide card closes first, so every slot is a poster's again.
-    if (_clearWide()) setState(() {});
+    // The wide card closes first (its row redraws alone), so every slot is
+    // a poster's again.
+    _clearWide();
     _reveal(row, i);
     _focusWhenBuilt(_node(row.key, i));
   }
@@ -356,6 +404,14 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
                         : Focus(
                             canRequestFocus: false,
                             skipTraversal: true,
+                            // A title page, a hold menu: the wide card
+                            // and its trailer close (a page under another
+                            // stays built and would play on).
+                            onFocusChange: (has) {
+                              if (has) return;
+                              _clearWide();
+                              _cardTrailer.stop();
+                            },
                             onKeyEvent: (_, e) => _onKey(rows, e),
                             child: ListView.builder(
                               controller: _scroll,
@@ -379,7 +435,6 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
   Widget _buildRow(ArchiveService service, List<ArchiveRow> rows, int r) {
     final row = rows[r];
     final scheme = Theme.of(context).colorScheme;
-    final wideAt = _wideIndex(row);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -399,58 +454,68 @@ class _HubFolderScreenState extends State<HubFolderScreen> {
             ),
           ),
         ),
-        SizedBox(
-          height: PosterCard.height + 16,
-          child: ListView.builder(
-            controller: _rowScroll(row.key),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
-            // A builder even with no wide card: switching between
-            // itemExtent and a builder would rebuild the cards and drop
-            // the focus (same as the Media Hub tab).
-            itemExtentBuilder: (i, _) => i >= row.items.length
-                ? null
-                : (i == wideAt ? _wideSlot : _slot),
-            itemCount: row.items.length,
-            itemBuilder: (_, i) {
-              final meta = row.items[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: PosterCard(
-                  focusNode: _node(row.key, i),
-                  title: meta.name,
-                  imageUrl: meta.posterUrl,
-                  rating: meta.year,
-                  tag: meta.releaseTag?.label,
-                  tagStrong: meta.releaseTag == HubReleaseTag.isNew,
-                  wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
-                  wideImageUrl: meta.backgroundUrl,
-                  wideLogoUrl: meta.logo,
-                  tapToPreview: _touch,
-                  onTap: () => _open(row.sourceAt(i), meta),
-                  isFavorite: service.isFavorite(row.sourceAt(i), meta),
-                  onToggleFavorite: () =>
-                      holdArchiveTitle(context, row, row.sourceAt(i), meta),
-                  onFocusGained: () {
-                    _lastIndex[row.key] = i;
-                    if (i >= row.items.length - 12) service.loadMore(row);
-                    final e = _expanded;
-                    if (e != null && (e.$1 != row.key || e.$2 != i)) {
-                      _clearWide();
-                    }
-                    _armWide(row, i);
-                    _row = r;
-                    _focused = meta;
-                    _focusTick.value++;
-                  },
-                ),
-              );
-            },
-          ),
-        ),
+        ValueListenableBuilder<int>(
+            valueListenable: _wideTickOf(row.key),
+            builder: (context, _, __) {
+              final wideAt = _wideIndex(row);
+              return _cards(service, row, r, wideAt);
+            }),
       ],
     );
   }
+
+  Widget _cards(ArchiveService service, ArchiveRow row, int r, int? wideAt) =>
+      SizedBox(
+        height: PosterCard.height + 16,
+        child: ListView.builder(
+          controller: _rowScroll(row.key),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
+          // A builder even with no wide card: switching between
+          // itemExtent and a builder would rebuild the cards and drop
+          // the focus (same as the Media Hub tab).
+          itemExtentBuilder: (i, _) =>
+              i >= row.items.length ? null : (i == wideAt ? _wideSlot : _slot),
+          itemCount: row.items.length,
+          itemBuilder: (_, i) {
+            final meta = row.items[i];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: PosterCard(
+                focusNode: _node(row.key, i),
+                title: meta.name,
+                imageUrl: meta.posterUrl,
+                rating: meta.year,
+                tag: meta.releaseTag?.label,
+                tagStrong: meta.releaseTag == HubReleaseTag.isNew,
+                wideWidth: i == wideAt ? PosterCard.wideCardWidth : null,
+                wideImageUrl: meta.backgroundUrl,
+                wideLogoUrl: meta.logo,
+                wideVideo: i == wideAt && _cardTrailersOn
+                    ? _cardTrailer.video(row.key, meta.id)
+                    : null,
+                tapToPreview: _touch,
+                onTap: () => _open(row.sourceAt(i), meta),
+                isFavorite: service.isFavorite(row.sourceAt(i), meta),
+                onToggleFavorite: () =>
+                    holdArchiveTitle(context, row, row.sourceAt(i), meta),
+                onFocusGained: () {
+                  _lastIndex[row.key] = i;
+                  if (i >= row.items.length - 12) service.loadMore(row);
+                  final e = _expanded;
+                  if (e != null && (e.$1 != row.key || e.$2 != i)) {
+                    _clearWide();
+                  }
+                  _armWide(row, i);
+                  _row = r;
+                  _focused = meta;
+                  _focusTick.value++;
+                },
+              ),
+            );
+          },
+        ),
+      );
 }
 
 /// The page's top: the focused title (logo or name, year, description),

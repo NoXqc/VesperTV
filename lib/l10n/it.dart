@@ -2238,8 +2238,8 @@ const Map<String, String> kIt = {
   "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
       "Sui Fire TV Stick, un trailer che richiede il lettore di YouTube viene riprodotto a schermo intero.",
   "Trailers on Media Hub cards": "Trailer nelle schede del Media Hub",
-  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
-      "Restando su un titolo nelle righe del Media Hub, la sua scheda si allarga e riproduce il trailer, con l'audio.",
+  "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on).":
+      "Restando su un titolo nelle righe e nelle collezioni del Media Hub, la sua scheda si allarga e riproduce il trailer, con l'audio (Collezione completa: con Schede larghe).",
   "Remove \"{title}\" from history?": "Rimuovere \"{title}\" dalla cronologia?",
   "Import from storage": "Importa da memoria esterna",
   "Add M3U playlists and Media Hub sources from USB or external storage":

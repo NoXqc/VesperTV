@@ -2229,8 +2229,8 @@ const Map<String, String> kEs = {
   "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
       "En los Fire TV Stick, un tráiler que necesita el reproductor de YouTube se reproduce a pantalla completa.",
   "Trailers on Media Hub cards": "Tráileres en las tarjetas del Media Hub",
-  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
-      "Al quedarte en un título de las filas del Media Hub, su tarjeta se ensancha y reproduce el tráiler, con sonido.",
+  "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on).":
+      "Al quedarte en un título de las filas y colecciones del Media Hub, su tarjeta se ensancha y reproduce el tráiler, con sonido (Colección completa: con Tarjetas anchas).",
   "Remove \"{title}\" from history?": "¿Quitar «{title}» del historial?",
   "Import from storage": "Importar desde almacenamiento",
   "Add M3U playlists and Media Hub sources from USB or external storage":

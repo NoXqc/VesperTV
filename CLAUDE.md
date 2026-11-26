@@ -557,6 +557,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   alone (`_wideTicks`: was a ~470 ms screen rebuild each). Homatics: card 1.6-1.8 s, title page 2.1-2.6 s (was
   7.6-8 s). Details: dev-notes/automatic-detail-trailers.md (last section). remote.html "Trailers on Media
   Hub cards". Tests: youtube_streams_test, hub_card_trailer_test, detail_trailer_test, addon_trailer_test.
+  Then (uncommitted, APK 1033 on the Homatics, box-tested): collections' pages (wide card) + Expand collection / catalog (focused 16:9 card, Wide
+  cards only) through one `CardTrailerSlot`; test/hub_collection_trailer_test.dart.
 - **Claude, 2026-11-26 - European Portuguese (`claude/pt-portuguese`, worktree `VesperTV-claude-pt`; owner: "You can complete
   Ricardo's work"):** GitHub PR #19 (Ricardo-Simoes, pt-PT, `lib/l10n/pt.dart`, 2,829 keys, compiled clean, no placeholder
   mistakes) merged with his commits kept; the 76 strings added since he started (Tuliprox DVR / own connection, network

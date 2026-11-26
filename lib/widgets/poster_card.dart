@@ -84,7 +84,8 @@ class PosterCard extends StatefulWidget {
   final String? wideLogoUrl;
 
   /// Drawn over the wide card's backdrop, under its logo: Media Hub's
-  /// trailer ([CardTrailer]). Only while [wideWidth] is set.
+  /// trailer ([CardTrailer]). Only while [wideWidth] is set or the card is
+  /// a [wideStyle] 16:9 one (Expand collection / catalog).
   final Widget? wideVideo;
 
   /// A wide card's width for [posterHeight]: 16:9 artwork.
@@ -478,7 +479,8 @@ class _PosterCardState extends State<PosterCard> {
                         )
                       else
                         const _PosterFallbackIcon(),
-                      if (wide && widget.wideVideo != null)
+                      if ((wide || widget.wideStyle) &&
+                          widget.wideVideo != null)
                         Positioned.fill(child: widget.wideVideo!),
                       if (logoUrl != null)
                         Positioned(

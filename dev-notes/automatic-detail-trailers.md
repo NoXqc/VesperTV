@@ -133,6 +133,19 @@ apps, and that it stays out of the Apple builds.
   7.6-8.0 s), 0.8 s of it the page's own first frame. Sound checked with `dumpsys audio`
   (our AudioTrack started, USAGE_MEDIA, 0 dB); one player at a time card -> page -> card;
   leaving the Media Hub = no player left.
+- Collections (owner, 2026-11-26: "add it to collections and expand collection"; build
+  1033): one `CardTrailerSlot` (card_trailer.dart: the 0.3 s lookup, the 1 s start, the
+  `done` state, `video(place, id)`) now runs it for the Media Hub tab, a collection's page
+  (`hub_folder_screen.dart`: its wide card widens at 0.5 s with the switch on, per-row
+  `_wideTicks` like the tab) and Expand collection / Expand catalog
+  (`archive_catalog_screen.dart`, owner's pick "Inside the focused card": only with Wide
+  cards on, the focused 16:9 card, `PosterCard.wideVideo` now also on a `wideStyle` card; a
+  poster grid plays none). Both pages stop it when the focus leaves their cards (their
+  `Focus.onFocusChange`): a title page over them stays built and its player played on.
+  test/hub_collection_trailer_test.dart. Homatics (1033): a step on the collection page or the
+  grid -> playing 1.4-1.6 s; five quick steps opened one player (the last card), max build
+  46 ms; title page from either = the card's player closes first, one sound; Back = the
+  card plays again; Up to the grid's buttons / Back to Home = no sound left.
 - Not changed: the Trailer button still opens YouTube's web player with controls; Home's
   and IPTV rows have no card trailers; Fire TV only needs full screen when the web player
   is the fallback.

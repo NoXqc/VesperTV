@@ -286,16 +286,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   }
 
   /// Settings > Playback > Trailers on Media Hub cards (owner,
-  /// 2026-11-26, after ARVIO): the focused title's trailer file, looked up
-  /// while the remote rests on the card ([_armCardTrailer]) and played in it
-  /// once it is wide ([_cardVideo]); `done`: played out on this card, not
-  /// again until the remote leaves it. A notifier: only the wide card's
-  /// video slot redraws (a screen setState costs ~450 ms on the Homatics).
-  Timer? _cardTrailerTimer, _cardTrailerDue;
-  final _cardTrailer =
-      ValueNotifier<({String row, String id, Uri uri, bool done})?>(null);
-  bool get _cardTrailersOn =>
-      context.read<AppPreferences?>()?.cardTrailers ?? false;
+  /// 2026-11-26, after ARVIO): the focused title's trailer, looked up while
+  /// the remote rests on the card ([_armCardTrailer]) and played in it once
+  /// it is wide.
+  final _cardTrailer = CardTrailerSlot();
+  bool get _cardTrailersOn => CardTrailer.enabledIn(context);
   PageRoute<void>? _previewRoute;
   bool _previewForeground = true;
   bool _previewRouteVisible = true;
@@ -536,8 +531,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     WidgetsBinding.instance.removeObserver(this);
     appRouteObserver.unsubscribe(this);
     _widePreviewTimer?.cancel();
-    _cardTrailerTimer?.cancel();
-    _cardTrailerDue?.cancel();
     _cardTrailer.dispose();
     for (final tick in _wideTicks.values) {
       tick.dispose();
@@ -691,8 +684,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (row.collection != null ||
         !_canPreview ||
         !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
-      _cardTrailerTimer?.cancel();
-      _cardTrailerDue?.cancel();
+      _cardTrailer.cancel();
       return;
     }
     _armCardTrailer(row, i);
@@ -730,72 +722,25 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   }
 
   /// Looks the focused card's trailer up after a short rest (fast scrolling
-  /// asks nothing), so the file is ready when the card widens.
+  /// asks nothing), so the file is ready when the card widens; the player
+  /// starts after 1 s on the card ([CardTrailerSlot]).
   void _armCardTrailer(ArchiveRow row, int i) {
-    _cardTrailerTimer?.cancel();
-    _cardTrailerDue?.cancel();
+    if (!_cardTrailersOn) {
+      _cardTrailer.stop();
+      return;
+    }
     final meta = row.items[i];
-    final known = _cardTrailer.value;
-    if (known != null && known.row == row.key && known.id == meta.id) return;
-    _cardTrailer.value = null;
-    if (!_cardTrailersOn) return;
     final source = row.sourceAt(i);
     final node = _node(row.key, i);
-    bool stillHere() =>
-        mounted &&
-        node.hasFocus &&
-        _lastIndex[row.key] == i &&
-        _focusedRowKey == row.key;
-    // The player starts after 1 s on the card (ARVIO's default), the lookup
-    // after 0.3 s: stepping along a row opened and closed a player per card
-    // (Homatics: frames ~32 ms while stepping).
-    Uri? found;
-    var due = false;
-    void start() {
-      if (found != null && due && stillHere()) {
-        _cardTrailer.value =
-            (row: row.key, id: meta.id, uri: found!, done: false);
-      }
-    }
-
-    _cardTrailerDue = Timer(_cardTrailerStart, () {
-      due = true;
-      start();
-    });
-    _cardTrailerTimer = Timer(const Duration(milliseconds: 300), () async {
-      if (!mounted || !node.hasFocus) return;
-      final addons = context.read<ArchiveService>().enabledSources;
-      final tmdbKey = context.read<StorageService?>()?.getTmdbApiKey() ?? '';
-      found = await CardTrailer.find(meta, source,
-          addons: addons, tmdbKey: tmdbKey);
-      start();
-    });
-  }
-
-  static const _cardTrailerStart = Duration(seconds: 1);
-
-  /// The wide card's video slot: empty until its trailer is found.
-  Widget? _cardVideo(String rowKey, ArchiveMeta meta) {
-    if (!_cardTrailersOn) return null;
-    return ValueListenableBuilder(
-        valueListenable: _cardTrailer,
-        builder: (context, trailer, _) {
-          if (trailer == null ||
-              trailer.done ||
-              trailer.row != rowKey ||
-              trailer.id != meta.id) {
-            return const SizedBox.shrink();
-          }
-          return CardTrailer(
-              key: ValueKey(trailer.uri),
-              uri: trailer.uri,
-              onDone: () {
-                if (_cardTrailer.value?.id == meta.id) {
-                  _cardTrailer.value =
-                      (row: rowKey, id: meta.id, uri: trailer.uri, done: true);
-                }
-              });
-        });
+    _cardTrailer.arm(
+        place: row.key,
+        id: meta.id,
+        stillHere: () =>
+            mounted &&
+            node.hasFocus &&
+            _lastIndex[row.key] == i &&
+            _focusedRowKey == row.key,
+        find: () => CardTrailer.findIn(context, meta, source));
   }
 
   void _revealFocusedAfterLayout(ArchiveRow row, int i) {
@@ -2563,8 +2508,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                                     : null,
                                 wideImageUrl: meta.backgroundUrl,
                                 wideLogoUrl: meta.logo,
-                                wideVideo: i == wideAt
-                                    ? _cardVideo(row.key, meta)
+                                wideVideo: i == wideAt && _cardTrailersOn
+                                    ? _cardTrailer.video(row.key, meta.id)
                                     : null,
                                 rating: row.continuations != null
                                     ? (row.continuations![i].episodeLabel

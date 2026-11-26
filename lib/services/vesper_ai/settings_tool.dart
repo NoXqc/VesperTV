@@ -228,7 +228,7 @@ final List<_AiSetting> _aiSettings = [
       'card_trailers',
       'playback',
       'Trailers on Media Hub cards',
-      "Media Hub's focused card plays the title's trailer, with sound.",
+      "Media Hub's focused card plays the title's trailer, with sound: rows, collections' pages, and Expand collection with Wide cards on.",
       (b) => b.prefs.cardTrailers,
       (b, on) => b.prefs.setCardTrailers(on)),
   // Media Hub playback (per viewer): which stream a title starts with

@@ -2242,8 +2242,8 @@ const Map<String, String> kFr = {
   "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
       "Sur les Fire TV Stick, une bande-annonce qui a besoin du lecteur de YouTube s'affiche en plein écran.",
   "Trailers on Media Hub cards": "Bandes-annonces sur les cartes du Media Hub",
-  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
-      "En restant sur un titre dans les rangées du Media Hub, sa carte s'élargit et la bande-annonce y joue, avec le son.",
+  "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on).":
+      "En restant sur un titre dans les rangées et collections du Media Hub, sa carte s'élargit et la bande-annonce y joue, avec le son (Collection complète : avec Cartes larges).",
   "Remove \"{title}\" from history?": "Retirer « {title} » de l’historique ?",
   "Import from storage": "Importer depuis un stockage",
   "Add M3U playlists and Media Hub sources from USB or external storage":

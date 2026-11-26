@@ -2186,8 +2186,8 @@ const Map<String, String> kEl = {
   "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
       "Στα Fire TV Stick, ένα τρέιλερ που χρειάζεται τον player του YouTube παίζει σε πλήρη οθόνη.",
   "Trailers on Media Hub cards": "Τρέιλερ στις κάρτες του Media Hub",
-  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
-      "Όταν μένετε σε έναν τίτλο στις σειρές του Media Hub, η κάρτα του μεγαλώνει και παίζει το τρέιλερ, με ήχο.",
+  "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on).":
+      "Όταν μένετε σε έναν τίτλο στις σειρές και τις συλλογές του Media Hub, η κάρτα του μεγαλώνει και παίζει το τρέιλερ, με ήχο (Επέκταση συλλογής: με τις Φαρδιές κάρτες).",
   "Remove \"{title}\" from history?":
       "Να αφαιρεθεί το «{title}» από το ιστορικό;",
   "Import from storage": "Εισαγωγή από αποθηκευτικό μέσο",

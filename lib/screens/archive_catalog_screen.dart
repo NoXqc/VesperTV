@@ -11,6 +11,7 @@ import '../services/archive_service.dart';
 import '../utils/display_title.dart';
 import '../utils/hub_title_order.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/card_trailer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/glass_menu.dart';
 import '../widgets/hold_to_activate.dart';
@@ -78,6 +79,26 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
   /// expanded catalog (owner, 1.0.51). A notifier: moving focus must not
   /// rebuild the grid.
   final ValueNotifier<ArchiveMeta?> _spot = ValueNotifier(null);
+
+  /// Settings > Playback > Trailers on Media Hub cards with Wide cards on
+  /// (owner, 2026-11-26: "Inside the focused card"): the focused 16:9 card
+  /// plays the title's trailer. A poster grid plays none.
+  final _cardTrailer = CardTrailerSlot();
+
+  void _armCardTrailer(
+      int i, ArchiveMeta meta, ArchiveSource source, bool wide) {
+    if (!wide || !CardTrailer.enabledIn(context)) {
+      _cardTrailer.stop();
+      return;
+    }
+    final node = FocusManager.instance.primaryFocus;
+    _cardTrailer.arm(
+        place: 'grid:$i',
+        id: meta.id,
+        stillHere: () =>
+            mounted && (node?.hasFocus ?? false) && _focusIndex == i,
+        find: () => CardTrailer.findIn(context, meta, source));
+  }
 
   /// A tile mixing movies and shows: All / Movies / TV Shows at the top
   /// (owner: no way to tell them apart). null = All.
@@ -155,6 +176,7 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
         genre: _genre,
         decade: _decade);
     _spot.value = null;
+    _cardTrailer.stop();
   }
 
   /// The rest of [rows]' pages, once per row (see [_restAsked]).
@@ -487,6 +509,7 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
     }
     _firstPoster.dispose();
     _spot.dispose();
+    _cardTrailer.dispose();
     super.dispose();
   }
 
@@ -645,6 +668,12 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
                 : Focus(
                     canRequestFocus: false,
                     skipTraversal: true,
+                    // Up to the buttons, a title page, a hold menu: the
+                    // card's trailer stops (a page under another stays
+                    // built and would play on).
+                    onFocusChange: (has) {
+                      if (!has) _cardTrailer.stop();
+                    },
                     onKeyEvent: (_, e) => _onGridKey(e, hasType),
                     child: LayoutBuilder(builder: (context, box) {
                       // SliverGridDelegateWithMaxCrossAxisExtent's columns.
@@ -705,6 +734,9 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
                 : PosterCard.posterHeight,
             wideStyle: wide,
             backdropUrl: meta.backgroundUrl,
+            wideVideo: wide && CardTrailer.enabledIn(context)
+                ? _cardTrailer.video('grid:$i', meta.id)
+                : null,
             artKey: 'hub:${meta.type.wire}:${meta.id}',
             tapToPreview: touchPreview,
             onTap: () => _open(source, meta),
@@ -717,6 +749,7 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
             onFocusGained: () {
               _focusIndex = i;
               _spot.value = meta;
+              _armCardTrailer(i, meta, source, wide);
               // A grid row holds several cards: ask for the
               // next page a few rows before the end (a tile:
               // of each of its catalogs).

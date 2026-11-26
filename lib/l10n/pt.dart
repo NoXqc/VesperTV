@@ -2229,8 +2229,8 @@ const Map<String, String> kPt = {
   "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
       "Nas Fire TV sticks, um trailer que precisa do leitor do YouTube é reproduzido em ecrã inteiro.",
   "Trailers on Media Hub cards": "Trailers nos cartões do Media Hub",
-  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
-      "Ao parar num título nas linhas do Media Hub, o seu cartão alarga e o trailer é reproduzido nele, com som.",
+  "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on).":
+      "Ao parar num título nas linhas e coleções do Media Hub, o seu cartão alarga e o trailer é reproduzido nele, com som (Expandir coleção: com Cartões largos).",
   "Remove \"{title}\" from history?": "Remover «{title}» do histórico?",
   "Import from storage": "Importar do armazenamento",
   "Add M3U playlists and Media Hub sources from USB or external storage":

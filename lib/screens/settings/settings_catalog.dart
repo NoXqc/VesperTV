@@ -1122,7 +1122,7 @@ class SettingsCatalog {
                 icon: Icons.slideshow_outlined,
                 title: tr('Trailers on Media Hub cards'),
                 help: tr(
-                    "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound."),
+                    "Resting on a title in Media Hub's rows and collections widens its card and plays the trailer in it, with sound (Expand collection: with Wide cards on)."),
                 value: prefs.cardTrailers,
                 onChanged: prefs.setCardTrailers),
         ]),
