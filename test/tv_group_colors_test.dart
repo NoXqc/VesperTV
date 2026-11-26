@@ -229,8 +229,7 @@ void main() {
     expect(playlist.groupColorOf(null, 'Mine 2'), 'blue');
     expect(find.text('Cup'), findsWidgets);
 
-    // Back goes on to the colour with the ticks (owner, 1016: the button
-    // was at the bottom of a long list); Back there changes nothing.
+    // Back cancels, ticks or not (owner, 1019).
     await holdOk(tester, 'Mine 2');
     await tester.tap(find.text('Colour…'));
     await settle(tester);
@@ -241,15 +240,11 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settle(tester);
     expect(picker, findsNothing);
-    expect(find.text('Colour for 2 groups'), findsOneWidget);
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await settle(tester);
     expect(find.text('Colour for 2 groups'), findsNothing);
     expect(playlist.groupColorOf(null, 'Mine'), 'blue');
     expect(playlist.groupColorOf(null, 'Mine 2'), 'blue');
 
-    // Up from the first group = the button at the top; nothing ticked +
-    // Back = closed.
+    // Nothing ticked: the button does nothing; Back = cancelled.
     await holdOk(tester, 'Mine 2');
     await tester.tap(find.text('Colour…'));
     await settle(tester);
@@ -259,6 +254,10 @@ void main() {
         .tap(find.descendant(of: picker, matching: find.text('Mine 2')));
     await tester.pump();
     expect(find.text('Choose a colour (0)'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(picker, findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settle(tester);
     expect(picker, findsNothing);

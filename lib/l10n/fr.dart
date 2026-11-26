@@ -4524,8 +4524,8 @@ const Map<String, String> kFr = {
       "Couleur pour {count} groupes",
   "Choose a colour ({count})":
       "Choisir une couleur ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK : cocher · Retour ou Droite : choisir la couleur",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK : cocher · Retour : annuler · Droite : choisir la couleur",
   "My groups":
       "Mes groupes",
   "Skip": "Saut",

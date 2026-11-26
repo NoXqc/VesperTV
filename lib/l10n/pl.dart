@@ -4105,8 +4105,8 @@ const Map<String, String> kPl = {
       "Kolor dla {count} grup",
   "Choose a colour ({count})":
       "Wybierz kolor ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: zaznacz · Wstecz lub Prawo: wybierz kolor",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: zaznacz · Wstecz: anuluj · Prawo: wybierz kolor",
   "My groups":
       "Moje grupy",
   "Skip": "Skok",

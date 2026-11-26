@@ -26,11 +26,10 @@ class GroupPickEntry {
 /// Ticks several groups (hold OK on a group > Colour… > Select more groups,
 /// owner 2026-11-25: "select a bunch that they want the same color"). One
 /// focus with its own Up / Down (a long list stays lazy: big playlists have
-/// hundreds of groups); OK ticks. Back goes on to the colour with the
-/// ticked groups (owner, 1016: scrolling down a big list to the button at
-/// the bottom was a chore, and Back threw the ticks away); the button sits
-/// at the top, reached with Right or Up from the first group. Back with
-/// nothing ticked closes. Returns the ticked indexes, null = closed.
+/// hundreds of groups); OK ticks. The button sits at the top (owner, 1016:
+/// scrolling down a big list to the button at the bottom was a chore):
+/// Right from any group, or Up from the first, then OK = on to the colour.
+/// Back cancels (owner, 1019). Returns the ticked indexes, null = cancelled.
 /// [action] names the button for how many are ticked.
 Future<Set<int>?> showGroupMultiPick(BuildContext context,
         {required String title,
@@ -132,14 +131,9 @@ class _GroupMultiPickState extends State<GroupMultiPick> {
     Navigator.of(context).pop(Set<int>.of(_ticked));
   }
 
-  /// Back (the key, or the system's): on to the colour with what is
-  /// ticked; nothing ticked = close.
+  /// Back: cancel, nothing coloured.
   void _back() {
     if (_closing) return;
-    if (_ticked.isNotEmpty) {
-      _done();
-      return;
-    }
     _closing = true;
     Navigator.of(context).pop();
   }
@@ -262,48 +256,42 @@ class _GroupMultiPickState extends State<GroupMultiPick> {
         ),
       ),
     );
-    // The system's Back (and a tap outside) comes here too.
-    return PopScope<Set<int>>(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _back();
-      },
-      child: Focus(
-        focusNode: _focus,
-        onKeyEvent: _onKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Text(widget.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800)),
+    return Focus(
+      focusNode: _focus,
+      onKeyEvent: _onKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+            child: Text(widget.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Text(
+                tr('OK: tick · Back: cancel · Right: choose the colour'),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+          button,
+          const Divider(height: 1, color: Colors.white12),
+          Flexible(
+            child: ListView.builder(
+              controller: _scroll,
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              itemExtent: _rowHeight,
+              itemCount: widget.entries.length,
+              itemBuilder: (_, i) => _row(i),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: Text(tr('OK: tick · Back or Right: choose the colour'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ),
-            button,
-            const Divider(height: 1, color: Colors.white12),
-            Flexible(
-              child: ListView.builder(
-                controller: _scroll,
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                itemExtent: _rowHeight,
-                itemCount: widget.entries.length,
-                itemBuilder: (_, i) => _row(i),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

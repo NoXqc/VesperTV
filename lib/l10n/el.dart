@@ -4473,8 +4473,8 @@ const Map<String, String> kEl = {
       "Χρώμα για {count} ομάδες",
   "Choose a colour ({count})":
       "Επιλογή χρώματος ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: επιλογή · Πίσω ή Δεξιά: επιλογή χρώματος",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: επιλογή · Πίσω: ακύρωση · Δεξιά: επιλογή χρώματος",
   "My groups":
       "Οι ομάδες μου",
   "Skip": "Άλμα",

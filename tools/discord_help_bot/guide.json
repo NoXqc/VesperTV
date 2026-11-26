@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere; Select more groups… at the bottom ticks several groups with OK, then Right and OK give them all one colour; Vesper or an AI app can do it too: \"make every sports group red\"), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
+    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere; Select more groups… at the bottom ticks several groups with OK, then Right and OK give them all one colour (Back cancels); Vesper or an AI app can do it too: \"make every sports group red\"), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },

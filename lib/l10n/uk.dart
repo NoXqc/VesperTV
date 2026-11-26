@@ -3983,8 +3983,8 @@ const Map<String, String> kUk = {
       "Колір для {count} груп",
   "Choose a colour ({count})":
       "Вибрати колір ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: позначити · «Назад» або праворуч: вибрати колір",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: позначити · «Назад»: скасувати · праворуч: вибрати колір",
   "My groups":
       "Мої групи",
   "Skip": "Перехід",

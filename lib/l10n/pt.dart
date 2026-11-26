@@ -4517,8 +4517,8 @@ const Map<String, String> kPt = {
       "Cor para {count} grupos",
   "Choose a colour ({count})":
       "Escolher uma cor ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: marcar · Voltar ou Direita: escolher a cor",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: marcar · Voltar: cancelar · Direita: escolher a cor",
   "My groups":
       "Os meus grupos",
   "Skip":

@@ -4518,8 +4518,8 @@ const Map<String, String> kIt = {
       "Colore per {count} gruppi",
   "Choose a colour ({count})":
       "Scegli un colore ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: seleziona · Indietro o Destra: scegli il colore",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: seleziona · Indietro: annulla · Destra: scegli il colore",
   "My groups":
       "I miei gruppi",
   "Skip": "Salto",

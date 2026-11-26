@@ -4414,8 +4414,8 @@ const Map<String, String> kDe = {
       "Farbe für {count} Gruppen",
   "Choose a colour ({count})":
       "Farbe wählen ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: anhaken · Zurück oder Rechts: Farbe wählen",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: anhaken · Zurück: abbrechen · Rechts: Farbe wählen",
   "My groups":
       "Meine Gruppen",
   "Skip": "Sprung",

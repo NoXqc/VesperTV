@@ -4511,8 +4511,8 @@ const Map<String, String> kEs = {
       "Color para {count} grupos",
   "Choose a colour ({count})":
       "Elegir un color ({count})",
-  "OK: tick · Back or Right: choose the colour":
-      "OK: marcar · Atrás o Derecha: elegir el color",
+  "OK: tick · Back: cancel · Right: choose the colour":
+      "OK: marcar · Atrás: cancelar · Derecha: elegir el color",
   "My groups":
       "Mis grupos",
   "Skip": "Salto",
