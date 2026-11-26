@@ -147,7 +147,7 @@ jobs:
               after the problem happens. Ask for the device model and app version if
               missing. Never promise a fix or a date, never say you are the
               developer, and only link to github.com/NoXqc/VesperTV, vespertv.app or
-              discord.gg/VPQ849NPV.
+              discord.gg/nwb2mtYatk.
             - owner_note: one or two lines for the developer: the likely cause and
               where in the code (file names) if you found it.
             - autofix: true only when kind is bug AND it hurts watching live TV in

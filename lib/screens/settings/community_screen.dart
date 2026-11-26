@@ -13,7 +13,7 @@ import '../../widgets/settings_scaffold.dart';
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
 
-  static const url = 'https://discord.gg/VPQ849NPV';
+  static const url = 'https://discord.gg/nwb2mtYatk';
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,7 @@ class CommunityScreen extends StatelessWidget {
                 children: [
                   Text(tr('Scan with your phone, or open')),
                   const SizedBox(height: 4),
-                  const SelectableText('discord.gg/VPQ849NPV',
+                  const SelectableText('discord.gg/nwb2mtYatk',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   if (!tv) ...[

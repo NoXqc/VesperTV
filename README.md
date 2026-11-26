@@ -299,7 +299,7 @@ Media Hub (Settings > Media Hub sources, or **Connect a media server**).
 ## Community
 
 Bug reports, suggestions/improvements, or general discussion — join the
-[Discord server](https://discord.gg/VPQ849NPV), or open an issue here on
+[Discord server](https://discord.gg/nwb2mtYatk), or open an issue here on
 GitHub. Please also visit us at r/VesperTV
 
 VesperTV is free and always will be. If you'd like to help with the server and

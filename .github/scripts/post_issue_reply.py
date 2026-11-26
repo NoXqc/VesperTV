@@ -58,7 +58,7 @@ def link_ok(url):
     if host == "github.com":
         return path.lower().startswith("/noxqc/vespertv")
     if host == "discord.gg":
-        return path.startswith("/VPQ849NPV")
+        return path.startswith("/nwb2mtYatk")
     if host in ("reddit.com", "www.reddit.com"):
         return path.lower().startswith("/r/vespertv")
     return False
