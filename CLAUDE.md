@@ -536,6 +536,36 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - MKVs whose index is named by a second SeekHead (`claude/timeshift-crash`, same worktree):**
+  cillfog (stable + test): every skip in Marshals (provider VOD, MKV) restarted the episode; VLC / browser / the provider's
+  app seek fine. LOG-JKB6RY: `seek targetMs=1133600` -> `position reason=2` (seek adjustment) posMs=0 = media3 saw the file
+  as unseekable. The real file (range-probed, owner gave the link; nothing kept): Lavf 60.20.100, the front SeekHead's only
+  entry points to a second SeekHead at the end (seg+228162855), which names Cues (1,420 points, seg+228114316). media3's
+  MatroskaExtractor reads the first SeekHead only (no chain) -> `SeekMap.Unseekable`. `MkvSeekHeadFix.java` (in
+  HttpVideoAsset's `network` chain, files only): on an open at byte 0 with a known length it reads 4 KB, and when the first
+  SeekHead names no Cues but another SeekHead, one range request (<= 4 KB) reads that one and the entry is rewritten in
+  place to name the Cues (same 4-byte ID + position widths, <= 8 bytes change); else pass-through. Log tag `VesperMkv`.
+  MkvSeekHeadFixTest (6; fixtures src/test/resources/mkv: one_seekhead.mkv = ffmpeg 9.1 output, two_seekheads.mkv = the
+  same rebuilt into the Lavf 60 layout; media3 alone = unseekable, with the fix = seekable). A run against the real link got
+  HTTP 509 (the provider's limit), not retried. Native 309.
+- **Claude, 2026-11-26 - Live pause: channel change ended the app (`claude/timeshift-crash`, worktree
+  `VesperTV-claude-tscrash`; merged into main without the held Streamer rule):** cillfog (Discord, OnePlus CPH2449, Android 16,
+  LOG-PESV4J): "crash (java)" < 1 s after a zap with the copy on (5STAR -> ITV1 in the guide, no pause needed); the
+  restart's resume-in-the-guide made it look like being sent out. `Timeshift.release()` / `restartWriter()` close the
+  writer's connection from another thread; media3's `DefaultHttpDataSource.close()` nulls its stream, so a read that
+  starts just after throws a NullPointerException, and the writer loop only caught IOException: uncaught on
+  `vesper-timeshift` = app death (fast phone + fast local Dispatcharr stream = a wide window; the owner's phone never hit
+  it). Now the read catches RuntimeException, the whole writer loop is guarded (anything = a failed connection, note
+  `writer stopped: X`), `closeQuietly` and the release thread too. `TimeshiftTest`
+  `release_whileTheWriterReads_neverEndsTheApp` (failed before: uncaught NPE). Plus `JavaCrashNote.kt`: a default
+  uncaught-exception handler writes the thread + exception chain (first frames, links removed) to
+  `files/vespertv_java_crash.txt`; Send log's Last exits prints it under the matching `crash (java)` (Android keeps no
+  Java trace). JavaCrashNoteTest (3). Same branch (cillfog: his channels come through Dispatcharr in **Redirect** mode =
+  straight to the provider): after a zap the old load woke with `STOPPED` and reopened the OLD channel while the new one
+  opened (two provider connections). `Timeshift.release()` = the player moves on (`leaving`): a load reading the copy
+  waits for its cancel (ExoPlayer interrupts it -> InterruptedIOException), up to `leaveWaitMs` 3 s, then the network as
+  before; `switchOff()` (Dart turns the setting off, `VideoPlayer.setTimeshift`) keeps the old "back to the network".
+  TimeshiftTest +2 (12).
 - **Claude, 2026-11-26 - guide rows with holes (`claude/guide-holes`, worktree `VesperTV-claude-guideholes`, from main
   3ad3bb0):** owner's photo (Homatics, Compact UI + compact guide): ESPN 2 4K / ESPN 4K rows blank across the view (the box's own guide had
   nothing after ~06:30 for them; his iPhone's had: a source refresh failing, see HANDOFF). A row

@@ -85,6 +85,17 @@ final class Timeshift {
   // ---------------------------------------------------------------- state (under lock)
   private volatile boolean armed;
   private volatile boolean released;
+  /**
+   * Released because the player moves on (a channel change, a movie, closing), not switched off:
+   * the reading load is about to be cancelled, so it waits for that instead of reconnecting.
+   */
+  private boolean leaving;
+
+  /**
+   * How long a load of a copy released by [release] waits for its cancel before it reconnects
+   * anyway (the old behaviour).
+   */
+  @VisibleForTesting long leaveWaitMs = 3_000;
   private long windowUs;
   private long capBytes;
   private boolean memoryOnly;
@@ -324,7 +335,30 @@ final class Timeshift {
     }
   }
 
+  /**
+   * The writer thread. Nothing may escape it: an uncaught exception on any thread ends the app
+   * (cillfog, OnePlus CPH2449, LOG-PESV4J, 2026-11-26: "crash (java)" on every channel change with
+   * the copy on). Anything unexpected counts as a connection that failed for good: the reader's
+   * next load reopens it ([openReader] -> [restartWriter]).
+   */
   private void writeLoop(int gen, DataSource first) {
+    try {
+      writeLoopUnguarded(gen, first);
+    } catch (Throwable t) {
+      Log.e(TAG, "writer stopped", t);
+      synchronized (lock) {
+        if (!released && gen == writerGen) {
+          failure = t instanceof IOException ? (IOException) t : new IOException(t);
+          writerSource = null;
+          writer = null;
+          note = "writer stopped: " + t.getClass().getSimpleName();
+          lock.notifyAll();
+        }
+      }
+    }
+  }
+
+  private void writeLoopUnguarded(int gen, DataSource first) {
     byte[] buf = new byte[64 * 1024];
     DataSource source = first;
     while (true) {
@@ -335,6 +369,12 @@ final class Timeshift {
       } catch (IOException e) {
         n = 0;
         error = e;
+      } catch (RuntimeException e) {
+        // release() / restartWriter() close this connection from another thread to unblock a
+        // waiting read; media3's DefaultHttpDataSource nulls its stream there, so a read that
+        // starts just after throws a NullPointerException, not an IOException.
+        n = 0;
+        error = new IOException("read failed: " + e, e);
       }
       synchronized (lock) {
         if (released || gen != writerGen) {
@@ -562,8 +602,25 @@ final class Timeshift {
       int avail;
       synchronized (lock) {
         long deadline = 0;
+        long leaveDeadline = 0;
         while (true) {
-          if (released || !armed) return STOPPED;
+          if (released || !armed) {
+            if (!leaving) return STOPPED;
+            // The player is moving on and cancels this load (an interrupt). Reconnecting here
+            // reopened the OLD channel while the new one opened: two connections at once, and
+            // with Dispatcharr in Redirect mode both go straight to the provider (cillfog,
+            // 2026-11-26). After [leaveWaitMs] without a cancel: the network, as before.
+            long now = clock.nowMs();
+            if (leaveDeadline == 0) leaveDeadline = now + leaveWaitMs;
+            if (now >= leaveDeadline) return STOPPED;
+            try {
+              lock.wait(Math.min(250, leaveDeadline - now));
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new InterruptedIOException();
+            }
+            continue;
+          }
           if (c.pos < tail) {
             long to = index.startAtOrAfter(tail);
             Log.i(TAG, "paused past the window: on from the oldest part kept");
@@ -712,13 +769,26 @@ final class Timeshift {
     return m;
   }
 
-  /** Switched off: the writer stops, its connection closes, the files go. */
+  /**
+   * The player moves on (a channel change, a movie, closing): the writer stops, its connection
+   * closes, the files go; a load still reading the copy waits for its cancel ([leaving]).
+   */
   void release() {
+    release(true);
+  }
+
+  /** Switched off while the channel plays: as [release], and the player's load goes back to the network. */
+  void switchOff() {
+    release(false);
+  }
+
+  private void release(boolean leaving) {
     DataSource source;
     File d;
     synchronized (lock) {
       if (released) return;
       released = true;
+      this.leaving = leaving;
       armed = false;
       writerGen++;
       source = writerSource;
@@ -734,12 +804,17 @@ final class Timeshift {
     final DataSource close = source;
     final File drop = d;
     Thread t = new Thread(() -> {
-      if (close != null) closeQuietly(close);
-      if (drop != null) {
-        deleteDir(drop);
-        synchronized (activeDirs) {
-          activeDirs.remove(drop);
+      try {
+        if (close != null) closeQuietly(close);
+        if (drop != null) {
+          deleteDir(drop);
+          synchronized (activeDirs) {
+            activeDirs.remove(drop);
+          }
         }
+      } catch (RuntimeException e) {
+        // Never end the app over a cleanup (see writeLoop).
+        Log.w(TAG, "release cleanup: " + e);
       }
     }, "vesper-timeshift-release");
     t.setDaemon(true);
@@ -792,8 +867,8 @@ final class Timeshift {
     if (s == null) return;
     try {
       s.close();
-    } catch (IOException ignored) {
-      // Closing a dead connection.
+    } catch (IOException | RuntimeException ignored) {
+      // Closing a dead connection (or one another thread is closing / reading).
     }
   }
 

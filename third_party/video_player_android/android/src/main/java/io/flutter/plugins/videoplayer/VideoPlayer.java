@@ -598,7 +598,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     Timeshift t = stats == null ? null : stats.timeshift;
     if (t == null) return "not a single stream (HLS)";
     if (!on || minutes <= 0) {
-      t.release();
+      t.switchOff();
       return "switched off";
     }
     if (!reconnectLiveStreams()) return "not the main player";
