@@ -188,6 +188,11 @@ void main() {
       expect(find.text('TV'), findsNothing);
       expect(_sportsTab, findsNothing);
       if (size.width > 1000) {
+        // The first Left reaches Home's Settings gear (2026-11-25); the
+        // second leaves Home for the tabs column.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pumpAndSettle();
+        expect(FocusManager.instance.primaryFocus?.debugLabel, 'home settings');
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       } else {
         // Portrait phone: the floating ☰ More button's menu (Settings

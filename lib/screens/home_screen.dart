@@ -52,6 +52,7 @@ import 'movie_detail_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
 import 'settings/profile_editor_screen.dart';
+import 'settings/settings_menu_screen.dart';
 import '../widgets/profile_card.dart';
 import 'sports_screen.dart';
 import '../services/vesper_ai/watch_list.dart';
@@ -223,6 +224,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, GlobalKey> _rowKeys = {};
   final List<FocusNode> _profileNodes = [];
   final _addProfileNode = FocusNode(debugLabel: 'home add profile');
+
+  /// The Settings gear left of the first profile (owner, 2026-11-25:
+  /// "a little gear icon for a setting shortcut"). Profile index -1. Only
+  /// on the profiles row that has it ([_gearShown], set each build): the
+  /// phone rows keep their own menu button.
+  final _settingsNode = FocusNode(debugLabel: 'home settings');
+  bool _gearShown = false;
   final _emptyFocus = FocusNode(debugLabel: 'home empty');
   bool _profilesHidden = false;
   Timer? _hubProgressRefresh;
@@ -351,6 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
       n.dispose();
     }
     _addProfileNode.dispose();
+    _settingsNode.dispose();
     _emptyFocus.dispose();
     super.dispose();
   }
@@ -1297,11 +1306,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     final count = context.read<ViewerProfileService>().profiles.length;
-    _profileIndex = (index ?? _activeProfileIndex()).clamp(0, count);
+    // The gear only by Left (or coming back from Settings): a plain return
+    // to the row lands on the profile in use.
+    _profileIndex =
+        (index ?? _activeProfileIndex()).clamp(_gearShown ? -1 : 0, count);
     setState(() => _inProfiles = true);
     if (_pageScroll.hasClients) _pageScroll.jumpTo(0);
-    _focusWhenBuilt(
-        _profileIndex == count ? _addProfileNode : _profileNode(_profileIndex));
+    _focusWhenBuilt(_profileIndex < 0
+        ? _settingsNode
+        : _profileIndex == count
+            ? _addProfileNode
+            : _profileNode(_profileIndex));
   }
 
   int _activeProfileIndex() {
@@ -1343,9 +1358,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowLeft) {
-        // The first profile card still leads to the tabs column (with every
-        // content tab hidden, that's the way to Settings).
-        if (_profileIndex > 0) {
+        // First profile -> the Settings gear; Left again still leads to the
+        // tabs column.
+        if (_profileIndex > 0 || (_profileIndex == 0 && _gearShown)) {
           _focusProfiles(_profileIndex - 1);
         } else {
           Navigator.of(context).maybePop();
@@ -1457,6 +1472,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editProfile(ViewerProfile profile) async {
     await openProfileEditor(context, profile.id);
     if (mounted) _focusProfiles();
+  }
+
+  /// The gear: Settings, behind the same PIN gate as every other way in.
+  Future<void> _openSettings() async {
+    final viewers = context.read<ViewerProfileService>();
+    if (!await viewers.requireUnlock(context) || !mounted) return;
+    await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const SettingsMenuScreen()));
+    if (mounted) _focusProfiles(-1);
   }
 
   // ---------------------------------------------------------- row editing --
@@ -1667,6 +1691,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // plays (the hero text doesn't jump when a channel starts).
     final mini =
         prefs.homeMiniPlayer && size.width >= HomeScreen.miniPlayerMinWidth;
+    _gearShown =
+        !hideProfiles && phoneMini == null && widget.phoneHeader == null;
     final miniHeight = heroHeight - 16;
     final miniWidth = math.min(miniHeight * 16 / 9, size.width * 0.38);
     return Scaffold(
@@ -1777,6 +1803,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           compact: !_inProfiles,
                           showBack: needsBackArrow && !widget.embedded,
                           nodes: _profileNode,
+                          settingsNode: _settingsNode,
+                          onSettings: _openSettings,
                           addNode: _addProfileNode,
                           onPick: _switchProfile,
                           onEdit: _editProfile,
@@ -2904,11 +2932,17 @@ class _ProfilesStrip extends StatelessWidget {
       required this.onEdit,
       required this.onAdd,
       required this.onFocus,
+      this.settingsNode,
+      this.onSettings,
       this.showBack = false,
       this.inline = false,
       this.compact = false});
   final bool compact;
   final bool showBack;
+
+  /// The Settings gear before the first profile (both or neither).
+  final FocusNode? settingsNode;
+  final VoidCallback? onSettings;
 
   /// Only the scrolling cards, for the phone's title row (no padding,
   /// Back arrow or clock).
@@ -2977,9 +3011,109 @@ class _ProfilesStrip extends StatelessWidget {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
+              if (settingsNode case final node?)
+                _SettingsGear(
+                    focusNode: node,
+                    compact: compact,
+                    scale: scale,
+                    onTap: onSettings!,
+                    onFocused: () => onFocus(-1)),
               Expanded(child: cards),
               if (MediaQuery.sizeOf(context).width >= 800) const _HomeClock(),
             ])));
+  }
+}
+
+/// The Settings gear left of the profile cards, tucked away (owner,
+/// 2026-11-26: "kind of hidden to the left with a small indicator"): a slim
+/// tab until the remote reaches it with Left (or a mouse hovers it), then it
+/// opens into a lit round gear and the cards slide right to make room.
+class _SettingsGear extends StatefulWidget {
+  const _SettingsGear(
+      {required this.focusNode,
+      required this.onTap,
+      required this.onFocused,
+      this.compact = false,
+      this.scale = 1});
+  final FocusNode focusNode;
+  final VoidCallback onTap, onFocused;
+  final bool compact;
+  final double scale;
+
+  /// The tab's width while the gear is tucked away.
+  static const double tabWidth = 6;
+
+  @override
+  State<_SettingsGear> createState() => _SettingsGearState();
+}
+
+class _SettingsGearState extends State<_SettingsGear> {
+  bool _focused = false, _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final open = _focused || _hovered;
+    final size = widget.compact ? 30.0 : 44.0 * widget.scale;
+    final tabHeight = widget.compact ? 16.0 : 26.0 * widget.scale;
+    return Padding(
+      // Centred on the portraits, not portrait + name.
+      padding: EdgeInsets.only(
+          right: 2, bottom: widget.compact ? 0 : 20 * widget.scale),
+      child: InkLayer(
+        child: InkWell(
+          focusNode: widget.focusNode,
+          onTap: widget.onTap,
+          onHover: (h) => setState(() => _hovered = h),
+          borderRadius: BorderRadius.circular(size / 2),
+          focusColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) widget.onFocused();
+          },
+          child: Tooltip(
+            message: tr('Settings'),
+            child: Padding(
+              // A wider touch / click target than the slim tab.
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                width: open ? size : _SettingsGear.tabWidth,
+                height: open ? size : tabHeight,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: open ? primary : Colors.white38,
+                  borderRadius: BorderRadius.circular(
+                      open ? size / 2 : _SettingsGear.tabWidth / 2),
+                  border: Border.all(
+                      width: 2,
+                      color: _focused ? Colors.white : Colors.transparent),
+                ),
+                child: AnimatedOpacity(
+                  opacity: open ? 1 : 0,
+                  duration: const Duration(milliseconds: 160),
+                  // The gear keeps its size while the tab opens around it.
+                  child: OverflowBox(
+                    minWidth: 0,
+                    minHeight: 0,
+                    maxWidth: size,
+                    maxHeight: size,
+                    child: Icon(Icons.settings_outlined,
+                        size: size * 0.55,
+                        color: ThemeData.estimateBrightnessForColor(primary) ==
+                                Brightness.dark
+                            ? Colors.white
+                            : Colors.black),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

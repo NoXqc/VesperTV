@@ -536,6 +536,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - Tabs + Minimalist per profile (`claude/profile-tabs`, worktree `VesperTV-claude-profiletabs`, from
+  main 3ad3bb0, APK 1021 built):** owner bug: his wife's profile (Minimalist, Movies / TV Shows hidden, Media Hub on) changed
+  his profile too: the Tabs switches + Minimalist were device keys. Now per viewer (`_vk`), reloaded on a switch
+  (`reloadPaletteForViewer`), old value copied once to existing profiles (`_migrateViewerTabs`); with 2+ profiles Minimalist
+  leaves Launch with profiles selector / Open on / Keep groups open alone. dev-notes/features.md (viewer profiles),
+  remote.html "Each profile has its own tabs", test/profile_tabs_test.dart. Analyze 16, 2625 tests. Not box-tested.
+  Same branch: Home's profiles row has a **Settings gear** left of the first profile (owner photo: "a little gear icon
+  for a setting shortcut"; `_SettingsGear`, profile index -1, `_gearShown` = the TV / tablet / computer row only; Up lands on
+  the profile in use, Left = gear, Left again = out of Home as before; `requireUnlock` then `SettingsMenuScreen`).
+  test/home_settings_gear_test.dart. 2026-11-26 (owner: "kind of hidden to the left with a small indicator"): a slim
+  tab until Left reaches it (or a mouse hovers), then it opens into the gear and the cards slide right; APK 1023.
 - **Claude, 2026-11-25 - NEW tag on Continue Watching + player Episodes list (`claude/cw-new-tag`, worktree
   `VesperTV-claude-cwnew`, from main 98632fe):** Kal-el23 (Discord) + owner: "I'll do both". (1) Home's New episodes row
   is gone (`HomeRowKind.newEpisodes` removed; a saved `new_episodes` id is dropped by `HomeRows.parse`): a "Notify me"

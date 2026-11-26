@@ -349,7 +349,8 @@ class AppConstants {
   static const String keyHideHome = 'vesper_hide_home';
 
   /// Settings > Appearance > Minimalist, and the settings it changed (as
-  /// they were), put back when it's turned off.
+  /// they were), put back when it's turned off. Per viewer, like the Tabs
+  /// switches above (2026-11-25).
   static const String keyMinimalist = 'vesper_minimalist';
   static const String keyMinimalistBefore = 'vesper_minimalist_before';
 
@@ -613,6 +614,10 @@ class AppConstants {
   static const String keyRefinedFinish = 'vesper_refined_finish';
   static const String keyViewerPalettesMigrated =
       'vesper_viewer_palettes_migrated';
+
+  /// The Tabs switches + Minimalist were copied to every viewer once
+  /// (`StorageService._migrateViewerTabs`).
+  static const String keyViewerTabsMigrated = 'vesper_viewer_tabs_migrated';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force
   /// one regardless — needed because plenty of real Android boxes (this

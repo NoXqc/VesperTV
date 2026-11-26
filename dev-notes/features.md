@@ -121,7 +121,17 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   profile is turned on for the chosen profiles (or the one in use) instead of "Already added"
   (`addSourceProfiles`, `AddonImportResult.nowOn`; Stremio's list ticks the ones off for this profile:
   `hasSourceOn`). Media servers / Trakt / Simkl: options > Profiles after connecting. Remove is still for
-  everyone. Tests: source_profiles_test, source_profiles_picker_test. `CatalogDatabase`'s own `is_favorite`
+  everyone. Tests: source_profiles_test, source_profiles_picker_test.
+  **Tabs + Minimalist per profile (owner, 2026-11-25, `claude/profile-tabs`):** his wife's profile turned
+  Minimalist on, hid Movies / TV Shows and showed the Media Hub, and his profile had it all too: Settings >
+  Interface > Tabs (Home, Live TV, Movies, TV Shows, What's New, Sports Trak, Media Hub, Recordings, Multiview)
+  and Minimalist (+ its "before" snapshot) were bare device keys. Now `_vk` like the palette;
+  `reloadPaletteForViewer` reloads them on a switch. `_migrateViewerTabs` copies the old device value once to
+  every existing profile (marker `vesper_viewer_tabs_migrated`), so nobody's tabs change with the update; a
+  profile made later starts with every tab. With 2+ profiles Minimalist leaves the device's own settings alone
+  (Launch with profiles selector, Open on, Keep groups open): its hidden tabs already send that viewer's start to
+  TV (`effectiveStartSection`). Still device-wide: Sports Trak off, Hide the catch-up group.
+  test/profile_tabs_test.dart. `CatalogDatabase`'s own `is_favorite`
   column stopped being the favorite source of truth — `PlaylistManager` injects a live callback
   (`isVodFavorite`/`isSeriesFavorite`) instead; only write that column while Main is active.
   `ViewerProfileService.requireUnlock` is the single PIN choke point for *opening Settings at all*

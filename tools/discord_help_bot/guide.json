@@ -440,6 +440,22 @@
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
+    "id": "44ab2fea924dfea1",
+    "category": "Home",
+    "title": "Each profile has its own tabs",
+    "answer": "The tabs you turn off (Home, Movies, TV Shows, Media Hub, Sports Trak…) and Minimalist apply to the profile in use only: someone else’s profile keeps its own. With more than one profile, Minimalist leaves Launch with profiles selector and Open on as they are, so everyone can still pick their profile.",
+    "controls": "Settings > Interface > Tabs · Settings > Appearance > Minimalist",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
+    "id": "0003d39fb149a3e6",
+    "category": "Home",
+    "title": "Settings from Home",
+    "answer": "The small gear left of the first profile opens Settings (a Kids profile asks for the PIN). Going up to the profiles lands on your profile; press Left to reach the gear and OK to open it. Left again leaves Home.",
+    "controls": "Home · profiles row · Left from the first profile",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
     "id": "7292204b66bcb258",
     "category": "Home",
     "title": "Hide profiles on Home",

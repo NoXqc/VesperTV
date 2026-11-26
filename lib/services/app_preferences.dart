@@ -592,9 +592,9 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A profile switch only reloads viewer-specific appearance: colours and
-  /// the guide layout. Device settings (layout, video compatibility, clock,
-  /// etc.) stay as they are.
+  /// A profile switch only reloads viewer-specific appearance: colours, the
+  /// guide layout and the Tabs switches. Device settings (layout, video
+  /// compatibility, clock, etc.) stay as they are.
   void reloadPaletteForViewer() {
     palette = _paletteById(_storage.getPaletteId());
     refinedFinish = _storage.getRefinedFinish();
@@ -608,6 +608,16 @@ class AppPreferences extends ChangeNotifier {
     uiSize = _storage.getUiSize();
     columnLines = _storage.getColumnLines();
     guideFocusPreview = _storage.getGuideFocusPreview();
+    // The Tabs switches (and Minimalist, read from storage) are per viewer.
+    hideMovies = _storage.getHideMovies();
+    hideShows = _storage.getHideShows();
+    hideLiveTv = _storage.getHideLiveTv();
+    hideSportsTrak = _storage.getHideSportsTrak();
+    hideWhatsNew = _storage.getHideWhatsNew();
+    hideArchive = _storage.getHideArchive();
+    hideRecordings = _storage.getHideRecordings();
+    hideMultiview = _storage.getHideMultiview();
+    hideHome = _storage.getHideHome();
     notifyListeners();
   }
 
@@ -894,24 +904,31 @@ class AppPreferences extends ChangeNotifier {
   /// Home, profiles, Sports Trak or Media Hub; the app opens on TV. Each
   /// one stays its own setting (a tab can be turned back on by itself).
   /// Off puts back what these settings were before it was turned on.
+  /// Per viewer (2026-11-25): with other profiles on the device it leaves
+  /// the device's own settings alone (Launch with profiles selector, Open
+  /// on, Keep groups open), so the others keep theirs; the tabs it hides
+  /// already send this viewer's start to TV ([effectiveStartSection]).
   bool get minimalist => _storage.getMinimalist();
+
+  bool get _onlyViewer => _storage.getViewerProfiles().length < 2;
 
   Future<void> setMinimalist(bool on) async {
     if (on == minimalist) return;
     if (on) {
+      final device = _onlyViewer;
       await _storage.setMinimalistBefore(jsonEncode({
         'refinedFinish': refinedFinish,
         'guideViewMode': guideViewMode,
         'guideFullVideo': guideFullVideo,
         'guideCompact': guideCompact,
-        'keepGroupsOpen': keepGroupsOpen,
+        if (device) 'keepGroupsOpen': keepGroupsOpen,
         'hideHome': hideHome,
         'hideProfiles': hideProfiles,
         'hideSportsTrak': hideSportsTrak,
         'sportsMode': _storage.getSportsMode(),
         'hideArchive': hideArchive,
-        'launchWithProfiles': launchWithProfiles,
-        'startSection': _storage.getStartSection(),
+        if (device) 'launchWithProfiles': launchWithProfiles,
+        if (device) 'startSection': _storage.getStartSection(),
       }));
       await _storage.setMinimalist(true);
       refinedFinish = false;
@@ -922,8 +939,10 @@ class AppPreferences extends ChangeNotifier {
       await _storage.setGuideFullVideo(false);
       guideCompact = true;
       await _storage.setGuideCompact(true);
-      keepGroupsOpen = false;
-      await _storage.setKeepGroupsOpen(false);
+      if (device) {
+        keepGroupsOpen = false;
+        await _storage.setKeepGroupsOpen(false);
+      }
       hideHome = true;
       await _storage.setHideHome(true);
       await _storage.setHideProfiles(true);
@@ -932,9 +951,11 @@ class AppPreferences extends ChangeNotifier {
       await _storage.setSportsMode(false);
       hideArchive = true;
       await _storage.setHideArchive(true);
-      await _storage.setLaunchWithProfiles(false);
-      if (const {'home', 'hub', 'sports'}.contains(startSection)) {
-        await _storage.setStartSection('tv');
+      if (device) {
+        await _storage.setLaunchWithProfiles(false);
+        if (const {'home', 'hub', 'sports'}.contains(startSection)) {
+          await _storage.setStartSection('tv');
+        }
       }
       notifyListeners();
       return;
@@ -954,8 +975,10 @@ class AppPreferences extends ChangeNotifier {
     await _storage.setGuideFullVideo(guideFullVideo);
     guideCompact = was('guideCompact', guideCompact);
     await _storage.setGuideCompact(guideCompact);
-    keepGroupsOpen = was('keepGroupsOpen', keepGroupsOpen);
-    await _storage.setKeepGroupsOpen(keepGroupsOpen);
+    if (before.containsKey('keepGroupsOpen')) {
+      keepGroupsOpen = was('keepGroupsOpen', keepGroupsOpen);
+      await _storage.setKeepGroupsOpen(keepGroupsOpen);
+    }
     hideHome = was('hideHome', false);
     await _storage.setHideHome(hideHome);
     await _storage.setHideProfiles(was('hideProfiles', false));
@@ -964,7 +987,9 @@ class AppPreferences extends ChangeNotifier {
     await _storage.setSportsMode(!hideSportsTrak && was('sportsMode', false));
     hideArchive = was('hideArchive', false);
     await _storage.setHideArchive(hideArchive);
-    await _storage.setLaunchWithProfiles(was('launchWithProfiles', false));
+    if (before.containsKey('launchWithProfiles')) {
+      await _storage.setLaunchWithProfiles(was('launchWithProfiles', false));
+    }
     final start = before['startSection'];
     if (start is String) {
       await _storage.setStartSection(start);

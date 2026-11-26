@@ -193,7 +193,10 @@ class StorageService {
     _activeViewerId = viewerId ??
         _prefs.getString(AppConstants.keyActiveViewerId) ??
         AppConstants.mainViewerId;
-    if (migrate) await _migrateViewerPalettes();
+    if (migrate) {
+      await _migrateViewerPalettes();
+      await _migrateViewerTabs();
+    }
   }
 
   /// Another Flutter engine may have committed episode checkpoints while this
@@ -218,6 +221,42 @@ class StorageService {
       }
     }
     await _prefs.setBool(AppConstants.keyViewerPalettesMigrated, true);
+  }
+
+  /// The Tabs switches and Minimalist are per viewer since 2026-11-25 (owner:
+  /// his wife's profile turned Minimalist on, hid Movies / TV Shows, showed
+  /// the Media Hub, and his own profile had it all too). They were one
+  /// device-wide setting before: copy it once to every existing viewer so
+  /// nobody's tabs change with the update. Main keeps the bare keys; a
+  /// profile made later starts with every tab shown.
+  static const _viewerTabKeys = [
+    AppConstants.keyHideMoviesShows,
+    AppConstants.keyHideMovies,
+    AppConstants.keyHideShows,
+    AppConstants.keyHideLiveTv,
+    AppConstants.keyHideSportsTrak,
+    AppConstants.keyHideWhatsNew,
+    AppConstants.keyHideArchive,
+    AppConstants.keyHideRecordings,
+    AppConstants.keyHideMultiview,
+    AppConstants.keyHideHome,
+    AppConstants.keyMinimalist,
+    AppConstants.keyMinimalistBefore,
+  ];
+
+  Future<void> _migrateViewerTabs() async {
+    if (_prefs.getBool(AppConstants.keyViewerTabsMigrated) == true) return;
+    for (final viewer in getViewerProfiles()) {
+      if (viewer.id == AppConstants.mainViewerId) continue;
+      for (final base in _viewerTabKeys) {
+        final value = _prefs.get(base);
+        final key = _vk(base, viewerId: viewer.id);
+        if (value == null || _prefs.containsKey(key)) continue;
+        if (value is bool) await _prefs.setBool(key, value);
+        if (value is String) await _prefs.setString(key, value);
+      }
+    }
+    await _prefs.setBool(AppConstants.keyViewerTabsMigrated, true);
   }
 
   Future<Directory> _ensureCacheDir() async {
@@ -622,18 +661,19 @@ class StorageService {
   Future<void> setResumeLastChannelInGuide(bool value) =>
       _prefs.setBool(AppConstants.keyResumeLastChannelInGuide, value);
   bool getHideMoviesShows() =>
-      _prefs.getBool(AppConstants.keyHideMoviesShows) ?? false;
+      _prefs.getBool(_vk(AppConstants.keyHideMoviesShows)) ?? false;
   Future<void> setHideMoviesShows(bool value) =>
-      _prefs.setBool(AppConstants.keyHideMoviesShows, value);
+      _prefs.setBool(_vk(AppConstants.keyHideMoviesShows), value);
 
-  /// Device-wide navigation switches, visible by default.
-  bool getHideLiveTv() => _prefs.getBool(AppConstants.keyHideLiveTv) ?? false;
+  /// Navigation switches (per viewer since 2026-11-25), visible by default.
+  bool getHideLiveTv() =>
+      _prefs.getBool(_vk(AppConstants.keyHideLiveTv)) ?? false;
   Future<void> setHideLiveTv(bool value) =>
-      _prefs.setBool(AppConstants.keyHideLiveTv, value);
+      _prefs.setBool(_vk(AppConstants.keyHideLiveTv), value);
   bool getHideSportsTrak() =>
-      _prefs.getBool(AppConstants.keyHideSportsTrak) ?? false;
+      _prefs.getBool(_vk(AppConstants.keyHideSportsTrak)) ?? false;
   Future<void> setHideSportsTrak(bool value) =>
-      _prefs.setBool(AppConstants.keyHideSportsTrak, value);
+      _prefs.setBool(_vk(AppConstants.keyHideSportsTrak), value);
   bool getSportsOff() => _prefs.getBool(AppConstants.keySportsOff) ?? false;
   Future<void> setSportsOff(bool value) async {
     await _prefs.setBool(AppConstants.keySportsOff, value);
@@ -641,19 +681,19 @@ class StorageService {
   }
 
   bool getHideWhatsNew() =>
-      _prefs.getBool(AppConstants.keyHideWhatsNew) ?? false;
+      _prefs.getBool(_vk(AppConstants.keyHideWhatsNew)) ?? false;
   Future<void> setHideWhatsNew(bool value) =>
-      _prefs.setBool(AppConstants.keyHideWhatsNew, value);
+      _prefs.setBool(_vk(AppConstants.keyHideWhatsNew), value);
 
   /// Separate Movies / TV Shows switches; unset = the old combined one.
   bool getHideMovies() =>
-      _prefs.getBool(AppConstants.keyHideMovies) ?? getHideMoviesShows();
+      _prefs.getBool(_vk(AppConstants.keyHideMovies)) ?? getHideMoviesShows();
   Future<void> setHideMovies(bool value) =>
-      _prefs.setBool(AppConstants.keyHideMovies, value);
+      _prefs.setBool(_vk(AppConstants.keyHideMovies), value);
   bool getHideShows() =>
-      _prefs.getBool(AppConstants.keyHideShows) ?? getHideMoviesShows();
+      _prefs.getBool(_vk(AppConstants.keyHideShows)) ?? getHideMoviesShows();
   Future<void> setHideShows(bool value) =>
-      _prefs.setBool(AppConstants.keyHideShows, value);
+      _prefs.setBool(_vk(AppConstants.keyHideShows), value);
   bool getVideoFill() => _prefs.getBool(AppConstants.keyVideoFill) ?? false;
   Future<void> setVideoFill(bool value) =>
       _prefs.setBool(AppConstants.keyVideoFill, value);
@@ -968,32 +1008,34 @@ class StorageService {
       _prefs.getBool(AppConstants.keyPanelZapOnMove) ?? false;
   Future<void> setPanelZapOnMove(bool value) =>
       _prefs.setBool(AppConstants.keyPanelZapOnMove, value);
-  bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
+  bool getHideArchive() =>
+      _prefs.getBool(_vk(AppConstants.keyHideArchive)) ?? false;
   Future<void> setHideArchive(bool value) =>
-      _prefs.setBool(AppConstants.keyHideArchive, value);
+      _prefs.setBool(_vk(AppConstants.keyHideArchive), value);
   bool getHideRecordings() =>
-      _prefs.getBool(AppConstants.keyHideRecordings) ?? false;
+      _prefs.getBool(_vk(AppConstants.keyHideRecordings)) ?? false;
   Future<void> setHideRecordings(bool value) =>
-      _prefs.setBool(AppConstants.keyHideRecordings, value);
+      _prefs.setBool(_vk(AppConstants.keyHideRecordings), value);
   bool getHideCatchupGroup() =>
       _prefs.getBool(AppConstants.keyHideCatchupGroup) ?? false;
   Future<void> setHideCatchupGroup(bool value) =>
       _prefs.setBool(AppConstants.keyHideCatchupGroup, value);
   bool getHideMultiview() =>
-      _prefs.getBool(AppConstants.keyHideMultiview) ?? false;
+      _prefs.getBool(_vk(AppConstants.keyHideMultiview)) ?? false;
   Future<void> setHideMultiview(bool value) =>
-      _prefs.setBool(AppConstants.keyHideMultiview, value);
-  bool getHideHome() => _prefs.getBool(AppConstants.keyHideHome) ?? false;
+      _prefs.setBool(_vk(AppConstants.keyHideMultiview), value);
+  bool getHideHome() => _prefs.getBool(_vk(AppConstants.keyHideHome)) ?? false;
   Future<void> setHideHome(bool value) =>
-      _prefs.setBool(AppConstants.keyHideHome, value);
-  bool getMinimalist() => _prefs.getBool(AppConstants.keyMinimalist) ?? false;
+      _prefs.setBool(_vk(AppConstants.keyHideHome), value);
+  bool getMinimalist() =>
+      _prefs.getBool(_vk(AppConstants.keyMinimalist)) ?? false;
   Future<void> setMinimalist(bool value) =>
-      _prefs.setBool(AppConstants.keyMinimalist, value);
+      _prefs.setBool(_vk(AppConstants.keyMinimalist), value);
   String? getMinimalistBefore() =>
-      _prefs.getString(AppConstants.keyMinimalistBefore);
+      _prefs.getString(_vk(AppConstants.keyMinimalistBefore));
   Future<void> setMinimalistBefore(String? json) => json == null
-      ? _prefs.remove(AppConstants.keyMinimalistBefore)
-      : _prefs.setString(AppConstants.keyMinimalistBefore, json);
+      ? _prefs.remove(_vk(AppConstants.keyMinimalistBefore))
+      : _prefs.setString(_vk(AppConstants.keyMinimalistBefore), json);
   Future<void> clearStartSection() =>
       _prefs.remove(AppConstants.keyStartSection);
 
