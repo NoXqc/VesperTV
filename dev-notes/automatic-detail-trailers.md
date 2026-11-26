@@ -19,7 +19,7 @@ No additional automatic lookup/player is created when disabled.
   still stops immediately. The detail subtree stays mounted so focus/scroll stay.
 - Automatic YouTube embeds use controls:0, audible playback, IgnorePointer and
   ExcludeFocus; the explicit Trailer button still opens the normal player with
-  controls:1. No stream extraction, proxy, enlarged iframe cropping or changes
+  controls:1. No stream extraction (superseded 2026-11-26: see the last section), proxy, enlarged iframe cropping or changes
   to YouTube's own branding implementation.
 - This supersedes the earlier uncovered side/top preview design at the owner's
   explicit request. YouTube's no-obscuring embed requirements remain a provider
@@ -78,3 +78,63 @@ replace it if the URL differs. Known differing IDs/year or title still clear the
 old preview immediately. Route/stop generation guards still cancel stale results.
 Tests cover preserved pending lookup, unchanged URL, changed URL and stale lookup.
 Hardware startup time and visual acceptance must still be checked by the owner.
+
+## Our own player for YouTube trailers + Media Hub card trailers (Claude, 2026-11-26)
+
+Owner: "Even our background trailer is clunky and takes several seconds", with a
+video of ARVIO (github.com/ProdigyV21/ARVIO, Apache-2.0) playing trailers in the
+focused Home card about 1.3 s after focus. Measured on the Homatics before the change
+(title page, Automatic trailers on): OK -> playing 7.6-8.0 s, of which the lookup
+0.9-2.0 s and YouTube's web player 5.9-6.8 s; a 0.6-0.7 s frame opening the page;
+YouTube's own title bar over our page. The owner chose ARVIO's way ("1 but not
+muted"), knowing it goes against YouTube's terms and breaks when YouTube changes its
+apps, and that it stays out of the Apple builds.
+
+- `services/youtube_streams.dart` (`YouTubeStreams`, adapted from ARVIO's
+  InAppYouTubeExtractor): asks YouTube's player API (`/youtubei/v1/player`) as three of
+  YouTube's own apps at once: Vision Pro (`VISIONOS`, HLS playlist up to 1080p, needs the
+  anonymous visitor id from `sw.js_data`), Android (`ANDROID`, one 360p mp4 with sound,
+  itag 18, downloads at full speed) and iPhone (`IOS`). Quest (`ANDROID_VR`) answers
+  LOGIN_REQUIRED since 2026-11 and is left out. **No API key** (the call works without one;
+  the project rule stands). Ciphered formats are skipped (no player code is run). Kept 20
+  min per video, "none" 2 min, one lookup per video at a time; `forget` after a failed
+  play. Log: `Trailer: YouTube stream hls+mp4 360p in N ms (visionos OK, android OK, ...)`.
+  `YouTubeStreams.supported` = not App Store builds, not Apple TV.
+- `YouTubeTrailerStream.large` (title pages: the HD playlist) / `.small` (cards: the mp4).
+  `resolveSmall` answers as soon as the Android client has the mp4 (~250-350 ms) without
+  waiting for the Vision Pro playlist.
+- `DetailTrailer`: a YouTube trailer plays its file in `TrailerVideo` (the old private
+  `_Preview`, now public: our texture player / mpv; HLS gets `VideoFormat.hls`). A file that
+  fails (error, 20 s start timeout) falls back once to YouTube's web player (`_failed`).
+  `_found` (the trailer link) vs `_uri` (what plays) keeps the same-title preserve logic.
+- `TrailerService` lookup order: the add-ons' details pages are asked all at once (taken
+  in the add-ons' order), then Cinemeta's, then add-ons' stream lists one at a time (each
+  is a debrid lookup on Torrentio-like add-ons; was meta + stream per add-on, then
+  Cinemeta). `quick` (cards): the first details page with a trailer wins, stream lists are
+  never asked. Found trailers are also kept by title (type + IMDb id + add-ons, 6 h): the
+  card's lookup serves its title page.
+- Media Hub card trailers: Settings > Playback > Movies & TV Shows > **Trailers on Media Hub
+  cards** (`vesper_card_trailers`, device, off by default, hidden where unsupported; Vesper
+  AI settings key `card_trailers`). `archive_screen.dart` `_armCardTrailer`: 300 ms after
+  focus the lookup starts (`CardTrailer.find`, quick + `resolveSmall`; only files our
+  player opens, never YouTube's web player in a card); the card widens after **0.5 s**
+  with the switch on (2 s without, unchanged); the player starts after **1 s** on the card
+  (`_cardTrailerDue`: at 0.5 s, stepping along a row opened and closed a player per card);
+  `widgets/card_trailer.dart` plays it over the
+  backdrop, under the logo (`PosterCard.wideVideo`), with sound, fading in on play and out
+  at the end (not replayed until the remote leaves the card). The trailer state is a
+  ValueNotifier: only the wide card's slot redraws (a Media Hub setState is ~450 ms on the
+  Homatics). Widening / shrinking a card redraws only its row (`_wideTicks`,
+  `_setExpanded`; was a screen setState each, twice per step: 467-482 ms builds while
+  stepping, now <= 83 ms). Stepping frames stay ~28-34 ms raster either way (the Media Hub
+  hero on the Homatics, same with the switch off).
+- Measured on the Homatics (1030-1032): card focus -> playing 1.6-1.8 s (first title after
+  a start 2.8 s; ARVIO ~1.3 s in the owner's video); title page OK -> playing 2.1-2.6 s (was
+  7.6-8.0 s), 0.8 s of it the page's own first frame. Sound checked with `dumpsys audio`
+  (our AudioTrack started, USAGE_MEDIA, 0 dB); one player at a time card -> page -> card;
+  leaving the Media Hub = no player left.
+- Not changed: the Trailer button still opens YouTube's web player with controls; Home's
+  and IPTV rows have no card trailers; Fire TV only needs full screen when the web player
+  is the fallback.
+- Tests: youtube_streams_test, hub_card_trailer_test, detail_trailer_test (file / fallback
+  / no file), addon_trailer_test (lookup order, quick, shared by title).

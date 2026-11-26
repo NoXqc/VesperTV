@@ -692,6 +692,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Device-only: Media Hub's focused card plays the title's trailer, with
+  /// sound (owner, 2026-11-26, after ARVIO's rows).
+  bool get cardTrailers => _storage.getCardTrailers();
+
+  void setCardTrailers(bool value) {
+    _storage.setCardTrailers(value);
+    notifyListeners();
+  }
+
   void setExpandedBrowse(bool value) {
     expandedBrowse = value;
     _storage.setExpandedBrowse(value);

@@ -36,6 +36,7 @@ import '../../widgets/download_sheet.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../utils/time_format.dart';
 import '../../services/vesper_ai/vesper_ai.dart';
+import '../../services/youtube_streams.dart';
 import '../vesper_ai/phone_mic_sheet.dart';
 import 'addons_screen.dart';
 import 'archive_posters_screen.dart';
@@ -1111,10 +1112,19 @@ class SettingsCatalog {
               help: [
                 tr('Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.'),
                 if (Platform.isAndroid)
-                  tr('On Fire TV sticks, the trailer plays full screen.'),
+                  tr("On Fire TV sticks, a trailer that needs YouTube's own player plays full screen."),
               ].join(' '),
               value: prefs.autoTrailers,
               onChanged: prefs.setAutoTrailers),
+          if (YouTubeStreams.supported)
+            SettingsToggle(
+                id: 'card_trailers',
+                icon: Icons.slideshow_outlined,
+                title: tr('Trailers on Media Hub cards'),
+                help: tr(
+                    "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound."),
+                value: prefs.cardTrailers,
+                onChanged: prefs.setCardTrailers),
         ]),
       ],
     );

@@ -224,6 +224,13 @@ final List<_AiSetting> _aiSettings = [
       'Movie and show pages play their trailer behind the details.',
       (b) => b.prefs.autoTrailers,
       (b, on) => b.prefs.setAutoTrailers(on)),
+  _switch(
+      'card_trailers',
+      'playback',
+      'Trailers on Media Hub cards',
+      "Media Hub's focused card plays the title's trailer, with sound.",
+      (b) => b.prefs.cardTrailers,
+      (b, on) => b.prefs.setCardTrailers(on)),
   // Media Hub playback (per viewer): which stream a title starts with
   // (hubBestStream / archive_playback). Preferred source is left out: its
   // choices are the viewer's sources.

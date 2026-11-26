@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -108,7 +109,7 @@ void main() {
       () async {
     final paths = <String>[];
     final service = TrailerService(client: MockClient((req) async {
-      paths.add(req.url.path);
+      paths.add('${req.url.host}${req.url.path}');
       if (req.url.path.contains('/meta/')) {
         return http.Response(
             jsonEncode({
@@ -133,7 +134,95 @@ void main() {
         (await service.resolve(request, addons: [source]))!
             .queryParameters['v'],
         id);
-    expect(paths, ['/meta/movie/tt123.json', '/stream/movie/tt123.json']);
+    // Details pages first (the add-on's, then Cinemeta's), stream lists
+    // last (2026-11-26).
+    expect(paths, [
+      'user-addon.example/meta/movie/tt123.json',
+      'v3-cinemeta.strem.io/meta/movie/tt123.json',
+      'user-addon.example/stream/movie/tt123.json',
+    ]);
+  });
+
+  // Owner, 2026-11-26: trailers took seconds; ARVIO's start in about one.
+  group('lookup speed', () {
+    String meta(String imdb, String yt) => jsonEncode({
+          'meta': {
+            'id': imdb,
+            'type': 'movie',
+            'trailerStreams': [
+              {'ytId': yt}
+            ]
+          }
+        });
+    const second = ArchiveSource(
+        manifestUrl: 'https://second-addon.example/manifest.json',
+        name: 'Second add-on',
+        imdbResources: {
+          'meta': ['movie'],
+        });
+
+    test("add-ons' details pages are asked at once and taken in order",
+        () async {
+      final asked = <String>[];
+      final slow = Completer<http.Response>();
+      final service = TrailerService(client: MockClient((req) {
+        asked.add(req.url.host);
+        if (req.url.host == 'user-addon.example') return slow.future;
+        return Future.value(http.Response(meta('tt123', 'SecondAddon'), 200));
+      }));
+      final result = service.resolve(request, addons: const [source, second]);
+      await Future<void>.delayed(Duration.zero);
+      expect(asked, ['user-addon.example', 'second-addon.example']);
+      slow.complete(http.Response(meta('tt123', id), 200));
+      expect((await result)!.queryParameters['v'], id);
+    });
+
+    test("a card's lookup never asks add-ons' stream lists", () async {
+      final paths = <String>[];
+      final service = TrailerService(client: MockClient((req) async {
+        paths.add('${req.url.host}${req.url.path}');
+        return http.Response('{}', 200);
+      }));
+      expect(
+          await service.resolve(request, addons: const [source], quick: true),
+          isNull);
+      expect(paths, [
+        'user-addon.example/meta/movie/tt123.json',
+        'v3-cinemeta.strem.io/meta/movie/tt123.json',
+      ]);
+    });
+
+    test("a card takes the first details page with a trailer", () async {
+      final slow = Completer<http.Response>();
+      final service = TrailerService(client: MockClient((req) {
+        if (req.url.host == 'user-addon.example') return slow.future;
+        return Future.value(http.Response(meta('tt123', 'CinemetaTrl'), 200));
+      }));
+      expect(
+          (await service.resolve(request, addons: const [source], quick: true))!
+              .queryParameters['v'],
+          'CinemetaTrl');
+      slow.complete(http.Response('{}', 200));
+    });
+
+    test('a card and its title page share the title\'s trailer', () async {
+      var asked = 0;
+      final service = TrailerService(client: MockClient((req) async {
+        asked++;
+        return http.Response(meta('tt123', id), 200);
+      }));
+      expect(
+          (await service.resolve(request, quick: true))!.queryParameters['v'],
+          id);
+      expect(asked, 1);
+      // The title page's request differs (year, language) but not the title.
+      expect(
+          (await service.resolve(const TrailerRequest(
+                  title: 'Film', series: false, imdbId: 'tt123', year: 2026)))!
+              .queryParameters['v'],
+          id);
+      expect(asked, 1);
+    });
   });
 
   test('disabled and non-IMDb sources are never queried', () async {

@@ -7,6 +7,7 @@ import '../models/cyberpunk_palette.dart';
 /// between the services that read and write them.
 class AppConstants {
   static const String keyAutoTrailers = 'vesper_auto_trailers';
+  static const String keyCardTrailers = 'vesper_card_trailers';
 
   static const String appName = 'VesperTV';
 

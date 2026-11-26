@@ -2126,8 +2126,11 @@ const Map<String, String> kUk = {
   "Trailers": "Трейлери",
   "Play trailers automatically on movie and show pages":
       "Автоматично відтворювати трейлери на сторінках фільмів і серіалів",
-  "On Fire TV sticks, the trailer plays full screen.":
-      "На Fire TV Stick трейлер відтворюється на весь екран.",
+  "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
+      "На Fire TV Stick трейлер, якому потрібен плеєр YouTube, відтворюється на весь екран.",
+  "Trailers on Media Hub cards": "Трейлери на картках Media Hub",
+  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
+      "Коли ви зупиняєтеся на назві в рядах Media Hub, її картка розширюється і відтворює трейлер зі звуком.",
   "Remove \"{title}\" from history?": "Видалити «{title}» з історії?",
   "Import from storage": "Імпорт зі сховища",
   "Add M3U playlists and Media Hub sources from USB or external storage":

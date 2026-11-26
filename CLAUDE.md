@@ -536,6 +536,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - trailers in our own player + Media Hub card trailers (`claude/fast-trailers`, worktree
+  `VesperTV-claude-fasttrailers`, on main, APK 1032 on the Homatics):** owner (ARVIO video): our
+  background trailer took 7.6-8 s on the Homatics (YouTube's web player 6-7 s of it). Owner chose ARVIO's way ("1 but
+  not muted"): `services/youtube_streams.dart` asks YouTube's player API as its Vision Pro / Android / iPhone apps (no
+  key; against YouTube's terms, breaks when YouTube changes; not App Store / Apple TV) and `TrailerVideo` plays the file
+  (title pages: HD playlist, cards: 360p mp4); a failed file falls back to the web player once. `TrailerService`: add-on
+  details pages at once, then Cinemeta, stream lists last; `quick` for cards; kept by title. Settings > Playback >
+  **Trailers on Media Hub cards** (device, off): the card widens at 0.5 s, the trailer starts at 1 s with sound
+  (`widgets/card_trailer.dart`, `PosterCard.wideVideo`, ValueNotifier slot); a card widens / shrinks with its row
+  alone (`_wideTicks`: was a ~470 ms screen rebuild each). Homatics: card 1.6-1.8 s, title page 2.1-2.6 s (was
+  7.6-8 s). Details: dev-notes/automatic-detail-trailers.md (last section). remote.html "Trailers on Media
+  Hub cards". Tests: youtube_streams_test, hub_card_trailer_test, detail_trailer_test, addon_trailer_test.
 - **Claude, 2026-11-26 - European Portuguese (`claude/pt-portuguese`, worktree `VesperTV-claude-pt`; owner: "You can complete
   Ricardo's work"):** GitHub PR #19 (Ricardo-Simoes, pt-PT, `lib/l10n/pt.dart`, 2,829 keys, compiled clean, no placeholder
   mistakes) merged with his commits kept; the 76 strings added since he started (Tuliprox DVR / own connection, network

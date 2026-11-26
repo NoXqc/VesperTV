@@ -15,6 +15,7 @@ import '../services/device_memory_service.dart';
 import '../services/desktop_stream_setup.dart';
 import '../services/playback_service.dart';
 import '../services/trailer_service.dart';
+import '../services/youtube_streams.dart';
 import '../utils/route_observer.dart';
 import 'youtube_platform_view.dart';
 import 'detail_header.dart';
@@ -29,11 +30,15 @@ class DetailTrailer extends StatefulWidget {
       required this.request,
       required this.child,
       this.resolve,
+      this.youtubeStream,
       this.youtubeBuilder});
   final bool enabled;
   final TrailerRequest request;
   final Widget child;
   final Future<Uri?> Function(TrailerRequest, List<ArchiveSource>)? resolve;
+
+  /// A YouTube trailer's own files ([YouTubeStreams]); tests pass one.
+  final Future<YouTubeTrailerStream?> Function(String videoId)? youtubeStream;
   final YouTubeViewBuilder? youtubeBuilder;
 
   @override
@@ -44,9 +49,15 @@ class DetailTrailerState extends State<DetailTrailer>
     with RouteAware, WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late final _fade = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 650));
-  var _playerKey = GlobalKey<_PreviewState>();
+  var _playerKey = GlobalKey<TrailerVideoState>();
   PageRoute<void>? _route;
+
+  /// What plays: a YouTube trailer's own file when we have it ([_found]
+  /// stays the YouTube link, kept as [_youtubeFallback] in case the file
+  /// won't play), else the trailer link itself.
   Uri? _uri;
+  Uri? _found;
+  Uri? _youtubeFallback;
   TrailerRequest? _activeRequest;
   bool _picture = false;
   Future<void>? _pausing;
@@ -108,7 +119,13 @@ class DetailTrailerState extends State<DetailTrailer>
     _fade.reset();
     ++_generation;
     final closing = _closePlayer();
-    if (mounted) setState(() => _uri = null);
+    if (mounted) {
+      setState(() {
+        _uri = null;
+        _found = null;
+        _youtubeFallback = null;
+      });
+    }
     await closing;
     try {
       await _pausing;
@@ -127,6 +144,8 @@ class DetailTrailerState extends State<DetailTrailer>
     _fade.reset();
     setState(() {
       _uri = null;
+      _found = null;
+      _youtubeFallback = null;
       _picture = false;
       _activeRequest = null;
     });
@@ -157,7 +176,7 @@ class DetailTrailerState extends State<DetailTrailer>
           TrailerService.instance.resolve(request, addons: sources));
       if (!mounted || generation != _generation) return;
       if (preserve) {
-        if (uri == _uri) {
+        if (uri == _found) {
           _activeRequest = request;
           return;
         }
@@ -165,13 +184,28 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
       }
       if (uri == null) return;
+      // A YouTube trailer plays its own file in our player (owner,
+      // 2026-11-26: YouTube's web player took 6-7 s on the Homatics);
+      // the web player stays the fallback.
+      var play = uri;
+      final youtubeId = TrailerLinks.videoId(uri.toString());
+      if (youtubeId != null &&
+          (widget.youtubeStream != null || YouTubeStreams.supported)) {
+        final stream = await (widget.youtubeStream ??
+                YouTubeStreams.instance.resolve)(youtubeId)
+            .catchError((Object _) => null);
+        if (!mounted || generation != _generation) return;
+        if (stream?.large case final direct?) play = direct;
+      }
       // Apple TV has no web view for a YouTube one (direct trailers play).
-      if (isAppleTv && TrailerLinks.videoId(uri.toString()) != null) return;
+      if (isAppleTv && TrailerLinks.videoId(play.toString()) != null) return;
       // Send log: a Fire TV Stick was closed for low memory right after a
       // show page's automatic trailer (4K episode just before, 2026-11-16).
-      final kind = TrailerLinks.videoId(uri.toString()) != null
+      final kind = TrailerLinks.videoId(play.toString()) != null
           ? 'youtube'
-          : 'direct ${uri.host}';
+          : play != uri
+              ? 'youtube file'
+              : 'direct ${uri.host}';
       unawaited(DeviceMemoryService.describeFree().then((free) =>
           debugPrint('Trailer: auto $kind ${free ?? ''}'.trimRight())));
       if (usesMediaKit) {
@@ -182,9 +216,11 @@ class DetailTrailerState extends State<DetailTrailer>
       await _pausing;
       if (mounted && generation == _generation && (_route?.isCurrent ?? true)) {
         setState(() {
-          _playerKey = GlobalKey<_PreviewState>();
+          _playerKey = GlobalKey<TrailerVideoState>();
           _activeRequest = request;
-          _uri = uri;
+          _found = uri;
+          _uri = play;
+          _youtubeFallback = play != uri ? uri : null;
         });
       }
     } catch (_) {
@@ -196,6 +232,24 @@ class DetailTrailerState extends State<DetailTrailer>
     if (!mounted || _finished) return;
     _finished = true;
     unawaited(_returnToArtwork());
+  }
+
+  /// The YouTube file wouldn't play: YouTube's own player, once.
+  void _failed() {
+    final fallback = _youtubeFallback;
+    if (!mounted || fallback == null || _uri == null) return _finish();
+    debugPrint('Trailer: file failed, YouTube player instead');
+    if (TrailerLinks.videoId(fallback.toString()) case final id?) {
+      YouTubeStreams.instance.forget(id);
+    }
+    if (isAppleTv) return _finish();
+    final closing = _closePlayer();
+    setState(() {
+      _youtubeFallback = null;
+      _playerKey = GlobalKey<TrailerVideoState>();
+      _uri = fallback;
+    });
+    unawaited(closing);
   }
 
   Future<void> _returnToArtwork() async {
@@ -238,10 +292,11 @@ class DetailTrailerState extends State<DetailTrailer>
     final uri = _uri;
     final preview = uri == null
         ? null
-        : _Preview(
+        : TrailerVideo(
             key: _playerKey,
             uri: uri,
             onFinished: _finish,
+            onFailed: _failed,
             onPlaying: () {
               if (!mounted || _picture) return;
               unawaited(DeviceMemoryService.describeFree().then((free) =>
@@ -286,22 +341,31 @@ class DetailTrailerState extends State<DetailTrailer>
   }
 }
 
-class _Preview extends StatefulWidget {
-  const _Preview(
+/// One trailer in its own player: our player for a file (Android texture /
+/// computers' mpv), YouTube's web player for a YouTube link. Never touches
+/// the main playback service, history or resume positions. Title pages
+/// ([DetailTrailer]) and Media Hub's focused card use it.
+class TrailerVideo extends StatefulWidget {
+  const TrailerVideo(
       {super.key,
       required this.uri,
       required this.onFinished,
       required this.onPlaying,
+      this.onFailed,
       this.youtubeBuilder});
   final Uri uri;
   final VoidCallback onFinished;
   final VoidCallback onPlaying;
+
+  /// The file didn't play (an error before or while playing; also the
+  /// 20 s start timeout). Without it: [onFinished].
+  final VoidCallback? onFailed;
   final YouTubeViewBuilder? youtubeBuilder;
   @override
-  State<_Preview> createState() => _PreviewState();
+  State<TrailerVideo> createState() => TrailerVideoState();
 }
 
-class _PreviewState extends State<_Preview> {
+class TrailerVideoState extends State<TrailerVideo> {
   VideoPlayerHdrController? _android;
   mk.Player? _windows;
   mv.VideoController? _windowsVideo;
@@ -318,9 +382,11 @@ class _PreviewState extends State<_Preview> {
   @override
   void initState() {
     super.initState();
-    _timeout = Timer(const Duration(seconds: 20), widget.onFinished);
+    _timeout = Timer(const Duration(seconds: 20), _failed);
     if (_youtube == null) unawaited(_initialize());
   }
+
+  void _failed() => (widget.onFailed ?? widget.onFinished)();
 
   Future<void> _initialize() async {
     try {
@@ -331,7 +397,7 @@ class _PreviewState extends State<_Preview> {
           if (done && _closed == null) widget.onFinished();
         });
         _errors = player.stream.error.listen((_) {
-          if (_closed == null) widget.onFinished();
+          if (_closed == null) _failed();
         });
         await player.setVolume(100);
         if (_closed != null) return;
@@ -339,6 +405,9 @@ class _PreviewState extends State<_Preview> {
       } else {
         final controller = _android = VideoPlayerHdrController.networkUrl(
             widget.uri,
+            // YouTube's HD trailers come as an HLS playlist.
+            formatHint:
+                widget.uri.path.endsWith('.m3u8') ? VideoFormat.hls : null,
             videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
         await controller.initialize(viewType: VideoViewType.textureView);
         if (_closed != null) return;
@@ -352,13 +421,16 @@ class _PreviewState extends State<_Preview> {
       setState(() => _ready = true);
       widget.onPlaying();
     } catch (_) {
-      if (mounted && _closed == null) widget.onFinished();
+      if (mounted && _closed == null) _failed();
     }
   }
 
   void _androidChanged() {
     final value = _android!.value;
-    if (_closed == null && (value.hasError || value.isCompleted)) {
+    if (_closed != null) return;
+    if (value.hasError) {
+      _failed();
+    } else if (value.isCompleted) {
       widget.onFinished();
     }
   }

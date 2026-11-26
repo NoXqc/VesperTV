@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/trailer.dart';
@@ -50,10 +51,20 @@ class TrailerService {
   final _cache = <String, ({DateTime until, Uri? url})>{};
   final _pending = <String, Future<Uri?>>{};
   final _capabilities = <String, ({DateTime until, ArchiveSource source})>{};
+
+  /// Found trailers by title (type + IMDb id + add-ons): a Media Hub card
+  /// and its title page build different requests for the same title.
+  final _byTitle = <String, ({DateTime until, Uri url})>{};
+
+  /// [quick]: a focused Media Hub card, many times a minute. The first
+  /// details page with a trailer wins (the add-ons' and Cinemeta's, all for
+  /// the same IMDb id), and add-ons' stream lists are never asked (each is
+  /// a debrid lookup on their side).
   Future<Uri?> resolve(TrailerRequest request,
-      {List<ArchiveSource> addons = const []}) {
+      {List<ArchiveSource> addons = const [], bool quick = false}) {
     final key = jsonEncode([
       request.cacheKey,
+      quick,
       for (final s in addons.where((s) => s.enabled)) [s.key, s.imdbResources]
     ]);
     final cached = _cache[key];
@@ -62,7 +73,7 @@ class TrailerService {
     }
     return _pending.putIfAbsent(
         key,
-        () => _resolve(request, addons)
+        () => _resolve(request, addons, quick)
                 .timeout(const Duration(seconds: 15), onTimeout: () => null)
                 .catchError((_) => null)
                 .then((url) {
@@ -85,7 +96,8 @@ class TrailerService {
   }
 
   Uri _youtube(String id) => Uri.https('www.youtube.com', '/watch', {'v': id});
-  Future<Uri?> _resolve(TrailerRequest r, List<ArchiveSource> addons) async {
+  Future<Uri?> _resolve(
+      TrailerRequest r, List<ArchiveSource> addons, bool quick) async {
     for (final raw in r.supplied) {
       if (TrailerLinks.videoId(raw) case final id?) return _youtube(id);
     }
@@ -134,47 +146,62 @@ class TrailerService {
     }
     final imdb = await _imdb(r);
     if (imdb == null) return null;
-    for (final source in sources) {
-      for (final resource in ['meta', 'stream']) {
-        if (!source.supportsImdb(resource, type) ||
-            timer.elapsed.inSeconds >= 12) {
-          continue;
-        }
-        try {
-          final base = source.baseUrl.replaceAll(RegExp(r'/+$'), '');
-          final data =
-              await _get(Uri.parse('$base/$resource/$type/$imdb.json'));
-          List<ArchiveStream> candidates;
-          if (resource == 'meta') {
-            final meta = data['meta'];
-            if (meta is! Map ||
-                meta['id'] != imdb ||
-                (meta['type'] != null && meta['type'] != type)) {
-              continue;
-            }
-            candidates = [
-              for (final id in TrailerLinks.fromMetadata(meta))
-                ArchiveStream(ytId: id),
-              ...ArchiveStream.trailersFromMetadata(meta)
-            ];
-          } else {
-            // A stream add-on answers with the title itself (TorBox,
-            // Torrentio…): only YouTube entries or links labelled as a
-            // trailer count, never "the first playable stream".
-            candidates = [
-              if (data['streams'] is List)
-                for (final row in data['streams'])
-                  if (row is Map)
-                    if (ArchiveStream.fromJson(row) case final stream?)
-                      if (stream.ytId != null || _labelledTrailer(row)) stream
-            ];
-          }
-          if (candidates.isNotEmpty) return candidates.first.playbackUri;
-        } catch (_) {/* A failing add-on does not block the next source. */}
-      }
+    final titleKey = '$type:$imdb:'
+        '${sources.map((s) => '${s.key}|${s.imdbResources}').join(',')}';
+    final known = _byTitle[titleKey];
+    if (known != null && known.until.isAfter(_now())) return known.url;
+    final url = await _lookup(type, imdb, sources, quick, timer);
+    if (url != null) {
+      if (_byTitle.length >= 128) _byTitle.remove(_byTitle.keys.first);
+      _byTitle[titleKey] =
+          (until: _now().add(const Duration(hours: 6)), url: url);
     }
-    // Cinemeta's meta carries the trailers Stremio itself shows
-    // (trailerStreams / trailers with YouTube ids) — no add-on needed.
+    return url;
+  }
+
+  /// The user's add-ons' details pages first (asked all at once, taken in
+  /// their order), then Cinemeta's, then the add-ons' stream lists one at a
+  /// time, only when nothing had a trailer (each is a debrid lookup for
+  /// Torrentio-like add-ons). Was each add-on's details then stream list in
+  /// turn, then Cinemeta: up to 5 s per request before a trailer showed.
+  Future<Uri?> _lookup(String type, String imdb, List<ArchiveSource> sources,
+      bool quick, Stopwatch timer) async {
+    final metas = [
+      for (final source in sources)
+        if (source.supportsImdb('meta', type)) _fromMeta(source, type, imdb)
+    ];
+    if (quick) return _first([...metas, _fromCinemeta(type, imdb)]);
+    for (final meta in metas) {
+      if (await meta case final url?) return url;
+    }
+    if (await _fromCinemeta(type, imdb) case final url?) return url;
+    for (final source in sources) {
+      if (!source.supportsImdb('stream', type) ||
+          timer.elapsed.inSeconds >= 12) {
+        continue;
+      }
+      try {
+        final base = source.baseUrl.replaceAll(RegExp(r'/+$'), '');
+        final data = await _get(Uri.parse('$base/stream/$type/$imdb.json'));
+        // A stream add-on answers with the title itself (TorBox,
+        // Torrentio…): only YouTube entries or links labelled as a
+        // trailer count, never "the first playable stream".
+        final candidates = [
+          if (data['streams'] is List)
+            for (final row in data['streams'])
+              if (row is Map)
+                if (ArchiveStream.fromJson(row) case final stream?)
+                  if (stream.ytId != null || _labelledTrailer(row)) stream
+        ];
+        if (candidates.isNotEmpty) return candidates.first.playbackUri;
+      } catch (_) {/* A failing add-on does not block the next source. */}
+    }
+    return null;
+  }
+
+  /// Cinemeta's meta carries the trailers Stremio itself shows
+  /// (trailerStreams / trailers with YouTube ids) — no add-on needed.
+  Future<Uri?> _fromCinemeta(String type, String imdb) async {
     try {
       final data = await _get(
           Uri.parse('https://v3-cinemeta.strem.io/meta/$type/$imdb.json'));
@@ -186,6 +213,42 @@ class TrailerService {
       }
     } catch (_) {/* No trailer rather than a wrong one. */}
     return null;
+  }
+
+  /// The first of [lookups] to find a trailer; null once all found none.
+  static Future<Uri?> _first(List<Future<Uri?>> lookups) {
+    final found = Completer<Uri?>();
+    var left = lookups.length;
+    if (left == 0) return Future.value();
+    for (final lookup in lookups) {
+      lookup.then((url) {
+        left--;
+        if (found.isCompleted) return;
+        if (url != null || left == 0) found.complete(url);
+      });
+    }
+    return found.future;
+  }
+
+  Future<Uri?> _fromMeta(ArchiveSource source, String type, String imdb) async {
+    try {
+      final base = source.baseUrl.replaceAll(RegExp(r'/+$'), '');
+      final data = await _get(Uri.parse('$base/meta/$type/$imdb.json'));
+      final meta = data['meta'];
+      if (meta is! Map ||
+          meta['id'] != imdb ||
+          (meta['type'] != null && meta['type'] != type)) {
+        return null;
+      }
+      final candidates = [
+        for (final id in TrailerLinks.fromMetadata(meta))
+          ArchiveStream(ytId: id),
+        ...ArchiveStream.trailersFromMetadata(meta)
+      ];
+      return candidates.isEmpty ? null : candidates.first.playbackUri;
+    } catch (_) {
+      return null; // A failing add-on does not block the next source.
+    }
   }
 
   static bool _labelledTrailer(Map row) => [row['name'], row['title']]

@@ -2139,8 +2139,11 @@ const Map<String, String> kPl = {
   "Trailers": "Zwiastuny",
   "Play trailers automatically on movie and show pages":
       "Odtwarzaj zwiastuny automatycznie na stronach filmów i seriali",
-  "On Fire TV sticks, the trailer plays full screen.":
-      "Na kijach Fire TV zwiastun odtwarza się na pełnym ekranie.",
+  "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
+      "Na kijach Fire TV zwiastun, który wymaga odtwarzacza YouTube, odtwarza się na pełnym ekranie.",
+  "Trailers on Media Hub cards": "Zwiastuny na kartach Media Hub",
+  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
+      "Gdy zatrzymasz się na tytule w rzędach Media Hub, jego karta się poszerza i odtwarza zwiastun, z dźwiękiem.",
   "Remove \"{title}\" from history?": "Usunąć „{title}” z historii?",
   "Import from storage": "Importuj z pamięci",
   "Add M3U playlists and Media Hub sources from USB or external storage":

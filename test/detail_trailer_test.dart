@@ -6,6 +6,8 @@ import 'package:nox_iptv/models/youtube_embed.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/trailer_service.dart';
+import 'package:nox_iptv/services/youtube_streams.dart';
+import 'package:flutter/services.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:nox_iptv/widgets/detail_trailer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +31,11 @@ class _Harness {
   Uri? result = _url;
   Future<void> Function(String)? execute;
 
+  /// A YouTube trailer's own files: none unless a test gives some (never
+  /// YouTube itself from a test).
+  YouTubeTrailerStream? stream;
+  final streamAsks = <String>[];
+
   Widget page({bool enabled = true, TrailerRequest request = _request}) =>
       MaterialApp(
           navigatorKey: navigator,
@@ -44,6 +51,10 @@ class _Harness {
               final result = Completer<Uri?>();
               pending.add(result);
               return result.future;
+            },
+            youtubeStream: (id) async {
+              streamAsks.add(id);
+              return stream;
             },
             youtubeBuilder: (document, controller, callback) {
               if (!documents.contains(document)) documents.add(document);
@@ -62,10 +73,15 @@ class _Harness {
 class _FakeVideo extends VideoPlayerPlatform {
   final events = StreamController<VideoEvent>.broadcast(sync: true);
   final calls = <String>[];
+  final created = <DataSource>[];
   @override
   Future<void> init() async {}
   @override
-  Future<int?> createWithOptions(VideoCreationOptions options) async => 1;
+  Future<int?> createWithOptions(VideoCreationOptions options) async {
+    created.add(options.dataSource);
+    return 1;
+  }
+
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) => events.stream;
   @override
@@ -504,5 +520,87 @@ void main() {
             .progress,
         0);
     await video.events.close();
+  });
+
+  // Owner, 2026-11-26: YouTube's web player took 6-7 s on the Homatics.
+  group("a YouTube trailer's own file", () {
+    final hls = Uri.parse('https://manifest.googlevideo.com/api/manifest/'
+        'hls_variant/id/1/file/index.m3u8');
+    late _FakeVideo video;
+    setUp(() {
+      final previous = VideoPlayerPlatform.instance;
+      video = _FakeVideo();
+      VideoPlayerPlatform.instance = video;
+      addTearDown(() => VideoPlayerPlatform.instance = previous);
+    });
+
+    Future<void> release(WidgetTester tester, _Harness h) async {
+      unawaited(h.key.currentState!.stop());
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      });
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await video.events.close();
+    }
+
+    testWidgets('plays in our player, not YouTube\'s', (tester) async {
+      final h = _Harness()
+        ..stream = YouTubeTrailerStream(
+            hls: hls,
+            muxed:
+                Uri.parse('https://rr1.googlevideo.com/videoplayback?itag=18'),
+            muxedHeight: 360);
+      await tester.pumpWidget(h.page());
+      await tester.pumpAndSettle();
+      expect(h.streamAsks, ['AbCdEfGhI12']);
+      expect(h.documents, isEmpty);
+      // The HD playlist for a full-page trailer.
+      expect(video.created.single.uri, hls.toString());
+      expect(video.created.single.formatHint, VideoFormat.hls);
+      video.events.add(VideoEvent(
+          eventType: VideoEventType.initialized,
+          duration: const Duration(minutes: 2),
+          size: const Size(1920, 1080)));
+      await tester.pumpAndSettle();
+      expect(video.calls, contains('play'));
+      expect(video.calls, contains('volume:1.0'));
+      expect(
+          tester
+              .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+              .playing,
+          isTrue);
+      await release(tester, h);
+    });
+
+    testWidgets("a file that won't play falls back to YouTube's player",
+        (tester) async {
+      final h = _Harness()..stream = YouTubeTrailerStream(hls: hls);
+      await tester.pumpWidget(h.page());
+      await tester.pumpAndSettle();
+      expect(h.documents, isEmpty);
+      video.events
+          .addError(PlatformException(code: 'VideoError', message: 'HTTP 403'));
+      await tester.pumpAndSettle();
+      expect(h.documents, hasLength(1));
+      expect(find.byKey(const ValueKey('preview')), findsOneWidget);
+      // Once: the web player's own end doesn't come back to the file.
+      h.event!({'type': 'ended'});
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('preview')), findsNothing);
+      expect(video.created, hasLength(1));
+      await release(tester, h);
+    });
+
+    testWidgets("no file: YouTube's player as before", (tester) async {
+      final h = _Harness();
+      await tester.pumpWidget(h.page());
+      await tester.pumpAndSettle();
+      expect(h.streamAsks, ['AbCdEfGhI12']);
+      expect(video.created, isEmpty);
+      expect(h.documents, hasLength(1));
+      await video.events.close();
+    });
   });
 }

@@ -7,7 +7,9 @@ with the user's TMDB key, or a unique exact Cinemeta title/type/year match. It a
 only enabled user-installed add-ons declaring movie/series `tt` meta/stream support.
 No IMDb identity means no add-on lookup; there is no first-result title guessing.
 Built-in Cinemeta supplies identity only, never an implicit trailer source. No
-YouTube add-on, extraction library, service key or proxy is bundled.
+YouTube add-on, extraction library, service key or proxy is bundled. Since 2026-11-26 automatic trailers (title pages,
+Media Hub cards) play YouTube's own files in our player (`YouTubeStreams`, no key, no
+library): dev-notes/automatic-detail-trailers.md, last section. The Trailer button is unchanged.
 
 Add-on meta trailers and stream responses accept validated YouTube IDs and direct
 HTTP(S) media URLs. Metadata trailer lists survive caching. Old saved add-ons can

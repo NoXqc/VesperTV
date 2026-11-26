@@ -2138,8 +2138,11 @@ const Map<String, String> kDe = {
   "Trailers": "Trailer",
   "Play trailers automatically on movie and show pages":
       "Trailer auf Film- und Serienseiten automatisch abspielen",
-  "On Fire TV sticks, the trailer plays full screen.":
-      "Auf Fire-TV-Sticks wird der Trailer im Vollbild abgespielt.",
+  "On Fire TV sticks, a trailer that needs YouTube's own player plays full screen.":
+      "Auf Fire-TV-Sticks wird ein Trailer, der den YouTube-Player braucht, im Vollbild abgespielt.",
+  "Trailers on Media Hub cards": "Trailer auf den Media-Hub-Karten",
+  "Resting on a title in Media Hub's rows widens its card and plays the trailer in it, with sound.":
+      "Bleibst du in den Media-Hub-Reihen auf einem Titel, wird seine Karte breiter und spielt den Trailer ab, mit Ton.",
   "Remove \"{title}\" from history?": "„{title}“ aus dem Verlauf entfernen?",
   "Import from storage": "Aus dem Speicher importieren",
   "Add M3U playlists and Media Hub sources from USB or external storage":

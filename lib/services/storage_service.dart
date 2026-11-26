@@ -1342,6 +1342,12 @@ class StorageService {
   Future<void> setAutoTrailers(bool value) =>
       _prefs.setBool(AppConstants.keyAutoTrailers, value);
 
+  /// Media Hub's focused card plays its trailer (device, off by default).
+  bool getCardTrailers() =>
+      _prefs.getBool(AppConstants.keyCardTrailers) ?? false;
+  Future<void> setCardTrailers(bool value) =>
+      _prefs.setBool(AppConstants.keyCardTrailers, value);
+
   bool getGuideExpanded() => _guideBool(AppConstants.keyGuideExpanded) ?? false;
   bool getGuideRowDetails() =>
       _guideBool(AppConstants.keyGuideRowDetails) ?? true;
@@ -2269,6 +2275,7 @@ class StorageService {
     AppConstants.keyVideoFill,
     AppConstants.keyVideoFit,
     AppConstants.keyAutoTrailers,
+    AppConstants.keyCardTrailers,
     AppConstants.keySubtitleScale,
     AppConstants.keyLiveGroupSort,
     AppConstants.keyStartSection,

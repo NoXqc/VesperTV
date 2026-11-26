@@ -18,6 +18,7 @@ import '../utils/image_urls.dart';
 import '../utils/app_store.dart';
 import '../utils/route_observer.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/card_trailer.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/archive_row_settings.dart';
 import '../widgets/collection_tile.dart';
@@ -267,6 +268,34 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   Timer? _progressRefresh;
   Timer? _widePreviewTimer;
   (String, int, String)? _expandedCard;
+
+  /// One per row: bumped when that row's wide card changes, so only the
+  /// row redraws. A screen setState per widen / shrink cost ~450 ms on the
+  /// Homatics, twice per step once cards widen at 0.5 s (card trailers).
+  final Map<String, ValueNotifier<int>> _wideTicks = {};
+  ValueNotifier<int> _wideTickOf(String rowKey) =>
+      _wideTicks.putIfAbsent(rowKey, () => ValueNotifier(0));
+
+  void _setExpanded((String, int, String) card) {
+    final before = _expandedCard;
+    _expandedCard = card;
+    if (before != null && before.$1 != card.$1) {
+      _wideTicks[before.$1]?.value++;
+    }
+    _wideTickOf(card.$1).value++;
+  }
+
+  /// Settings > Playback > Trailers on Media Hub cards (owner,
+  /// 2026-11-26, after ARVIO): the focused title's trailer file, looked up
+  /// while the remote rests on the card ([_armCardTrailer]) and played in it
+  /// once it is wide ([_cardVideo]); `done`: played out on this card, not
+  /// again until the remote leaves it. A notifier: only the wide card's
+  /// video slot redraws (a screen setState costs ~450 ms on the Homatics).
+  Timer? _cardTrailerTimer, _cardTrailerDue;
+  final _cardTrailer =
+      ValueNotifier<({String row, String id, Uri uri, bool done})?>(null);
+  bool get _cardTrailersOn =>
+      context.read<AppPreferences?>()?.cardTrailers ?? false;
   PageRoute<void>? _previewRoute;
   bool _previewForeground = true;
   bool _previewRouteVisible = true;
@@ -507,6 +536,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     WidgetsBinding.instance.removeObserver(this);
     appRouteObserver.unsubscribe(this);
     _widePreviewTimer?.cancel();
+    _cardTrailerTimer?.cancel();
+    _cardTrailerDue?.cancel();
+    _cardTrailer.dispose();
+    for (final tick in _wideTicks.values) {
+      tick.dispose();
+    }
     _hoverTimer?.cancel();
     _rowKeyQuiet?.cancel();
     _contentScope.removeListener(_onContentFocus);
@@ -616,14 +651,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   bool _clearWidePreview() {
     _widePreviewTimer?.cancel();
     _widePreviewTimer = null;
-    final changed = _expandedCard != null;
+    final before = _expandedCard;
     _expandedCard = null;
-    return changed;
+    if (before != null) _wideTicks[before.$1]?.value++;
+    return before != null;
   }
 
-  void _suspendWidePreview() {
-    if (_clearWidePreview() && mounted) setState(() {});
-  }
+  void _suspendWidePreview() => _clearWidePreview();
 
   void _resumeWidePreview() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -646,10 +680,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final clicked = _clickedCard;
     _clickedCard = null;
     final wideBefore = _extentBuilders[row.key]?.$1;
-    // The step itself no longer rebuilds the screen ([_focusTick]): a card
-    // that had gone wide needs one to shrink back.
+    // The step itself no longer rebuilds the screen ([_focusTick]); a card
+    // that had gone wide shrinks back with its row alone ([_wideTicks]).
     if (_clearWidePreview() && mounted) {
-      setState(() {});
       _keepPlaceAfterCollapse(row, i, wideBefore);
     }
     final type = _type;
@@ -658,16 +691,22 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (row.collection != null ||
         !_canPreview ||
         !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
+      _cardTrailerTimer?.cancel();
+      _cardTrailerDue?.cancel();
       return;
     }
+    _armCardTrailer(row, i);
     // Computers: a click opens the card wide at once (owner, 2026-11-19);
     // the keyboard keeps the remote's 2 s rest.
     if (clicked != null && clicked.$1 == row.key && clicked.$2 == i) {
-      setState(() => _expandedCard = (row.key, i, id));
+      _setExpanded((row.key, i, id));
       _revealFocusedAfterLayout(row, i);
       return;
     }
-    _widePreviewTimer = Timer(const Duration(seconds: 2), () {
+    // With card trailers on, the card widens after 0.5 s like ARVIO's (its
+    // trailer then plays from 1 s); without them the 2 s rest stays.
+    _widePreviewTimer =
+        Timer(Duration(milliseconds: _cardTrailersOn ? 500 : 2000), () {
       _widePreviewTimer = null;
       if (!mounted ||
           !_canPreview ||
@@ -685,9 +724,78 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           !(rows[r].items[i].backgroundUrl?.isNotEmpty ?? false)) {
         return;
       }
-      setState(() => _expandedCard = (row.key, i, id));
+      _setExpanded((row.key, i, id));
       _revealFocusedAfterLayout(rows[r], i);
     });
+  }
+
+  /// Looks the focused card's trailer up after a short rest (fast scrolling
+  /// asks nothing), so the file is ready when the card widens.
+  void _armCardTrailer(ArchiveRow row, int i) {
+    _cardTrailerTimer?.cancel();
+    _cardTrailerDue?.cancel();
+    final meta = row.items[i];
+    final known = _cardTrailer.value;
+    if (known != null && known.row == row.key && known.id == meta.id) return;
+    _cardTrailer.value = null;
+    if (!_cardTrailersOn) return;
+    final source = row.sourceAt(i);
+    final node = _node(row.key, i);
+    bool stillHere() =>
+        mounted &&
+        node.hasFocus &&
+        _lastIndex[row.key] == i &&
+        _focusedRowKey == row.key;
+    // The player starts after 1 s on the card (ARVIO's default), the lookup
+    // after 0.3 s: stepping along a row opened and closed a player per card
+    // (Homatics: frames ~32 ms while stepping).
+    Uri? found;
+    var due = false;
+    void start() {
+      if (found != null && due && stillHere()) {
+        _cardTrailer.value =
+            (row: row.key, id: meta.id, uri: found!, done: false);
+      }
+    }
+
+    _cardTrailerDue = Timer(_cardTrailerStart, () {
+      due = true;
+      start();
+    });
+    _cardTrailerTimer = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted || !node.hasFocus) return;
+      final addons = context.read<ArchiveService>().enabledSources;
+      final tmdbKey = context.read<StorageService?>()?.getTmdbApiKey() ?? '';
+      found = await CardTrailer.find(meta, source,
+          addons: addons, tmdbKey: tmdbKey);
+      start();
+    });
+  }
+
+  static const _cardTrailerStart = Duration(seconds: 1);
+
+  /// The wide card's video slot: empty until its trailer is found.
+  Widget? _cardVideo(String rowKey, ArchiveMeta meta) {
+    if (!_cardTrailersOn) return null;
+    return ValueListenableBuilder(
+        valueListenable: _cardTrailer,
+        builder: (context, trailer, _) {
+          if (trailer == null ||
+              trailer.done ||
+              trailer.row != rowKey ||
+              trailer.id != meta.id) {
+            return const SizedBox.shrink();
+          }
+          return CardTrailer(
+              key: ValueKey(trailer.uri),
+              uri: trailer.uri,
+              onDone: () {
+                if (_cardTrailer.value?.id == meta.id) {
+                  _cardTrailer.value =
+                      (row: rowKey, id: meta.id, uri: trailer.uri, done: true);
+                }
+              });
+        });
   }
 
   void _revealFocusedAfterLayout(ArchiveRow row, int i) {
@@ -717,7 +825,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   void _focusCard(ArchiveRow row, int i) {
     final wideBefore = _extentBuilders[row.key]?.$1;
     if (!(_nodes[row.key]?[i]?.hasFocus ?? false) && _clearWidePreview()) {
-      setState(() {});
       _keepPlaceAfterCollapse(row, i, wideBefore);
     }
     _revealCard(row, i);
@@ -2297,7 +2404,6 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       ColorScheme scheme) {
     PerfDiagnostics.hubRowBuilds++;
     final row = rows[r];
-    final wideAt = _wideIndex(row);
     return Column(
       key: _rowKey(row.key),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2415,121 +2521,140 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                 )),
           )
         else if (!_rowHidden(row))
-          SizedBox(
-            height: PosterCard.height + 16,
-            child: _mouseRow(
-                row,
-                ListView.builder(
-                  controller: _rowScroll(row.key),
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
-                  // Exact slot width: [_focusCard]'s jump lands where the card
-                  // really is, even far past the built ones (the TV tab's rows
-                  // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
-                  // built early, so Right always finds the next one ready. Always
-                  // a builder (never switching to itemExtent): another sliver type
-                  // would rebuild the cards and drop the focus.
-                  itemExtentBuilder: _extentBuilder(row.key, wideAt),
-                  scrollCacheExtent:
-                      const ScrollCacheExtent.pixels(_cardExtent * 5),
-                  itemCount: row.items.length,
-                  itemBuilder: (_, i) {
-                    final meta = row.items[i];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ValueListenableBuilder<Set<String>>(
-                        valueListenable: ArchiveReadyWatch.instance.tags,
-                        builder: (context, ready, _) => PosterCard(
-                          ready: ready.contains(meta.id),
-                          fetching: ArchiveReadyWatch.instance.fetching.value
-                              .contains(meta.id),
-                          focusNode: _node(row.key, i),
-                          title: meta.name,
-                          imageUrl: meta.posterUrl,
-                          wideWidth:
-                              i == wideAt ? PosterCard.wideCardWidth : null,
-                          wideImageUrl: meta.backgroundUrl,
-                          wideLogoUrl: meta.logo,
-                          rating: row.continuations != null
-                              ? (row.continuations![i].episodeLabel.isNotEmpty
-                                  ? row.continuations![i].episodeLabel
-                                  : meta.year)
-                              : meta.year,
-                          progressFraction: row.continuations?[i].progress,
-                          tag: row.continuations == null
-                              ? meta.releaseTag?.label
-                              : null,
-                          tagStrong: row.continuations == null &&
-                              meta.releaseTag == HubReleaseTag.isNew,
-                          sourceLabel: row.continuations != null
-                              ? (row.upcoming
-                                  ? tr('Airs {date}', {
-                                      'date': (row.continuations![i].episode
-                                                  ?.released ??
-                                              '')
-                                          .split('T')
-                                          .first
-                                    })
-                                  : row.continuations![i].resume
-                                      ? tr('Resume')
-                                      : meta.type == ArchiveType.movie
-                                          ? tr('Play')
-                                          : row.continuations![i].episode ==
-                                                  null
-                                              ? tr('Continue series')
-                                              : tr('Next episode'))
-                              : null,
-                          // Touch: first tap shows the title in the hero, a second
-                          // opens it, in both orientations (a phone on its side is
-                          // over 700 wide and opened at once, owner 2026-11-02).
-                          tapToPreview: Theme.of(context).platform ==
-                                  TargetPlatform.android &&
-                              !(context.read<AppPreferences?>()?.isTelevision ??
-                                  false),
-                          onTap: () => row.continuations != null
-                              ? _openContinuation(row.continuations![i])
-                              : _open(row.sourceAt(i), meta),
-                          isFavorite: context
-                              .read<ArchiveService>()
-                              .isFavorite(row.sourceAt(i), meta),
-                          onToggleFavorite: () => holdArchiveTitle(
-                              context, row, row.sourceAt(i), meta),
-                          onHover: isDesktopTarget
-                              ? (on) => _onCardHover(row, i, meta, on)
-                              : null,
-                          onSelect: isDesktopTarget
-                              ? () => _clickedCard = (row.key, i)
-                              : null,
-                          onFocusGained: () {
-                            _hoverTimer?.cancel();
-                            _selectedHero = (
-                              meta: meta,
-                              folder: null,
-                              label: row.labelAt(i),
-                              fromServer: row.sourceAt(i).server != null,
-                            );
-                            service.prioritizeRow(row);
-                            service.retainSearchFocus(row);
-                            _focusedRowKey = row.key;
-                            _lastIndex[row.key] = i;
-                            if (i >= row.items.length - 12) {
-                              context.read<ArchiveService>().loadMore(row);
-                            }
-                            _armWidePreview(row, i);
-                            _focusedRow = r;
-                            _focused = meta;
-                            _focusedFolder = null;
-                            _focusedLabel = row.labelAt(i);
-                            _focusedFromServer = row.sourceAt(i).server != null;
-                            _focusChanged();
-                            _revealFocusedAfterLayout(row, i);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                )),
-          ),
+          ValueListenableBuilder<int>(
+              valueListenable: _wideTickOf(row.key),
+              builder: (context, _, __) {
+                final wideAt = _wideIndex(row);
+                return SizedBox(
+                  height: PosterCard.height + 16,
+                  child: _mouseRow(
+                      row,
+                      ListView.builder(
+                        controller: _rowScroll(row.key),
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: _rowPadding),
+                        // Exact slot width: [_focusCard]'s jump lands where the card
+                        // really is, even far past the built ones (the TV tab's rows
+                        // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
+                        // built early, so Right always finds the next one ready. Always
+                        // a builder (never switching to itemExtent): another sliver type
+                        // would rebuild the cards and drop the focus.
+                        itemExtentBuilder: _extentBuilder(row.key, wideAt),
+                        scrollCacheExtent:
+                            const ScrollCacheExtent.pixels(_cardExtent * 5),
+                        itemCount: row.items.length,
+                        itemBuilder: (_, i) {
+                          final meta = row.items[i];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: ValueListenableBuilder<Set<String>>(
+                              valueListenable: ArchiveReadyWatch.instance.tags,
+                              builder: (context, ready, _) => PosterCard(
+                                ready: ready.contains(meta.id),
+                                fetching: ArchiveReadyWatch
+                                    .instance.fetching.value
+                                    .contains(meta.id),
+                                focusNode: _node(row.key, i),
+                                title: meta.name,
+                                imageUrl: meta.posterUrl,
+                                wideWidth: i == wideAt
+                                    ? PosterCard.wideCardWidth
+                                    : null,
+                                wideImageUrl: meta.backgroundUrl,
+                                wideLogoUrl: meta.logo,
+                                wideVideo: i == wideAt
+                                    ? _cardVideo(row.key, meta)
+                                    : null,
+                                rating: row.continuations != null
+                                    ? (row.continuations![i].episodeLabel
+                                            .isNotEmpty
+                                        ? row.continuations![i].episodeLabel
+                                        : meta.year)
+                                    : meta.year,
+                                progressFraction:
+                                    row.continuations?[i].progress,
+                                tag: row.continuations == null
+                                    ? meta.releaseTag?.label
+                                    : null,
+                                tagStrong: row.continuations == null &&
+                                    meta.releaseTag == HubReleaseTag.isNew,
+                                sourceLabel: row.continuations != null
+                                    ? (row.upcoming
+                                        ? tr('Airs {date}', {
+                                            'date': (row.continuations![i]
+                                                        .episode?.released ??
+                                                    '')
+                                                .split('T')
+                                                .first
+                                          })
+                                        : row.continuations![i].resume
+                                            ? tr('Resume')
+                                            : meta.type == ArchiveType.movie
+                                                ? tr('Play')
+                                                : row.continuations![i]
+                                                            .episode ==
+                                                        null
+                                                    ? tr('Continue series')
+                                                    : tr('Next episode'))
+                                    : null,
+                                // Touch: first tap shows the title in the hero, a second
+                                // opens it, in both orientations (a phone on its side is
+                                // over 700 wide and opened at once, owner 2026-11-02).
+                                tapToPreview: Theme.of(context).platform ==
+                                        TargetPlatform.android &&
+                                    !(context
+                                            .read<AppPreferences?>()
+                                            ?.isTelevision ??
+                                        false),
+                                onTap: () => row.continuations != null
+                                    ? _openContinuation(row.continuations![i])
+                                    : _open(row.sourceAt(i), meta),
+                                isFavorite: context
+                                    .read<ArchiveService>()
+                                    .isFavorite(row.sourceAt(i), meta),
+                                onToggleFavorite: () => holdArchiveTitle(
+                                    context, row, row.sourceAt(i), meta),
+                                onHover: isDesktopTarget
+                                    ? (on) => _onCardHover(row, i, meta, on)
+                                    : null,
+                                onSelect: isDesktopTarget
+                                    ? () => _clickedCard = (row.key, i)
+                                    : null,
+                                onFocusGained: () {
+                                  _hoverTimer?.cancel();
+                                  _selectedHero = (
+                                    meta: meta,
+                                    folder: null,
+                                    label: row.labelAt(i),
+                                    fromServer: row.sourceAt(i).server != null,
+                                  );
+                                  service.prioritizeRow(row);
+                                  service.retainSearchFocus(row);
+                                  _focusedRowKey = row.key;
+                                  _lastIndex[row.key] = i;
+                                  if (i >= row.items.length - 12) {
+                                    context
+                                        .read<ArchiveService>()
+                                        .loadMore(row);
+                                  }
+                                  _armWidePreview(row, i);
+                                  _focusedRow = r;
+                                  _focused = meta;
+                                  _focusedFolder = null;
+                                  _focusedLabel = row.labelAt(i);
+                                  _focusedFromServer =
+                                      row.sourceAt(i).server != null;
+                                  _focusChanged();
+                                  _revealFocusedAfterLayout(row, i);
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      )),
+                );
+              }),
       ],
     );
   }
