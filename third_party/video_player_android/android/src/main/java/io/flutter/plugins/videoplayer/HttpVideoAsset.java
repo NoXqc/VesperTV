@@ -52,8 +52,10 @@ final class HttpVideoAsset extends VideoAsset {
       @Nullable String userAgent) {
     super(assetUrl);
     this.streamingFormat = streamingFormat;
-    // Before anything uses the headers: the DRM header is ours, never sent.
+    // Before anything uses the headers: the DRM header is ours, never sent,
+    // and neither is the request-lineage tag.
     this.drm = StreamDrm.take(httpHeaders);
+    httpHeaders.remove("X-Rq-Lineage-7Kq2Vd");
     if (drm != null) android.util.Log.i("VesperDrm", "stream DRM: " + drm);
     this.httpHeaders = httpHeaders;
     this.userAgent = userAgent;

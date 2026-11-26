@@ -79,10 +79,15 @@ class StreamDrm {
     }
   }
 
+  /// Request-lineage tag: like [headerKey], never sent to a server.
+  static const _lineageKey = 'x-rq-origin-M4tP9z';
+
   /// [headers] for a player or a request that can't use the DRM.
   static Map<String, String> withoutDrm(Map<String, String> headers) =>
-      headers.containsKey(headerKey)
-          ? ({...headers}..remove(headerKey))
+      headers.containsKey(headerKey) || headers.containsKey(_lineageKey)
+          ? ({...headers}
+            ..remove(headerKey)
+            ..remove(_lineageKey))
           : headers;
 
   /// The ClearKey license ExoPlayer's `LocalMediaDrmCallback` answers every
