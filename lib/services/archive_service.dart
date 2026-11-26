@@ -2821,13 +2821,14 @@ class ArchiveService extends ChangeNotifier {
           ]);
           return;
         }
+        var torrents = 0;
         Future<List<ArchiveStream>> fetch(String id) async => s.server != null
             ? source.server == null
                 ? await _serverTitleStreams(
                     s, meta, episode, () => session.active)
                 : await _servers.streams(s, id)
             : await _api.fetchStreams(s.baseUrl, meta.type, id,
-                wire: meta.wire);
+                wire: meta.wire, skippedTorrents: (n) => torrents += n);
         var streams = await fetch(id);
         if (streams.isEmpty &&
             imdbId != null &&
@@ -2841,10 +2842,13 @@ class ArchiveService extends ChangeNotifier {
               'ref=${ArchiveApiService.diagnosticReference(videoId)} '
               'items=${streams.length} fetchMs=${watch.elapsedMilliseconds}');
         }
-        session.finish(key, [
-          for (final stream in streams)
-            ArchiveStreamOption(source: s, stream: stream)
-        ]);
+        session.finish(
+            key,
+            [
+              for (final stream in streams)
+                ArchiveStreamOption(source: s, stream: stream)
+            ],
+            skippedTorrents: torrents);
       } catch (e) {
         debugPrint('ArchiveStreams: source=${s.key} '
             'failed=${ArchiveApiService.errorText(e)}');

@@ -537,6 +537,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - "Torrents only" in the Media Hub stream list (`claude/torrent-only-message`, worktree
+  `VesperTV-claude-torrentonly`):** Reddit (davidbenWered, LOG-MGPDXB, KPN Amlogic box): after Import from Stremio every title
+  said "No playable stream"; his Torrentio had no debrid service, so it answered 76 torrent links only (`torrents=76
+  accepted=0`), which Stremio's own torrent engine plays and VesperTV never does. `ArchiveApiService.fetchStreams(skippedTorrents:)`
+  counts the infoHash entries it leaves out; `ArchiveStreamSession.torrentsOnly` / `onlyTorrentsFound`; the picker chip says
+  **Torrentio · Torrents only** (was No streams) and, with nothing playable, the picker and the player's Sources drawer say
+  torrents can't play + turn on a debrid service in the add-on (`torrentsOnlyMessage`). 8 languages; remote.html "Watch with
+  Real-Debrid or TorBox" + guide.json. test/archive_torrents_only_test.dart (4). Analyze 16, 2636 tests.
 - **Claude, 2026-11-26 - trailers in our own player + Media Hub card trailers (`claude/fast-trailers`, worktree
   `VesperTV-claude-fasttrailers`, on main, APK 1032 on the Homatics):** owner (ARVIO video): our
   background trailer took 7.6-8 s on the Homatics (YouTube's web player 6-7 s of it). Owner chose ARVIO's way ("1 but

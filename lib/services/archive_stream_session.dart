@@ -11,6 +11,17 @@ class ArchiveStreamSession extends ChangeNotifier {
   final bool Function() isCurrent;
   final Map<String, ArchiveSourceStatus> statuses = {};
   final Map<String, String> names = {};
+
+  /// Sources that answered with torrent links only (no debrid service set up
+  /// in the add-on): VesperTV plays direct links, so none of them is listed.
+  final Set<String> torrentsOnly = {};
+
+  /// Nothing to play and at least one source had torrents only: the picker
+  /// explains debrid instead of a bare "No playable stream".
+  bool get onlyTorrentsFound =>
+      !loading &&
+      torrentsOnly.isNotEmpty &&
+      statuses.values.every((s) => s != ArchiveSourceStatus.ready);
   final Map<String, List<ArchiveStreamOption>> _results = {};
   final Set<String> _excluded = {};
   String _id(ArchiveStreamOption o) => '${o.source.key}|${o.stream.identity}';
@@ -51,13 +62,14 @@ class ArchiveStreamSession extends ChangeNotifier {
     completedAt = null;
     if (_done.isCompleted) _done = Completer<void>();
     statuses[key] = ArchiveSourceStatus.loading;
+    torrentsOnly.remove(key);
     _results.remove(key);
     _excluded.removeWhere((id) => id.startsWith('$key|'));
     notifyListeners();
   }
 
   void finish(String key, List<ArchiveStreamOption> result,
-      {bool failed = false}) {
+      {bool failed = false, int skippedTorrents = 0}) {
     if (!active) {
       if (!_done.isCompleted) _done.complete();
       if (!_disposed) {
@@ -72,6 +84,11 @@ class ArchiveStreamSession extends ChangeNotifier {
       return;
     }
     _results[key] = result;
+    if (!failed && result.isEmpty && skippedTorrents > 0) {
+      torrentsOnly.add(key);
+    } else {
+      torrentsOnly.remove(key);
+    }
     statuses[key] = failed
         ? ArchiveSourceStatus.failed
         : result.isEmpty

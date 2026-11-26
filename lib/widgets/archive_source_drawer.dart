@@ -9,6 +9,7 @@ import '../l10n/l10n.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_size.dart';
+import 'archive_stream_picker.dart' show torrentsOnlyMessage;
 import 'gold_tag.dart';
 import 'stream_badge_row.dart';
 
@@ -258,7 +259,14 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                   ? const Center(child: CircularProgressIndicator())
                   : _options.isEmpty
                       ? Center(
-                          child: Text(tr('No playable stream for this title.')))
+                          child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                  _session?.onlyTorrentsFound == true
+                                      ? torrentsOnlyMessage()
+                                      : tr(
+                                          'No playable stream for this title.'),
+                                  textAlign: TextAlign.center)))
                       : ListView.builder(
                           controller: _scroll,
                           padding: const EdgeInsets.symmetric(horizontal: 12),

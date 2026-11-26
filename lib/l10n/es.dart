@@ -4516,4 +4516,9 @@ const Map<String, String> kEs = {
   "My groups":
       "Mis grupos",
   "Skip": "Salto",
+
+  // Media Hub: a source that found torrent links only (no debrid service).
+  "Torrents only": "Solo torrents",
+  "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
+      "Solo se encontraron enlaces torrent y {app} no reproduce torrents. Activa un servicio debrid (Real-Debrid, TorBox…) en los ajustes del complemento para que dé enlaces directos.",
 };

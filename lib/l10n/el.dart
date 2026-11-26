@@ -4478,4 +4478,9 @@ const Map<String, String> kEl = {
   "My groups":
       "Οι ομάδες μου",
   "Skip": "Άλμα",
+
+  // Media Hub: a source that found torrent links only (no debrid service).
+  "Torrents only": "Μόνο torrent",
+  "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
+      "Βρέθηκαν μόνο σύνδεσμοι torrent και το {app} δεν αναπαράγει torrent. Ενεργοποίησε μια υπηρεσία debrid (Real-Debrid, TorBox…) στις ρυθμίσεις του πρόσθετου ώστε να δίνει άμεσους συνδέσμους.",
 };

@@ -3988,4 +3988,9 @@ const Map<String, String> kUk = {
   "My groups":
       "Мої групи",
   "Skip": "Перехід",
+
+  // Media Hub: a source that found torrent links only (no debrid service).
+  "Torrents only": "Лише торенти",
+  "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
+      "Знайдено лише торент-посилання, а {app} не відтворює торенти. Увімкни debrid-сервіс (Real-Debrid, TorBox…) у налаштуваннях додатка, щоб він давав прямі посилання.",
 };

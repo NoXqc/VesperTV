@@ -8,9 +8,19 @@ import '../services/archive_stream_session.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/archive_stream_size.dart';
 import '../services/storage_service.dart';
+import '../utils/constants.dart';
 import 'archive_playback_settings.dart';
 import 'stream_badge_row.dart';
 import 'tv_menu_tile.dart';
+
+/// Shown when a title's sources found torrent links only (Torrentio and the
+/// like without a debrid service in their settings): VesperTV plays direct
+/// links, never torrents.
+String torrentsOnlyMessage() => tr(
+    "Only torrent links were found, and {app} can't play torrents. Turn on a "
+    "debrid service (Real-Debrid, TorBox…) in the add-on's settings so it "
+    'sends direct links.',
+    {'app': AppConstants.appName});
 
 class ArchiveStreamPicker extends StatefulWidget {
   const ArchiveStreamPicker(
@@ -173,7 +183,10 @@ class _ArchiveStreamPickerState extends State<ArchiveStreamPicker> {
                                                   ArchiveSourceStatus.ready =>
                                                     tr('Ready'),
                                                   ArchiveSourceStatus.empty =>
-                                                    tr('No streams'),
+                                                    session.torrentsOnly
+                                                            .contains(e.key)
+                                                        ? tr('Torrents only')
+                                                        : tr('No streams'),
                                                   ArchiveSourceStatus.failed =>
                                                     tr('Retry'),
                                                 }}'),
@@ -197,8 +210,10 @@ class _ArchiveStreamPickerState extends State<ArchiveStreamPicker> {
                                   padding: const EdgeInsets.all(32),
                                   child: Text(session?.loading == true
                                       ? tr('Looking for streams…')
-                                      : tr(
-                                          'No playable stream for this title.')))
+                                      : session?.onlyTorrentsFound == true
+                                          ? torrentsOnlyMessage()
+                                          : tr(
+                                              'No playable stream for this title.')))
                               : ListView.builder(
                                   shrinkWrap: true,
                                   padding:

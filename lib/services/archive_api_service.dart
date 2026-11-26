@@ -336,18 +336,26 @@ class ArchiveApiService {
   /// Direct, playable streams for a movie id or an episode id
   /// (`{id}:{season}:{episode}`, or whatever id the series meta's video
   /// carries). Torrent and external browser entries are skipped — see
-  /// [ArchiveStream].
+  /// [ArchiveStream]. [skippedTorrents] gets how many torrent entries were
+  /// left out: a Torrentio without a debrid service answers with nothing else,
+  /// and the picker says so instead of "No streams".
   Future<List<ArchiveStream>> fetchStreams(
       String baseUrl, ArchiveType type, String videoId,
-      {String? wire}) async {
+      {String? wire, void Function(int count)? skippedTorrents}) async {
     final j = await _getJson(Uri.parse(
         '$baseUrl/stream/${_seg(wire ?? type.wire)}/${_seg(videoId)}.json'));
     final out = <ArchiveStream>[];
+    var torrents = 0;
     for (final s in (j['streams'] as List? ?? const [])) {
       if (s is! Map) continue;
       final stream = ArchiveStream.fromJson(s);
-      if (stream != null) out.add(stream);
+      if (stream != null) {
+        out.add(stream);
+      } else if (s['infoHash'] != null) {
+        torrents++;
+      }
     }
+    skippedTorrents?.call(torrents);
     final rows = (j['streams'] as List? ?? const []).whereType<Map>();
     diagnostics?.call('ArchiveStreamResponse: source=${_sourceKey(baseUrl)} '
         'ref=${diagnosticReference(videoId)} type=${wire ?? type.wire} '
