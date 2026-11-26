@@ -16,6 +16,28 @@ void main() {
     expect(DeviceDefaults.rulesFor(stick, rules), isEmpty);
   });
 
+  test('Google TV Streamer gets Compatibility video (#23), others do not', () {
+    const streamer = DeviceFingerprint(
+        manufacturer: 'Google',
+        model: 'Google TV Streamer',
+        hardware: 'mt8696',
+        socModel: 'MT8696',
+        sdk: '34');
+    const rules = DeviceDefaults.bundledRules;
+    final matched = DeviceDefaults.rulesFor(streamer, rules);
+    expect(matched.map((r) => r.id), ['google-tv-streamer']);
+    expect(matched.single.set, {DeviceDefaults.compatVideo: true});
+    expect(DeviceDefaults.rulesFor(cube, rules).map((r) => r.id),
+        isNot(contains('google-tv-streamer')));
+    // A remote rule with the same id and no settings switches it off.
+    final off = DeviceDefaults.parse('{"rules":[{"id":"google-tv-streamer",'
+        '"match":{"model":"Google TV Streamer"},"set":{}}]}');
+    expect(
+        DeviceDefaults.rulesFor(
+            streamer, DeviceDefaults.merge(DeviceDefaults.bundledRules, off)),
+        isEmpty);
+  });
+
   test('match is case-insensitive and needs every field', () {
     const rule = DeviceRule(
         id: 'x',

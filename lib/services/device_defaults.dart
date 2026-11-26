@@ -32,6 +32,20 @@ class DeviceDefaults {
       match: {'model': 'AFTGAZL'},
       set: {hideVideoOnSports: true},
     ),
+    // Google TV Streamer (MT8696, PowerVR GPU, Android 14): the app closed
+    // in the guide while a channel played in the preview (GitHub #23,
+    // JcknDew). Symbolized (LOG-HYUKZP, 2026-11-26): Skia's glDrawArrays
+    // null pointer in the PowerVR driver inside Flutter's Hybrid
+    // Composition frames (the player's platform view); the menus' render
+    // mode didn't matter (1020). Compatibility video draws the picture as a
+    // texture: no platform view. No HDR on this box then. A remote rule
+    // with this id and an empty set turns it off without a release.
+    DeviceRule(
+      id: 'google-tv-streamer',
+      note: 'Google TV Streamer: GPU driver crash under the guide preview',
+      match: {'model': 'Google TV Streamer'},
+      set: {compatVideo: true},
+    ),
   ];
 
   /// This device, read once at startup ([load]). Empty off Android.

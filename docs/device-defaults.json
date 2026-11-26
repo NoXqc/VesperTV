@@ -7,6 +7,12 @@
       "note": "Fire TV Cube (3rd gen): live picture stayed on top of other pages (2026-10-23)",
       "match": { "model": "AFTGAZL" },
       "set": { "hideVideoOnSports": true }
+    },
+    {
+      "id": "google-tv-streamer",
+      "note": "Google TV Streamer: PowerVR driver crash (glDrawArrays null pointer) in the guide while the preview plays, Hybrid Composition frames; Compatibility video = no platform view, no HDR (GitHub #23, 2026-11-26)",
+      "match": { "model": "Google TV Streamer" },
+      "set": { "compatVideo": true }
     }
   ]
 }
