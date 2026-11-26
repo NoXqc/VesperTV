@@ -50,6 +50,7 @@
         android:icon="@mipmap/vespertv_launcher"
         android:banner="@drawable/vespertv_banner"
         android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:largeHeap="true"
         android:requestLegacyExternalStorage="true">
         <!-- Impeller (Vulkan) crashes on startup on several budget Amlogic/Mali

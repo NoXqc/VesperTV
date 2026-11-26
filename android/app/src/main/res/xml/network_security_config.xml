@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Same rules as before this file existed (plain http allowed, the device's own
+  root certificates), plus Let's Encrypt's two roots: Android 7.0 has neither
+  (ISRG Root X1 came in 7.1.1, X2 in 14), so the player and every Java / Kotlin
+  download failed on HTTPS links certified by Let's Encrypt there. Flutter's
+  own HTTP client gets the same roots from lib/services/extra_root_certs.dart.
+
+  With this file Android ignores android:usesCleartextTraffic (API 24+), so
+  cleartextTrafficPermitted must stay true: most IPTV streams are plain http.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -537,6 +537,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - Let's Encrypt roots for Android 7.0 (`claude/old-android-certs`, worktree `VesperTV-claude-certs`):**
+  Discord: 2015 Sony Bravia (KDL-50W755C, Android 7.0): no movie / show posters, some channel logos missing; IBO Pro and a
+  TiviMate rebrand show them. Android 7.0 (SDK 24 = the app's minSdk) lacks ISRG Root X1 (added in 7.1.1) and X2 (14), and
+  Flutter's HTTP client trusts the device's root store: every Let's Encrypt image host failed the handshake. Proven on the PC
+  with a Dart client trusting no built-in roots: valid-isrgrootx1/x2.letsencrypt.org fail, + X1 / + X1 + X2 = 200.
+  `services/extra_root_certs.dart` (`ExtraRootCerts.installIfNeeded`, main.dart right after the sqflite setup) adds both to
+  `SecurityContext.defaultContext` on SDK < 25 only (newer ones have X1; adding a root twice throws
+  CERT_ALREADY_IN_HASH_TABLE); log `ExtraRootCerts:`. Java side (ExoPlayer, downloads): `res/xml/network_security_config.xml`
+  = system + `@raw/isrg_root_x1` / `x2` with `cleartextTrafficPermitted="true"` (the config makes Android ignore
+  usesCleartextTraffic). Roots from the Windows store / letsencrypt.org, SHA-256 pinned in the test
+  (test/extra_root_certs_test.dart, 4). Release APK checked (config + both raw certs survive shrinking). Not tested on a
+  7.0 device (no API 24 emulator image here).
 - **Claude, 2026-11-26 - "Torrents only" in the Media Hub stream list (`claude/torrent-only-message`, worktree
   `VesperTV-claude-torrentonly`):** Reddit (davidbenWered, LOG-MGPDXB, KPN Amlogic box): after Import from Stremio every title
   said "No playable stream"; his Torrentio had no debrid service, so it answered 76 torrent links only (`torrents=76

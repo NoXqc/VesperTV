@@ -49,6 +49,7 @@ import 'services/cloud_sync_service.dart';
 import 'services/content_updates.dart';
 import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
+import 'services/extra_root_certs.dart';
 import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
@@ -154,6 +155,8 @@ Future<void> _main() async {
     } catch (e) {
       debugPrint('Sqflite: thread count not set: $e');
     }
+    // Android 7.0 lacks Let's Encrypt's roots: blank logos / posters there.
+    await ExtraRootCerts.installIfNeeded();
   }
   // Plain `sqflite` has no Windows/Linux implementation at all — confirmed
   // via .flutter-plugins-dependencies: sqflite_android/sqflite_darwin exist
