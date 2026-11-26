@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: live pause and rewind on the player's one connection (owner + cillfog on
 // Discord, 2026-11-25: "live pause for channels without catch-up, without a second connection").
 //

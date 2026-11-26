@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: "Native video surface (beta)" (Settings > Interface > Background video,
 // AppPreferences.nativeVideoSurface, MethodChannel "vespertv/native_surface"). With it on,
 // MainActivity starts Flutter transparent and the main player draws into ONE plain SurfaceView

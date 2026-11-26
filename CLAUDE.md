@@ -285,6 +285,7 @@ Unreleased (2026-11-22, +958, `claude/drm-clearkey`): **`StreamDrm.java`** - M3U
 Widevine / PlayReady / ClearKey license servers) arrives as the reserved header `X-VesperTV-DRM` (Dart
 `StreamDrm`); `HttpVideoAsset` removes it before any request, sets `MediaItem.DrmConfiguration` and a
 `DrmSessionManagerProvider` (`LocalMediaDrmCallback` for playlist keys). Details: `dev-notes/drm.md`.
+**Licensing (2026-11-26, owner):** Flutter's original code here is BSD (`LICENSE`); VesperTV's own files and changes are GPL-3.0 (`LICENSE-VESPERTV.md` in the folder). A new file starts with `// Copyright (C) 2026 VesperTV contributors` + `// SPDX-License-Identifier: GPL-3.0-only`; a Flutter file you change gets the `// Changed by VesperTV contributors` lines under Flutter's header (keep them on a re-sync).
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 

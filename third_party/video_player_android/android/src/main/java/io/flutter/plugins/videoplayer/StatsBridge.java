@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: the Data pool's measured numbers (MethodChannel "vespertv/stats"). Dart samples
 // getStats twice and turns the differences into a real bitrate (StreamStats' bytes) and a real
 // frame rate (the video decoder's rendered/dropped counters) — live MPEG-TS declares neither.

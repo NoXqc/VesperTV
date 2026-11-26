@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: opt-in "green flicker fix" (MethodChannel "vespertv/video", Settings >
 // Interface > Background video). On, the main player's SurfaceView is a media overlay
 // (setZOrderMediaOverlay, as already done on Android 7 and older): the partial workaround

@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: the player's progressive-file source; reads from ReadAhead's ring file once
 // read-ahead is on, else straight from the network as before. Switched on mid-read, its open
 // connection becomes the download's first one (no reconnect: the 8 s freeze at 0:00 of the

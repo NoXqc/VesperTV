@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: opt-in HDMI audio passthrough for the main player (MethodChannel
 // "vespertv/audio", Settings > Interface > Audio). Off by default: every player is built with a
 // context-less DefaultAudioSink, so Dolby audio is always decoded to PCM and setVolume() keeps

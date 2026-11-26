@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: the live player's progressive source when Live pause & rewind is on. Reads the
 // network as before until Dart arms Timeshift for the channel; at the next read its open
 // connection becomes Timeshift's writer (no reconnect) and the player reads the rolling copy

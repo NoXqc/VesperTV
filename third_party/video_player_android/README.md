@@ -1,3 +1,5 @@
+> **VesperTV's copy.** This folder is Flutter's plugin with VesperTV's player work added. Flutter's original code is BSD; everything VesperTV added or changed is GPL-3.0: see [LICENSE-VESPERTV.md](LICENSE-VESPERTV.md).
+
 # video\_player\_android
 
 The Android implementation of [`video_player`][1].

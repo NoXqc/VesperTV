@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: memory budget for the player's buffer (see the callers in
 // PlatformViewVideoPlayer and TextureVideoPlayer).
 package io.flutter.plugins.videoplayer;

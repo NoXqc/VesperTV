@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: embedded subtitle tracks (MKV/MP4 text tracks) for the Flutter side.
 //
 // The stock plugin exposes audio/video tracks only. This adds, beside the pigeon API:

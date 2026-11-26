@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: the video's frame rate from the first frames' presentation timestamps, for
 // Match frame rate (Dart DisplayMatch, read through StatsBridge "ptsFps"). Live MPEG-TS declares
 // no frame rate, and counting rendered frames needed ~4 s of wall clock, so the TV switched

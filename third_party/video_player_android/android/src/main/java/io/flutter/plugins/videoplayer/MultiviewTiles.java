@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: native Multiview tiles (MethodChannel "vespertv/multiview_tiles"). Only used
 // while the native video surface is on (Flutter window transparent, see NativeVideoSurface).
 // Each Multiview screen's player draws into its own plain SurfaceView behind the Flutter view

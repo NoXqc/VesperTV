@@ -1,3 +1,7 @@
+// Copyright (C) 2026 VesperTV contributors
+// SPDX-License-Identifier: GPL-3.0-only
+// VesperTV's own file: GNU GPL v3 with the App Store exception, not BSD (see
+// LICENSE-VESPERTV.md in the video_player_android folder).
 // VesperTV patch: Audio delay / A/V sync (Settings > Playback > Audio and the player's
 // Audio sync button, MethodChannel "vespertv/audio" setAudioDelay). The audio sink is the
 // player's master clock: the video renderer shows each frame when the sink's position reaches
