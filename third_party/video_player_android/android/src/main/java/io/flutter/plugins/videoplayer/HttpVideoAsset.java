@@ -114,11 +114,15 @@ final class HttpVideoAsset extends VideoAsset {
         stats.readAhead = new ReadAhead(initialFactory, stats.fileUri());
       }
       final ReadAhead readAhead = stats.readAhead;
-      final DataSource.Factory network = readAhead == null
+      final DataSource.Factory connection = readAhead == null
           ? () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats)
           : () -> new ReadAheadDataSource(
               () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats),
               readAhead);
+      // MKVs whose seek index is only named by a second SeekHead (Lavf 60): one small range
+      // request makes them seekable (MkvSeekHeadFix). Files only; live streams pass through.
+      final DataSource.Factory network =
+          () -> new MkvSeekHeadFix(connection.createDataSource(), initialFactory);
       // Live pause & rewind: off until Dart arms it for a live channel (then the player reads a
       // rolling copy that this stream's one connection fills). Same network chain underneath.
       if (stats.timeshift == null) {
