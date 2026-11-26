@@ -108,8 +108,15 @@ class MainActivity : FlutterActivity() {
         // and at 4K HDR10 output frames showed half-drawn while a channel played (owner photos,
         // 2026-11-14; 8-bit SDR output hid it). As a TextureView: video + window, both DEVICE,
         // Flutter raster 17-26 ms instead of 32-52 ms, Android frames 23 ms median.
-        val texture = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            .getBoolean("flutter.vesper_ui_texture", true)
+        //
+        // Only with the native video surface (the switch is only shown then): with it off the
+        // window is opaque and Flutter's own default is a SurfaceView, as before +789. +789..1014
+        // forced the TextureView there too, and the guide preview (a Hybrid Composition platform
+        // view without the native surface) crashed the Google TV Streamer's PowerVR driver
+        // (glDrawArrays null pointer on the main thread, GitHub #23, LOG-FHGWYY).
+        val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val texture = prefs.getBoolean("flutter.vesper_native_video_surface", true) &&
+            prefs.getBoolean("flutter.vesper_ui_texture", true)
         Log.i("VesperNativeSurface", "startup: menus drawn on a ${if (texture) "TextureView" else "SurfaceView"}")
         return if (texture) RenderMode.texture else RenderMode.surface
     }
