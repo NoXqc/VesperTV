@@ -32,13 +32,16 @@ class _Groups extends PlaylistManager {
       url: 'https://example.com/$id');
 
   late final a = [for (var i = 1; i <= 3; i++) _ch('a$i', 'Liga $i', 'Liga')];
+  late final b = [for (var i = 1; i <= 2; i++) _ch('b$i', 'Cup $i', 'Cup')];
 
   @override
-  List<Channel> get channels => a;
+  List<Channel> get channels => [...a, ...b];
 
   @override
-  List<M3uGroup> get tvGroups =>
-      [M3uGroup(title: 'Liga', playlistId: 'p', channels: a)];
+  List<M3uGroup> get tvGroups => [
+        M3uGroup(title: 'Liga', playlistId: 'p', channels: a),
+        M3uGroup(title: 'Cup', playlistId: 'p', channels: b),
+      ];
 
   @override
   List<Channel> visibleChannels(
@@ -192,6 +195,74 @@ void main() {
     expect(playlist.groupColorOf(null, 'Mine'), isNull);
     await focusRow(tester, 'Liga');
     expect(fadeOf(tester, 'Mine'), isNull);
+  });
+
+  testWidgets('Colour… > Select more groups… colours several at once',
+      (tester) async {
+    final playlist = await pumpHome(tester);
+    // (This fake has no playlist sessions: own groups keep the colours.)
+    await playlist.createUserGroup('Mine 2');
+    await settle(tester);
+    await holdOk(tester, 'Mine');
+    await tester.tap(find.text('Colour…'));
+    await settle(tester);
+    await tester.tap(find.text('Select more groups…'));
+    await settle(tester);
+    // Own groups first, then the playlist's; Mine ticked and focused.
+    final picker = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == 'GroupMultiPick');
+    expect(picker, findsOneWidget);
+    expect(find.text('Choose a colour (1)'), findsOneWidget);
+    // A new own group is listed first, like the column: tick it by touch.
+    await tester
+        .tap(find.descendant(of: picker, matching: find.text('Mine 2')));
+    await tester.pump();
+    expect(find.text('Choose a colour (2)'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight); // the button
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(find.text('Colour for 2 groups'), findsOneWidget);
+    expect(find.text('Select more groups…'), findsNothing);
+    await tester.tap(find.text('Blue'));
+    await settle(tester);
+    expect(playlist.groupColorOf(null, 'Mine'), 'blue');
+    expect(playlist.groupColorOf(null, 'Mine 2'), 'blue');
+    expect(find.text('Cup'), findsWidgets);
+
+    // Back goes on to the colour with the ticks (owner, 1016: the button
+    // was at the bottom of a long list); Back there changes nothing.
+    await holdOk(tester, 'Mine 2');
+    await tester.tap(find.text('Colour…'));
+    await settle(tester);
+    await tester.tap(find.text('Select more groups…'));
+    await settle(tester);
+    await tester.tap(find.descendant(of: picker, matching: find.text('Mine')));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(picker, findsNothing);
+    expect(find.text('Colour for 2 groups'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(find.text('Colour for 2 groups'), findsNothing);
+    expect(playlist.groupColorOf(null, 'Mine'), 'blue');
+    expect(playlist.groupColorOf(null, 'Mine 2'), 'blue');
+
+    // Up from the first group = the button at the top; nothing ticked +
+    // Back = closed.
+    await holdOk(tester, 'Mine 2');
+    await tester.tap(find.text('Colour…'));
+    await settle(tester);
+    await tester.tap(find.text('Select more groups…'));
+    await settle(tester);
+    await tester
+        .tap(find.descendant(of: picker, matching: find.text('Mine 2')));
+    await tester.pump();
+    expect(find.text('Choose a colour (0)'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(picker, findsNothing);
+    expect(find.text('Group colour'), findsNothing);
   });
 
   test('column line colours: theme, accent, white, presets', () {

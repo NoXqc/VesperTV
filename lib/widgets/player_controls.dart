@@ -39,6 +39,7 @@ import '../l10n/l10n.dart';
 import '../utils/app_store.dart';
 import '../utils/scrub_steps.dart';
 import '../utils/skip_step.dart';
+import 'skip_step_picker.dart';
 import '../services/live_timeshift.dart';
 import '../utils/video_fit.dart';
 
@@ -782,6 +783,23 @@ class PlayerControls extends StatelessWidget {
           },
         )
       ),
+      // How far the -/+ buttons jump (Settings > Playback > Player > Skip
+      // buttons) from the player (owner, 2026-11-25). Where they jump:
+      // movies, episodes, catch-up and paused live TV. No "15 s" under it
+      // (owner, 1018): the skip arrows show the number, the menu ticks it.
+      if (!isLive || playback?.catchup != null || LiveTimeshift.minutes > 0)
+        (
+          'skip_step',
+          LabeledIconButton(
+            icon: Icons.fast_forward_outlined,
+            label: tr('Skip buttons'),
+            shortLabel: tr('Skip'),
+            onPressed: () {
+              onActivity?.call();
+              showSkipStepPicker(context);
+            },
+          )
+        ),
       // Live buffer (Settings > Playback) from the player: the native player
       // takes the new reserve at once, so a stalling channel can be tried
       // with a bigger one without leaving it.

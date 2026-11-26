@@ -4399,4 +4399,21 @@ const Map<String, String> kDe = {
       "Live-Sender behalten beim Zuschauen ihre letzten Minuten auf diesem Gerät, über dieselbe Verbindung: Pause hält das Bild an, nicht den Stream, und Wiedergabe macht dort weiter, wo du angehalten hast. Die Zurück- / Vor-Tasten und Zurückspulen bewegen sich darin (eine Wiederholung), LIVE springt zu jetzt. Belegt beim Zuschauen Speicher (etwa 2 GB für 30 Minuten eines HD-Senders, beim Senderwechsel gelöscht); bei wenig freiem Speicher bleiben etwa 30 Sekunden im Arbeitsspeicher. Sender im HLS-Format (.m3u8) haben es nicht. Gilt ab dem nächsten Sender.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
       "Das Update {version} wurde nicht installiert: Dieses Gerät hat noch die Version oben. Versuche es erneut; klappt es wieder nicht, gib Speicher frei oder installiere es mit der App Downloader.",
+  "Episodes":
+      "Folgen",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Auf/Ab: durchsuchen · Links/Rechts: Staffel · OK: abspielen · Zurück: schließen",
+  "Up/Down: browse · OK: play · Back: close":
+      "Auf/Ab: durchsuchen · OK: abspielen · Zurück: schließen",
+  "Select more groups…":
+      "Weitere Gruppen auswählen…",
+  "Colour for {count} groups":
+      "Farbe für {count} Gruppen",
+  "Choose a colour ({count})":
+      "Farbe wählen ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK: anhaken · Zurück oder Rechts: Farbe wählen",
+  "My groups":
+      "Meine Gruppen",
+  "Skip": "Sprung",
 };

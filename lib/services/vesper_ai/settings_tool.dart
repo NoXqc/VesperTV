@@ -443,6 +443,23 @@ final List<_AiSetting> _aiSettings = [
         b.prefs.setPalette(
             AppConstants.cyberpunkPalettes.firstWhere((p) => p.id == id));
       }),
+  // Owner, 2026-11-25: the colour by voice / AI app, like Settings.
+  _AiSetting(
+      'column_lines',
+      'look',
+      'Column lines',
+      'The colour of the lines between the TV home\'s columns and in the '
+          'guide (this profile).',
+      choices: [
+        ('default', 'Default'),
+        ('accent', 'Theme color'),
+        ('white', 'White'),
+        for (final c in GroupColor.presets) (c.id, c.name),
+      ],
+      read: (b) =>
+          b.prefs.columnLines.isEmpty ? 'default' : b.prefs.columnLines,
+      write: (b, v) async =>
+          b.prefs.setColumnLines(v == 'default' ? '' : '$v')),
   _switch(
       'refined_finish',
       'look',

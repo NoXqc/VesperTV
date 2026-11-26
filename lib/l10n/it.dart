@@ -4503,4 +4503,21 @@ const Map<String, String> kIt = {
       "I canali in diretta tengono gli ultimi minuti su questo dispositivo mentre guardi, con la stessa connessione: Pausa ferma l'immagine, non lo stream, e Play riprende da dove eri. I pulsanti indietro / avanti e Riavvolgi si muovono al suo interno (un replay), LIVE torna al presente. Usa spazio di archiviazione mentre guardi (circa 2 GB per 30 minuti di un canale HD, cancellato al cambio canale); con poco spazio libero tiene circa 30 secondi in memoria. I canali in formato HLS (.m3u8) non lo hanno. Vale dal canale successivo.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
       "L'aggiornamento {version} non si è installato: questo dispositivo ha ancora la versione qui sopra. Riprova; se non riesce di nuovo, libera spazio o installalo con l'app Downloader.",
+  "Episodes":
+      "Episodi",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Su/Giù: sfoglia · Sinistra/Destra: stagione · OK: riproduci · Indietro: chiudi",
+  "Up/Down: browse · OK: play · Back: close":
+      "Su/Giù: sfoglia · OK: riproduci · Indietro: chiudi",
+  "Select more groups…":
+      "Seleziona altri gruppi…",
+  "Colour for {count} groups":
+      "Colore per {count} gruppi",
+  "Choose a colour ({count})":
+      "Scegli un colore ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK: seleziona · Indietro o Destra: scegli il colore",
+  "My groups":
+      "I miei gruppi",
+  "Skip": "Salto",
 };

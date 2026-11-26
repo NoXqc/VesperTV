@@ -2558,20 +2558,35 @@ class PlaylistManager extends ChangeNotifier {
 
   /// [colorId] null = no colour.
   Future<void> setGroupColor(
-      String? playlistId, String title, String? colorId) async {
-    if (playlistId != null) {
-      await _sessionFor(playlistId)?.setGroupColor(title, colorId);
-      return;
+          String? playlistId, String title, String? colorId) =>
+      setGroupColorMany([(playlistId, title)], colorId);
+
+  /// Several groups (playlist id, or null for the viewer's own groups +
+  /// title) get [colorId] at once: one save per playlist (Colour… > Select
+  /// more groups, Vesper AI).
+  Future<void> setGroupColorMany(
+      Iterable<(String?, String)> groups, String? colorId) async {
+    final byPlaylist = <String?, List<String>>{};
+    for (final (playlistId, title) in groups) {
+      (byPlaylist[playlistId] ??= []).add(title);
     }
-    final next = {..._myGroupColors};
-    if (colorId == null) {
-      next.remove(title);
-    } else {
-      next[title] = colorId;
+    for (final MapEntry(key: playlistId, value: titles) in byPlaylist.entries) {
+      if (playlistId != null) {
+        await _sessionFor(playlistId)?.setGroupColorMany(titles, colorId);
+        continue;
+      }
+      final next = {..._myGroupColors};
+      for (final title in titles) {
+        if (colorId == null) {
+          next.remove(title);
+        } else {
+          next[title] = colorId;
+        }
+      }
+      _myGroupColors = next;
+      await _storage.setGroupColors(GroupColor.ownScope, next);
+      notifyListeners();
     }
-    _myGroupColors = next;
-    await _storage.setGroupColors(GroupColor.ownScope, next);
-    notifyListeners();
   }
 
   /// The viewer's own groups' colours (title -> colour id).

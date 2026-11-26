@@ -265,14 +265,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   EpisodeAlerts? _episodeAlerts;
 
-  /// A check found a new episode (or a follow changed): redraw that row.
+  /// A check found a new episode (or a follow changed): redraw Continue
+  /// Watching, where new episodes show.
   void _episodesChanged() {
     if (!mounted || _loading) return;
     final rows = <HomeRowKind, _HomeRow?>{
       for (final row in _rows) row.kind: row
     };
-    if (!_rowsConfig.visible.contains(HomeRowKind.newEpisodes)) return;
-    rows[HomeRowKind.newEpisodes] = _newEpisodesRow();
+    if (!_rowsConfig.visible.contains(HomeRowKind.continueWatching)) return;
+    rows[HomeRowKind.continueWatching] = _continueRow();
     _apply(_loadId, rows, focusFirst: false, done: true);
   }
 
@@ -450,8 +451,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final quick = <HomeRowKind, _HomeRow?>{
       if (visible.contains(HomeRowKind.continueWatching))
         HomeRowKind.continueWatching: _continueRow(),
-      if (visible.contains(HomeRowKind.newEpisodes))
-        HomeRowKind.newEpisodes: _newEpisodesRow(),
       if (visible.contains(HomeRowKind.recentChannels))
         HomeRowKind.recentChannels: _recentRow(epg),
       if (visible.contains(HomeRowKind.watchList))
@@ -560,6 +559,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final items = <({int at, _HomeItem item})>[];
     final played = playback.recentlyPlayed;
 
+    // "Notify me" shows (owner + Kal-el23, 2026-11-25: no New episodes row):
+    // a show's card gets the gold NEW tag and "S6 E4 is available" and goes
+    // first, newest notice first; a show the viewer had finished (no card)
+    // comes back as one. A followed show whose next episode is scheduled
+    // says "Airs in 5 days" on its card.
+    final alerts = _episodeAlerts;
+    final notices = alerts?.notices ?? const <EpisodeNotice>[];
+    final noticeAt = {
+      for (final (i, n) in notices.indexed) n.showKey: i - notices.length
+    };
+    final now = DateTime.now();
+    final tagged = <String>{};
+    EpisodeNotice? noticeFor(String showKey) {
+      final at = noticeAt[showKey];
+      if (at == null || !tagged.add(showKey)) return null;
+      return notices[at + notices.length];
+    }
+
+    String? airsFor(String showKey) {
+      final next = alerts?.show(showKey)?.next;
+      return next != null && next.upcoming(now)
+          ? _airsIn(next.displayDate, now)
+          : null;
+    }
+
     // Playlists' movies and episodes (one card per show), newest first.
     final seenSeries = <String>{};
     for (var i = 0; i < played.length; i++) {
@@ -580,13 +604,21 @@ class _HomeScreenState extends State<HomeScreen> {
           categoryId: '',
           coverUrl: c.seriesCoverUrl,
         );
+        final showKey = FollowedShow.iptvKey(c.playlistId, c.seriesId!);
+        final notice = noticeFor(showKey);
         items.add((
-          at: i,
+          at: notice != null ? noticeAt[showKey]! : i,
           item: _HomeItem(
             key: 'cw:${c.id}',
-            removeFromHistory: () => playback.removeFromHistory(c),
+            removeFromHistory: () async {
+              if (notice != null) await alerts?.dismiss(showKey);
+              await playback.removeFromHistory(c);
+            },
             title: c.seriesName ?? c.name,
-            subtitle: c.name,
+            subtitle: notice != null ? _noticeLine(notice) : c.name,
+            description: notice?.episodeTitle,
+            tag: notice != null ? tr('NEW') : airsFor(showKey),
+            tagHighlight: notice != null,
             imageUrl: c.backdropUrl ?? c.seriesCoverUrl ?? c.logoUrl,
             backdropUrl: c.backdropUrl,
             progress: storage.getWatchedFraction(c.id),
@@ -634,19 +666,62 @@ class _HomeScreenState extends State<HomeScreen> {
           episodes.contains(c.rawId) ||
           c.rawId.startsWith('$ep${meta.id}'));
       if (at < 0) at = played.length;
+      final showKey = FollowedShow.hubKey(source.manifestUrl, meta.id);
+      final series = meta.type == ArchiveType.series;
+      final notice = series ? noticeFor(showKey) : null;
+      final followed = notice == null ? null : alerts?.show(showKey);
       items.add((
-        at: at,
+        at: notice != null ? noticeAt[showKey]! : at,
         item: _HomeItem(
           key: 'hub:${source.key}:${meta.id}',
-          removeFromHistory: () => hub.removeFromHistory(source, meta),
+          removeFromHistory: () async {
+            if (notice != null) await alerts?.dismiss(showKey);
+            await hub.removeFromHistory(source, meta);
+          },
           title: meta.name,
-          subtitle:
-              entry.episodeLabel.isNotEmpty ? entry.episodeLabel : source.name,
+          subtitle: notice != null
+              ? _noticeLine(notice)
+              : entry.episodeLabel.isNotEmpty
+                  ? entry.episodeLabel
+                  : source.name,
+          tag: notice != null
+              ? tr('NEW')
+              : series
+                  ? airsFor(showKey)
+                  : null,
+          tagHighlight: notice != null,
           imageUrl: meta.backgroundUrl ?? meta.posterUrl,
           backdropUrl: meta.backgroundUrl,
-          description: meta.description,
+          description: notice?.episodeTitle ?? meta.description,
           progress: entry.progress,
-          open: (ctx) => openArchiveContinuation(ctx, entry),
+          // The new episode is on the show's page (opening it reads the
+          // notice); resuming would play the old one.
+          open: followed != null
+              ? (ctx) => _openFollowed(ctx, followed)
+              : (ctx) => openArchiveContinuation(ctx, entry),
+        )
+      ));
+    }
+
+    // New episodes of shows with no card here (watched to the end).
+    for (final n in notices) {
+      if (tagged.contains(n.showKey)) continue;
+      final show = alerts?.show(n.showKey);
+      if (show == null) continue;
+      items.add((
+        at: noticeAt[n.showKey]!,
+        item: _HomeItem(
+          key: 'ne:${n.showKey}',
+          title: n.title,
+          subtitle: _noticeLine(n),
+          description: n.episodeTitle,
+          imageUrl: show.backdropUrl ?? show.posterUrl,
+          backdropUrl: show.backdropUrl,
+          tag: tr('NEW'),
+          tagHighlight: true,
+          removeLabel: 'Dismiss',
+          removeFromHistory: () => alerts!.dismiss(n.showKey),
+          open: (ctx) => _openFollowed(ctx, show),
         )
       ));
     }
@@ -655,54 +730,11 @@ class _HomeScreenState extends State<HomeScreen> {
         [for (final e in items.take(20)) e.item]);
   }
 
-  /// "Notify me" shows: a new episode first ("S1 E3 is available"), then
-  /// the next scheduled ones ("S1 E4 · Airs in 5 days"), like Nuvio.
-  _HomeRow? _newEpisodesRow() {
-    final alerts = _episodeAlerts;
-    if (alerts == null) return null;
-    final now = DateTime.now();
-    final noticed = <String>{};
-    final items = <_HomeItem>[
-      for (final n in alerts.notices)
-        if (alerts.show(n.showKey) case final show? when noticed.add(n.showKey))
-          _HomeItem(
-            key: 'ne:${n.showKey}',
-            title: n.title,
-            subtitle: n.count > 1
-                ? tr('{count} new episodes - {code} is available',
-                    {'count': '${n.count}', 'code': n.code})
-                : tr('{code} is available', {'code': n.code}),
-            description: n.episodeTitle,
-            imageUrl: show.backdropUrl ?? show.posterUrl,
-            backdropUrl: show.backdropUrl,
-            tag: tr('NEW'),
-            tagHighlight: true,
-            removeLabel: 'Dismiss',
-            removeFromHistory: () => alerts.dismiss(n.showKey),
-            open: (ctx) => _openFollowed(ctx, show),
-          ),
-    ];
-    final upcoming = [
-      for (final s in alerts.shows)
-        if (s.next case final next?
-            when !noticed.contains(s.key) && next.upcoming(now))
-          (show: s, next: next)
-    ]..sort((a, b) => a.next.date.compareTo(b.next.date));
-    for (final (:show, :next) in upcoming) {
-      items.add(_HomeItem(
-        key: 'ne:${show.key}',
-        title: show.title,
-        subtitle: next.season != null && next.episode != null
-            ? 'S${next.season} E${next.episode}'
-            : null,
-        tag: _airsIn(next.displayDate, now),
-        imageUrl: show.backdropUrl ?? show.posterUrl,
-        backdropUrl: show.backdropUrl,
-        open: (ctx) => _openFollowed(ctx, show),
-      ));
-    }
-    return _HomeRow(HomeRowKind.newEpisodes, _CardShape.wide, items);
-  }
+  /// "S1 E3 is available" / "3 new episodes - S1 E3 is available".
+  static String _noticeLine(EpisodeNotice n) => n.count > 1
+      ? tr('{count} new episodes - {code} is available',
+          {'count': '${n.count}', 'code': n.code})
+      : tr('{code} is available', {'code': n.code});
 
   static String _airsIn(DateTime date, DateTime now) {
     final days = DateTime(date.year, date.month, date.day)

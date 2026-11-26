@@ -364,11 +364,30 @@ class PlaybackService extends ChangeNotifier {
         switchSource: true);
   }
 
+  /// Each queued episode's season (channel id -> season), when the show
+  /// page knew it: the player's Episodes list jumps by it.
+  Map<String, int>? _upNextSeasons;
+
   void setUpNextQueue(List<Channel>? queue,
-      {Future<Channel?> Function(Channel)? resolve}) {
+      {Future<Channel?> Function(Channel)? resolve,
+      Map<String, int>? seasons}) {
     _upNextQueue = queue;
     _upNextResolver = resolve;
+    _upNextSeasons = seasons;
   }
+
+  /// The show's episodes while one of them plays (the player's Episodes
+  /// list, Kal-el23 2026-11-25), else null: a movie, a live channel, a
+  /// one-episode show.
+  List<Channel>? get episodeList {
+    final queue = _upNextQueue;
+    final current = currentChannel;
+    if (queue == null || queue.length < 2 || current == null) return null;
+    return queue.any((c) => c.id == current.id) ? queue : null;
+  }
+
+  /// [episodeId]'s season in [episodeList], when known.
+  int? seasonOfEpisode(String episodeId) => _upNextSeasons?[episodeId];
 
   Channel? get _nextInQueue {
     final queue = _upNextQueue;

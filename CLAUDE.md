@@ -536,6 +536,24 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-25 - NEW tag on Continue Watching + player Episodes list (`claude/cw-new-tag`, worktree
+  `VesperTV-claude-cwnew`, from main 98632fe):** Kal-el23 (Discord) + owner: "I'll do both". (1) Home's New episodes row
+  is gone (`HomeRowKind.newEpisodes` removed; a saved `new_episodes` id is dropped by `HomeRows.parse`): a "Notify me"
+  notice puts a gold NEW tag + "S2 E4 is available" on the show's Continue Watching card and moves it first (newest
+  notice first); a finished show (no card) comes back as one; a followed show's scheduled next episode = "Airs in N
+  days" on its card (upcoming-only cards for shows not in the row are no longer shown). Hub card with a notice opens the
+  show page (`_openFollowed`, reads the notice) instead of resuming. (2) Player **Episodes** (options row tile id
+  `episodes`, phone / computer top bar, remote buttons `opt:episodes`): `widgets/episode_drawer.dart`, opens on the
+  episode playing, Up/Down, Left/Right or CH+/CH- = season, OK plays. Android `PlaybackService.episodeList` +
+  `setUpNextQueue(seasons:)`; computers / iOS / Apple TV `DesktopPlayerScreen.queueSeasons`. Tests:
+  home_new_episode_tag_test, episode_drawer_test, home_rows_test. Not box-tested. Same branch (owner: "can the AI mcp add
+  colors to group" + "select more group"): Colour… > **Select more groups…** (`widgets/group_multi_pick.dart`: tick the
+  column's groups, then one colour; `PlaylistManager.setGroupColorMany`, one save per playlist), Vesper AI `groups` action
+  `colour` (exact name or words, own groups too, `none` clears, no TV confirm) + `settings` key `column_lines`. Needs the
+  app update; AI apps must reconnect the connector to see the new action. Tests: tv_group_colors_test,
+  vesper_my_groups_tool_test, vesper_settings_tool_test. 1017: Select more groups' button at the top, Back = on to the
+  colour with the ticks. Options row **Skip** tile (id `skip_step`, `widgets/skip_step_picker.dart`, `SkipStep.changes`;
+  movies / episodes / catch-up / Live pause; computers too). test/skip_step_picker_test.dart.
 - **Claude, 2026-11-25 - issue diagnostics (`claude/issue-diagnostics`, test build 1.0.74-dev.1014):** GitHub open issues reviewed. (1) #23 Google TV Streamer native crashes in the guide preview, no clue where: Send log's "Last exits" (now 5) lists each native crash's report (Android 12+ `ApplicationExitInfo.getTraceInputStream` tombstone: signal, cause / abort, crashing thread + 14 frames, the dead process's last 12 log lines), `TombstoneSummary.kt` (own small protobuf reader, falls back to library strings), read off the main thread. (2) #22 Fire TV "says installed, doesn't update": `UpdateAttempts.kt` notes the APK's / installed version, free MB and installer before the install (own prefs file, never transferred) and at the next start logs `VesperUpdater: updated to` / `did not install`; Check for Updates shows "The update to {version} didn't install ..."; Dart `AppUpdate:` lines. (3) #20 Apple TV 968 movies close the app: `AppLog.step` / `stepDone` write the current step synchronously to `vespertv_step.txt` (the main log is async and loses its last lines in a native crash); the next session logs `LastStep: the previous session ended during: ...` (Apple TV open 10 s, DisplayMatch ask 8 s). Tests: TombstoneSummaryTest, UpdateAttemptsTest, app_log_step_test, update_install_failure_test.
 - **Claude, 2026-11-25 - Sports Trak: Find games in hidden groups (`claude/sports-hidden-groups`, worktree
   `VesperTV-claude-sportshidden`, from main 84c3eb6):** owner: a toggle so Sports Trak matches channels from hidden groups.

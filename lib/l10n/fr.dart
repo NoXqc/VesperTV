@@ -4509,4 +4509,21 @@ const Map<String, String> kFr = {
       "Les chaînes en direct gardent leurs dernières minutes sur cet appareil pendant que vous regardez, sur la même connexion : Pause arrête l'image, pas le flux, et Lecture reprend là où vous étiez. Les boutons reculer / avancer et Retour rapide s'y déplacent (une reprise), EN DIRECT revient au présent. Utilise du stockage pendant le visionnement (environ 2 Go pour 30 minutes d'une chaîne HD, effacé au changement de chaîne); avec peu d'espace libre, environ 30 secondes sont gardées en mémoire. Les chaînes au format HLS (.m3u8) ne l'ont pas. S'applique à partir de la prochaine chaîne.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
       "La mise à jour {version} ne s'est pas installée : cet appareil a toujours la version ci-dessus. Réessayez; si elle échoue encore, libérez de l'espace ou installez-la avec l'application Downloader.",
+  "Episodes":
+      "Épisodes",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Haut/Bas : parcourir · Gauche/Droite : saison · OK : lire · Retour : fermer",
+  "Up/Down: browse · OK: play · Back: close":
+      "Haut/Bas : parcourir · OK : lire · Retour : fermer",
+  "Select more groups…":
+      "Sélectionner d'autres groupes…",
+  "Colour for {count} groups":
+      "Couleur pour {count} groupes",
+  "Choose a colour ({count})":
+      "Choisir une couleur ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK : cocher · Retour ou Droite : choisir la couleur",
+  "My groups":
+      "Mes groupes",
+  "Skip": "Saut",
 };

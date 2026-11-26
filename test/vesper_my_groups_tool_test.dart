@@ -239,4 +239,60 @@ void main() {
     expect(manager.userGroups, isEmpty);
     expect(names('SPORTS'), ['TSN 1', 'RDS']);
   });
+
+  test('groups colour: one by name, several by words, own groups, none',
+      () async {
+    await box.call('my_groups', {'action': 'create', 'group': 'My sports'});
+    final one = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'sports',
+      'colour': 'red',
+    });
+    expect(one['error'], isNull, reason: '$one');
+    expect(one['groups'], ['SPORTS']);
+    expect(manager.groupColorOf('p', 'SPORTS'), 'red');
+    expect(manager.groupColorOf(null, 'My sports'), isNull);
+
+    final many = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'contains': 'sports',
+      'colour': 'teal',
+    });
+    expect(many['colour'], 'aqua');
+    expect(many['groups'], unorderedEquals(['My sports', 'SPORTS']));
+    expect(manager.groupColorOf(null, 'My sports'), 'aqua');
+    expect(manager.groupColorOf('p', 'NEWS'), isNull);
+
+    final listed = await box.call('groups', {'action': 'list', 'tab': 'tv'});
+    final sports = (listed['groups'] as List)
+        .cast<Map>()
+        .firstWhere((g) => g['name'] == 'SPORTS');
+    expect(sports['colour'], 'aqua');
+
+    await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'SPORTS',
+      'colour': 'none',
+    });
+    expect(manager.groupColorOf('p', 'SPORTS'), isNull);
+
+    final bad = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'SPORTS',
+      'colour': 'mauve',
+    });
+    expect(bad['error'], contains('Colours'));
+    final none = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'Movies',
+      'colour': 'red',
+    });
+    expect(none['error'], contains('No TV group'));
+    expect(host.questions, isEmpty, reason: 'cosmetic: no TV confirm');
+  });
 }

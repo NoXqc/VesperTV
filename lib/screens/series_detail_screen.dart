@@ -451,12 +451,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       // playing audio behind this unrelated episode.
       DesktopMiniPlayer.instance.clear();
       await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) =>
-              DesktopPlayerScreen(channel: episode, queue: _allEpisodes)));
+          builder: (_) => DesktopPlayerScreen(
+              channel: episode,
+              queue: _allEpisodes,
+              queueSeasons: Map.of(_seasonOfEpisode))));
     } else {
       // The queue lets playback auto-advance into the next episode near the
       // end (see `PlaybackService._nextInQueue`), across seasons too.
-      context.read<PlaybackService>().setUpNextQueue(_allEpisodes);
+      context
+          .read<PlaybackService>()
+          .setUpNextQueue(_allEpisodes, seasons: Map.of(_seasonOfEpisode));
       await Navigator.of(context).push(
           PlayerPageRoute(builder: (_) => PlayerScreen(channel: episode)));
     }

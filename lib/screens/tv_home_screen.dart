@@ -1,4 +1,5 @@
 import '../widgets/glass_menu.dart';
+import '../widgets/group_multi_pick.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
@@ -791,10 +792,27 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   /// Hold OK on a live group (or an own group: [playlistId] null) >
   /// Colour… (owner, 2026-11-25): No colour + `GroupColor.presets`, the
-  /// current one focused and ticked. The row wears it at rest.
+  /// current one focused and ticked, and Select more groups… (several
+  /// groups, one colour). The row wears it at rest.
   Future<void> _pickGroupColor(String? playlistId, String title) async {
     final playlist = context.read<PlaylistManager>();
     final current = GroupColor.byId(playlist.groupColorOf(playlistId, title));
+    final picked = await _askGroupColor(current, selectMore: true);
+    if (picked == null || !mounted) return;
+    if (picked == _selectMoreGroups) {
+      await _colorManyGroups(playlistId, title);
+      return;
+    }
+    await playlist.setGroupColor(
+        playlistId, title, picked.isEmpty ? null : picked);
+  }
+
+  static const _selectMoreGroups = '__more__';
+
+  /// The colour menu: a preset id, '' = No colour, [_selectMoreGroups],
+  /// null = closed.
+  Future<String?> _askGroupColor(GroupColor? current,
+      {bool selectMore = false, int? count}) {
     Widget choice(Color? color, String name, bool on) => Row(
           children: [
             Container(
@@ -818,11 +836,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             if (on) const Icon(Icons.check, size: 18, color: Colors.white),
           ],
         );
-    final picked = await showGlassMenu<String>(
+    return showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
         maxWidth: 280,
-        title: Text(tr('Group colour')),
+        title: Text(count == null
+            ? tr('Group colour')
+            : tr('Colour for {count} groups', {'count': '$count'})),
         children: [
           TvDialogOption(
             autofocus: current == null,
@@ -835,12 +855,64 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               onPressed: () => Navigator.of(context).pop(c.id),
               child: choice(c.color, tr(c.name), c == current),
             ),
+          if (selectMore)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop(_selectMoreGroups),
+              child: Row(children: [
+                const Icon(Icons.checklist, size: 18, color: Colors.white70),
+                const SizedBox(width: 12),
+                Expanded(child: Text(tr('Select more groups…'))),
+              ]),
+            ),
         ],
       ),
     );
-    if (picked == null || !mounted) return;
-    await playlist.setGroupColor(
-        playlistId, title, picked.isEmpty ? null : picked);
+  }
+
+  /// Colour… > Select more groups… (owner, 2026-11-25): tick the groups of
+  /// the groups column (own groups, then each playlist's, as shown; the
+  /// group the menu was opened on ticked and focused), then one colour for
+  /// all of them.
+  Future<void> _colorManyGroups(String? playlistId, String title) async {
+    final playlist = context.read<PlaylistManager>();
+    final sort = context.read<AppPreferences>().liveGroupSort;
+    final visible = _withoutHiddenPlaylists(
+        playlist.tvGroups.where((g) => !g.isHidden).toList(), 'tv');
+    final groups = <(String?, String)>[
+      for (final t in sort.sorted(playlist.userGroups, (t) => t)) (null, t),
+      for (final id in visible.map((g) => g.playlistId).toSet())
+        for (final g in sort.sorted(
+            visible.where((g) => g.playlistId == id), (g) => g.title))
+          (g.playlistId, g.title),
+    ];
+    final manyPlaylists = visible.map((g) => g.playlistId).toSet().length > 1;
+    final start = groups.indexOf((playlistId, title));
+    final ticked = await showGroupMultiPick(
+      context,
+      title: tr('Select more groups…'),
+      action: (n) => tr('Choose a colour ({count})', {'count': '$n'}),
+      start: math.max(0, start),
+      entries: [
+        for (final (id, t) in groups)
+          GroupPickEntry(
+            title: t,
+            detail: id == null
+                ? tr('My groups')
+                : manyPlaylists
+                    ? playlist.playlistNameFor(id)
+                    : null,
+            color: GroupColor.of(playlist.groupColorOf(id, t)),
+            checked: id == playlistId && t == title,
+          ),
+      ],
+    );
+    if (ticked == null || ticked.isEmpty || !mounted) return;
+    final picked = await _askGroupColor(
+        GroupColor.byId(playlist.groupColorOf(playlistId, title)),
+        count: ticked.length);
+    if (picked == null || picked == _selectMoreGroups || !mounted) return;
+    await playlist.setGroupColorMany(
+        [for (final i in ticked) groups[i]], picked.isEmpty ? null : picked);
   }
 
   /// Hold OK on a live group > Rename… / Use the provider's name ('').

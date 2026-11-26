@@ -11,6 +11,7 @@ import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
 import '../widgets/live_source_drawer.dart';
+import '../widgets/episode_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
@@ -853,6 +854,46 @@ class _PlayerScreenState extends State<PlayerScreen>
       if (mounted) {
         TopNotice.show(tr('Could not switch stream. Try another source.'));
       }
+    } finally {
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
+    }
+  }
+
+  /// The show's episodes (options row > Episodes, the phone's top bar):
+  /// another episode plays here, no trip back to the show page.
+  Future<void> _openEpisodes() async {
+    final episodes = _playback.episodeList;
+    final channel = _playback.currentChannel;
+    if (episodes == null || channel == null || _sourceDrawerOpen) return;
+    final storage = context.read<StorageService>();
+    _sourceBackGuard.opened();
+    _hideTimer?.cancel();
+    setState(() {
+      _topVisible = false;
+      _bottomVisible = false;
+      _optionsVisible = false;
+      _moreVisible = false;
+    });
+    try {
+      final picked = await showEpisodeDrawer(context, entries: [
+        for (final e in episodes)
+          EpisodeEntry(
+            channel: e,
+            current: e.id == channel.id,
+            season: _playback.seasonOfEpisode(e.id),
+            progress: storage.getWatchedFraction(e.id),
+            watched: storage.isFullyWatched(e.id),
+          ),
+      ]);
+      if (!mounted ||
+          picked == null ||
+          _playback.currentChannel?.id != channel.id) {
+        return;
+      }
+      await _playback.play(episodes[picked]);
     } finally {
       if (mounted) {
         _sourceBackGuard.closed();
@@ -2228,6 +2269,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                               // Right; touch has no key).
                                               // Live: the tab on the right
                                               // edge (see below).
+                                              if (playback.episodeList != null)
+                                                _TopBarIconButton(
+                                                  icon: Icons
+                                                      .video_library_outlined,
+                                                  tooltip: tr('Episodes'),
+                                                  onPressed: _openEpisodes,
+                                                ),
                                               if (widget.sources != null)
                                                 _TopBarIconButton(
                                                   icon: Icons.swap_horiz,
@@ -2510,6 +2558,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                       _openMultiview(channel)
                                                   : null,
                                           leadingOptions: [
+                                            if (playback.episodeList != null)
+                                              PlayerOption(
+                                                id: 'episodes',
+                                                icon: Icons
+                                                    .video_library_outlined,
+                                                label: tr('Episodes'),
+                                                onPressed: _openEpisodes,
+                                              ),
                                             if (channel.isLive ||
                                                 playback.catchup != null) ...[
                                               PlayerOption(

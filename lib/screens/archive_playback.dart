@@ -126,7 +126,8 @@ bool _isSilo(ArchiveStreamOption o) =>
 void _serverPlayFailed(BuildContext context, Object error) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(error is MediaServerLoginException
-        ? tr('The server sign-in has expired. Connect the server again in Settings.')
+        ? tr(
+            'The server sign-in has expired. Connect the server again in Settings.')
         : error is SiloPlaybackRefusedException && error.message.isNotEmpty
             ? tr("The server can't play this file: {reason}",
                 {'reason': error.message})
@@ -419,10 +420,16 @@ Future<void> playArchiveTitle(
               sources: sources,
               queue: hasQueue ? queue : null,
               resolveQueued: hasQueue ? resolve : null,
+              queueSeasons: hasQueue
+                  ? {for (final e in videosById.entries) e.key: e.value.season}
+                  : null,
             )));
   } else {
     playback.setUpNextQueue(hasQueue ? queue : null,
-        resolve: hasQueue ? resolve : null);
+        resolve: hasQueue ? resolve : null,
+        seasons: hasQueue
+            ? {for (final e in videosById.entries) e.key: e.value.season}
+            : null);
     // Awaited so PlayerScreen's own play() doesn't race this one (see
     // TvHomeScreen._selectChannel).
     await playback.play(channel);

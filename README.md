@@ -171,8 +171,8 @@ Grab the latest release from the [Releases](../../releases) page or
 - Poster rows over an HD backdrop, and an **expanded catalog** grid that remembers its sort.
 - Title pages with a **Trailer** (and optional automatic trailers), a **Watch list** button, and
   with your own TMDB key: cast portraits, actor credits, collections and More like this.
-- **Notify me** on a show: a **New episodes** row on Home and an Android notification, even with
-  the app closed.
+- **Notify me** on a show: a gold **NEW** tag on its Continue Watching card on Home and an Android
+  notification, even with the app closed. An **Episodes** list in the player jumps to any episode.
 - Continue watching, Watch list rows, mark a whole season watched, and the next episode's air date.
 - **Downloads (Android):** download a movie, an episode or a whole season to watch
   offline. It suggests tonight at 2:00, at a speed that looks like someone watching, and saves to
@@ -206,7 +206,7 @@ or AI apps. [See below](#vesper-ai).
 - **Viewer profiles** with photos and an optional PIN, and **Kids profiles** limited to the
   groups you allow. Each keeps its own favourites, history, Media Hub, colours and guide layout.
   Optional **Who's watching** at launch.
-- **Home:** Continue watching, Recent channels, New episodes, Watch list and today's games,
+- **Home:** Continue watching (with new episodes), Recent channels, Watch list and today's games,
   with a small player for live channels on TV boxes. A bigger live channel card and your own
   Home wallpaper (optionally behind Who's watching too). **Compact UI** makes the tabs, groups and
   channel rows smaller, per profile.

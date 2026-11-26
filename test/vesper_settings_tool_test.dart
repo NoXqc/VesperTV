@@ -343,4 +343,17 @@ void main() {
       expect(missing, isEmpty, reason: name);
     }
   });
+
+  test('column_lines: the Column lines colour, default = the theme', () async {
+    final list = await box.call('settings', {'action': 'list'});
+    expect(setting(list, 'column_lines')['value'], 'default');
+    expect(setting(list, 'column_lines')['choices'], contains('red'));
+    final r = await box.call(
+        'settings', {'action': 'set', 'key': 'column_lines', 'value': 'red'});
+    expect(r['error'], isNull, reason: '$r');
+    expect(prefs.columnLines, 'red');
+    await box.call('settings',
+        {'action': 'set', 'key': 'column_lines', 'value': 'default'});
+    expect(prefs.columnLines, '');
+  });
 }

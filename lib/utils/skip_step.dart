@@ -13,8 +13,13 @@ class SkipStep {
 
   static int _seconds = defaultSeconds;
   static int get seconds => _seconds;
-  static set seconds(int s) =>
-      _seconds = choices.contains(s) ? s : defaultSeconds;
+  static set seconds(int s) {
+    _seconds = choices.contains(s) ? s : defaultSeconds;
+    changes.value = _seconds;
+  }
+
+  /// [seconds] as it changes (the options row's Skip tile shows it).
+  static final ValueNotifier<int> changes = ValueNotifier(defaultSeconds);
 
   static Duration get tap => Duration(seconds: _seconds);
 

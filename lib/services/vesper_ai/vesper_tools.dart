@@ -13,6 +13,7 @@ import '../../models/hub_collection.dart';
 import '../../models/sports.dart';
 import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
+import '../../utils/group_colors.dart';
 import '../../utils/title_search.dart';
 import '../addon_service.dart';
 import '../app_preferences.dart';
@@ -523,6 +524,61 @@ List<String> spokenTokens(String text) {
   if (letters.isNotEmpty) out.add(letters);
   if (_spokenCache.length >= 20000) _spokenCache.clear();
   return _spokenCache[text] = out;
+}
+
+/// groups action colour (owner, 2026-11-25: "can the AI add colours to
+/// groups"): TV groups and the viewer's own groups, by exact name or by
+/// words, one save per playlist. Cosmetic and undone the same way: no TV
+/// confirm.
+Future<Map<String, Object?>> _colourGroups(
+    VesperToolbox box, Map<String, Object?> args) async {
+  if (box.restrictedViewer) {
+    throw VesperToolError('This profile cannot change groups.');
+  }
+  var colour = _str(args, 'colour').toLowerCase();
+  if (colour.isEmpty) colour = _str(args, 'color').toLowerCase();
+  colour = const {
+        'cyan': 'aqua',
+        'teal': 'aqua',
+        'turquoise': 'aqua',
+        'violet': 'purple',
+        'magenta': 'pink',
+        'gold': 'yellow',
+        'no colour': 'none',
+        'no color': 'none',
+        'off': 'none',
+        'remove': 'none',
+      }[colour] ??
+      colour;
+  final id = colour == 'none' ? null : GroupColor.byId(colour)?.id;
+  if (colour != 'none' && id == null) {
+    throw VesperToolError(
+        'Colours: red, orange, yellow, green, aqua, blue, purple, pink or none.');
+  }
+  final name = _str(args, 'group');
+  final words = _str(args, 'contains');
+  if (name.isEmpty && words.isEmpty) throw VesperToolError('Say which groups.');
+  final search = words.isEmpty ? null : TitleSearch(words);
+  bool hit(String title) => search != null
+      ? search.matches(title)
+      : title.toLowerCase() == name.toLowerCase();
+  final targets = <(String?, String)>[
+    for (final t in box.playlist.userGroups)
+      if (hit(t)) (null, t),
+    for (final g in box.playlist.tvGroups)
+      if (hit(g.title)) (g.playlistId, g.title),
+  ];
+  if (targets.isEmpty) {
+    throw VesperToolError(name.isNotEmpty
+        ? 'No TV group is called "$name". List them with action list.'
+        : 'No TV group matches "$words".');
+  }
+  await box.playlist.setGroupColorMany(targets, id);
+  return {
+    'done': 'colour',
+    'colour': id ?? 'none',
+    'groups': [for (final (_, t) in targets) t],
+  };
 }
 
 String _str(Map<String, Object?> args, String key) {
@@ -1331,8 +1387,12 @@ final List<VesperTool> vesperTools = [
     description:
         'The groups (categories) of a tab: list them, list the live channels '
         'of one group with their guide now / next (action channels, e.g. '
-        'every "NBA League Pass" channel), or hide / show the groups whose '
-        'name contains some words (e.g. hide every group with "Turkish"). '
+        'every "NBA League Pass" channel), hide / show the groups whose '
+        'name contains some words (e.g. hide every group with "Turkish"), '
+        'or colour TV groups (action colour: the row wears it in the TV '
+        'groups column; one group by its exact name, or every group whose '
+        'name contains some words; the viewer\'s own groups too; colour '
+        'none removes it). '
         'Hidden groups come back in Settings > Playlists & sources > Playlist Manager. For single '
         'channels, rules or renames use playlist_editor; for the viewer\'s '
         'own groups (new groups of picked channels) use my_groups.',
@@ -1341,7 +1401,12 @@ final List<VesperTool> vesperTools = [
       'properties': {
         'action': {
           'type': 'string',
-          'enum': ['list', 'channels', 'hide', 'show'],
+          'enum': ['list', 'channels', 'hide', 'show', 'colour'],
+        },
+        'colour': {
+          'type': 'string',
+          'enum': [for (final c in GroupColor.presets) c.id, 'none'],
+          'description': 'For colour.',
         },
         'tab': {
           'type': 'string',
@@ -1349,11 +1414,13 @@ final List<VesperTool> vesperTools = [
         },
         'contains': {
           'type': 'string',
-          'description': 'For hide / show: words the group names contain.',
+          'description':
+              'For hide / show / colour: words the group names contain.',
         },
         'group': {
           'type': 'string',
-          'description': 'For channels: the group\'s name (tab tv).',
+          'description':
+              'For channels / colour: the group\'s exact name (tab tv).',
         },
       },
       'required': ['action', 'tab'],
@@ -1362,6 +1429,9 @@ final List<VesperTool> vesperTools = [
       final action = _str(args, 'action');
       final tab = _str(args, 'tab');
       if (action == 'channels') return _groupChannels(box, _str(args, 'group'));
+      if (action == 'colour' || action == 'color') {
+        return _colourGroups(box, args);
+      }
       final groups = switch (tab) {
         'movies' => box.playlist.vodGroups,
         'series' => box.playlist.seriesGroups,
@@ -1375,6 +1445,10 @@ final List<VesperTool> vesperTools = [
                 'name': g.title,
                 if (box._manyPlaylists)
                   'playlist': box._playlistName(g.playlistId),
+                if (tab == 'tv')
+                  if (box.playlist.groupColorOf(g.playlistId, g.title)
+                      case final colour?)
+                    'colour': colour,
               }
           ],
           if (groups.length > 300) 'note': '${groups.length} groups in all.',

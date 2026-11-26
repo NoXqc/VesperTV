@@ -4496,4 +4496,21 @@ const Map<String, String> kEs = {
       "Los canales en vivo guardan sus últimos minutos en este dispositivo mientras miras, con la misma conexión: Pausa detiene la imagen, no la transmisión, y Reproducir sigue donde pausaste. Los botones atrás / adelante y Retroceder se mueven dentro (una repetición), EN VIVO salta al presente. Usa almacenamiento mientras miras (unos 2 GB por 30 minutos de un canal HD, se borra al cambiar de canal); con poco espacio libre guarda unos 30 segundos en memoria. Los canales en formato HLS (.m3u8) no lo tienen. Se aplica desde el próximo canal.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
       "La actualización {version} no se instaló: este dispositivo sigue con la versión de arriba. Inténtalo de nuevo; si vuelve a fallar, libera espacio o instálala con la app Downloader.",
+  "Episodes":
+      "Episodios",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Arriba/Abajo: explorar · Izquierda/Derecha: temporada · OK: reproducir · Atrás: cerrar",
+  "Up/Down: browse · OK: play · Back: close":
+      "Arriba/Abajo: explorar · OK: reproducir · Atrás: cerrar",
+  "Select more groups…":
+      "Seleccionar más grupos…",
+  "Colour for {count} groups":
+      "Color para {count} grupos",
+  "Choose a colour ({count})":
+      "Elegir un color ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK: marcar · Atrás o Derecha: elegir el color",
+  "My groups":
+      "Mis grupos",
+  "Skip": "Salto",
 };

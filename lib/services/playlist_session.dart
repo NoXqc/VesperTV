@@ -2569,12 +2569,20 @@ class PlaylistSession {
   }
 
   /// Hold OK > Colour…: [colorId] null = no colour.
-  Future<void> setGroupColor(String title, String? colorId) async {
+  Future<void> setGroupColor(String title, String? colorId) =>
+      setGroupColorMany([title], colorId);
+
+  /// [setGroupColor] for several groups at once (Colour… > Select more
+  /// groups, Vesper AI): one save, one redraw.
+  Future<void> setGroupColorMany(
+      Iterable<String> titles, String? colorId) async {
     final next = {...groupColors};
-    if (colorId == null) {
-      next.remove(title);
-    } else {
-      next[title] = colorId;
+    for (final title in titles) {
+      if (colorId == null) {
+        next.remove(title);
+      } else {
+        next[title] = colorId;
+      }
     }
     groupColors = next;
     await storage.setGroupColors(profile.id, next);

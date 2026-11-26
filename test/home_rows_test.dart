@@ -8,7 +8,6 @@ void main() {
     expect(rows.visible, [
       HomeRowKind.games,
       HomeRowKind.continueWatching,
-      HomeRowKind.newEpisodes,
       HomeRowKind.watchList,
       HomeRowKind.collections,
       HomeRowKind.recentChannels,
@@ -27,13 +26,12 @@ void main() {
       HomeRowKind.recentChannels
     ]);
     expect(rows.hidden, {HomeRowKind.games});
-    // Rows added in a later version are appended, shown; New episodes goes
-    // under Continue Watching.
+    // Rows added in a later version are appended, shown; the Watch list and
+    // Collections go under Continue Watching.
     expect(rows.visible, contains(HomeRowKind.newShows));
     final continueAt = rows.order.indexOf(HomeRowKind.continueWatching);
-    expect(rows.order[continueAt + 1], HomeRowKind.newEpisodes);
-    expect(rows.order[continueAt + 2], HomeRowKind.watchList);
-    expect(rows.order[continueAt + 3], HomeRowKind.collections);
+    expect(rows.order[continueAt + 1], HomeRowKind.watchList);
+    expect(rows.order[continueAt + 2], HomeRowKind.collections);
     expect(HomeRows.parse(rows.encoded).encoded, rows.encoded);
   });
 
@@ -57,9 +55,22 @@ void main() {
     expect(rows.visible.last, HomeRowKind.newShows);
     expect(rows.hidden, {
       HomeRowKind.continueWatching,
-      HomeRowKind.newEpisodes,
       HomeRowKind.watchList,
       HomeRowKind.collections
     });
+  });
+
+  test('the old New episodes row is dropped (a NEW tag on Continue Watching)',
+      () {
+    final rows = HomeRows.parse(
+        ['games', 'continue', 'new_episodes', '-watchlist', 'recent']);
+    expect(rows.encoded, isNot(contains('new_episodes')));
+    expect(rows.order.take(3), [
+      HomeRowKind.games,
+      HomeRowKind.continueWatching,
+      HomeRowKind.watchList,
+    ]);
+    expect(rows.order, contains(HomeRowKind.recentChannels));
+    expect(rows.hidden, {HomeRowKind.watchList});
   });
 }

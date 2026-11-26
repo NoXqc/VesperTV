@@ -166,9 +166,11 @@ enum PlayerArrow {
     // (player_controls.dart / player_screen.dart: ids are saved, never
     // rename). A tile the channel doesn't have does nothing.
     ('opt:live_sources', 'Sources'),
+    ('opt:episodes', 'Episodes'),
     ('opt:audio', 'Audio track'),
     ('opt:subtitles', 'Subtitles'),
     ('opt:audio_sync', 'Audio sync'),
+    ('opt:skip_step', 'Skip buttons'),
     ('opt:recall', 'Recall — go back to a recent channel'),
     ('opt:start_over', 'Watch from the start'),
     ('opt:reload', 'Reload channel'),

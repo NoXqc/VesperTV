@@ -4090,4 +4090,21 @@ const Map<String, String> kPl = {
       "Kanały na żywo zachowują ostatnie minuty na tym urządzeniu podczas oglądania, przez to samo połączenie: Pauza zatrzymuje obraz, nie strumień, a Odtwórz wznawia od miejsca pauzy. Przyciski wstecz / naprzód i Przewiń do tyłu poruszają się w nim (powtórka), NA ŻYWO wraca do teraz. Zajmuje pamięć podczas oglądania (około 2 GB na 30 minut kanału HD, usuwane przy zmianie kanału); przy małej ilości wolnego miejsca zachowuje około 30 sekund w pamięci RAM. Kanały w formacie HLS (.m3u8) tego nie mają. Działa od następnego kanału.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
       "Aktualizacja {version} się nie zainstalowała: to urządzenie ma nadal wersję powyżej. Spróbuj ponownie; jeśli znów się nie uda, zwolnij miejsce lub zainstaluj ją aplikacją Downloader.",
+  "Episodes":
+      "Odcinki",
+  "Up/Down: browse · Left/Right: season · OK: play · Back: close":
+      "Góra/Dół: przeglądaj · Lewo/Prawo: sezon · OK: odtwórz · Wstecz: zamknij",
+  "Up/Down: browse · OK: play · Back: close":
+      "Góra/Dół: przeglądaj · OK: odtwórz · Wstecz: zamknij",
+  "Select more groups…":
+      "Zaznacz więcej grup…",
+  "Colour for {count} groups":
+      "Kolor dla {count} grup",
+  "Choose a colour ({count})":
+      "Wybierz kolor ({count})",
+  "OK: tick · Back or Right: choose the colour":
+      "OK: zaznacz · Wstecz lub Prawo: wybierz kolor",
+  "My groups":
+      "Moje grupy",
+  "Skip": "Skok",
 };

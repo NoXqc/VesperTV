@@ -4,7 +4,6 @@ import 'storage_service.dart';
 enum HomeRowKind {
   games('games', "Today's games"),
   continueWatching('continue', 'Continue Watching'),
-  newEpisodes('new_episodes', 'New episodes'),
   watchList('watchlist', 'Watch list'),
   recentChannels('recent', 'Recent channels'),
   favourites('favourites', 'Favourite channels'),
@@ -25,8 +24,9 @@ enum HomeRowKind {
 
 /// Which Home rows the active viewer sees, in their order. Stored per viewer
 /// as ids, a hidden row as `-id` (`StorageService.getHomeRows`). A row added
-/// in a later version (not in the saved list) is appended, shown — except
-/// New episodes, which goes right under Continue Watching.
+/// in a later version (not in the saved list) is appended, shown. The old
+/// New episodes row (`new_episodes`) is dropped: a new episode is a NEW tag
+/// on Continue Watching now (owner, 2026-11-25).
 class HomeRows {
   HomeRows(this.order, this.hidden);
 
@@ -52,17 +52,13 @@ class HomeRows {
     for (final k in HomeRowKind.values) {
       if (order.contains(k)) continue;
       final cw = order.indexOf(HomeRowKind.continueWatching);
-      final ne = order.indexOf(HomeRowKind.newEpisodes);
-      if (k == HomeRowKind.watchList && (ne >= 0 || cw >= 0)) {
-        // Vesper AI's watch list: under New episodes / Continue Watching.
-        order.insert((ne >= 0 ? ne : cw) + 1, k);
-      } else if (k == HomeRowKind.newEpisodes && cw >= 0) {
+      if (k == HomeRowKind.watchList && cw >= 0) {
+        // Vesper AI's watch list: under Continue Watching.
         order.insert(cw + 1, k);
       } else if (k == HomeRowKind.collections && cw >= 0) {
         // Like Nuvio: the tiles under Continue Watching (and its rows).
         final wl = order.indexOf(HomeRowKind.watchList);
-        final after = [cw, ne, wl].reduce((a, b) => a > b ? a : b);
-        order.insert(after + 1, k);
+        order.insert((wl > cw ? wl : cw) + 1, k);
       } else {
         order.add(k);
       }

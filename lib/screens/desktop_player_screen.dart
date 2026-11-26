@@ -12,6 +12,8 @@ import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/live_sources.dart';
 import '../widgets/live_source_drawer.dart';
+import '../widgets/episode_drawer.dart';
+import '../widgets/skip_step_picker.dart';
 import '../widgets/archive_source_drawer.dart';
 import '../widgets/channel_schedule_panel.dart';
 import '../utils/playback_modal_back_guard.dart';
@@ -103,6 +105,7 @@ class DesktopPlayerScreen extends StatefulWidget {
     this.queue,
     this.sources,
     this.resolveQueued,
+    this.queueSeasons,
     this.existingPlayer,
     this.existingController,
     this.catchupAt,
@@ -125,6 +128,10 @@ class DesktopPlayerScreen extends StatefulWidget {
   /// Gives a [queue] episode that has no URL yet (Archive) its stream —
   /// same role as `PlaybackService.setUpNextQueue`'s `resolve`.
   final Future<Channel?> Function(Channel)? resolveQueued;
+
+  /// Each [queue] episode's season (channel id -> season), when the show
+  /// page knew it: the Episodes list jumps by it.
+  final Map<String, int>? queueSeasons;
 
   /// Set together, only by `DesktopLiveResumeHint` when resuming a
   /// minimized live channel — reuses the session already playing in the
@@ -631,6 +638,44 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       if (mounted) {
         TopNotice.show(tr('Could not switch stream. Try another source.'));
       }
+    } finally {
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
+    }
+  }
+
+  /// The show's episodes (options row > Episodes, the top bar), as
+  /// Android's player lists them: another episode plays here.
+  bool get _hasEpisodeList =>
+      !_isLive && _queue.length > 1 && _currentIndex >= 0;
+
+  Future<void> _openEpisodes() async {
+    if (!_hasEpisodeList || _sourceDrawerOpen) return;
+    final storage = context.read<StorageService>();
+    final queue = _queue;
+    final channelId = _currentChannel.id;
+    _sourceBackGuard.opened();
+    setState(() {
+      _controlsVisible = false;
+      _tvOptions = false;
+    });
+    try {
+      final picked = await showEpisodeDrawer(context, entries: [
+        for (final e in queue)
+          EpisodeEntry(
+            channel: e,
+            current: e.id == channelId,
+            season: widget.queueSeasons?[e.id],
+            progress: storage.getWatchedFraction(e.id),
+            watched: storage.isFullyWatched(e.id),
+          ),
+      ]);
+      if (!mounted || picked == null || _currentChannel.id != channelId) {
+        return;
+      }
+      await _switchTo(queue[picked]);
     } finally {
       if (mounted) {
         _sourceBackGuard.closed();
@@ -2472,6 +2517,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           active: _tvOptions,
           onActivity: _armTvBarIdle,
           tiles: [
+            if (_hasEpisodeList)
+              (
+                'episodes',
+                tile(
+                    Icons.video_library_outlined, tr('Episodes'), _openEpisodes)
+              ),
             if (_isLive)
               ('channels', tile(Icons.list, tr('Channels'), _openPanel)),
             if (live)
@@ -2530,6 +2581,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ? null
                       : '${delay > 0 ? '+' : '-'}${delay.abs()} ms')
             ),
+            // Android's Skip tile: how far the -/+ buttons jump.
+            if (!live)
+              (
+                'skip_step',
+                tile(Icons.fast_forward_outlined, tr('Skip buttons'), () async {
+                  await showSkipStepPicker(context);
+                  if (mounted) setState(() {});
+                }, shortLabel: tr('Skip'))
+              ),
             if (linked != null)
               (
                 'linked',
@@ -2629,6 +2689,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                         fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (_hasEpisodeList)
+                  IconButton(
+                    tooltip: tr('Episodes'),
+                    icon: const Icon(Icons.video_library_outlined,
+                        color: Colors.white),
+                    onPressed: _openEpisodes,
+                  ),
                 if (widget.sources != null)
                   IconButton(
                     tooltip: tr('Sources'),
