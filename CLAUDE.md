@@ -608,6 +608,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   waits for its cancel (ExoPlayer interrupts it -> InterruptedIOException), up to `leaveWaitMs` 3 s, then the network as
   before; `switchOff()` (Dart turns the setting off, `VideoPlayer.setTimeshift`) keeps the old "back to the network".
   TimeshiftTest +2 (12).
+- **Claude, 2026-11-26 - Google TV Streamer: Compatibility video by default (`claude/streamer-compat`, worktree
+  `VesperTV-claude-streamer`, from main 1dceef4; GitHub #23, JcknDew):** 1020's render-mode fix did NOT stop the crashes
+  (LOG-HYUKZP: SurfaceView menus, same crash 14 s after Back to the guide with the preview playing). Symbolized with the
+  engine's android-arm-release symbols (Flutter 3.47.5, engine ab598368, build id e27b8157; the Streamer runs the 32-bit
+  engine): Skia `FillRectOp` -> `glDrawArrays` null pointer in `libGLESv2_powervr.so` inside
+  `AndroidExternalViewEmbedder::SubmitFlutterView` = Hybrid Composition frames of the player's platform view. Native-surface-ON
+  sessions crashed too on 1013 (no tombstone then). `DeviceDefaults` bundled rule `google-tv-streamer` (model `Google TV
+  Streamer`) sets `compatVideo` (texture player, no platform view; the switch is hidden since 9095148; no HDR there), same
+  rule in docs/device-defaults.json (the parity test requires it). **Merging into main publishes it to every Streamer
+  through the site**, so the test build goes out from the branch first. A remote rule with the same id and an empty set
+  turns it off. test/device_defaults_test.dart (+1).
 - **Claude, 2026-11-26 - guide rows with holes (`claude/guide-holes`, worktree `VesperTV-claude-guideholes`, from main
   3ad3bb0):** owner's photo (Homatics, Compact UI + compact guide): ESPN 2 4K / ESPN 4K rows blank across the view (the box's own guide had
   nothing after ~06:30 for them; his iPhone's had: a source refresh failing, see HANDOFF). A row
