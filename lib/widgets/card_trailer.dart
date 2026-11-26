@@ -63,7 +63,9 @@ class CardTrailer extends StatefulWidget {
     final youtube = TrailerLinks.videoId(found.toString());
     if (youtube == null) return found;
     if (!YouTubeStreams.supported) return null;
-    return YouTubeStreams.instance.resolveSmall(youtube);
+    final file = await YouTubeStreams.instance.resolveSmall(youtube);
+    if (file == null) tellIfYouTubeBlocked();
+    return file;
   }
 
   /// Tests: answers [find] instead of the trailer lookup.

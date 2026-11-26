@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../l10n/l10n.dart';
 import '../utils/app_store.dart';
 import '../utils/desktop_platform.dart';
 
@@ -59,6 +60,34 @@ class YouTubeStreams {
   String? _visitor;
   DateTime? _visitorUntil;
   Future<String?>? _visitorLoad;
+
+  /// YouTube answered "Sign in to confirm you're not a bot": it has flagged
+  /// this connection (a VPN, a data-centre address). LOG-FYXL6N (SHIELD,
+  /// 2026-11-26): every client refused every trailer there, while the
+  /// owner's PC got them; the VPS's address got the same answers, and no
+  /// other client (Quest, TV, web, embedded, YouTube Music) got past it
+  /// without signing in. Lookups then pause [_botPause] instead of asking
+  /// for every card, and the viewer is told once ([takeBotNotice]).
+  bool get botCheck => _botUntil?.isAfter(_now()) ?? false;
+  DateTime? _botUntil;
+  bool _botSeen = false, _botTold = false;
+
+  /// Short: a viewer who turns the VPN off gets trailers back soon.
+  static const _botPause = Duration(minutes: 2);
+
+  /// True once per block (again after a trailer came through in between):
+  /// the caller shows [youTubeBotCheckMessage].
+  bool takeBotNotice() {
+    if (!_botSeen || _botTold) return false;
+    _botTold = true;
+    return true;
+  }
+
+  /// YouTube's reason is the bot check ("Sign in to confirm your age" is
+  /// not: that video needs an account anywhere).
+  @visibleForTesting
+  static bool isBotCheck(String reason) =>
+      reason.toLowerCase().contains('not a bot');
 
   static const _webAgent = 'Mozilla/5.0 (Linux; Android 12; Android TV) '
       'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36';
@@ -125,16 +154,26 @@ class YouTubeStreams {
     if (cached != null && cached.until.isAfter(_now())) {
       return Future.value(cached.stream);
     }
+    if (botCheck) return Future.value();
     return _pending.putIfAbsent(videoId, () async {
       final watch = Stopwatch()..start();
       final early = _early[videoId] = Completer<Uri?>();
       final outcome = <String>[];
+      final reasons = <String>{};
       YouTubeTrailerStream? stream;
       try {
-        stream = await _resolve(videoId, early, outcome)
+        stream = await _resolve(videoId, early, outcome, reasons)
             .timeout(const Duration(seconds: 8));
       } catch (_) {
         stream = null;
+      }
+      final bot = stream == null && reasons.any(isBotCheck);
+      if (bot) {
+        _botSeen = true;
+        _botUntil = _now().add(_botPause);
+      } else if (stream != null) {
+        _botSeen = _botTold = false;
+        _botUntil = null;
       }
       if (!early.isCompleted) early.complete(stream?.small);
       _early.remove(videoId);
@@ -143,13 +182,20 @@ class YouTubeStreams {
         until: _now().add(stream == null ? const Duration(minutes: 2) : _keep),
         stream: stream,
       );
+      final said = reasons.isEmpty
+          ? ''
+          : '; YouTube: ${reasons.map((r) => '"$r"').join(', ')}';
       debugPrint(stream == null
           ? 'Trailer: no YouTube stream for $videoId '
-              '(${watch.elapsedMilliseconds} ms; ${outcome.join(', ')})'
+              '(${watch.elapsedMilliseconds} ms; ${outcome.join(', ')}$said)'
           : 'Trailer: YouTube stream ${stream.hls != null ? 'hls' : ''}'
               '${stream.hls != null && stream.muxed != null ? '+' : ''}'
               '${stream.muxed != null ? 'mp4 ${stream.muxedHeight}p' : ''} '
               'in ${watch.elapsedMilliseconds} ms (${outcome.join(', ')})');
+      if (bot) {
+        debugPrint("Trailer: YouTube's bot check refuses this connection "
+            '(a VPN?); no trailer lookups for ${_botPause.inMinutes} min');
+      }
       return stream;
     }).whenComplete(() => _pending.remove(videoId));
   }
@@ -174,8 +220,8 @@ class YouTubeStreams {
   /// round trip shorter).
   void warmUp() => unawaited(_visitorId());
 
-  Future<YouTubeTrailerStream?> _resolve(
-      String videoId, Completer<Uri?> early, List<String> outcome) async {
+  Future<YouTubeTrailerStream?> _resolve(String videoId, Completer<Uri?> early,
+      List<String> outcome, Set<String> reasons) async {
     final visitor = await _visitorId();
     Uri? hls;
     Uri? muxed;
@@ -184,6 +230,7 @@ class YouTubeStreams {
       for (final c in _clients)
         _player(videoId, c, visitor).then((answer) {
           outcome.add('${c.key} ${answer.status}');
+          if (answer.reason case final reason?) reasons.add(reason);
           final streaming = answer.data?['streamingData'];
           if (streaming is! Map) return;
           hls ??= _https(streaming['hlsManifestUrl']);
@@ -222,7 +269,7 @@ class YouTubeStreams {
         : null;
   }
 
-  Future<({String status, Map? data})> _player(
+  Future<({String status, String? reason, Map? data})> _player(
       String videoId,
       ({
         String key,
@@ -265,12 +312,22 @@ class YouTubeStreams {
         )
         .timeout(const Duration(seconds: 4));
     if (response.statusCode != 200) {
-      return (status: 'HTTP ${response.statusCode}', data: null);
+      return (status: 'HTTP ${response.statusCode}', reason: null, data: null);
     }
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (data is! Map) return (status: 'no answer', data: null);
-    final status = '${(data['playabilityStatus'] as Map?)?['status'] ?? 'OK'}';
-    return (status: status, data: status == 'OK' ? data : null);
+    if (data is! Map) return (status: 'no answer', reason: null, data: null);
+    final playability = data['playabilityStatus'] as Map?;
+    final status = '${playability?['status'] ?? 'OK'}';
+    final reason = '${playability?['reason'] ?? ''}'.trim();
+    return (
+      status: status,
+      reason: status == 'OK' || reason.isEmpty
+          ? null
+          : reason.length > 80
+              ? reason.substring(0, 80)
+              : reason,
+      data: status == 'OK' ? data : null,
+    );
   }
 
   /// YouTube's anonymous visitor id (`sw.js_data`, the service worker's
@@ -317,3 +374,8 @@ class YouTubeStreams {
     }
   }
 }
+
+/// What the viewer reads when YouTube's bot check stopped a trailer
+/// ([YouTubeStreams.takeBotNotice]).
+String youTubeBotCheckMessage() => tr(
+    "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.");

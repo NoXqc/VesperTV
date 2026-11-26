@@ -4534,4 +4534,8 @@ const Map<String, String> kFr = {
   "Torrents only": "Torrents seulement",
   "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
       "Seuls des liens torrent ont été trouvés, et {app} ne lit pas les torrents. Activez un service debrid (Real-Debrid, TorBox…) dans les réglages du module pour qu’il donne des liens directs.",
+
+  // Trailers: YouTube's bot check refused this connection (a VPN).
+  "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
+      "YouTube refuse les bandes-annonces sur cette connexion : il demande de confirmer que vous n’êtes pas un robot. Vous utilisez un VPN ? Essayez un autre serveur ou désactivez-le.",
 };

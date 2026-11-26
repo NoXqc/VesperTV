@@ -4528,4 +4528,8 @@ const Map<String, String> kIt = {
   "Torrents only": "Solo torrent",
   "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
       "Sono stati trovati solo link torrent e {app} non riproduce i torrent. Attiva un servizio debrid (Real-Debrid, TorBox…) nelle impostazioni del componente aggiuntivo perché fornisca link diretti.",
+
+  // Trailers: YouTube's bot check refused this connection (a VPN).
+  "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
+      "YouTube non riproduce i trailer su questa connessione: chiede di confermare che non sei un bot. Usi una VPN? Prova un altro server o disattivala.",
 };

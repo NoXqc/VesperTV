@@ -4483,4 +4483,8 @@ const Map<String, String> kEl = {
   "Torrents only": "Μόνο torrent",
   "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
       "Βρέθηκαν μόνο σύνδεσμοι torrent και το {app} δεν αναπαράγει torrent. Ενεργοποίησε μια υπηρεσία debrid (Real-Debrid, TorBox…) στις ρυθμίσεις του πρόσθετου ώστε να δίνει άμεσους συνδέσμους.",
+
+  // Trailers: YouTube's bot check refused this connection (a VPN).
+  "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
+      "Το YouTube δεν παίζει τρέιλερ σε αυτή τη σύνδεση: ζητά να επιβεβαιώσεις ότι δεν είσαι bot. Χρησιμοποιείς VPN; Δοκίμασε άλλον διακομιστή ή απενεργοποίησέ το.",
 };

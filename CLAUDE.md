@@ -537,6 +537,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-26 - YouTube's bot check: say why trailers don't play (`claude/yt-bot-notice`, worktree
+  `VesperTV-claude-ytbot`):** LOG-FYXL6N (SHIELD, 1036): no card trailer, ever; every client answered `LOGIN_REQUIRED`
+  "Sign in to confirm you're not a bot" while the owner's PC got the same trailers. The VPS's address got exactly that answer,
+  and no other anonymous client (android_vr, tv, tv_simply, tv_embedded, web, mweb, web_embedded, the YouTube Music apps)
+  gets past it: YouTube flagged the viewer's connection (a VPN). Not fixable in the app. `YouTubeStreams` now logs YouTube's
+  reason, pauses lookups 2 min after a bot check (`botCheck`) and `takeBotNotice()` is true once per block (again after a
+  trailer came through). `tellIfYouTubeBlocked()` (detail_trailer.dart) shows the top message (TopNotice, like Tuliprox's
+  busy notice): a Media Hub card right away; a title page only when YouTube's web player then gave up too (error or its 20 s
+  timeout), never while a trailer plays. 8 languages; remote.html trailer row + guide.json. test/youtube_streams_test.dart (+4).
 - **Claude, 2026-11-26 - Let's Encrypt roots for Android 7.0 (`claude/old-android-certs`, worktree `VesperTV-claude-certs`):**
   Discord: 2015 Sony Bravia (KDL-50W755C, Android 7.0): no movie / show posters, some channel logos missing; IBO Pro and a
   TiviMate rebrand show them. Android 7.0 (SDK 24 = the app's minSdk) lacks ISRG Root X1 (added in 7.1.1) and X2 (14), and

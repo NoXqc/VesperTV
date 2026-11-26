@@ -17,6 +17,7 @@ import '../services/playback_service.dart';
 import '../services/trailer_service.dart';
 import '../services/youtube_streams.dart';
 import '../utils/route_observer.dart';
+import 'top_notice_overlay.dart';
 import 'youtube_platform_view.dart';
 import 'detail_header.dart';
 import '../utils/desktop_platform.dart';
@@ -60,6 +61,10 @@ class DetailTrailerState extends State<DetailTrailer>
   Uri? _youtubeFallback;
   TrailerRequest? _activeRequest;
   bool _picture = false;
+
+  /// YouTube's web player stands in because YouTube's bot check refused
+  /// the file ([YouTubeStreams.botCheck]): it is usually refused there too.
+  bool _botFallback = false;
   Future<void>? _pausing;
   bool _foreground = true, _visible = true, _stopped = false, _finished = false;
   int _generation = 0;
@@ -147,6 +152,7 @@ class DetailTrailerState extends State<DetailTrailer>
       _found = null;
       _youtubeFallback = null;
       _picture = false;
+      _botFallback = false;
       _activeRequest = null;
     });
     return closing;
@@ -197,6 +203,10 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
         if (stream?.large case final direct?) play = direct;
       }
+      final botFallback = play == uri &&
+          youtubeId != null &&
+          widget.youtubeStream == null &&
+          YouTubeStreams.instance.botCheck;
       // Apple TV has no web view for a YouTube one (direct trailers play).
       if (isAppleTv && TrailerLinks.videoId(play.toString()) != null) return;
       // Send log: a Fire TV Stick was closed for low memory right after a
@@ -221,6 +231,7 @@ class DetailTrailerState extends State<DetailTrailer>
           _found = uri;
           _uri = play;
           _youtubeFallback = play != uri ? uri : null;
+          _botFallback = botFallback;
         });
       }
     } catch (_) {
@@ -231,6 +242,8 @@ class DetailTrailerState extends State<DetailTrailer>
   void _finish() {
     if (!mounted || _finished) return;
     _finished = true;
+    // YouTube's player gave up too (an error, or nothing in 20 s): say why.
+    if (_botFallback && !_picture) tellIfYouTubeBlocked();
     unawaited(_returnToArtwork());
   }
 
@@ -501,4 +514,15 @@ class TrailerVideoState extends State<TrailerVideo> {
     }
     return IgnorePointer(child: ExcludeFocus(child: video));
   }
+}
+
+/// YouTube's bot check stopped a trailer ([YouTubeStreams.botCheck]): say
+/// why at the top of the screen, like Tuliprox's busy notice, once per
+/// block. Media Hub cards right away (nothing else is tried there), title
+/// pages once YouTube's own player gave up too.
+void tellIfYouTubeBlocked() {
+  if (!YouTubeStreams.instance.takeBotNotice()) return;
+  debugPrint("Trailer: told the viewer about YouTube's bot check");
+  TopNotice.show(youTubeBotCheckMessage(),
+      duration: const Duration(seconds: 10));
 }

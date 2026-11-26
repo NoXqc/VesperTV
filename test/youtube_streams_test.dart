@@ -152,4 +152,102 @@ void main() {
     expect(YouTubeStreams.visitorFromServiceWorkerData(serviceWorker), visitor);
     expect(YouTubeStreams.visitorFromServiceWorkerData('nope'), isNull);
   });
+
+  group("YouTube's bot check (LOG-FYXL6N: a VPN on a SHIELD)", () {
+    const bot = 'Sign in to confirm you’re not a bot';
+    var now = DateTime(2026, 11, 26, 17);
+    var answer = 'bot';
+    late List<http.Request> asked;
+    late YouTubeStreams service;
+
+    setUp(() {
+      now = DateTime(2026, 11, 26, 17);
+      answer = 'bot';
+      asked = [];
+      service = YouTubeStreams(
+          now: () => now,
+          client: MockClient((req) async {
+            asked.add(req);
+            if (req.url.path == '/sw.js_data') {
+              return http.Response(serviceWorker, 200);
+            }
+            http.Response player(Map<String, Object?> data) =>
+                http.Response.bytes(utf8.encode(jsonEncode(data)), 200);
+            return switch (answer) {
+              'ok' => player({
+                  'playabilityStatus': {'status': 'OK'},
+                  'streamingData': {
+                    'formats': [
+                      {'url': mp4, 'mimeType': 'video/mp4', 'height': 360}
+                    ]
+                  }
+                }),
+              'age' => player({
+                  'playabilityStatus': {
+                    'status': 'LOGIN_REQUIRED',
+                    'reason': 'Sign in to confirm your age'
+                  }
+                }),
+              _ => player({
+                  'playabilityStatus': {
+                    'status': 'LOGIN_REQUIRED',
+                    'reason': bot
+                  }
+                }),
+            };
+          }));
+    });
+
+    int posts() => asked.where((r) => r.method == 'POST').length;
+
+    test('told once, and no more lookups for 2 minutes', () async {
+      expect(await service.resolve(id), isNull);
+      expect(service.botCheck, isTrue);
+      expect(service.takeBotNotice(), isTrue);
+      expect(service.takeBotNotice(), isFalse, reason: 'once per block');
+      final before = posts();
+      // Another card: YouTube isn't asked while the block lasts.
+      expect(await service.resolveSmall('ZyXwVuTsR98'), isNull);
+      expect(posts(), before);
+      // Later (the VPN turned off): asked again, and trailers come back.
+      now = now.add(const Duration(minutes: 3));
+      answer = 'ok';
+      expect(await service.resolveSmall('ZyXwVuTsR98'), isNotNull);
+      expect(posts(), greaterThan(before));
+      expect(service.botCheck, isFalse);
+      expect(service.takeBotNotice(), isFalse);
+    });
+
+    test('blocked again after trailers worked: told again', () async {
+      await service.resolve(id);
+      expect(service.takeBotNotice(), isTrue);
+      now = now.add(const Duration(minutes: 3));
+      answer = 'ok';
+      await service.resolve('ZyXwVuTsR98');
+      now = now.add(const Duration(minutes: 3));
+      answer = 'bot';
+      expect(await service.resolve('n1omQI6g3v0'), isNull);
+      expect(service.takeBotNotice(), isTrue);
+    });
+
+    test('still blocked after the pause: not told twice', () async {
+      await service.resolve(id);
+      expect(service.takeBotNotice(), isTrue);
+      now = now.add(const Duration(minutes: 3));
+      expect(await service.resolve('ZyXwVuTsR98'), isNull);
+      expect(service.botCheck, isTrue);
+      expect(service.takeBotNotice(), isFalse);
+    });
+
+    test('an age check is not the bot check', () async {
+      answer = 'age';
+      expect(await service.resolve(id), isNull);
+      expect(service.botCheck, isFalse);
+      expect(service.takeBotNotice(), isFalse);
+      expect(YouTubeStreams.isBotCheck(bot), isTrue);
+      expect(YouTubeStreams.isBotCheck("Sign in to confirm you're not a bot"),
+          isTrue);
+      expect(YouTubeStreams.isBotCheck('This video is not available'), isFalse);
+    });
+  });
 }

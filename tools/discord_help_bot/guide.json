@@ -531,7 +531,7 @@
     "id": "c529c45153b59203",
     "category": "Media Hub",
     "title": "Trailers on Media Hub cards",
-    "answer": "Rest on a title in a Media Hub row or on a collection's page: after half a second its card widens and plays the trailer, with sound. In Expand collection (and Expand catalog) the focused card plays it when Wide cards is on; a poster grid doesn't. Moving on stops it; at the end the card goes back to its picture. Automatic trailers (same page) plays the trailer behind a movie or show page. Both use VesperTV's own player and start in a second or two; when YouTube won't hand a trailer over, a title page uses YouTube's own player instead (slower), and a card shows its picture.",
+    "answer": "Rest on a title in a Media Hub row or on a collection's page: after half a second its card widens and plays the trailer, with sound. In Expand collection (and Expand catalog) the focused card plays it when Wide cards is on; a poster grid doesn't. Moving on stops it; at the end the card goes back to its picture. Automatic trailers (same page) plays the trailer behind a movie or show page. Both use VesperTV's own player and start in a second or two; when YouTube won't hand a trailer over, a title page uses YouTube's own player instead (slower), and a card shows its picture. If a message at the top says YouTube asks to confirm you're not a bot, YouTube is refusing trailers on your connection, most often because of a VPN: try another VPN server or turn the VPN off, and trailers come back within a couple of minutes.",
     "controls": "Settings › Playback › Trailers on Media Hub cards",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },

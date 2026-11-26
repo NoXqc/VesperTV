@@ -4115,4 +4115,8 @@ const Map<String, String> kPl = {
   "Torrents only": "Tylko torrenty",
   "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
       "Znaleziono tylko linki torrent, a {app} nie odtwarza torrentów. Włącz usługę debrid (Real-Debrid, TorBox…) w ustawieniach dodatku, aby podawał bezpośrednie linki.",
+
+  // Trailers: YouTube's bot check refused this connection (a VPN).
+  "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
+      "YouTube nie odtwarza zwiastunów na tym połączeniu: prosi o potwierdzenie, że nie jesteś botem. Używasz VPN? Spróbuj innego serwera albo go wyłącz.",
 };
