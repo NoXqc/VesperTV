@@ -45,6 +45,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         if (!cleanedUpdateApk) {
             cleanedUpdateApk = true
+            JavaCrashNote.install(applicationContext)
             UpdateAttempts(this).checkAtStart()
             try {
                 val leftover = File(cacheDir, "noxplayer_update.apk")
@@ -231,7 +232,12 @@ class MainActivity : FlutterActivity() {
                         " importance=${e.importance}" +
                         " pss=${e.pss / 1024}MB rss=${e.rss / 1024}MB" +
                         (e.description?.let { " ($it)" } ?: "")
-                ) + nativeCrashLines(e)
+                ) + nativeCrashLines(e) +
+                    if (e.reason == android.app.ApplicationExitInfo.REASON_CRASH) {
+                        JavaCrashNote.linesFor(this, e.timestamp)
+                    } else {
+                        emptyList()
+                    }
             }
         } catch (e: Exception) {
             listOf("unavailable: ${e.javaClass.simpleName}")

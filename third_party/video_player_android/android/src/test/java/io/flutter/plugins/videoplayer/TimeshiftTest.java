@@ -52,6 +52,11 @@ public class TimeshiftTest {
   private volatile int endAfter = -1;
   /** Packets each source may deliver before it waits (the live edge). */
   private volatile int limit = Integer.MAX_VALUE;
+  /**
+   * A read after close() throws a NullPointerException, as media3's DefaultHttpDataSource does
+   * (close() nulls its input stream) when another thread closes it between two reads.
+   */
+  private volatile boolean npeWhenClosed;
   private Timeshift timeshift;
 
   @Before
@@ -155,14 +160,14 @@ public class TimeshiftTest {
           if (end >= 0 && k >= end) return done > 0 ? done : C.RESULT_END_OF_INPUT;
           while (k >= limit) {
             if (done > 0) return done;
-            if (closed) throw new IOException("closed");
+            if (closed) throw closedError();
             try {
               Thread.sleep(5);
             } catch (InterruptedException e) {
               throw new java.io.InterruptedIOException();
             }
           }
-          if (closed) throw new IOException("closed");
+          if (closed) throw closedError();
           current = packet(k, first, baseUs);
           currentOff = 0;
           produced++;
@@ -173,6 +178,11 @@ public class TimeshiftTest {
         done += n;
       }
       return done;
+    }
+
+    private IOException closedError() {
+      if (npeWhenClosed) throw new NullPointerException("input stream gone (closed elsewhere)");
+      return new IOException("closed");
     }
 
     @Nullable
@@ -257,6 +267,100 @@ public class TimeshiftTest {
     assertEquals(60, index.keyframes());
     // From a middle byte: the next keyframe.
     assertEquals(275L * PER_GROUP * TS, index.startAtOrAfter(260L * PER_GROUP * TS + 5));
+  }
+
+  @Test
+  public void release_whileTheWriterReads_neverEndsTheApp() throws Exception {
+    // cillfog (Discord, OnePlus CPH2449, LOG-PESV4J, 2026-11-26): a channel change with the copy
+    // on = "crash (java)". release() closes the writer's connection from another thread; media3's
+    // DefaultHttpDataSource then throws a NullPointerException on the next read, and the writer
+    // only caught IOException: uncaught on its thread, which ends the app.
+    npeWhenClosed = true;
+    limit = 6_000; // the writer waits at the live edge, inside read()
+    List<Throwable> uncaught = new CopyOnWriteArrayList<>();
+    Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+    Thread.setDefaultUncaughtExceptionHandler((thread, e) -> uncaught.add(e));
+    try {
+      Timeshift t = newTimeshift(10L << 30);
+      TimeshiftDataSource ds = new TimeshiftDataSource(network(), t);
+      ds.open(spec(0));
+      readFully(ds, 10_000);
+      assertEquals(null, t.arm(30));
+      readFully(ds, 50_000); // takes over: the writer thread reads the connection now
+      // At the live edge (bytes before the takeover aren't in the copy): the writer now waits
+      // inside read() for more.
+      waitForHead(t, 6_000L * TS - 20_000);
+      Thread.sleep(100);
+      t.release();
+      Thread.sleep(500);
+      assertTrue("uncaught on a Timeshift thread: " + uncaught, uncaught.isEmpty());
+      assertTrue(t.isReleased());
+    } finally {
+      Thread.setDefaultUncaughtExceptionHandler(previous);
+    }
+  }
+
+  /** A load reading at the head on its own thread (ExoPlayer's loader); [ended] = how it ended. */
+  private Thread readOnItsOwn(TimeshiftDataSource ds,
+      java.util.concurrent.atomic.AtomicReference<Throwable> ended) {
+    Thread loader = new Thread(() -> {
+      byte[] b = new byte[64 * 1024];
+      try {
+        while (ds.read(b, 0, b.length) != C.RESULT_END_OF_INPUT) {
+          // Keeps reading, then waits at the head.
+        }
+      } catch (Throwable e) {
+        ended.set(e);
+      }
+    });
+    loader.start();
+    return loader;
+  }
+
+  @Test
+  public void channelChange_theOldLoadWaitsForItsCancel_noSecondConnection() throws Exception {
+    // cillfog (Dispatcharr in Redirect mode: straight to the provider): after a zap the old load
+    // woke up with STOPPED and reopened the OLD channel while the new one opened.
+    limit = 3_000;
+    Timeshift t = newTimeshift(10L << 30);
+    TimeshiftDataSource ds = new TimeshiftDataSource(network(), t);
+    ds.open(spec(0));
+    readFully(ds, 1000);
+    t.arm(30);
+    readFully(ds, 10_000);
+    java.util.concurrent.atomic.AtomicReference<Throwable> ended =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Thread loader = readOnItsOwn(ds, ended);
+    Thread.sleep(300); // at the head now
+    t.release();
+    Thread.sleep(600);
+    assertEquals("no reconnect while the load is being cancelled", 1, opens.get());
+    loader.interrupt(); // ExoPlayer cancels the replaced source's load
+    loader.join(2_000);
+    assertTrue(String.valueOf(ended.get()), ended.get() instanceof java.io.InterruptedIOException);
+    assertEquals(1, opens.get());
+  }
+
+  @Test
+  public void channelChange_noCancelAfterTheWait_theNetworkAsBefore() throws Exception {
+    limit = 3_000;
+    Timeshift t = newTimeshift(10L << 30);
+    t.leaveWaitMs = 300;
+    TimeshiftDataSource ds = new TimeshiftDataSource(network(), t);
+    ds.open(spec(0));
+    readFully(ds, 1000);
+    t.arm(30);
+    readFully(ds, 10_000);
+    java.util.concurrent.atomic.AtomicReference<Throwable> ended =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Thread loader = readOnItsOwn(ds, ended);
+    Thread.sleep(300);
+    t.release();
+    long until = System.currentTimeMillis() + 3_000;
+    while (opens.get() < 2 && System.currentTimeMillis() < until) Thread.sleep(10);
+    assertEquals("reconnects once the wait is over", 2, opens.get());
+    loader.interrupt();
+    loader.join(2_000);
   }
 
   @Test
@@ -426,7 +530,7 @@ public class TimeshiftTest {
     readFully(ds, 1000);
     t.arm(30);
     readFully(ds, 10_000);
-    t.release();
+    t.switchOff();
     byte[] after = readFully(ds, 2 * TS);
     assertEquals(2, opens.get());
     // A new connection from "now": its own first packet somewhere in the next two.
