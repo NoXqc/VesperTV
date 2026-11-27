@@ -1059,6 +1059,27 @@ class CatalogDatabase {
   /// search) for an item the provider never tagged with one — see
   /// `Channel.tmdbId`'s doc comment. Same "write once, separate from the
   /// wholesale category replace" reasoning as [setVodReleaseDate].
+  /// Forgets the TMDB id, date, poster and backdrop stamped on a title (a
+  /// wrong What's New match): the provider's own art and order come back.
+  Future<void> clearVodTmdb(String id) => _clearTmdb('vod_channels', id);
+
+  /// [clearVodTmdb] for a show.
+  Future<void> clearSeriesTmdb(String id) => _clearTmdb('series_items', id);
+
+  Future<void> _clearTmdb(String table, String id) async {
+    final db = await _database;
+    await db.update(
+        table,
+        {
+          'tmdb_id': null,
+          'release_date': null,
+          'poster_url': null,
+          'backdrop_url': null,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
+  }
+
   Future<void> setVodTmdbId(String id, String tmdbId) async {
     final db = await _database;
     await db.update('vod_channels', {'tmdb_id': tmdbId},

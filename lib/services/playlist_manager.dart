@@ -1007,13 +1007,95 @@ class PlaylistManager extends ChangeNotifier {
       }
     }
     final service = TmdbEnrichmentService(_storage, _catalogDb);
-    final vodIds = await _matchTrendingVod(service, key, _curatedPoolSize);
-    final seriesIds =
-        await _matchTrendingSeries(service, key, _curatedPoolSize);
+    final oldVod = _storage.getWhatsNewVodIds();
+    final oldSeries = _storage.getWhatsNewSeriesIds();
+    final trendingVod = <String, TmdbTrendingItem>{};
+    final trendingSeries = <String, TmdbTrendingItem>{};
+    final vodIds =
+        await _matchTrendingVod(service, key, _curatedPoolSize, trendingVod);
+    final seriesIds = await _matchTrendingSeries(
+        service, key, _curatedPoolSize, trendingSeries);
+    final undone = await _undoWrongStamps(service, key,
+        movies: oldVod.where((id) => !vodIds.contains(id)).toList(),
+        shows: oldSeries.where((id) => !seriesIds.contains(id)).toList(),
+        trendingMovies: trendingVod,
+        trendingShows: trendingSeries);
+    debugPrint('WhatsNew: ${vodIds.length} movie(s), ${seriesIds.length} '
+        'show(s) matched; $undone wrong earlier match(es) undone');
     await _storage.setWhatsNewVodIds(vodIds);
     await _storage.setWhatsNewSeriesIds(seriesIds);
     await _storage.setWhatsNewTmdbLastRefreshed(DateTime.now());
     notifyListeners();
+  }
+
+  /// Catalog searches per trending title: wide enough that the real title
+  /// is among them when a common word ("The", "Steps") matches many.
+  static const _trendingSearchLimit = 40;
+
+  /// The previous What's New titles that this pass didn't pick again were
+  /// matched by the old first-search-hit rule, which stamped another film's
+  /// poster, date and TMDB id onto them ([TmdbEnrichmentService.sameTitle]).
+  /// Each one whose stamped id is not this title (by name and the year in
+  /// its name) gets them cleared, so its own art and order come back.
+  /// One TMDB request per title not in this week's trending lists.
+  Future<int> _undoWrongStamps(TmdbEnrichmentService service, String apiKey,
+      {required List<String> movies,
+      required List<String> shows,
+      required Map<String, TmdbTrendingItem> trendingMovies,
+      required Map<String, TmdbTrendingItem> trendingShows}) async {
+    Future<bool> wrong(String name, String? tmdbId, bool isMovie,
+        Map<String, TmdbTrendingItem> trending) async {
+      if (tmdbId == null || tmdbId.isEmpty) return false;
+      final t = trending[tmdbId];
+      final tmdb = t != null
+          ? (
+              title: t.title,
+              originalTitle: t.originalTitle,
+              year: t.releaseDate?.year
+            )
+          : await service.fetchTitle(tmdbId, apiKey, isMovie: isMovie);
+      if (tmdb == null) return false;
+      // The catalog's own date may be the stamp: the name's year decides.
+      return !TmdbEnrichmentService.sameTitle(
+          tmdbId: tmdbId,
+          tmdbTitle: tmdb.title,
+          originalTitle: tmdb.originalTitle,
+          tmdbYear: tmdb.year,
+          name: name);
+    }
+
+    var undone = 0;
+    if (movies.isNotEmpty) {
+      final loaded = {for (final c in allCachedVod) c.id: c};
+      for (final row in await _catalogDb.getVodByIds(movies)) {
+        if (!await wrong(row.name, row.tmdbId, true, trendingMovies)) continue;
+        await _catalogDb.clearVodTmdb(row.id);
+        final c = loaded[row.id];
+        if (c != null) {
+          c.tmdbId = null;
+          c.releaseDate = null;
+          c.posterUrl = null;
+          c.backdropUrl = null;
+        }
+        undone++;
+      }
+    }
+    if (shows.isNotEmpty) {
+      final loaded = {for (final s in allCachedSeries) s.id: s};
+      for (final row in await _catalogDb.getSeriesByIds(shows)) {
+        if (!await wrong(row.name, row.tmdbId, false, trendingShows)) continue;
+        await _catalogDb.clearSeriesTmdb(row.id);
+        final s = loaded[row.id];
+        if (s != null) {
+          s.tmdbId = null;
+          s.releaseDate = null;
+          s.posterUrl = null;
+          s.backdropUrl = null;
+        }
+        undone++;
+      }
+    }
+    return undone;
   }
 
   /// Matches TMDB's weekly-trending movies against this catalog
@@ -1027,8 +1109,8 @@ class PlaylistManager extends ChangeNotifier {
   /// of the next search result for the same title, not just dropped
   /// outright, since a kid profile shouldn't see a shorter list purely
   /// because its own group happens to carry a trending title too.
-  Future<List<String>> _matchTrendingVod(
-      TmdbEnrichmentService service, String apiKey, int target) async {
+  Future<List<String>> _matchTrendingVod(TmdbEnrichmentService service,
+      String apiKey, int target, Map<String, TmdbTrendingItem> seen) async {
     final matched = <String>[];
     final seenTmdbIds = <String>{};
     final loaded = {for (final c in allCachedVod) c.id: c};
@@ -1036,18 +1118,31 @@ class PlaylistManager extends ChangeNotifier {
       final trending = await service.fetchTrendingMovies(apiKey, page: page);
       if (trending.isEmpty) break;
       for (final item in trending) {
+        seen[item.tmdbId] = item;
+      }
+      for (final item in trending) {
         if (matched.length >= target) break;
         if (!seenTmdbIds.add(item.tmdbId)) continue;
         final clean = service.cleanTitleForMatching(item.title);
         if (clean.isEmpty) continue;
-        final results = await _catalogDb
-            .searchVod(clean, _enabledXtreamPlaylistIds, limit: 10);
+        final results = await _catalogDb.searchVod(
+            clean, _enabledXtreamPlaylistIds,
+            limit: _trendingSearchLimit);
         Channel? match;
         for (final r in results) {
-          if (!_isHiddenForActiveViewer(r.playlistId, r.group)) {
-            match = r;
-            break;
+          if (_isHiddenForActiveViewer(r.playlistId, r.group)) continue;
+          if (!TmdbEnrichmentService.sameTitle(
+              tmdbId: item.tmdbId,
+              tmdbTitle: item.title,
+              originalTitle: item.originalTitle,
+              tmdbYear: item.releaseDate?.year,
+              name: r.name,
+              otherTmdb: r.tmdbId,
+              otherDate: r.releaseDate)) {
+            continue;
           }
+          match = r;
+          break;
         }
         if (match == null) continue;
         matched.add(match.id);
@@ -1077,8 +1172,8 @@ class PlaylistManager extends ChangeNotifier {
   }
 
   /// See [_matchTrendingVod]'s doc comment — same idea for series.
-  Future<List<String>> _matchTrendingSeries(
-      TmdbEnrichmentService service, String apiKey, int target) async {
+  Future<List<String>> _matchTrendingSeries(TmdbEnrichmentService service,
+      String apiKey, int target, Map<String, TmdbTrendingItem> seen) async {
     final matched = <String>[];
     final seenTmdbIds = <String>{};
     final loaded = {for (final s in allCachedSeries) s.id: s};
@@ -1086,18 +1181,31 @@ class PlaylistManager extends ChangeNotifier {
       final trending = await service.fetchTrendingSeries(apiKey, page: page);
       if (trending.isEmpty) break;
       for (final item in trending) {
+        seen[item.tmdbId] = item;
+      }
+      for (final item in trending) {
         if (matched.length >= target) break;
         if (!seenTmdbIds.add(item.tmdbId)) continue;
         final clean = service.cleanTitleForMatching(item.title);
         if (clean.isEmpty) continue;
-        final results = await _catalogDb
-            .searchSeries(clean, _enabledXtreamPlaylistIds, limit: 10);
+        final results = await _catalogDb.searchSeries(
+            clean, _enabledXtreamPlaylistIds,
+            limit: _trendingSearchLimit);
         XtreamSeries? match;
         for (final r in results) {
-          if (!_isHiddenForActiveViewer(r.playlistId, r.categoryId)) {
-            match = r;
-            break;
+          if (_isHiddenForActiveViewer(r.playlistId, r.categoryId)) continue;
+          if (!TmdbEnrichmentService.sameTitle(
+              tmdbId: item.tmdbId,
+              tmdbTitle: item.title,
+              originalTitle: item.originalTitle,
+              tmdbYear: item.releaseDate?.year,
+              name: r.name,
+              otherTmdb: r.tmdbId,
+              otherDate: r.releaseDate)) {
+            continue;
           }
+          match = r;
+          break;
         }
         if (match == null) continue;
         matched.add(match.id);

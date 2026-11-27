@@ -486,9 +486,18 @@ class SettingsSearchField extends StatelessWidget {
           readOnly: readOnly,
           autocorrect: false,
           textInputAction: TextInputAction.search,
-          // The keyboard closes; the first result is one Down away.
-          onSubmitted: (_) =>
-              focusNode.focusInDirection(TraversalDirection.down),
+          // The search key: on to the first result (the keyboard closes as
+          // the field loses focus). Not onSubmitted: by then the field had
+          // given its focus back to the pane and the move started from
+          // nothing, landing on the clear X (cillfog, 2026-11-26).
+          onEditingComplete: () {
+            if (focusNode.focusInDirection(TraversalDirection.down)) return;
+            if (TvTextFieldGate.isEditing(focusNode)) {
+              TvTextFieldGate.stopEditing(focusNode);
+            } else {
+              focusNode.unfocus();
+            }
+          },
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
             hintText: tr('Search settings'),

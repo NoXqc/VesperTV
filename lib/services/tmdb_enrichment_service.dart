@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
+import 'archive_discovery_service.dart';
 import 'catalog_database.dart';
 import 'storage_service.dart';
 
@@ -13,6 +14,7 @@ import 'storage_service.dart';
 typedef TmdbTrendingItem = ({
   String tmdbId,
   String title,
+  String? originalTitle,
   DateTime? releaseDate,
   String? posterUrl,
   String? backdropUrl,
@@ -199,8 +201,7 @@ class TmdbEnrichmentService {
             }
             if (details.backdropUrl != null) {
               s.backdropUrl = details.backdropUrl;
-              unawaited(
-                  _db.setSeriesBackdropUrl(s.id, details.backdropUrl!));
+              unawaited(_db.setSeriesBackdropUrl(s.id, details.backdropUrl!));
             }
           }
         } catch (_) {
@@ -276,13 +277,9 @@ class TmdbEnrichmentService {
     return (title: title.trim(), year: year);
   }
 
-  Future<
-      ({
-        DateTime? releaseDate,
-        String? posterUrl,
-        String? backdropUrl
-      })?> _fetchDetails(String tmdbId, String apiKey,
-      {required bool isMovie}) async {
+  Future<({DateTime? releaseDate, String? posterUrl, String? backdropUrl})?>
+      _fetchDetails(String tmdbId, String apiKey,
+          {required bool isMovie}) async {
     try {
       final path = isMovie ? 'movie' : 'tv';
       final uri = Uri.parse('$_base/$path/$tmdbId?api_key=$apiKey');
@@ -334,35 +331,45 @@ class TmdbEnrichmentService {
   Future<List<TmdbTrendingItem>> _fetchTrending(String mediaType, String apiKey,
       {required int page}) async {
     try {
-      final uri = Uri.parse('$_base/trending/$mediaType/week').replace(
-          queryParameters: {'api_key': apiKey, 'page': '$page'});
+      final uri = Uri.parse('$_base/trending/$mediaType/week')
+          .replace(queryParameters: {'api_key': apiKey, 'page': '$page'});
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return const [];
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final results = (data['results'] as List?) ?? const [];
-      return results.whereType<Map<String, dynamic>>().map((item) {
-        final id = item['id']?.toString();
-        final title = (mediaType == 'movie' ? item['title'] : item['name'])
-            ?.toString();
-        final rawDate =
-            (mediaType == 'movie' ? item['release_date'] : item['first_air_date'])
+      return results
+          .whereType<Map<String, dynamic>>()
+          .map((item) {
+            final id = item['id']?.toString();
+            final title = (mediaType == 'movie' ? item['title'] : item['name'])
                 ?.toString();
-        final posterPath = item['poster_path'] as String?;
-        final backdropPath = item['backdrop_path'] as String?;
-        return (
-          tmdbId: id ?? '',
-          title: title ?? '',
-          releaseDate: (rawDate != null && rawDate.isNotEmpty)
-              ? DateTime.tryParse(rawDate)
-              : null,
-          posterUrl: (posterPath != null && posterPath.isNotEmpty)
-              ? '$_imageBase$posterPath'
-              : null,
-          backdropUrl: (backdropPath != null && backdropPath.isNotEmpty)
-              ? '$_backdropImageBase$backdropPath'
-              : null,
-        );
-      }).where((item) => item.tmdbId.isNotEmpty && item.title.isNotEmpty).toList();
+            final original = (mediaType == 'movie'
+                    ? item['original_title']
+                    : item['original_name'])
+                ?.toString();
+            final rawDate = (mediaType == 'movie'
+                    ? item['release_date']
+                    : item['first_air_date'])
+                ?.toString();
+            final posterPath = item['poster_path'] as String?;
+            final backdropPath = item['backdrop_path'] as String?;
+            return (
+              tmdbId: id ?? '',
+              title: title ?? '',
+              originalTitle: original,
+              releaseDate: (rawDate != null && rawDate.isNotEmpty)
+                  ? DateTime.tryParse(rawDate)
+                  : null,
+              posterUrl: (posterPath != null && posterPath.isNotEmpty)
+                  ? '$_imageBase$posterPath'
+                  : null,
+              backdropUrl: (backdropPath != null && backdropPath.isNotEmpty)
+                  ? '$_backdropImageBase$backdropPath'
+                  : null,
+            );
+          })
+          .where((item) => item.tmdbId.isNotEmpty && item.title.isNotEmpty)
+          .toList();
     } catch (_) {
       return const [];
     }
@@ -375,4 +382,82 @@ class TmdbEnrichmentService {
   /// one layer up, against `CatalogDatabase` directly, not through this
   /// service.
   String cleanTitleForMatching(String raw) => _cleanTitleForSearch(raw).title;
+
+  /// TMDB's own title, original title and year for [tmdbId] (one request),
+  /// or null. `PlaylistManager` uses it to check what an earlier What's New
+  /// pass stamped onto a catalog title.
+  Future<({String title, String? originalTitle, int? year})?> fetchTitle(
+      String tmdbId, String apiKey,
+      {required bool isMovie}) async {
+    try {
+      final path = isMovie ? 'movie' : 'tv';
+      final uri = Uri.parse('$_base/$path/$tmdbId?api_key=$apiKey');
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final title = (isMovie ? data['title'] : data['name'])?.toString() ?? '';
+      if (title.isEmpty) return null;
+      final date =
+          (isMovie ? data['release_date'] : data['first_air_date'])?.toString();
+      return (
+        title: title,
+        originalTitle:
+            (isMovie ? data['original_title'] : data['original_name'])
+                ?.toString(),
+        year: DateTime.tryParse(date ?? '')?.year,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// A year the provider wrote in the name: "Hexed (1993)", "[2025]" or a
+  /// trailing "- 1988".
+  static final RegExp _yearInName =
+      RegExp(r'[(\[]((?:19|20)\d{2})[)\]]|\s[-–]\s*((?:19|20)\d{2})\s*$');
+  static final RegExp _trailingDashYear =
+      RegExp(r'\s[-–]\s*(?:19|20)\d{2}\s*$');
+
+  static int? yearInName(String name) {
+    final m = _yearInName.firstMatch(name);
+    if (m == null) return null;
+    return int.parse(m.group(1) ?? m.group(2)!);
+  }
+
+  /// [ArchiveDiscoveryService.titleKey], also without a trailing "- 1988".
+  static String titleKey(String name) => ArchiveDiscoveryService.titleKey(
+      name.replaceFirst(_trailingDashYear, ''));
+
+  /// Whether the catalog title [name] is the TMDB title [tmdbTitle] /
+  /// [originalTitle]: the same cleaned title, years at most one apart when
+  /// both are known, and no different TMDB id on the catalog side.
+  ///
+  /// What's New used to take the first catalog search hit for each word of
+  /// a trending title (cillfog, 2026-11-26: "The Odyssey" (2026) landed on
+  /// "The Navigator: A Medieval Odyssey - 1988", "Steps" on "The Fantastic
+  /// 4: First Steps", "Hexed" (2026) on "Hexed (1993)") and stamped its
+  /// poster, date and id there. So the catalog's year comes from its name
+  /// first, and an id equal to [tmdbId] proves nothing on its own: it may
+  /// be such a stamp.
+  static bool sameTitle({
+    required String tmdbId,
+    required String tmdbTitle,
+    String? originalTitle,
+    int? tmdbYear,
+    required String name,
+    String? otherTmdb,
+    DateTime? otherDate,
+  }) {
+    final other = otherTmdb?.trim() ?? '';
+    if (other.isNotEmpty && other != tmdbId) return false;
+    final key = titleKey(name);
+    if (key.isEmpty) return false;
+    final keys = {
+      titleKey(tmdbTitle),
+      if (originalTitle != null) titleKey(originalTitle),
+    }..remove('');
+    if (!keys.contains(key)) return false;
+    final year = yearInName(name) ?? otherDate?.year;
+    return tmdbYear == null || year == null || (tmdbYear - year).abs() <= 1;
+  }
 }

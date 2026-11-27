@@ -440,7 +440,9 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   `ExtendSelectionByCharacterIntent` with `focusInDirection`, deferred a microtask and skipped if
   focus already moved: Flutter delivers the key to the field even after a `HardwareKeyboard`
   handler handled it (Add Playlist's `_handleFieldEscapeKey`), and that handler must win.
-  `test/tv_text_field_gate_test.dart`.
+  `test/tv_text_field_gate_test.dart`. Those overrides are enabled only while the field itself has focus
+  (`_FieldArrowAction`): they also cover buttons inside the field (clear X, password eye), where an always-enabled
+  one swallowed the arrow (Settings search, 2026-11-27).
 - **Sports Trak, Settings and Search keep a background live channel playing** (owner reverted the
   1.0.24 parking on all three, 2026-10-20). Movies/TV Shows/Media Hub still park it
   (`_parkLiveChannel`). The parking was added because the video stayed on screen over those pages
@@ -537,6 +539,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-27 - What's New TMDB matches + Settings search focus (`claude/tmdb-trending-match`, worktree
+  `VesperTV-claude-tmdbmatch`, from main 804013c):** cillfog (Discord). (1) With a TMDB key, What's New put trending
+  films' posters / dates / ids on other catalog titles ("The Odyssey" 2026 on "The Navigator: A Medieval Odyssey - 1988",
+  "Steps" on "The Fantastic 4: First Steps", "Hexed" 2026 on "Hexed (1993)"): the trending pass took the first word-search
+  hit. Now `TmdbEnrichmentService.sameTitle` (title / original title, year from the catalog NAME first, +-1, no other
+  TMDB id) and the last list's wrong stamps are cleared on the next refresh (`_undoWrongStamps`). Stamps from older
+  weeks' lists stay (not remembered). (2) Settings search: the search key left focus on the clear X and Down did
+  nothing; `onEditingComplete` goes to the first result and `TvTextFieldGate`'s arrow actions only act while the field
+  has focus (every gated field with a button inside: clear X, password eye). Rows in dev-notes/bugs-and-fixes.md.
+  Tests: whats_new_tmdb_match_test, settings_search_focus_test.
 - **Claude, 2026-11-26 - YouTube's bot check: say why trailers don't play (`claude/yt-bot-notice`, worktree
   `VesperTV-claude-ytbot`):** LOG-FYXL6N (SHIELD, 1036): no card trailer, ever; every client answered `LOGIN_REQUIRED`
   "Sign in to confirm you're not a bot" while the owner's PC got the same trailers. The VPS's address got exactly that answer,

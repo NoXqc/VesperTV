@@ -65,6 +65,10 @@ class TvTextFieldGate extends StatefulWidget {
   /// Screen-level shortcuts must leave arrows with an actively edited field.
   static bool isEditing(FocusNode? node) => _editors[node]?._typing ?? false;
 
+  /// Closes [node]'s keyboard and leaves the field focused, read-only (a
+  /// search key with nothing to move on to).
+  static void stopEditing(FocusNode node) => _editors[node]?._stopTyping();
+
   @override
   State<TvTextFieldGate> createState() => _TvTextFieldGateState();
 }
@@ -293,15 +297,18 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
         actions: _typing
             ? const <Type, Action<Intent>>{}
             : {
-                ExtendSelectionVerticallyToAdjacentLineIntent: CallbackAction<
-                    ExtendSelectionVerticallyToAdjacentLineIntent>(
-                  onInvoke: (i) => _move(i.forward
+                ExtendSelectionVerticallyToAdjacentLineIntent:
+                    _FieldArrowAction<
+                        ExtendSelectionVerticallyToAdjacentLineIntent>(
+                  widget.focusNode,
+                  (i) => _move(i.forward
                       ? TraversalDirection.down
                       : TraversalDirection.up),
                 ),
                 ExtendSelectionByCharacterIntent:
-                    CallbackAction<ExtendSelectionByCharacterIntent>(
-                  onInvoke: (i) => _move(i.forward
+                    _FieldArrowAction<ExtendSelectionByCharacterIntent>(
+                  widget.focusNode,
+                  (i) => _move(i.forward
                       ? TraversalDirection.right
                       : TraversalDirection.left),
                 ),
@@ -309,5 +316,26 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
         child: widget.builder(context, !_typing),
       ),
     );
+  }
+}
+
+/// One of the gate's arrow overrides. Enabled only while the field itself
+/// has focus: the gate's Actions also cover the field's own buttons (a
+/// clear X, a password eye), where an always-enabled action took the arrow
+/// and did nothing, so the remote was stuck there (cillfog, Settings search,
+/// 2026-11-26). Disabled, the app's own arrow traversal runs.
+class _FieldArrowAction<T extends Intent> extends Action<T> {
+  _FieldArrowAction(this._node, this._onInvoke);
+
+  final FocusNode _node;
+  final void Function(T intent) _onInvoke;
+
+  @override
+  bool isEnabled(T intent) => _node.hasPrimaryFocus;
+
+  @override
+  Object? invoke(T intent) {
+    _onInvoke(intent);
+    return null;
   }
 }
