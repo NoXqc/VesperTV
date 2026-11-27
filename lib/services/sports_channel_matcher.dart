@@ -1255,6 +1255,62 @@ class SportsChannelMatcher {
     return bias;
   }
 
+  /// The last [_fewestTerms] answer, by its terms: the 30 s poll asks for
+  /// the same day again, and the drop compares every pair of terms (3,876
+  /// on LOG-X7Z2W2).
+  static (String, Set<String>)? _lastTerms;
+
+  /// [raw] without the terms that contain a shorter one ("georgia bulldogs"
+  /// ⊃ "georgia"): each term is a LIKE over every guide row of the day.
+  /// Synchronous unless it has to breathe: two matches started together
+  /// must reach [_guideHits] at once to share its scan.
+  static FutureOr<Set<String>> _fewestTerms(
+      Set<String> raw, _Breather breather) {
+    final byLength = raw.toList()
+      ..sort((a, b) {
+        final c = a.length.compareTo(b.length);
+        return c != 0 ? c : a.compareTo(b);
+      });
+    final key = byLength.join('');
+    final last = _lastTerms;
+    if (last != null && last.$1 == key) return last.$2;
+    final terms = <String>{};
+    Set<String> done() {
+      _lastTerms = (key, terms);
+      return terms;
+    }
+
+    Future<Set<String>> rest(int from) async {
+      for (var i = from; i < byLength.length; i++) {
+        if (i % 32 == 31 && breather.due) await breather.pause();
+        final t = byLength[i];
+        if (!terms.any(t.contains)) terms.add(t);
+      }
+      return done();
+    }
+
+    for (var i = 0; i < byLength.length; i++) {
+      if (i % 32 == 31 && breather.due) return rest(i);
+      final t = byLength[i];
+      if (!terms.any(t.contains)) terms.add(t);
+    }
+    return done();
+  }
+
+  /// The first index of [sorted] at or after [t] ([sorted.length] if none).
+  static int _firstAtOrAfter(List<DateTime> sorted, DateTime t) {
+    var lo = 0, hi = sorted.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (sorted[mid].isBefore(t)) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
   /// The guide title scan, by its window + terms. It's one SQL `LIKE` per
   /// term over the whole guide — on a busy Saturday (dozens of college
   /// games, hundreds of terms) the Formuler took long enough that the Sports
@@ -1336,6 +1392,11 @@ class SportsChannelMatcher {
       {int limit = 8}) async {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
+    // A whole day is matched on the UI isolate: hand the remote a turn every
+    // few ms. LOG-X7Z2W2 (SHIELD, 32,010 channels, EuroLeague / EuroCup /
+    // BCL / boxing / WWE / AEW added): each 30 s poll held it 3.2-3.5 s in
+    // one piece, twice in a row = Android's "not responding".
+    final breather = _Breather();
     final countries = picks.countryPreferences;
     final preferredPlaylist = picks.preferredPlaylist;
     // Keep the existing capped series/network suggestions, but let a valid
@@ -1374,6 +1435,7 @@ class SportsChannelMatcher {
     }).toList();
     final raw = <String>{};
     for (final g in scanGames) {
+      if (breather.due) await breather.pause();
       final groups = _nameGroups(g);
       if (groups.isNotEmpty) {
         for (final p in groups.first) {
@@ -1395,11 +1457,8 @@ class SportsChannelMatcher {
         if (greek != null) raw.addAll(greek.stems);
       }
     }
-    final byLength = raw.toList()..sort((a, b) => a.length.compareTo(b.length));
-    final terms = <String>{};
-    for (final t in byLength) {
-      if (!terms.any(t.contains)) terms.add(t);
-    }
+    final fewest = _fewestTerms(raw, breather);
+    final terms = fewest is Set<String> ? fewest : await fewest;
     // Back far enough for a block already on at kickoff (see [_coverBefore]).
     final earliest = lower.subtract(_coverBefore - const Duration(hours: 1));
     var latest = _guideWindow(anchor).$2;
@@ -1415,14 +1474,31 @@ class SportsChannelMatcher {
     // series but not this game's teams still counts — Greek guides write
     // foreign clubs in Greek ("Euroleague: Χάποελ Τελ Αβίβ - Βίρτους
     // Μπολόνια", user report 2026-10-20) — unless it names another game.
-    final groupsByGame = {for (final g in games) g: _nameGroups(g)};
+    final groupsByGame = <SportsGame, List<List<String>>>{};
+    final gamesByLeague = <String, List<SportsGame>>{};
+    for (final g in games) {
+      if (breather.due) await breather.pause();
+      groupsByGame[g] = _nameGroups(g);
+      (gamesByLeague[g.league.id] ??= []).add(g);
+    }
     bool namesOtherGame(SportsGame g, String title) =>
-        groupsByGame.entries.any((o) =>
-            o.key != g &&
-            o.key.league.id == g.league.id &&
-            o.value.every((group) => group.any(title.contains)));
+        gamesByLeague[g.league.id]!.any((o) =>
+            o != g &&
+            groupsByGame[o]!.every((group) => group.any(title.contains)));
+
+    // The guide hits by start time: a game reads only those of its own
+    // window, and each title is normalized once (it was every hit for every
+    // game, the title normalized again each time).
+    final byStart = List<int>.generate(programmes.length, (i) => i)
+      ..sort((a, b) {
+        final c = programmes[a].start.compareTo(programmes[b].start);
+        return c != 0 ? c : a.compareTo(b);
+      });
+    final starts = [for (final i in byStart) programmes[i].start];
+    final titles = List<String?>.filled(programmes.length, null);
 
     for (final g in games) {
+      if (breather.due) await breather.pause();
       // A guide programme naming the game on a channel the viewer hid.
       String? hiddenInGuide;
       final found = <String, ChannelMatch>{};
@@ -1523,7 +1599,9 @@ class SportsChannelMatcher {
         final eastern = g.start.add(_easternOffset(g.start));
         final local = clock(g.start.toLocal());
         final sport = g.league.espnPath.split('/').first;
-        for (final e in _abbrEvents) {
+        for (var n = 0; n < _abbrEvents.length; n++) {
+          if (n % 256 == 255 && breather.due) await breather.pause();
+          final e = _abbrEvents[n];
           if (e.sports.isNotEmpty && !e.sports.contains(sport)) continue;
           final fits = e.at
               ? e.first == away && e.second == home
@@ -1565,7 +1643,20 @@ class SportsChannelMatcher {
       final series = [
         for (final p in g.league.seriesPhrases) sportsNormalize(p)
       ];
-      for (final p in programmes) {
+      // Starting from the window (or [_coverBefore] before kickoff) until
+      // its end, read in the order the guide gave them (ties keep the
+      // first, as before).
+      final cover = g.start.subtract(_coverBefore);
+      final window = <int>[
+        for (var k =
+                _firstAtOrAfter(starts, from.isBefore(cover) ? from : cover);
+            k < byStart.length && starts[k].isBefore(to);
+            k++)
+          byStart[k],
+      ]..sort();
+      for (var n = 0; n < window.length; n++) {
+        if (n % 64 == 63 && breather.due) await breather.pause();
+        final p = programmes[window[n]];
         final start = p.start.toUtc();
         // A block that began before the window but is on at kickoff (UK
         // guides list the build-up: TNT Sports' "Premier League : Manchester
@@ -1578,7 +1669,7 @@ class SportsChannelMatcher {
         if ((start.isBefore(from) && !covers) || !start.isBefore(to)) {
           continue;
         }
-        final title = sportsNormalize(p.title);
+        final title = titles[window[n]] ??= sportsNormalize(p.title);
         final byName = groups.every((group) => group.any(title.contains));
         // Both team codes as words ("TOR @ BOS", GiladG2 on Discord,
         // 2026-11-18): some guides write only those.
@@ -1886,4 +1977,20 @@ List<ChannelMatch> preferSportsSources(List<ChannelMatch> matches) {
     ordered[i] = moved[n];
   }
   return ordered;
+}
+
+/// Hands the event loop a turn once [slice] of work went by, so a long match
+/// never holds the remote ([SportsChannelMatcher.matchDay]).
+class _Breather {
+  _Breather();
+
+  static const slice = Duration(milliseconds: 8);
+  final _watch = Stopwatch()..start();
+
+  bool get due => _watch.elapsed >= slice;
+
+  Future<void> pause() async {
+    await Future<void>.delayed(Duration.zero);
+    _watch.reset();
+  }
 }

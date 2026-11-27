@@ -539,6 +539,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-27 - Sports Trak "not responding" on big playlists (`claude/sports-trak-anr`, worktree
+  `VesperTV-claude-sportsanr`, from main bde3ba0):** LOG-X7Z2W2 (SHIELD, 1036, 32k channels, 7 extra leagues): every 30 s
+  poll held the UI 3.2-3.5 s (`MainStall ... jobs=[matcherPrepare]`), twice = ANR. `SportsChannelMatcher._matchDay` now
+  breathes every 8 ms (`_Breather`), reads only each game's window of guide hits (sorted once, titles normalized once),
+  same-league `namesOtherGame`, memoized `_fewestTerms`. Same results (dump compared); PC hold 482 -> 27 ms. Row in
+  dev-notes/bugs-and-fixes.md; test/sports_matcher_speed_test.dart.
 - **Claude, 2026-11-27 - Your own live styles (`claude/live-styles-import`, worktree `VesperTV-claude-mystyles`, from main
   0593622):** owner: "import custom live groups so if users want to build their own". Colour… > Live styles… > **Your own
   styles…** / Settings > Appearance > Look > **Your live styles** (`MyLiveStylesScreen`): a link to a style file or the text
