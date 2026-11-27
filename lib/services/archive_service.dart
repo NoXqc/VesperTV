@@ -223,9 +223,18 @@ class ArchiveService extends ChangeNotifier {
     return fresh;
   }
 
-  /// The connected tracker account of [kind], if any.
+  /// The tracker account of [kind] this profile uses, if any. One account
+  /// of each kind per profile (Discord, 2026-11-26: people sharing a box
+  /// want their own Trakt / Simkl); a profile with none sees "not
+  /// connected" even when another profile has one ([trackerAccounts]).
   ArchiveSource? trackerSource(TrackerKind kind) =>
-      sources.where((s) => s.tracker?.kind == kind).firstOrNull;
+      sources.where((s) => s.tracker?.kind == kind && s.enabled).firstOrNull;
+
+  /// Every saved account of [kind], other profiles' too.
+  List<ArchiveSource> trackerAccounts(TrackerKind kind) => [
+        for (final s in _storedSources)
+          if (s.tracker?.kind == kind) s,
+      ];
 
   /// Every enabled account's login, fresh — what `WatchTracker` reports to.
   Future<List<TrackerLogin>> trackerLogins() async {
@@ -241,22 +250,86 @@ class ArchiveService extends ChangeNotifier {
     return out;
   }
 
-  /// Adds (or replaces: one account per tracker) a signed-in account.
-  Future<ArchiveSource> addTracker(TrackerLogin login) async {
-    final source = ArchiveSource(
-      manifestUrl: '${login.kind.name}://account',
-      name: login.kind.label,
-      description: login.userName,
-      catalogs: TrackerApi.catalogsFor(login.kind),
-      tracker: login,
-    );
+  /// Adds a signed-in account for [profileIds] (when null: the profile in
+  /// use, plus the profiles that already had this user). The same user
+  /// signing in again keeps their account (new token); those profiles leave
+  /// any other account of that kind, and an account left on no profile is
+  /// removed (one profile: the old "replace").
+  Future<ArchiveSource> addTracker(TrackerLogin login,
+      {Set<String>? profileIds}) async {
+    final same = sameTrackerUser(login);
+    final ids = profileIds ??
+        {
+          _storage.getActiveViewerId(),
+          if (same != null) ...profilesWith(same),
+        };
+    final source = same?.copyWith(tracker: login) ??
+        ArchiveSource(
+          manifestUrl: _newTrackerUrl(login),
+          name: login.kind.label,
+          description: login.userName,
+          catalogs: TrackerApi.catalogsFor(login.kind),
+          tracker: login,
+        );
+    final list = _storedSources;
+    final added =
+        same == null ? (await _forProfiles([source], ids)).single : source;
     await _saveSources([
-      for (final s in _storedSources)
-        if (s.tracker?.kind != login.kind) s,
-      source,
+      for (final s in list)
+        if (s.manifestUrl == source.manifestUrl) added else s,
+      if (same == null) added,
     ]);
+    if (same == null) {
+      await _oneTrackerPerProfile({added.manifestUrl}, ids);
+    } else {
+      await setSourceProfiles([source.manifestUrl], ids);
+    }
     unawaited(refresh(force: true));
-    return source;
+    return added;
+  }
+
+  /// The saved account of [login]'s user, if any (same service, same name).
+  ArchiveSource? sameTrackerUser(TrackerLogin login) {
+    final name = login.userName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    return trackerAccounts(login.kind)
+        .where((s) => s.tracker!.userName.trim().toLowerCase() == name)
+        .firstOrNull;
+  }
+
+  /// `trakt://account` was the only one (still read); later accounts get
+  /// their own address, as every source's key comes from it.
+  String _newTrackerUrl(TrackerLogin login) {
+    final taken = {for (final s in _storedSources) s.manifestUrl};
+    final base = '${login.kind.name}://account';
+    if (!taken.contains(base)) return base;
+    final name = login.userName.trim().toLowerCase();
+    var url = name.isEmpty ? '' : '$base/${Uri.encodeComponent(name)}';
+    for (var n = 2; url.isEmpty || taken.contains(url); n++) {
+      url = '$base/$n';
+    }
+    return url;
+  }
+
+  /// [urls]'s tracker accounts now cover [profileIds]: the other accounts
+  /// of their kind leave those profiles, removed when on no profile.
+  Future<void> _oneTrackerPerProfile(
+      Set<String> urls, Set<String> profileIds) async {
+    final kinds = {
+      for (final s in _storedSources)
+        if (urls.contains(s.manifestUrl) && s.tracker != null) s.tracker!.kind,
+    };
+    for (final kind in kinds) {
+      for (final other in trackerAccounts(kind)) {
+        if (urls.contains(other.manifestUrl)) continue;
+        final keep = profilesWith(other).difference(profileIds);
+        if (keep.isEmpty) {
+          await removeSource(other);
+        } else {
+          await _setSourceProfiles({other.manifestUrl}, keep);
+        }
+      }
+    }
   }
 
   /// Every Archive [Channel] uses this playlist id; `PlaybackService.play`
@@ -380,6 +453,13 @@ class ArchiveService extends ChangeNotifier {
       Iterable<String> urls, Set<String> profileIds) async {
     final links = urls.toSet();
     if (links.isEmpty) return;
+    await _setSourceProfiles(links, profileIds);
+    // A Trakt / Simkl account: one of each kind per profile.
+    await _oneTrackerPerProfile(links, profileIds);
+  }
+
+  Future<void> _setSourceProfiles(
+      Set<String> links, Set<String> profileIds) async {
     final everyone = await _writeSourceProfiles(links, profileIds);
     final list = _storedSources;
     if (list

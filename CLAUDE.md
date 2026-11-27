@@ -585,6 +585,21 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   nothing; `onEditingComplete` goes to the first result and `TvTextFieldGate`'s arrow actions only act while the field
   has focus (every gated field with a button inside: clear X, password eye). Rows in dev-notes/bugs-and-fixes.md.
   Tests: whats_new_tmdb_match_test, settings_search_focus_test.
+- **Claude, 2026-11-26 - a Trakt / Simkl account per profile + the phone's Connect window (`claude/trakt-profiles`, worktree
+  `VesperTV-claude-traktprofiles`, from main 4c4ba57):** Discord (cillfog): "Can Trakt / Simkl be scoped per profile, or is it
+  just one login for all profiles?" (owner: "work on it") + his phone photo: Connect Trakt's code ran down one letter per
+  line past the window. Accounts stay Media Hub sources; each profile uses at most one of each kind (its own Enabled):
+  `trackerSource` = the enabled one, `trackerAccounts`, `sameTrackerUser` (same name = same account, new token),
+  `addTracker(login, profileIds:)` (null = this profile + the profiles that had that user), later accounts get
+  `trakt://account/<name>` (the first keeps `trakt://account`), `_oneTrackerPerProfile` (also run by `setSourceProfiles`,
+  so Media Hub sources' Profiles row keeps the rule): those profiles leave other accounts of that kind, an account on no
+  profile is removed (one profile = the old replace). `TrackerSync` keys its 5-min history cache by the profile's logins.
+  Trakt & Simkl screen, 2+ profiles: subtitle names the profiles, OK = Profiles / Use another account on this profile /
+  Disconnect (says which profiles lose it); connecting offers another profile's account first, then asks Which profiles
+  get it (`SourceProfiles.pick`; first account = the usual choice). Connect window (`TrackerSignInDialog`): < 600 px wide
+  stacks the steps over the QR, the code is one line (FittedBox), phones / computers get Open in browser + Copy code;
+  scrolls inside its 520 px box (AlertDialog `scrollable` asks the QR's intrinsic height: LayoutBuilder assert). 8
+  languages; remote.html "A Trakt or Simkl account for each profile" + guide.json. test/tracker_profiles_test.dart (7).
 - **Claude, 2026-11-26 - YouTube's bot check: say why trailers don't play (`claude/yt-bot-notice`, worktree
   `VesperTV-claude-ytbot`):** LOG-FYXL6N (SHIELD, 1036): no card trailer, ever; every client answered `LOGIN_REQUIRED`
   "Sign in to confirm you're not a bot" while the owner's PC got the same trailers. The VPS's address got exactly that answer,

@@ -4583,4 +4583,23 @@ const Map<String, String> kEs = {
       "OK en un estilo lo elimina.",
   "Your own styles…":
       "Tus propios estilos…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Conectado como {name} ({profiles}) — pulsa OK para ver opciones",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Cada perfil puede tener su propia cuenta: conéctala mientras ese perfil está en uso.",
+  "Use {name} ({profiles})":
+      "Usar {name} ({profiles})",
+  "Sign in with another account":
+      "Iniciar sesión con otra cuenta",
+  "Profiles: {profiles}":
+      "Perfiles: {profiles}",
+  "Use another account on this profile":
+      "Usar otra cuenta en este perfil",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Se desconectan todos los perfiles que la usan: {profiles}.",
+  "Copied":
+      "Copiado",
+  "Copy code":
+      "Copiar código",
 };

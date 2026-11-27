@@ -4590,4 +4590,23 @@ const Map<String, String> kIt = {
       "OK su uno stile lo rimuove.",
   "Your own styles…":
       "I tuoi stili…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Connesso come {name} ({profiles}) — premi OK per le opzioni",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Ogni profilo può avere il proprio account: collegalo mentre quel profilo è in uso.",
+  "Use {name} ({profiles})":
+      "Usa {name} ({profiles})",
+  "Sign in with another account":
+      "Accedi con un altro account",
+  "Profiles: {profiles}":
+      "Profili: {profiles}",
+  "Use another account on this profile":
+      "Usa un altro account su questo profilo",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Vengono disconnessi tutti i profili che lo usano: {profiles}.",
+  "Copied":
+      "Copiato",
+  "Copy code":
+      "Copia codice",
 };

@@ -536,6 +536,14 @@
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
+    "id": "0de72513fd5c8f71",
+    "category": "Media Hub",
+    "title": "A Trakt or Simkl account for each profile",
+    "answer": "Each profile can have its own Trakt and Simkl account. Open the profile, go to Trakt & Simkl and connect: a code shows on the screen, enter it on the Trakt or Simkl page from your phone (on a phone, Open in browser and Copy code do it on the same phone). With more than one profile, VesperTV then asks which profiles get the account. To give a profile its own: OK on the connected account › Use another account on this profile. An account another profile already has can be used without signing in again. Each profile's plays go to its own account, and its watched marks come from it. Profiles (same menu) chooses who uses an account; Disconnect removes it from every profile that uses it. A Kids profile gets none unless you add it there.",
+    "controls": "Media Hub sources › Add a source › Trakt & Simkl",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
     "id": "c529c45153b59203",
     "category": "Media Hub",
     "title": "Trailers on Media Hub cards",

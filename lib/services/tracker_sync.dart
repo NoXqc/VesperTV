@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/archive_models.dart';
 import '../models/channel.dart';
 import 'archive_service.dart';
 import 'playlist_manager.dart';
@@ -33,27 +34,38 @@ class TrackerSync {
   static const _maxAge = Duration(minutes: 5);
   TrackerHistory? _cached;
   DateTime? _cachedAt;
+
+  /// Whose history [_cached] is: each profile can have its own accounts
+  /// (Discord, 2026-11-26), so another profile's never fills this one's.
+  String? _cachedFor;
   Future<TrackerHistory?>? _inFlight;
 
   /// Drop the cache (a play just finished, an account was connected).
   void invalidate() {
     _cached = null;
     _cachedAt = null;
+    _cachedFor = null;
   }
 
-  /// Every connected account's history merged; null when none is connected.
-  Future<TrackerHistory?> history({bool force = false}) {
+  static String _whose(List<TrackerLogin> logins) => [
+        for (final l in logins) '${l.kind.name}:${l.userName}:${l.accessToken}'
+      ].join('|');
+
+  /// The profile in use's accounts' history merged; null when it has none.
+  Future<TrackerHistory?> history({bool force = false}) async {
     final service = _service;
-    if (service == null) return Future.value(null);
+    if (service == null) return null;
+    final logins = await service.trackerLogins();
+    if (logins.isEmpty) return null;
+    final whose = _whose(logins);
     if (!force &&
         _cached != null &&
+        _cachedFor == whose &&
         DateTime.now().difference(_cachedAt!) < _maxAge) {
-      return Future.value(_cached);
+      return _cached;
     }
     return _inFlight ??= () async {
       try {
-        final logins = await service.trackerLogins();
-        if (logins.isEmpty) return null;
         final merged = TrackerHistory();
         for (final login in logins) {
           try {
@@ -64,6 +76,7 @@ class TrackerSync {
         }
         _cached = merged;
         _cachedAt = DateTime.now();
+        _cachedFor = whose;
         return merged;
       } finally {
         _inFlight = null;

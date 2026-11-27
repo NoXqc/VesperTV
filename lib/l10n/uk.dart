@@ -4055,4 +4055,23 @@ const Map<String, String> kUk = {
       "OK на стилі видаляє його.",
   "Your own styles…":
       "Власні стилі…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Підключено як {name} ({profiles}) — натисніть OK, щоб побачити параметри",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Кожен профіль може мати власний обліковий запис: підключіть його, коли цей профіль використовується.",
+  "Use {name} ({profiles})":
+      "Використати {name} ({profiles})",
+  "Sign in with another account":
+      "Увійти з іншим обліковим записом",
+  "Profiles: {profiles}":
+      "Профілі: {profiles}",
+  "Use another account on this profile":
+      "Використати інший обліковий запис у цьому профілі",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Буде відключено всі профілі, які його використовують: {profiles}.",
+  "Copied":
+      "Скопійовано",
+  "Copy code":
+      "Копіювати код",
 };

@@ -4486,4 +4486,23 @@ const Map<String, String> kDe = {
       "OK auf einem Stil entfernt ihn.",
   "Your own styles…":
       "Eigene Stile…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Verbunden als {name} ({profiles}) – OK für Optionen drücken",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Jedes Profil kann sein eigenes Konto haben: Verbinde es, während dieses Profil aktiv ist.",
+  "Use {name} ({profiles})":
+      "{name} verwenden ({profiles})",
+  "Sign in with another account":
+      "Mit einem anderen Konto anmelden",
+  "Profiles: {profiles}":
+      "Profile: {profiles}",
+  "Use another account on this profile":
+      "Anderes Konto für dieses Profil verwenden",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Alle Profile, die es nutzen, werden getrennt: {profiles}.",
+  "Copied":
+      "Kopiert",
+  "Copy code":
+      "Code kopieren",
 };

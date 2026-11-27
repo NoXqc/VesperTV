@@ -4596,4 +4596,23 @@ const Map<String, String> kFr = {
       "OK sur un style le supprime.",
   "Your own styles…":
       "Vos propres styles…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Connecté en tant que {name} ({profiles}) — OK pour les options",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Chaque profil peut avoir son propre compte : connectez-le pendant que ce profil est utilisé.",
+  "Use {name} ({profiles})":
+      "Utiliser {name} ({profiles})",
+  "Sign in with another account":
+      "Se connecter avec un autre compte",
+  "Profiles: {profiles}":
+      "Profils : {profiles}",
+  "Use another account on this profile":
+      "Utiliser un autre compte sur ce profil",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Tous les profils qui l’utilisent sont déconnectés : {profiles}.",
+  "Copied":
+      "Copié",
+  "Copy code":
+      "Copier le code",
 };

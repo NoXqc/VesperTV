@@ -4545,4 +4545,23 @@ const Map<String, String> kEl = {
       "OK σε ένα στυλ το αφαιρεί.",
   "Your own styles…":
       "Τα δικά σας στυλ…",
+  // Trakt & Simkl: an account per profile; the phone's Connect window.
+  "Connected as {name} ({profiles}) — press OK for options":
+      "Συνδέθηκε ως {name} ({profiles}) — πατήστε OK για επιλογές",
+  "Each profile can have its own account: connect it while that profile is in use.":
+      "Κάθε προφίλ μπορεί να έχει τον δικό του λογαριασμό: συνδέστε τον ενώ χρησιμοποιείται αυτό το προφίλ.",
+  "Use {name} ({profiles})":
+      "Χρήση του {name} ({profiles})",
+  "Sign in with another account":
+      "Σύνδεση με άλλο λογαριασμό",
+  "Profiles: {profiles}":
+      "Προφίλ: {profiles}",
+  "Use another account on this profile":
+      "Χρήση άλλου λογαριασμού σε αυτό το προφίλ",
+  "Every profile that uses it is disconnected: {profiles}.":
+      "Αποσυνδέονται όλα τα προφίλ που τον χρησιμοποιούν: {profiles}.",
+  "Copied":
+      "Αντιγράφηκε",
+  "Copy code":
+      "Αντιγραφή κωδικού",
 };
