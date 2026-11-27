@@ -4376,7 +4376,7 @@ const Map<String, String> kPt = {
   "A recording on the Tuliprox server is ready.":
       "Uma gravação no servidor Tuliprox está pronta.",
   "Another device on your account took over this stream.":
-      "Outro dispositivo da tua conta ficou com esta stream.",
+      "Outro dispositivo da tua conta ficou com este stream.",
   "Channel {id}":
       "Canal {id}",
   "Delete from the server":
@@ -4392,7 +4392,7 @@ const Map<String, String> kPt = {
   "On your own connection now. Pick a source in Sources to switch just for you.":
       "Agora estás na tua própria ligação. Escolhe uma fonte em Fontes para mudar só para ti.",
   "Only a .ts stream can get its own connection. This one plays as HLS.":
-      "Só uma stream .ts pode ter a sua própria ligação. Esta é reproduzida em HLS.",
+      "Só um stream .ts pode ter a sua própria ligação. Esta é reproduzida em HLS.",
   "Record on the server":
       "Gravar no servidor",
   "Record weekly on the server":
@@ -4400,7 +4400,7 @@ const Map<String, String> kPt = {
   "Recording is switched off on this server.":
       "A gravação está desativada neste servidor.",
   "Someone else is watching this channel on the server. Pick \"Your own connection\" in Sources first, then the source.":
-      "Outra pessoa está a ver este canal no servidor. Escolhe primeiro «A tua própria ligação» em Fontes e depois a fonte.",
+      "Outra pessoa está a ver este canal no servidor. Escolhe primeiro \"A tua própria ligação\" em Fontes e depois a fonte.",
   "Stop it and cancel the ones coming up":
       "Parar e cancelar as próximas",
   "Stop weekly recording":
@@ -4420,7 +4420,7 @@ const Map<String, String> kPt = {
   "The server's disk is full.":
       "O disco do servidor está cheio.",
   "This Tuliprox version can only record weekly. A one-time recording needs a newer Tuliprox.":
-      "Esta versão do Tuliprox só grava semanalmente. Uma gravação única precisa de um Tuliprox mais recente.",
+      "Esta versão do Tuliprox só pode gravar semanalmente. Uma gravação única precisa de um Tuliprox mais recente.",
   "This account may not record on the server.":
       "Esta conta não pode gravar no servidor.",
   "This show has already ended or has no times in the guide.":
@@ -4450,7 +4450,7 @@ const Map<String, String> kPt = {
   "{n} % reliable":
       "{n} % fiável",
   "{title} · every {day} at {time}":
-      "{title} · todas as semanas, {day} às {time}",
+      "{title} · todas(os) as {day} às {time}",
   "{used} of {cap} used on the server":
       "{used} de {cap} usados no servidor",
   "{used} used on the server":
@@ -4482,7 +4482,7 @@ const Map<String, String> kPt = {
   "Find games in hidden groups":
       "Procurar jogos nos grupos ocultos",
   "Game channels can also come from the live groups you hid, so a group hidden to keep the TV tidy still carries its games. Channels you hid one by one stay out. Never on a Kids profile. Saved for this viewer.":
-      "Os canais dos jogos também podem vir dos grupos em direto que ocultaste, por isso um grupo oculto para manter a TV arrumada continua a ter os seus jogos. Os canais que ocultaste um a um ficam de fora. Nunca num perfil infantil. Guardado para este perfil.",
+      "Os canais dos jogos também podem vir dos grupos em direto que ocultaste, por isso um grupo oculto para manter a TV arrumada continua a ter os seus jogos. Os canais que ocultaste um a um ficam de fora. Nunca num perfil Infantil. Guardado para este espectador.",
   "White":
       "Branco",
   "Column lines":
@@ -4494,17 +4494,17 @@ const Map<String, String> kPt = {
   "Ahead {seconds} s":
       "Avançar {seconds} s",
   "◀ Rewind":
-      "◀ Recuar",
+      "◀ Voltar Atrás",
   "Skip buttons":
       "Botões de salto",
   "How far one press of the back / ahead buttons and the remote's Rewind / Fast-forward jumps, on movies, episodes, catch-up and paused live TV. Holding them still jumps further and further.":
       "Quanto salta um toque nos botões recuar / avançar e nas teclas Recuar / Avançar rápido do comando, em filmes, episódios, diferido e TV em direto em pausa. Mantê-los premidos salta cada vez mais longe.",
   "Pause & rewind live TV":
-      "Pausa e recuo na TV em direto",
+      "Pausa & voltar atrás na TV em direto",
   "Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don't have it. Applies from the next channel.":
-      "Os canais em direto guardam os últimos minutos neste dispositivo enquanto vês, na mesma ligação: Pausa para a imagem, não a stream, e Reproduzir continua onde paraste. Os botões recuar / avançar e Recuar andam para trás e para a frente nela (uma repetição), EM DIRETO salta para agora. Usa armazenamento enquanto vês (cerca de 2 GB por 30 minutos de um canal HD, apagados quando mudas de canal); com pouco espaço livre guarda cerca de 30 segundos em memória. Os canais no formato HLS (.m3u8) não têm isto. Aplica-se a partir do próximo canal.",
+      "Os canais em direto guardam os últimos minutos neste dispositivo enquanto vês, na mesma ligação: Pausa pára a imagem, não o stream, e Reproduzir continua onde paraste. Os botões recuar / avançar e Voltar Atrás andam para trás e para a frente nele (uma repetição), EM DIRETO salta para agora. Usa armazenamento enquanto vês (cerca de 2 GB por 30 minutos de um canal HD, apagados quando mudas de canal); com pouco espaço livre guarda cerca de 30 segundos em memória. Os canais no formato HLS (.m3u8) não têm isto. Aplica-se a partir do próximo canal.",
   "The update to {version} didn't install: this device still has the version above. Try again; if it fails again, free some storage or install it with the Downloader app.":
-      "A atualização para {version} não foi instalada: este dispositivo ainda tem a versão acima. Tenta novamente; se voltar a falhar, liberta espaço ou instala-a com a aplicação Downloader.",
+      "A atualização para {version} não foi instalada: este dispositivo ainda tem a versão acima. Tenta novamente; se voltar a falhar, liberta algum espaço ou instala-a com a aplicação Downloader.",
   "Episodes":
       "Episódios",
   "Up/Down: browse · Left/Right: season · OK: play · Back: close":
@@ -4527,7 +4527,7 @@ const Map<String, String> kPt = {
   // Media Hub: a source that found torrent links only (no debrid service).
   "Torrents only": "Só torrents",
   "Only torrent links were found, and {app} can't play torrents. Turn on a debrid service (Real-Debrid, TorBox…) in the add-on's settings so it sends direct links.":
-      "Só foram encontradas ligações torrent, e o {app} não reproduz torrents. Ativa um serviço debrid (Real-Debrid, TorBox…) nas definições da extensão para que dê ligações diretas.",
+      "Só foram encontradas ligações torrent, e o {app} não reproduz torrents. Ativa um serviço debrid (Real-Debrid, TorBox…) nas definições da extensão para que envie ligações diretas.",
 
   // Trailers: YouTube's bot check refused this connection (a VPN).
   "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
@@ -4551,5 +4551,5 @@ const Map<String, String> kPt = {
   "Clear favourites…":
       "Limpar favoritos…",
   "Delete watched history…":
-      "Apagar histórico…",
+      "Apagar histórico de visualizados…",
 };
