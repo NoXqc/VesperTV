@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:nox_iptv/models/catchup.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
@@ -80,5 +81,33 @@ void main() {
             programmes: programmes,
             stopAtProgrammeEnd: false),
         isNull);
+  });
+
+  // LOG-WFEVGV (Mac, 1.0.73, NPO catch-up): every `.m3u8` try logged these
+  // and stayed black; media_kit's error stream never fired, so the `.ts`
+  // switch never ran.
+  test('mpv lines that mean the .m3u8 never opened', () {
+    bool failed(String prefix, String level, String text) =>
+        DesktopCatchup.openFailed(
+            PlayerLog(prefix: prefix, level: level, text: text));
+    expect(
+        failed('ffmpeg/demuxer', 'error',
+            "hls: Error when loading first segment 'http://x/1.ts'"),
+        isTrue);
+    expect(
+        failed('ffmpeg/demuxer', 'warn',
+            "hls: Error when loading first segment 'http://x/1.ts'"),
+        isTrue);
+    expect(failed('lavf', 'error', 'avformat_open_input() failed  '), isTrue);
+    expect(
+        failed('cplayer', 'error', 'Failed to recognize file format.'), isTrue);
+    // Not an open failure.
+    expect(
+        failed('sub', 'error',
+            "Could not find subtitle decoder for format 'eia_608'."),
+        isFalse);
+    expect(failed('ffmpeg', 'error', 'http: Stream ends prematurely at 1'),
+        isFalse);
+    expect(failed('lavf', 'warn', 'avformat_open_input() failed'), isFalse);
   });
 }

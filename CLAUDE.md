@@ -539,6 +539,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-27 - catch-up on computers / iPhone: the `.ts` switch (`claude/desktop-catchup-ts`, worktree
+  `VesperTV-claude-dcatchup`, from main 0593622):** LOG-WFEVGV (Mac 1.0.73, NL panel, NPO): every catch-up black, the
+  panel's `.m3u8` never served its first segment; the desktop `.ts` switch only listened to media_kit's error stream
+  (which leaves out `ffmpeg/demuxer` / `lavf` open failures) and had no 4 s rule. `DesktopCatchup.openFailed` + a
+  `CatchupFormat.hlsPatience` timer (picture or moving position = playing), like Android. Row in dev-notes/bugs-and-fixes.md.
 - **Claude, 2026-11-27 - What's New TMDB matches + Settings search focus (`claude/tmdb-trending-match`, worktree
   `VesperTV-claude-tmdbmatch`, from main 804013c):** cillfog (Discord). (1) With a TMDB key, What's New put trending
   films' posters / dates / ids on other catalog titles ("The Odyssey" 2026 on "The Navigator: A Medieval Odyssey - 1988",

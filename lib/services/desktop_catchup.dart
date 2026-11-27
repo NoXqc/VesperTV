@@ -67,7 +67,31 @@ class DesktopCatchup {
   StreamSubscription<bool>? _completed;
   StreamSubscription<Duration>? _position;
   StreamSubscription<String>? _error;
+  StreamSubscription<PlayerLog>? _log;
+  Timer? _slowStart;
+  void Function()? _standDown;
   int _gen = 0;
+
+  /// mpv's words for a stream that never opened. media_kit's error stream
+  /// leaves these out (it only passes on file / tcp / decoder / stream
+  /// errors), so a `.m3u8` whose first segment the panel never serves
+  /// failed silently: LOG-WFEVGV (Mac, NPO catch-up, 2026-11-27) had
+  /// `hls: Error when loading first segment` + `avformat_open_input()
+  /// failed` on every try and a black picture.
+  @visibleForTesting
+  static bool openFailed(PlayerLog log) {
+    final text = log.text.trim();
+    final error = log.level == 'error' || log.level == 'fatal';
+    return (error &&
+            log.prefix == 'lavf' &&
+            text.contains('avformat_open_input')) ||
+        (error && log.prefix == 'cplayer' && text.startsWith('Failed to')) ||
+        // ffmpeg's HLS reader says it at error level; mpv may pass it as a
+        // warning.
+        ((error || log.level == 'warn') &&
+            log.prefix == 'ffmpeg/demuxer' &&
+            text.startsWith('hls: Error when loading first segment'));
+  }
 
   bool get active => session != null;
 
@@ -144,20 +168,58 @@ class DesktopCatchup {
   void _watch(CatchupSession s, int gen) {
     _completed?.cancel();
     _position?.cancel();
-    _error?.cancel();
+    _stopFormatWatch();
     final opened = clock();
     // A `.m3u8` link the panel won't open (Dispatcharr's `/timeshift/` is
-    // `.ts` only: 404): the same request as `.ts`, kept for this playlist.
+    // `.ts` only: 404), or that gives no picture within
+    // [CatchupFormat.hlsPatience] (a panel building the HLS archive on
+    // demand, or never serving its first segment): the same request as
+    // `.ts`, kept for this playlist, like Android's `_watchCatchupStart`.
     final f = format;
     if (f != null && CatchupFormat.isHls(s)) {
-      _error = player.stream.error.listen((e) {
+      void asTs(String why) {
         if (gen != _gen || session != s) return;
-        _error?.cancel();
-        f.learnTs(s.live.playlistId, '.m3u8 failed to open');
-        debugPrint('DesktopCatchup: .m3u8 failed ($e), asking again as .ts');
+        _stopFormatWatch();
+        f.learnTs(s.live.playlistId, why);
+        debugPrint('DesktopCatchup: $why, asking again as .ts');
         unawaited(play(s.live, s.playhead(s.startOffset),
             toProgrammeEnd: s.until != null));
+      }
+
+      _error =
+          player.stream.error.listen((e) => asTs('.m3u8 failed to open ($e)'));
+      _log = player.stream.log.listen((log) {
+        if (openFailed(log)) asTs('.m3u8 failed to open (${log.text})');
       });
+      // Playing = a picture, or the position moving (a radio channel has
+      // no picture).
+      Duration? firstPosition;
+      var playing = false;
+      final picture = player.stream.width.listen((w) {
+        if ((w ?? 0) > 0) playing = true;
+      });
+      final moving = player.stream.position.listen((p) {
+        final first = firstPosition ??= p;
+        if ((p - first).abs() > const Duration(milliseconds: 500)) {
+          playing = true;
+        }
+      });
+      _slowStart = Timer(CatchupFormat.hlsPatience, () {
+        picture.cancel();
+        moving.cancel();
+        if (playing || (player.state.width ?? 0) > 0) {
+          // It opened: a later hiccup is not the link's format.
+          _log?.cancel();
+          _log = null;
+          return;
+        }
+        asTs('.m3u8 gave no picture in '
+            '${CatchupFormat.hlsPatience.inSeconds} s');
+      });
+      _standDown = () {
+        picture.cancel();
+        moving.cancel();
+      };
     }
     _completed = player.stream.completed.listen((done) {
       if (!done || gen != _gen || session != s) return;
@@ -231,7 +293,7 @@ class DesktopCatchup {
     _gen++;
     _completed?.cancel();
     _position?.cancel();
-    _error?.cancel();
+    _stopFormatWatch();
     session = null;
     debugPrint('DesktopCatchup: back to live ${live.name}');
     await onLive(live);
@@ -242,7 +304,18 @@ class DesktopCatchup {
     _gen++;
     _completed?.cancel();
     _position?.cancel();
-    _error?.cancel();
+    _stopFormatWatch();
     session = null;
+  }
+
+  void _stopFormatWatch() {
+    _error?.cancel();
+    _error = null;
+    _log?.cancel();
+    _log = null;
+    _slowStart?.cancel();
+    _slowStart = null;
+    _standDown?.call();
+    _standDown = null;
   }
 }
