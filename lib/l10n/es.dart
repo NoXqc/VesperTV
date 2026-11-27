@@ -4525,4 +4525,24 @@ const Map<String, String> kEs = {
   // Trailers: YouTube's bot check refused this connection (a VPN).
   "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
       "YouTube no reproduce tráilers en esta conexión: pide confirmar que no eres un bot. ¿Usas una VPN? Prueba otro servidor o desactívala.",
+
+  // Live group styles + the Favourites / History / Catch-up hold menu (2026-11-26).
+  "Live styles…":
+      "Estilos animados…",
+  "Live styles":
+      "Estilos animados",
+  "Live style for {count} groups":
+      "Estilo animado para {count} grupos",
+  "Getting live styles…":
+      "Obteniendo estilos animados…",
+  "Couldn't get the live styles. Check the connection and try again.":
+      "No se pudieron obtener los estilos animados. Revisa la conexión e inténtalo de nuevo.",
+  "Seasonal":
+      "De temporada",
+  "Fun":
+      "Divertidos",
+  "Clear favourites…":
+      "Vaciar favoritos…",
+  "Delete watched history…":
+      "Borrar historial…",
 };

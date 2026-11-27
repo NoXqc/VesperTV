@@ -53,3 +53,5 @@ hidden column's stays transparent) and the Timeline guide's two (ruler + channel
 under the guide's hours and the programme cells' outlines (on now: the line colour at 85 % instead of the theme
 colour; others: 45 % instead of white24; the focused cell keeps its highlight). 3 strings x 7
 languages; tv_group_colors_test (+3).
+
+**Live styles (2026-11-26):** moving backgrounds from a downloaded bank, saved here as `style:<id>`; Favourites / History / Catch-up / Recently added take colours too. See dev-notes/live-group-styles.md.

@@ -3997,4 +3997,24 @@ const Map<String, String> kUk = {
   // Trailers: YouTube's bot check refused this connection (a VPN).
   "YouTube won't play trailers on this connection: it asks to confirm you're not a bot. Using a VPN? Try another server, or turn it off.":
       "YouTube не відтворює трейлери на цьому з’єднанні: просить підтвердити, що ти не бот. Користуєшся VPN? Спробуй інший сервер або вимкни його.",
+
+  // Live group styles + the Favourites / History / Catch-up hold menu (2026-11-26).
+  "Live styles…":
+      "Анімовані стилі…",
+  "Live styles":
+      "Анімовані стилі",
+  "Live style for {count} groups":
+      "Анімований стиль для {count} груп",
+  "Getting live styles…":
+      "Завантаження анімованих стилів…",
+  "Couldn't get the live styles. Check the connection and try again.":
+      "Не вдалося отримати анімовані стилі. Перевірте з’єднання та спробуйте ще раз.",
+  "Seasonal":
+      "Сезонні",
+  "Fun":
+      "Розважальні",
+  "Clear favourites…":
+      "Очистити улюблене…",
+  "Delete watched history…":
+      "Видалити історію переглядів…",
 };

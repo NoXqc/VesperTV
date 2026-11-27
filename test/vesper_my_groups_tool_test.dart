@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/services/live_group_styles.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/models/xtream_series.dart';
@@ -294,5 +295,84 @@ void main() {
     });
     expect(none['error'], contains('No TV group'));
     expect(host.questions, isEmpty, reason: 'cosmetic: no TV confirm');
+  });
+
+  test('groups colour: a live style by id or name (2026-11-26)', () async {
+    LiveGroupStyles.instance.debugUse(LiveGroupStyles.parse(
+        File('docs/styles/group-styles.json').readAsStringSync()));
+    addTearDown(LiveGroupStyles.instance.debugReset);
+    final byId = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'SPORTS',
+      'style': 'hockey',
+    });
+    expect(byId['error'], isNull, reason: '$byId');
+    expect(manager.groupColorOf('p', 'SPORTS'), 'style:hockey');
+    await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'SPORTS',
+      'style': 'Shooting stars',
+    });
+    expect(manager.groupColorOf('p', 'SPORTS'), 'style:shooting-stars');
+    final unknown = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'SPORTS',
+      'style': 'dragons',
+    });
+    expect(unknown['error'], allOf(contains('christmas'), contains('soccer')));
+  });
+
+  test('groups colour: Favourites, History, Catch-up rows (2026-11-26)',
+      () async {
+    LiveGroupStyles.instance.debugUse(LiveGroupStyles.parse(
+        File('docs/styles/group-styles.json').readAsStringSync()));
+    addTearDown(LiveGroupStyles.instance.debugReset);
+    final fav = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'Favorites',
+      'style': 'christmas',
+    });
+    expect(fav['error'], isNull, reason: '$fav');
+    expect(fav['groups'], ['Favourites']);
+    expect(manager.groupColorOf(null, '__favorites__'), 'style:christmas');
+
+    await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'history',
+      'colour': 'blue',
+    });
+    expect(manager.groupColorOf(null, '__history__'), 'blue');
+
+    final recent = await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'contains': 'recent',
+      'colour': 'green',
+    });
+    expect(recent['groups'], ['Recently added'], reason: 'never History');
+    expect(manager.groupColorOf(null, '__history__'), 'blue');
+
+    final listed = await box.call('groups', {'action': 'list', 'tab': 'tv'});
+    final rows = {
+      for (final r in (listed['rows'] as List).cast<Map>())
+        r['name']: r['colour']
+    };
+    expect(rows['Favourites'], 'style:christmas');
+    expect(rows['History'], 'blue');
+    expect(rows['Catch-up'], isNull);
+    expect(rows.containsKey('Catch-up'), isTrue);
+
+    await box.call('groups', {
+      'action': 'colour',
+      'tab': 'tv',
+      'group': 'Catch up',
+      'colour': 'none',
+    });
+    expect(manager.groupColorOf(null, '__catchup__'), isNull);
   });
 }

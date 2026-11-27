@@ -1,0 +1,1223 @@
+{
+ "version": 1,
+ "about": "VesperTV live group styles. Hold OK on a group > Colour... > Live styles. Shapes and motions: lib/services/live_group_styles.dart; how to add one: dev-notes/live-group-styles.md.",
+ "styles": [
+  {
+   "id": "christmas",
+   "category": "seasonal",
+   "name": {
+    "en": "Christmas",
+    "fr": "Noël",
+    "es": "Navidad",
+    "it": "Natale",
+    "el": "Χριστούγεννα",
+    "de": "Weihnachten",
+    "pl": "Boże Narodzenie",
+    "uk": "Різдво",
+    "pt": "Natal"
+   },
+   "fade": [
+    "#A6C62828",
+    "#661B5E20",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "snowflake",
+     "motion": "fall",
+     "count": 9,
+     "size": [
+      4,
+      8
+     ],
+     "speed": 9,
+     "color": [
+      "#FFFFFF",
+      "#E3F2FD"
+     ],
+     "opacity": [
+      0.55,
+      0.95
+     ],
+     "spin": 0.15,
+     "sway": 5
+    },
+    {
+     "shape": "dot",
+     "motion": "chase",
+     "count": 14,
+     "size": 3.2,
+     "y": 0.1,
+     "speed": 0.8,
+     "color": [
+      "#FF5252",
+      "#FFD740",
+      "#69F0AE",
+      "#40C4FF"
+     ],
+     "opacity": 1,
+     "glow": true
+    }
+   ]
+  },
+  {
+   "id": "snowfall",
+   "category": "seasonal",
+   "name": {
+    "en": "Snowfall",
+    "fr": "Chute de neige",
+    "es": "Nevada",
+    "it": "Nevicata",
+    "el": "Χιονόπτωση",
+    "de": "Schneefall",
+    "pl": "Opady śniegu",
+    "uk": "Снігопад",
+    "pt": "Neve a cair"
+   },
+   "fade": [
+    "#993A7BD5",
+    "#4D1E3C72",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "snowflake",
+     "motion": "fall",
+     "count": 12,
+     "size": [
+      3,
+      9
+     ],
+     "speed": 11,
+     "color": [
+      "#FFFFFF",
+      "#BBDEFB"
+     ],
+     "opacity": [
+      0.5,
+      1
+     ],
+     "spin": 0.2,
+     "sway": 6
+    },
+    {
+     "shape": "dot",
+     "motion": "fall",
+     "count": 10,
+     "size": [
+      1.5,
+      3
+     ],
+     "speed": 15,
+     "color": "#FFFFFF",
+     "opacity": [
+      0.4,
+      0.8
+     ],
+     "sway": 3
+    }
+   ]
+  },
+  {
+   "id": "new-year",
+   "category": "seasonal",
+   "name": {
+    "en": "New Year",
+    "fr": "Nouvel An",
+    "es": "Año Nuevo",
+    "it": "Capodanno",
+    "el": "Πρωτοχρονιά",
+    "de": "Silvester",
+    "pl": "Sylwester",
+    "uk": "Новий рік",
+    "pt": "Ano Novo"
+   },
+   "fade": [
+    "#994A148C",
+    "#33FFD700",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "burst",
+     "count": 24,
+     "size": [
+      2,
+      3.4
+     ],
+     "gap": 0.6,
+     "color": [
+      "#FFD740",
+      "#FF4081",
+      "#40C4FF",
+      "#B2FF59"
+     ],
+     "opacity": 1,
+     "glow": true,
+     "x": [
+      0.2,
+      0.85
+     ],
+     "y": [
+      0.3,
+      0.6
+     ]
+    },
+    {
+     "shape": "confetti",
+     "motion": "fall",
+     "count": 10,
+     "size": [
+      3,
+      5
+     ],
+     "speed": 14,
+     "color": [
+      "#FFD740",
+      "#FF4081",
+      "#40C4FF"
+     ],
+     "opacity": [
+      0.6,
+      0.9
+     ],
+     "spin": 1,
+     "sway": 4
+    }
+   ]
+  },
+  {
+   "id": "hearts",
+   "category": "seasonal",
+   "name": {
+    "en": "Hearts",
+    "fr": "Cœurs",
+    "es": "Corazones",
+    "it": "Cuori",
+    "el": "Καρδιές",
+    "de": "Herzen",
+    "pl": "Serca",
+    "uk": "Серця",
+    "pt": "Corações"
+   },
+   "fade": [
+    "#99D81B60",
+    "#33F48FB1",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "heart",
+     "motion": "rise",
+     "count": 9,
+     "size": [
+      7,
+      12
+     ],
+     "speed": 10,
+     "color": [
+      "#FF4081",
+      "#F8BBD0",
+      "#FF80AB"
+     ],
+     "opacity": [
+      0.65,
+      1
+     ],
+     "sway": 5,
+     "spin": 0.3,
+     "fadeOut": true
+    }
+   ]
+  },
+  {
+   "id": "autumn",
+   "category": "seasonal",
+   "name": {
+    "en": "Autumn leaves",
+    "fr": "Feuilles d'automne",
+    "es": "Hojas de otoño",
+    "it": "Foglie d'autunno",
+    "el": "Φθινοπωρινά φύλλα",
+    "de": "Herbstlaub",
+    "pl": "Jesienne liście",
+    "uk": "Осіннє листя",
+    "pt": "Folhas de outono"
+   },
+   "fade": [
+    "#99BF360C",
+    "#4DFF8F00",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "glyph:eco",
+     "motion": "fall",
+     "count": 8,
+     "size": [
+      10,
+      15
+     ],
+     "speed": 9,
+     "color": [
+      "#FF7043",
+      "#FFB300",
+      "#A1887F",
+      "#E64A19"
+     ],
+     "opacity": [
+      0.6,
+      0.95
+     ],
+     "spin": 0.35,
+     "sway": 9
+    }
+   ]
+  },
+  {
+   "id": "shooting-stars",
+   "category": "vesper",
+   "name": {
+    "en": "Shooting stars",
+    "fr": "Étoiles filantes",
+    "es": "Estrellas fugaces",
+    "it": "Stelle cadenti",
+    "el": "Πεφταστέρια",
+    "de": "Sternschnuppen",
+    "pl": "Spadające gwiazdy",
+    "uk": "Падаючі зірки",
+    "pt": "Estrelas cadentes"
+   },
+   "fade": [
+    "#B30D1B3D",
+    "#4D1A237E",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "star4",
+     "motion": "twinkle",
+     "count": 14,
+     "size": [
+      2.5,
+      5.5
+     ],
+     "speed": 0.5,
+     "color": [
+      "#FFE082",
+      "#FFFFFF"
+     ],
+     "opacity": [
+      0.5,
+      1
+     ]
+    },
+    {
+     "shape": "star4",
+     "motion": "streak",
+     "count": 3,
+     "size": [
+      6,
+      8
+     ],
+     "speed": 170,
+     "gap": 1.2,
+     "color": "#FFD54F",
+     "opacity": 1,
+     "glow": true
+    }
+   ]
+  },
+  {
+   "id": "evening-star",
+   "category": "vesper",
+   "name": {
+    "en": "Evening star",
+    "fr": "Étoile du soir",
+    "es": "Lucero de la tarde",
+    "it": "Stella della sera",
+    "el": "Αποσπερίτης",
+    "de": "Abendstern",
+    "pl": "Gwiazda wieczorna",
+    "uk": "Вечірня зоря",
+    "pt": "Estrela da tarde"
+   },
+   "fade": [
+    "#99000000",
+    "#66B8860B",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "twinkle",
+     "count": 16,
+     "size": [
+      1.2,
+      2.4
+     ],
+     "speed": 0.6,
+     "color": [
+      "#FFE082",
+      "#FFFFFF"
+     ],
+     "opacity": [
+      0.3,
+      0.9
+     ]
+    },
+    {
+     "shape": "star4",
+     "motion": "twinkle",
+     "count": 1,
+     "size": 18,
+     "speed": 0.35,
+     "color": "#FFD54F",
+     "opacity": [
+      0.85,
+      1
+     ],
+     "glow": true,
+     "x": 0.7,
+     "y": 0.5
+    }
+   ],
+   "pulse": 0.35
+  },
+  {
+   "id": "starfield",
+   "category": "vesper",
+   "name": {
+    "en": "Starfield",
+    "fr": "Champ d'étoiles",
+    "es": "Campo de estrellas",
+    "it": "Campo stellare",
+    "el": "Αστρικό πεδίο",
+    "de": "Sternenfeld",
+    "pl": "Gwiezdne pole",
+    "uk": "Зоряне поле",
+    "pt": "Campo de estrelas"
+   },
+   "fade": [
+    "#B3000814",
+    "#4D0D47A1",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "drift-left",
+     "count": 18,
+     "size": [
+      1,
+      2
+     ],
+     "speed": 18,
+     "color": "#FFFFFF",
+     "opacity": [
+      0.3,
+      0.7
+     ]
+    },
+    {
+     "shape": "dot",
+     "motion": "drift-left",
+     "count": 8,
+     "size": [
+      2,
+      3
+     ],
+     "speed": 38,
+     "color": [
+      "#FFFFFF",
+      "#B3E5FC"
+     ],
+     "opacity": [
+      0.6,
+      1
+     ],
+     "glow": true
+    }
+   ]
+  },
+  {
+   "id": "aurora",
+   "category": "vesper",
+   "name": {
+    "en": "Aurora",
+    "fr": "Aurore boréale",
+    "es": "Aurora boreal",
+    "it": "Aurora boreale",
+    "el": "Σέλας",
+    "de": "Polarlicht",
+    "pl": "Zorza polarna",
+    "uk": "Полярне сяйво",
+    "pt": "Aurora boreal"
+   },
+   "fade": [
+    "#99001E1E",
+    "#33004D40",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "band",
+     "motion": "wave",
+     "count": 3,
+     "size": [
+      6,
+      12
+     ],
+     "speed": 0.12,
+     "sway": 7,
+     "color": [
+      "#64FFDA",
+      "#B388FF",
+      "#69F0AE"
+     ],
+     "opacity": [
+      0.35,
+      0.7
+     ],
+     "y": [
+      0.25,
+      0.6
+     ]
+    }
+   ]
+  },
+  {
+   "id": "soccer",
+   "category": "sports",
+   "name": {
+    "en": "Soccer",
+    "fr": "Football",
+    "es": "Fútbol",
+    "it": "Calcio",
+    "el": "Ποδόσφαιρο",
+    "de": "Fußball",
+    "pl": "Piłka nożna",
+    "uk": "Футбол",
+    "pt": "Futebol"
+   },
+   "fade": [
+    "#B31B5E20",
+    "#4D2E7D32",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "vline",
+     "motion": "still",
+     "count": 1,
+     "size": 1.2,
+     "x": 0.62,
+     "color": "#FFFFFF",
+     "opacity": 0.25
+    },
+    {
+     "shape": "glyph:sports_soccer",
+     "motion": "roll",
+     "count": 1,
+     "size": 16,
+     "speed": 32,
+     "color": "#FFFFFF",
+     "opacity": 0.95
+    }
+   ]
+  },
+  {
+   "id": "hockey",
+   "category": "sports",
+   "name": {
+    "en": "Hockey",
+    "fr": "Hockey",
+    "es": "Hockey",
+    "it": "Hockey",
+    "el": "Χόκεϊ",
+    "de": "Eishockey",
+    "pl": "Hokej",
+    "uk": "Хокей",
+    "pt": "Hóquei"
+   },
+   "fade": [
+    "#990277BD",
+    "#3329B6F6",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "vline",
+     "motion": "still",
+     "count": 1,
+     "size": 1.6,
+     "x": 0.55,
+     "color": "#FF5252",
+     "opacity": 0.6
+    },
+    {
+     "shape": "vline",
+     "motion": "still",
+     "count": 2,
+     "size": 1.4,
+     "x": [
+      0.35,
+      0.75
+     ],
+     "color": "#448AFF",
+     "opacity": 0.55
+    },
+    {
+     "shape": "dot",
+     "motion": "twinkle",
+     "count": 8,
+     "size": [
+      1,
+      2
+     ],
+     "speed": 0.7,
+     "color": "#FFFFFF",
+     "opacity": [
+      0.3,
+      0.8
+     ]
+    },
+    {
+     "shape": "puck",
+     "motion": "slide",
+     "count": 1,
+     "size": 12,
+     "speed": 170,
+     "gap": 1.4,
+     "y": 0.72,
+     "color": "#111111",
+     "opacity": 1
+    }
+   ]
+  },
+  {
+   "id": "football",
+   "category": "sports",
+   "name": {
+    "en": "Football",
+    "fr": "Football américain",
+    "es": "Fútbol americano",
+    "it": "Football americano",
+    "el": "Αμερικανικό ποδόσφαιρο",
+    "de": "American Football",
+    "pl": "Futbol amerykański",
+    "uk": "Американський футбол",
+    "pt": "Futebol americano"
+   },
+   "fade": [
+    "#B3335E1F",
+    "#4D558B2F",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "vline",
+     "motion": "still",
+     "count": 5,
+     "size": 1,
+     "x": [
+      0.2,
+      0.9
+     ],
+     "color": "#FFFFFF",
+     "opacity": 0.18
+    },
+    {
+     "shape": "glyph:sports_football",
+     "motion": "arc",
+     "count": 1,
+     "size": 16,
+     "speed": 60,
+     "gap": 1.2,
+     "spin": 1.2,
+     "color": "#C68B59",
+     "opacity": 1
+    }
+   ]
+  },
+  {
+   "id": "basketball",
+   "category": "sports",
+   "name": {
+    "en": "Basketball",
+    "fr": "Basket-ball",
+    "es": "Baloncesto",
+    "it": "Pallacanestro",
+    "el": "Μπάσκετ",
+    "de": "Basketball",
+    "pl": "Koszykówka",
+    "uk": "Баскетбол",
+    "pt": "Basquetebol"
+   },
+   "fade": [
+    "#B3BF360C",
+    "#4DFF6F00",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "hline",
+     "motion": "still",
+     "count": 1,
+     "size": 1,
+     "y": 0.94,
+     "color": "#FFFFFF",
+     "opacity": 0.15
+    },
+    {
+     "shape": "glyph:sports_basketball",
+     "motion": "bounce",
+     "count": 1,
+     "size": 15,
+     "speed": 40,
+     "color": "#FF9800",
+     "opacity": 1
+    }
+   ]
+  },
+  {
+   "id": "baseball",
+   "category": "sports",
+   "name": {
+    "en": "Baseball",
+    "fr": "Baseball",
+    "es": "Béisbol",
+    "it": "Baseball",
+    "el": "Μπέιζμπολ",
+    "de": "Baseball",
+    "pl": "Baseball",
+    "uk": "Бейсбол",
+    "pt": "Basebol"
+   },
+   "fade": [
+    "#B30D47A1",
+    "#4D1565C0",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "twinkle",
+     "count": 6,
+     "size": [
+      1,
+      2
+     ],
+     "speed": 0.5,
+     "color": "#FFFFFF",
+     "opacity": [
+      0.2,
+      0.6
+     ],
+     "y": [
+      0,
+      0.35
+     ]
+    },
+    {
+     "shape": "glyph:sports_baseball",
+     "motion": "arc",
+     "count": 1,
+     "size": 14,
+     "speed": 70,
+     "gap": 1.5,
+     "spin": 1.5,
+     "color": "#FFFFFF",
+     "opacity": 1
+    }
+   ]
+  },
+  {
+   "id": "tennis",
+   "category": "sports",
+   "name": {
+    "en": "Tennis",
+    "fr": "Tennis",
+    "es": "Tenis",
+    "it": "Tennis",
+    "el": "Τένις",
+    "de": "Tennis",
+    "pl": "Tenis",
+    "uk": "Теніс",
+    "pt": "Ténis"
+   },
+   "fade": [
+    "#B3006064",
+    "#4D00897B",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "vline",
+     "motion": "still",
+     "count": 1,
+     "size": 1,
+     "x": 0.6,
+     "color": "#FFFFFF",
+     "opacity": 0.35
+    },
+    {
+     "shape": "dot",
+     "motion": "bounce",
+     "count": 1,
+     "size": 7,
+     "speed": 55,
+     "color": "#D4E157",
+     "opacity": 1,
+     "glow": true
+    }
+   ]
+  },
+  {
+   "id": "racing",
+   "category": "sports",
+   "name": {
+    "en": "Racing",
+    "fr": "Course automobile",
+    "es": "Carreras",
+    "it": "Corse",
+    "el": "Αγώνες",
+    "de": "Motorsport",
+    "pl": "Wyścigi",
+    "uk": "Перегони",
+    "pt": "Corridas"
+   },
+   "fade": [
+    "#B3B71C1C",
+    "#33212121",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dash",
+     "motion": "drift",
+     "count": 10,
+     "size": [
+      10,
+      22
+     ],
+     "speed": 140,
+     "color": [
+      "#FFFFFF",
+      "#FF8A80"
+     ],
+     "opacity": [
+      0.25,
+      0.6
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fire",
+   "category": "fun",
+   "name": {
+    "en": "Fire",
+    "fr": "Feu",
+    "es": "Fuego",
+    "it": "Fuoco",
+    "el": "Φωτιά",
+    "de": "Feuer",
+    "pl": "Ogień",
+    "uk": "Вогонь",
+    "pt": "Fogo"
+   },
+   "fade": [
+    "#B3BF360C",
+    "#66DD2C00",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "rise",
+     "count": 14,
+     "size": [
+      1.5,
+      3.5
+     ],
+     "speed": 16,
+     "color": [
+      "#FFD180",
+      "#FF9100",
+      "#FF3D00"
+     ],
+     "opacity": [
+      0.6,
+      1
+     ],
+     "sway": 3,
+     "fadeOut": true,
+     "glow": true,
+     "x": [
+      0,
+      0.7
+     ]
+    }
+   ],
+   "pulse": 0.6
+  },
+  {
+   "id": "digital-rain",
+   "category": "fun",
+   "name": {
+    "en": "Digital rain",
+    "fr": "Pluie numérique",
+    "es": "Lluvia digital",
+    "it": "Pioggia digitale",
+    "el": "Ψηφιακή βροχή",
+    "de": "Digitaler Regen",
+    "pl": "Cyfrowy deszcz",
+    "uk": "Цифровий дощ",
+    "pt": "Chuva digital"
+   },
+   "fade": [
+    "#B3001B0A",
+    "#4D00381A",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "char",
+     "motion": "fall",
+     "count": 12,
+     "size": [
+      8,
+      11
+     ],
+     "speed": 22,
+     "color": [
+      "#00E676",
+      "#69F0AE",
+      "#B9F6CA"
+     ],
+     "opacity": [
+      0.4,
+      0.95
+     ],
+     "chars": "0101101ABCDEFX7"
+    }
+   ]
+  },
+  {
+   "id": "bubbles",
+   "category": "fun",
+   "name": {
+    "en": "Bubbles",
+    "fr": "Bulles",
+    "es": "Burbujas",
+    "it": "Bolle",
+    "el": "Φυσαλίδες",
+    "de": "Blasen",
+    "pl": "Bańki",
+    "uk": "Бульбашки",
+    "pt": "Bolhas"
+   },
+   "fade": [
+    "#9900838F",
+    "#3326C6DA",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "bubble",
+     "motion": "rise",
+     "count": 10,
+     "size": [
+      4,
+      10
+     ],
+     "speed": 12,
+     "color": [
+      "#E0F7FA",
+      "#80DEEA"
+     ],
+     "opacity": [
+      0.5,
+      0.9
+     ],
+     "sway": 4
+    }
+   ]
+  },
+  {
+   "id": "neon",
+   "category": "fun",
+   "name": {
+    "en": "Neon",
+    "fr": "Néon",
+    "es": "Neón",
+    "it": "Neon",
+    "el": "Νέον",
+    "de": "Neon",
+    "pl": "Neon",
+    "uk": "Неон",
+    "pt": "Néon"
+   },
+   "fade": [
+    "#994A148C",
+    "#3300E5FF",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "band",
+     "motion": "wave",
+     "count": 2,
+     "size": [
+      3,
+      5
+     ],
+     "speed": 0.25,
+     "sway": 6,
+     "color": [
+      "#FF4081",
+      "#18FFFF"
+     ],
+     "opacity": [
+      0.6,
+      1
+     ],
+     "y": [
+      0.3,
+      0.7
+     ]
+    },
+    {
+     "shape": "spark",
+     "motion": "twinkle",
+     "count": 6,
+     "size": [
+      3,
+      5
+     ],
+     "speed": 0.8,
+     "color": [
+      "#FF80AB",
+      "#84FFFF"
+     ],
+     "opacity": [
+      0.4,
+      1
+     ]
+    }
+   ]
+  },
+  {
+   "id": "music",
+   "category": "fun",
+   "name": {
+    "en": "Music",
+    "fr": "Musique",
+    "es": "Música",
+    "it": "Musica",
+    "el": "Μουσική",
+    "de": "Musik",
+    "pl": "Muzyka",
+    "uk": "Музика",
+    "pt": "Música"
+   },
+   "fade": [
+    "#994527A0",
+    "#337C4DFF",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "glyph:music_note",
+     "motion": "rise",
+     "count": 6,
+     "size": [
+      12,
+      17
+     ],
+     "speed": 10,
+     "color": [
+      "#E1BEE7",
+      "#B388FF",
+      "#FFFFFF"
+     ],
+     "opacity": [
+      0.65,
+      1
+     ],
+     "sway": 6,
+     "fadeOut": true
+    }
+   ]
+  },
+  {
+   "id": "movie-night",
+   "category": "fun",
+   "name": {
+    "en": "Movie night",
+    "fr": "Soirée cinéma",
+    "es": "Noche de cine",
+    "it": "Serata cinema",
+    "el": "Βραδιά σινεμά",
+    "de": "Filmabend",
+    "pl": "Wieczór filmowy",
+    "uk": "Кіновечір",
+    "pt": "Noite de cinema"
+   },
+   "fade": [
+    "#B37F0000",
+    "#33B71C1C",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "chase",
+     "count": 16,
+     "size": 2.6,
+     "y": 0.1,
+     "speed": 1.2,
+     "color": "#FFD740",
+     "opacity": 1,
+     "glow": true
+    },
+    {
+     "shape": "dot",
+     "motion": "chase",
+     "count": 16,
+     "size": 2.6,
+     "y": 0.9,
+     "speed": 1.2,
+     "color": "#FFD740",
+     "opacity": 1,
+     "glow": true
+    }
+   ]
+  },
+  {
+   "id": "balloons",
+   "category": "fun",
+   "name": {
+    "en": "Balloons",
+    "fr": "Ballons",
+    "es": "Globos",
+    "it": "Palloncini",
+    "el": "Μπαλόνια",
+    "de": "Luftballons",
+    "pl": "Balony",
+    "uk": "Повітряні кульки",
+    "pt": "Balões"
+   },
+   "fade": [
+    "#99F06292",
+    "#334FC3F7",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "balloon",
+     "motion": "rise",
+     "count": 6,
+     "size": [
+      9,
+      13
+     ],
+     "speed": 9,
+     "color": [
+      "#FF5252",
+      "#FFD740",
+      "#40C4FF",
+      "#69F0AE",
+      "#E040FB"
+     ],
+     "opacity": [
+      0.75,
+      0.95
+     ],
+     "sway": 4
+    }
+   ]
+  },
+  {
+   "id": "rain",
+   "category": "fun",
+   "name": {
+    "en": "Rain",
+    "fr": "Pluie",
+    "es": "Lluvia",
+    "it": "Pioggia",
+    "el": "Βροχή",
+    "de": "Regen",
+    "pl": "Deszcz",
+    "uk": "Дощ",
+    "pt": "Chuva"
+   },
+   "fade": [
+    "#99263238",
+    "#33455A64",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dash",
+     "motion": "fall",
+     "count": 18,
+     "size": [
+      6,
+      10
+     ],
+     "speed": 70,
+     "tilt": -0.25,
+     "color": "#B0BEC5",
+     "opacity": [
+      0.3,
+      0.7
+     ]
+    }
+   ]
+  },
+  {
+   "id": "paws",
+   "category": "fun",
+   "name": {
+    "en": "Paw prints",
+    "fr": "Pattes",
+    "es": "Huellas",
+    "it": "Zampe",
+    "el": "Πατούσες",
+    "de": "Pfoten",
+    "pl": "Łapki",
+    "uk": "Лапки",
+    "pt": "Patas"
+   },
+   "fade": [
+    "#998D6E63",
+    "#33FFCC80",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "glyph:pets",
+     "motion": "drift",
+     "count": 4,
+     "size": [
+      11,
+      14
+     ],
+     "speed": 14,
+     "color": [
+      "#FFE0B2",
+      "#FFCC80"
+     ],
+     "opacity": [
+      0.5,
+      0.85
+     ],
+     "sway": 2
+    }
+   ]
+  }
+ ]
+}

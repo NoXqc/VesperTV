@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:video_player_hdr/video_player_hdr.dart';
 
+import '../live_group_styles.dart';
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
 import '../../models/channel.dart';
@@ -526,17 +527,49 @@ List<String> spokenTokens(String text) {
   return _spokenCache[text] = out;
 }
 
+/// The TV tab's own rows that take a colour too (owner, 2026-11-26), saved
+/// in the own scope under tv_home_screen's keys: the name they show first,
+/// then other names a viewer may say.
+const _colourRows = {
+  '__favorites__': ['Favourites', 'Favorites', 'Favs'],
+  '__history__': ['History', 'Watch history', 'Watched history'],
+  '__catchup__': ['Catch-up', 'Catchup', 'Catch up'],
+  '__recent__': ['Recently added', 'Recent'],
+};
+
 /// groups action colour (owner, 2026-11-25: "can the AI add colours to
-/// groups"): TV groups and the viewer's own groups, by exact name or by
-/// words, one save per playlist. Cosmetic and undone the same way: no TV
-/// confirm.
+/// groups"): TV groups, the viewer's own groups and the rows above, by
+/// exact name or by words, one save per playlist. Cosmetic and undone the
+/// same way: no TV confirm.
 Future<Map<String, Object?>> _colourGroups(
     VesperToolbox box, Map<String, Object?> args) async {
   if (box.restrictedViewer) {
     throw VesperToolError('This profile cannot change groups.');
   }
+  final styleName = _str(args, 'style');
   var colour = _str(args, 'colour').toLowerCase();
   if (colour.isEmpty) colour = _str(args, 'color').toLowerCase();
+  // A live style (moving background from the bank on the site, 2026-11-26).
+  String? styleId;
+  if (styleName.isNotEmpty) {
+    final List<LiveGroupStyle> styles;
+    try {
+      styles = await LiveGroupStyles.instance.load();
+    } catch (_) {
+      throw VesperToolError(
+          "The live styles couldn't be downloaded. Try again later.");
+    }
+    final wanted = styleName.toLowerCase().replaceAll(' ', '-');
+    final style = styles.where((s) =>
+        s.id == wanted ||
+        s.names.values.any((n) => n.toLowerCase() == styleName.toLowerCase()));
+    if (style.isEmpty) {
+      throw VesperToolError(
+          'Live styles: ${[for (final s in styles) s.id].join(', ')}.');
+    }
+    styleId = style.first.colorId;
+    colour = '';
+  }
   colour = const {
         'cyan': 'aqua',
         'teal': 'aqua',
@@ -550,7 +583,7 @@ Future<Map<String, Object?>> _colourGroups(
         'remove': 'none',
       }[colour] ??
       colour;
-  final id = colour == 'none' ? null : GroupColor.byId(colour)?.id;
+  final id = styleId ?? (colour == 'none' ? null : GroupColor.byId(colour)?.id);
   if (colour != 'none' && id == null) {
     throw VesperToolError(
         'Colours: red, orange, yellow, green, aqua, blue, purple, pink or none.');
@@ -562,7 +595,18 @@ Future<Map<String, Object?>> _colourGroups(
   bool hit(String title) => search != null
       ? search.matches(title)
       : title.toLowerCase() == name.toLowerCase();
+  // A row by any of its names (or the one it shows in the viewer's language);
+  // words only by those two, so "recent" is never History.
+  final rows = <String, String>{
+    for (final MapEntry(key: key, value: names) in _colourRows.entries)
+      if (search != null
+          ? search.matches(names.first) || search.matches(tr(names.first))
+          : [...names, tr(names.first)]
+              .any((n) => n.toLowerCase() == name.toLowerCase()))
+        key: tr(names.first),
+  };
   final targets = <(String?, String)>[
+    for (final key in rows.keys) (null, key),
     for (final t in box.playlist.userGroups)
       if (hit(t)) (null, t),
     for (final g in box.playlist.tvGroups)
@@ -577,7 +621,7 @@ Future<Map<String, Object?>> _colourGroups(
   return {
     'done': 'colour',
     'colour': id ?? 'none',
-    'groups': [for (final (_, t) in targets) t],
+    'groups': [for (final (_, t) in targets) rows[t] ?? t],
   };
 }
 
@@ -1391,8 +1435,10 @@ final List<VesperTool> vesperTools = [
         'name contains some words (e.g. hide every group with "Turkish"), '
         'or colour TV groups (action colour: the row wears it in the TV '
         'groups column; one group by its exact name, or every group whose '
-        'name contains some words; the viewer\'s own groups too; colour '
-        'none removes it). '
+        'name contains some words; the viewer\'s own groups and the '
+        'Favourites, History, Catch-up and Recently added rows too; colour '
+        'none removes it; style instead of colour = a live style that '
+        'moves while the remote is on the group). '
         'Hidden groups come back in Settings > Playlists & sources > Playlist Manager. For single '
         'channels, rules or renames use playlist_editor; for the viewer\'s '
         'own groups (new groups of picked channels) use my_groups.',
@@ -1407,6 +1453,14 @@ final List<VesperTool> vesperTools = [
           'type': 'string',
           'enum': [for (final c in GroupColor.presets) c.id, 'none'],
           'description': 'For colour.',
+        },
+        'style': {
+          'type': 'string',
+          'description': 'For colour, instead of a colour: a live style, a '
+              'moving background from the bank, by id or name (christmas, '
+              'snowfall, new-year, shooting-stars, aurora, soccer, hockey, '
+              'football, basketball, fire, neon, movie-night...). An '
+              'unknown one answers with the whole list.',
         },
         'tab': {
           'type': 'string',
@@ -1452,6 +1506,16 @@ final List<VesperTool> vesperTools = [
               }
           ],
           if (groups.length > 300) 'note': '${groups.length} groups in all.',
+          if (tab == 'tv')
+            'rows': [
+              for (final MapEntry(key: key, value: names)
+                  in _colourRows.entries)
+                {
+                  'name': tr(names.first),
+                  if (box.playlist.groupColorOf(null, key) case final colour?)
+                    'colour': colour,
+                }
+            ],
         };
       }
       if (box.restrictedViewer) {

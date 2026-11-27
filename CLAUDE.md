@@ -558,6 +558,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   usesCleartextTraffic). Roots from the Windows store / letsencrypt.org, SHA-256 pinned in the test
   (test/extra_root_certs_test.dart, 4). Release APK checked (config + both raw certs survive shrinking). Not tested on a
   7.0 device (no API 24 emulator image here).
+- **Claude, 2026-11-26 - live group styles + Colour… on Favourites / History / Catch-up (`claude/live-groups`, worktree
+  `VesperTV-claude-livegroups`, from main 1670eb2):** owner: "a bank of *live* group[s] that users could download ... Christmas
+  ... snowflakes that starts to move on focus ... shooting stars *vesper style* ... sports" + colours for Favourites / History /
+  Catch-up. Colour… > **Live styles…** = a gallery of 25 styles (Seasonal, Vesper, Sports, Fun) from
+  `docs/styles/group-styles.json` = vespertv.app/styles/group-styles.json (site, not the relay: a new style is a commit; the
+  relay's pending deploy). A style is data (fade + particle layers: shape x motion), saved as `style:<id>` where colours are
+  (synced; older apps = no colour); still at rest, moving only while focused, 30 fps, 30 s per visit (`LiveStyleBackground` timer +
+  `LiveStylePainter`, own RepaintBoundary; Homatics: any moving frame = a full-screen raster, ~21-27 ms). Favourites / History / Catch-up / Recently added: hold = Colour… + the old action (own-scope keys
+  `__favorites__` etc.); Select more groups lists them first. Vesper AI / AI apps `groups` colour `style` + the four rows by name (`list` gives `rows`). Details + format + how to add a
+  style: dev-notes/live-group-styles.md. Tests: live_group_styles_test, tv_live_group_styles_test (+ tv_group_colors,
+  catchup_guide, vesper_my_groups updated).
 - **Claude, 2026-11-26 - "Torrents only" in the Media Hub stream list (`claude/torrent-only-message`, worktree
   `VesperTV-claude-torrentonly`):** Reddit (davidbenWered, LOG-MGPDXB, KPN Amlogic box): after Import from Stremio every title
   said "No playable stream"; his Torrentio had no debrid service, so it answered 76 torrent links only (`torrents=76

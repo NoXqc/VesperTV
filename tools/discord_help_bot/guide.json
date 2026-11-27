@@ -107,7 +107,7 @@
     "id": "a35f7fab13c78eec",
     "category": "Live TV",
     "title": "Group menu",
-    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere; Select more groups… at the bottom ticks several groups with OK, then Right and OK give them all one colour (Back cancels); Vesper or an AI app can do it too: \"make every sports group red\"), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
+    "answer": "Add to Favourites, Colour… (a soft fade of one of 8 colours behind the group, red for your Sports group, say; shown while the remote is elsewhere; Live styles… opens a gallery of moving backgrounds downloaded from vespertv.app: Christmas snow, shooting stars, Hockey, Soccer, Football, Basketball, Fire, Neon and more, still while the remote is elsewhere and moving when it is on the group; Select more groups… at the bottom ticks several groups with OK, then Right and OK give them all one colour or style (Back cancels); Vesper or an AI app can do it too: \"make every sports group red\"), Hide Group, Move Up / Down, Move to Top, Rename… (live groups; giving it the name of another group of the same playlist merges the two, and Use the provider's name undoes a rename or a merge), and New group… to start your own group.",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -120,18 +120,18 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
-    "id": "a5181bb484f86291",
+    "id": "1474557cc26c3098",
     "category": "Live TV",
-    "title": "Clear this tab's favourites",
-    "answer": "Asks first. Works on the Favourites row of TV, Movies and TV Shows.",
+    "title": "Colour or clear this tab's favourites",
+    "answer": "On the TV tab: Colour… (a colour or a live style, like a group) and Clear favourites…, which asks first. On Movies and TV Shows the hold clears them, after asking.",
     "controls": "Hold OK on Favourites",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
-    "id": "e99bb76165a1115c",
+    "id": "00d8e8a6e5b32020",
     "category": "Live TV",
-    "title": "Clear channel history",
-    "answer": "Asks first.",
+    "title": "Colour or clear channel history",
+    "answer": "Colour… (a colour or a live style, like a group) and Delete watched history…, which asks first.",
     "controls": "Hold OK on History",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -139,7 +139,7 @@
     "id": "c4521d562ce2fca7",
     "category": "Live TV",
     "title": "Catch-up playlists",
-    "answer": "The Catch-up group lists every channel your provider marks with catch-up. OK or → on a playlist hides or shows its channels in this group only (for a provider that marks channels it doesn't really keep). Settings > Appearance > Live TV > Catch-up group hides the whole group.",
+    "answer": "The hold menu has Colour… (like a group; Recently added has it too) and Catch-up playlists. The Catch-up group lists every channel your provider marks with catch-up. OK or → on a playlist hides or shows its channels in this group only (for a provider that marks channels it doesn't really keep). Settings > Appearance > Live TV > Catch-up group hides the whole group.",
     "controls": "Hold OK on Catch-up",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },

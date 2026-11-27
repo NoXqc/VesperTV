@@ -324,7 +324,11 @@ void main() {
     // The pick went into the channels: Back to the groups.
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
+    // Hold = Colour… + Catch-up playlists (2026-11-26).
     await tester.longPress(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    expect(find.text('Colour…'), findsOneWidget);
+    await tester.tap(find.text('Catch-up playlists'));
     await tester.pumpAndSettle();
     expect(find.text('Catch-up playlists'), findsOneWidget);
     expect(find.text('1 channels'), findsOneWidget);
@@ -335,6 +339,8 @@ void main() {
     expect(inGuideRows, findsNothing);
     // Shown again the same way.
     await tester.longPress(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Catch-up playlists'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hidden here · 1 channels'));
     await tester.pumpAndSettle();

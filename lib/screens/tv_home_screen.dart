@@ -51,6 +51,9 @@ import '../utils/scroll_safety.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/favorite_live_sort.dart';
 import '../utils/group_colors.dart';
+import '../services/live_group_styles.dart';
+import '../widgets/live_style_picker.dart';
+import '../widgets/live_style_view.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/display_title.dart';
@@ -796,8 +799,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// groups, one colour). The row wears it at rest.
   Future<void> _pickGroupColor(String? playlistId, String title) async {
     final playlist = context.read<PlaylistManager>();
-    final current = GroupColor.byId(playlist.groupColorOf(playlistId, title));
-    final picked = await _askGroupColor(current, selectMore: true);
+    final picked = await _askGroupColor(
+        playlist.groupColorOf(playlistId, title),
+        selectMore: true);
     if (picked == null || !mounted) return;
     if (picked == _selectMoreGroups) {
       await _colorManyGroups(playlistId, title);
@@ -808,11 +812,32 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   static const _selectMoreGroups = '__more__';
+  static const _liveStylesChoice = '__live__';
 
-  /// The colour menu: a preset id, '' = No colour, [_selectMoreGroups],
-  /// null = closed.
-  Future<String?> _askGroupColor(GroupColor? current,
-      {bool selectMore = false, int? count}) {
+  /// Colour… on Favourites / History / Catch-up / Recently added: kept with
+  /// the own groups' colours under these keys (the rows' sentinels; History
+  /// has none of its own).
+  static const _historyColorKey = '__history__';
+
+  /// A saved colour id that names a live style ([LiveGroupStyles]), else
+  /// null.
+  static String? _liveStyleIdOf(String? colorId) =>
+      LiveGroupStyles.isStyleId(colorId) ? colorId : null;
+
+  /// One colour for a saved id (Select more groups' dots): a preset's, or
+  /// a live style's main colour.
+  static Color? _swatchOf(String? colorId) =>
+      GroupColor.of(colorId) ??
+      LiveGroupStyles.instance.styleOf(colorId)?.swatch;
+
+  /// The colour menu: a preset id, a live style's `style:<id>` (Live
+  /// styles… opens the bank), '' = No colour, [_selectMoreGroups], null =
+  /// closed. [currentId] = the saved colour id.
+  Future<String?> _askGroupColor(String? currentId,
+      {bool selectMore = false, int? count}) async {
+    final current = GroupColor.byId(currentId);
+    final currentStyle = _liveStyleIdOf(currentId);
+    final none = current == null && currentStyle == null;
     Widget choice(Color? color, String name, bool on) => Row(
           children: [
             Container(
@@ -836,7 +861,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             if (on) const Icon(Icons.check, size: 18, color: Colors.white),
           ],
         );
-    return showGlassMenu<String>(
+    final picked = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
         maxWidth: 280,
@@ -845,9 +870,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             : tr('Colour for {count} groups', {'count': '$count'})),
         children: [
           TvDialogOption(
-            autofocus: current == null,
+            autofocus: none,
             onPressed: () => Navigator.of(context).pop(''),
-            child: choice(null, tr('No colour'), current == null),
+            child: choice(null, tr('No colour'), none),
           ),
           for (final c in GroupColor.presets)
             TvDialogOption(
@@ -855,6 +880,20 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               onPressed: () => Navigator.of(context).pop(c.id),
               child: choice(c.color, tr(c.name), c == current),
             ),
+          // Moving backgrounds from the bank on the site (owner,
+          // 2026-11-26): snowflakes, shooting stars, sports...
+          TvDialogOption(
+            autofocus: currentStyle != null,
+            onPressed: () => Navigator.of(context).pop(_liveStylesChoice),
+            child: Row(children: [
+              const Icon(Icons.auto_awesome,
+                  size: 18, color: Color(0xFFFFD54F)),
+              const SizedBox(width: 12),
+              Expanded(child: Text(tr('Live styles…'))),
+              if (currentStyle != null)
+                const Icon(Icons.check, size: 18, color: Colors.white),
+            ]),
+          ),
           if (selectMore)
             TvDialogOption(
               onPressed: () => Navigator.of(context).pop(_selectMoreGroups),
@@ -867,6 +906,65 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         ],
       ),
     );
+    if (picked != _liveStylesChoice || !mounted) return picked;
+    return showLiveStylePicker(context, currentId: currentStyle, count: count);
+  }
+
+  /// The name Favourites / History / Catch-up / Recently added show.
+  String _specialRowName(String key) => switch (key) {
+        _favoritesGroupSentinel => tr('Favourites'),
+        _historyColorKey => tr('History'),
+        _catchupGroupSentinel => tr('Catch-up'),
+        _ => tr('Recently added'),
+      };
+
+  /// Hold OK on Favourites / History / Catch-up / Recently added (owner,
+  /// 2026-11-26: colours for them too): Colour… first, then what a hold
+  /// did before (clear favourites, delete the history, the catch-up
+  /// playlists).
+  Future<void> _specialRowMenu(String key) async {
+    final (String? action, Future<void> Function()? run) = switch (key) {
+      _favoritesGroupSentinel => (
+          tr('Clear favourites…'),
+          _confirmClearFavorites
+        ),
+      _historyColorKey => (
+          tr('Delete watched history…'),
+          _confirmClearChannelHistory
+        ),
+      _catchupGroupSentinel => (
+          tr('Catch-up playlists'),
+          _showCatchupPlaylists
+        ),
+      _ => (null, null),
+    };
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        maxWidth: 280,
+        title: Text(_specialRowName(key),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        children: [
+          TvDialogOption(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop('color'),
+            child: Text(tr('Colour…')),
+          ),
+          if (action != null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('action'),
+              child: Text(action),
+            ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 'color') await _pickGroupColor(null, key);
+    if (choice == 'action') await run?.call();
   }
 
   /// Colour… > Select more groups… (owner, 2026-11-25): tick the groups of
@@ -878,7 +976,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final sort = context.read<AppPreferences>().liveGroupSort;
     final visible = _withoutHiddenPlaylists(
         playlist.tvGroups.where((g) => !g.isHidden).toList(), 'tv');
+    final specials = {
+      _favoritesGroupSentinel,
+      _historyColorKey,
+      if (_showCatchupGroup) _catchupGroupSentinel,
+      if (_showRecentGroup) _recentGroupSentinel,
+    };
     final groups = <(String?, String)>[
+      for (final key in specials) (null, key),
       for (final t in sort.sorted(playlist.userGroups, (t) => t)) (null, t),
       for (final id in visible.map((g) => g.playlistId).toSet())
         for (final g in sort.sorted(
@@ -895,20 +1000,20 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       entries: [
         for (final (id, t) in groups)
           GroupPickEntry(
-            title: t,
+            title: id == null && specials.contains(t) ? _specialRowName(t) : t,
             detail: id == null
-                ? tr('My groups')
+                ? (specials.contains(t) ? null : tr('My groups'))
                 : manyPlaylists
                     ? playlist.playlistNameFor(id)
                     : null,
-            color: GroupColor.of(playlist.groupColorOf(id, t)),
+            color: _swatchOf(playlist.groupColorOf(id, t)),
             checked: id == playlistId && t == title,
           ),
       ],
     );
     if (ticked == null || ticked.isEmpty || !mounted) return;
     final picked = await _askGroupColor(
-        GroupColor.byId(playlist.groupColorOf(playlistId, title)),
+        playlist.groupColorOf(playlistId, title),
         count: ticked.length);
     if (picked == null || picked == _selectMoreGroups || !mounted) return;
     await playlist.setGroupColorMany(
@@ -6096,9 +6201,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   controller: _groupsScroll,
                   children: [
                     // Hold Select = clear this tab's Favourites (after a confirm).
+                    // Hold = Colour… + Clear favourites… (_specialRowMenu).
                     HoldToActivate(
                       onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-                      onHold: _confirmClearFavorites,
+                      onHold: () => _specialRowMenu(_favoritesGroupSentinel),
                       child: _SelectableRow(
                         icon: Icons.star,
                         label: tr('Favourites'),
@@ -6106,8 +6212,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         collapsed: collapsed,
                         fontSize: _groupFontSize,
                         focusNode: _firstGroupRowFocusNode,
+                        tint: GroupColor.of(playlist.groupColorOf(
+                            null, _favoritesGroupSentinel)),
+                        liveStyleId: _liveStyleIdOf(playlist.groupColorOf(
+                            null, _favoritesGroupSentinel)),
                         onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-                        onLongPress: _confirmClearFavorites,
+                        onLongPress: () =>
+                            _specialRowMenu(_favoritesGroupSentinel),
                         onHighlight: () =>
                             _onGroupHighlighted(_favoritesGroupSentinel),
                       ),
@@ -6116,22 +6227,26 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                     // clear (same HoldToActivate-over-InkWell shape as the live list).
                     HoldToActivate(
                       onTap: _showHistoryPopup,
-                      onHold: _confirmClearChannelHistory,
+                      onHold: () => _specialRowMenu(_historyColorKey),
                       child: _SelectableRow(
                         icon: Icons.history,
                         label: tr('History'),
                         selected: false,
                         collapsed: collapsed,
                         fontSize: _groupFontSize,
+                        tint: GroupColor.of(
+                            playlist.groupColorOf(null, _historyColorKey)),
+                        liveStyleId: _liveStyleIdOf(
+                            playlist.groupColorOf(null, _historyColorKey)),
                         onTap: _showHistoryPopup,
-                        onLongPress: _confirmClearChannelHistory,
+                        onLongPress: () => _specialRowMenu(_historyColorKey),
                       ),
                     ),
                     // Hold Select = which playlists this group shows.
                     if (_showCatchupGroup)
                       HoldToActivate(
                         onTap: () => _onGroupSelected(_catchupGroupSentinel),
-                        onHold: _showCatchupPlaylists,
+                        onHold: () => _specialRowMenu(_catchupGroupSentinel),
                         child: _SelectableRow(
                           icon: Icons.replay,
                           label: tr('Catch-up'),
@@ -6139,23 +6254,38 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                           collapsed: collapsed,
                           fontSize: _groupFontSize,
                           focusNode: _catchupRowFocusNode,
+                          tint: GroupColor.of(playlist.groupColorOf(
+                              null, _catchupGroupSentinel)),
+                          liveStyleId: _liveStyleIdOf(playlist.groupColorOf(
+                              null, _catchupGroupSentinel)),
                           onTap: () => _onGroupSelected(_catchupGroupSentinel),
-                          onLongPress: _showCatchupPlaylists,
+                          onLongPress: () =>
+                              _specialRowMenu(_catchupGroupSentinel),
                           onHighlight: () =>
                               _onGroupHighlighted(_catchupGroupSentinel),
                         ),
                       ),
                     // Channels the providers added lately (Settings > Tabs).
                     if (_showRecentGroup)
-                      _SelectableRow(
-                        icon: Icons.fiber_new_outlined,
-                        label: tr('Recently added'),
-                        selected: effectiveGroup == _recentGroupSentinel,
-                        collapsed: collapsed,
-                        fontSize: _groupFontSize,
+                      HoldToActivate(
                         onTap: () => _onGroupSelected(_recentGroupSentinel),
-                        onHighlight: () =>
-                            _onGroupHighlighted(_recentGroupSentinel),
+                        onHold: () => _specialRowMenu(_recentGroupSentinel),
+                        child: _SelectableRow(
+                          icon: Icons.fiber_new_outlined,
+                          label: tr('Recently added'),
+                          selected: effectiveGroup == _recentGroupSentinel,
+                          collapsed: collapsed,
+                          fontSize: _groupFontSize,
+                          tint: GroupColor.of(playlist.groupColorOf(
+                              null, _recentGroupSentinel)),
+                          liveStyleId: _liveStyleIdOf(playlist.groupColorOf(
+                              null, _recentGroupSentinel)),
+                          onTap: () => _onGroupSelected(_recentGroupSentinel),
+                          onLongPress: () =>
+                              _specialRowMenu(_recentGroupSentinel),
+                          onHighlight: () =>
+                              _onGroupHighlighted(_recentGroupSentinel),
+                        ),
                       ),
                     // The viewer's own groups (any playlist's channels): above every
                     // playlist's groups, never hidden with one.
@@ -6174,6 +6304,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         isFavorited: false,
                         isPendingHide: false,
                         tint: GroupColor.of(playlist.groupColorOf(null, title)),
+                        liveStyleId:
+                            _liveStyleIdOf(playlist.groupColorOf(null, title)),
                         onTap: () => _onGroupSelected(title),
                         onHighlight: () => _onGroupHighlighted(title),
                         onLongPress: () => _showMyGroupOptions(title),
@@ -6209,6 +6341,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                         isPendingHide: _pendingHideGroups
                             .contains(_groupKey(group.playlistId, group.title)),
                         tint: GroupColor.of(playlist.groupColorOf(
+                            group.playlistId, group.title)),
+                        liveStyleId: _liveStyleIdOf(playlist.groupColorOf(
                             group.playlistId, group.title)),
                         onTap: () => _onGroupSelected(group.title,
                             playlistId: group.playlistId),
@@ -8388,9 +8522,17 @@ class _SelectableRow extends StatefulWidget {
     this.focusNode,
     this.onHighlight,
     this.labelBuilder,
+    this.tint,
+    this.liveStyleId,
   });
 
   final String label;
+
+  /// Favourites / History / Catch-up / Recently added wear a colour
+  /// (hold OK > Colour…) like a group: a fade while the remote is
+  /// elsewhere ([_GroupRow.tint]) or a live style ([_GroupRow.liveStyleId]).
+  final Color? tint;
+  final String? liveStyleId;
 
   /// Draws the label in place of plain [label] text, given the row's label
   /// style (the Sports Trak tab's small gold "Trak").
@@ -8557,87 +8699,131 @@ class _SelectableRowState extends State<_SelectableRow> {
                 if (f) _ensureVisible(context);
                 if (f) widget.onHighlight?.call();
               },
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 12, vertical: _rowInnerPadding),
-                child: widget.collapsed
-                    ? Center(
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            leadingWidget,
-                            if (isPlaying)
-                              Positioned(
-                                right: -3,
-                                top: -3,
-                                child: Icon(Icons.circle,
-                                    size: 8, color: scheme.tertiary),
-                              ),
-                          ],
-                        ),
-                      )
-                    : Row(
-                        children: [
-                          leadingWidget,
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
+              child: _StyledRowBox(
+                  liveStyleId: widget.liveStyleId,
+                  animate: _focused,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    gradient: widget.tint == null || _focused
+                        ? null
+                        : groupColorFade(widget.tint!),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 12, vertical: _rowInnerPadding),
+                    child: widget.collapsed
+                        ? Center(
+                            child: Stack(
+                              clipBehavior: Clip.none,
                               children: [
-                                Row(
-                                  children: [
-                                    if (isPlaying) ...[
-                                      Icon(Icons.play_arrow,
-                                          size: 14, color: scheme.tertiary),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Expanded(
-                                      child: _label(
-                                        TextStyle(
-                                          color: foregroundColor,
-                                          fontSize: fontSize,
-                                          fontWeight: (_focused || isPlaying)
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          // The Live TV list floats translucent
-                                          // over the video now — a shadow keeps
-                                          // the name readable no matter how
-                                          // bright/busy whatever's playing
-                                          // behind it is. Harmless on the solid
-                                          // backgrounds this row is also used
-                                          // on (tabs, groups).
-                                          shadows: const [
-                                            Shadow(
-                                                color: Colors.black,
-                                                blurRadius: 4)
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (widget.subtitle != null)
-                                  DefaultTextStyle.merge(
-                                    style: TextStyle(
-                                      color: _focused
-                                          ? focusedForeground.withValues(
-                                              alpha: 0.85)
-                                          : Colors.white54,
-                                    ),
-                                    child: widget.subtitle!,
+                                leadingWidget,
+                                if (isPlaying)
+                                  Positioned(
+                                    right: -3,
+                                    top: -3,
+                                    child: Icon(Icons.circle,
+                                        size: 8, color: scheme.tertiary),
                                   ),
                               ],
                             ),
+                          )
+                        : Row(
+                            children: [
+                              leadingWidget,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (isPlaying) ...[
+                                          Icon(Icons.play_arrow,
+                                              size: 14, color: scheme.tertiary),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Expanded(
+                                          child: _label(
+                                            TextStyle(
+                                              color: foregroundColor,
+                                              fontSize: fontSize,
+                                              fontWeight:
+                                                  (_focused || isPlaying)
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                              // The Live TV list floats translucent
+                                              // over the video now — a shadow keeps
+                                              // the name readable no matter how
+                                              // bright/busy whatever's playing
+                                              // behind it is. Harmless on the solid
+                                              // backgrounds this row is also used
+                                              // on (tabs, groups).
+                                              shadows: const [
+                                                Shadow(
+                                                    color: Colors.black,
+                                                    blurRadius: 4)
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (widget.subtitle != null)
+                                      DefaultTextStyle.merge(
+                                        style: TextStyle(
+                                          color: _focused
+                                              ? focusedForeground.withValues(
+                                                  alpha: 0.85)
+                                              : Colors.white54,
+                                        ),
+                                        child: widget.subtitle!,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (widget.trailing != null) widget.trailing!,
+                            ],
                           ),
-                          if (widget.trailing != null) widget.trailing!,
-                        ],
-                      ),
-              ),
+                  )),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A group row's colour layer: its fade ([decoration]) and, for a live
+/// style, the moving background under the row's content.
+class _StyledRowBox extends StatelessWidget {
+  const _StyledRowBox({
+    required this.decoration,
+    required this.liveStyleId,
+    required this.animate,
+    required this.child,
+  });
+
+  final Decoration decoration;
+  final String? liveStyleId;
+  final bool animate;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = liveStyleId;
+    return DecoratedBox(
+      decoration: decoration,
+      child: style == null
+          ? child
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: LiveStyleBackground(colorId: style, animate: animate),
+                ),
+                child,
+              ],
+            ),
     );
   }
 }
@@ -8720,10 +8906,16 @@ class _GroupRow extends StatefulWidget {
     this.onFocusedOnBuild,
     this.onHighlight,
     this.tint,
+    this.liveStyleId,
   });
 
   final IconData icon;
   final String label;
+
+  /// Hold OK > Colour… > Live styles… (`style:<id>`, [LiveGroupStyles]):
+  /// a moving background, still while the remote is elsewhere, moving on
+  /// focus (owner, 2026-11-26). Null = none ([tint] then).
+  final String? liveStyleId;
 
   /// Hold OK > Colour… (`GroupColor`): the outline, name and icon while the
   /// row is neither focused nor the open group (those keep the usual
@@ -8992,7 +9184,9 @@ class _GroupRowState extends State<_GroupRow> {
                   // Its own layer, always there: the Refined finish paints
                   // over the row's own decoration, and the tree keeps one
                   // shape whatever the colour.
-                  child: DecoratedBox(
+                  child: _StyledRowBox(
+                    liveStyleId: widget.moving ? null : widget.liveStyleId,
+                    animate: _focused,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       gradient: tint == null ? null : groupColorFade(tint),
@@ -9017,6 +9211,14 @@ class _GroupRowState extends State<_GroupRow> {
                                       fontWeight: highlighted
                                           ? FontWeight.bold
                                           : FontWeight.normal,
+                                      // Readable over a live style.
+                                      shadows: widget.liveStyleId == null
+                                          ? null
+                                          : const [
+                                              Shadow(
+                                                  color: Colors.black,
+                                                  blurRadius: 4)
+                                            ],
                                     ),
                                   ),
                                 ),

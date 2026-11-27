@@ -206,6 +206,9 @@ void main() {
     await holdOk(tester, 'Mine');
     await tester.tap(find.text('Colour…'));
     await settle(tester);
+    // The menu scrolls on a TV-sized screen (Live styles… made it taller).
+    await tester.ensureVisible(find.text('Select more groups…'));
+    await tester.pump();
     await tester.tap(find.text('Select more groups…'));
     await settle(tester);
     // Own groups first, then the playlist's; Mine ticked and focused.
@@ -223,6 +226,8 @@ void main() {
     await settle(tester);
     expect(find.text('Colour for 2 groups'), findsOneWidget);
     expect(find.text('Select more groups…'), findsNothing);
+    await tester.ensureVisible(find.text('Blue'));
+    await tester.pump();
     await tester.tap(find.text('Blue'));
     await settle(tester);
     expect(playlist.groupColorOf(null, 'Mine'), 'blue');
@@ -233,6 +238,9 @@ void main() {
     await holdOk(tester, 'Mine 2');
     await tester.tap(find.text('Colour…'));
     await settle(tester);
+    // The menu scrolls on a TV-sized screen (Live styles… made it taller).
+    await tester.ensureVisible(find.text('Select more groups…'));
+    await tester.pump();
     await tester.tap(find.text('Select more groups…'));
     await settle(tester);
     await tester.tap(find.descendant(of: picker, matching: find.text('Mine')));
@@ -248,6 +256,9 @@ void main() {
     await holdOk(tester, 'Mine 2');
     await tester.tap(find.text('Colour…'));
     await settle(tester);
+    // The menu scrolls on a TV-sized screen (Live styles… made it taller).
+    await tester.ensureVisible(find.text('Select more groups…'));
+    await tester.pump();
     await tester.tap(find.text('Select more groups…'));
     await settle(tester);
     await tester
