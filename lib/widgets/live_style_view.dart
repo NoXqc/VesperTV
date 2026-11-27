@@ -76,6 +76,16 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
       !DeviceTypeService.television &&
       FocusManager.instance.highlightMode == FocusHighlightMode.touch;
 
+  static bool _animationsOffNoted = false;
+
+  /// Once a run, for Send log: the box says animations are off.
+  static void _noteAnimationsOff() {
+    if (_animationsOffNoted) return;
+    _animationsOffNoted = true;
+    debugPrint('LiveStyles: the device has animations off (animation scale 0'
+        ' / Remove animations); live styles move anyway');
+  }
+
   final _time = ValueNotifier<double>(restAt);
 
   /// Seconds this visit has moved, for a scene ([LiveStyleScene]); null =
@@ -157,9 +167,15 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
   @override
   Widget build(BuildContext context) {
     final touch = _touch;
-    final moving = (widget.animate || touch) &&
-        TickerMode.valuesOf(context).enabled &&
-        !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+    // Not held by the system's "animations off": Flutter reports it when the
+    // box's Transition animation scale is 0, which Google TV owners set for
+    // speed (LOG-D6MCDD, onn 4K Pro, 1041: every live style stayed still on
+    // focus). A live style is the viewer's own pick of something that moves.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _noteAnimationsOff();
+    }
+    final moving =
+        (widget.animate || touch) && TickerMode.valuesOf(context).enabled;
     final length = LiveStyleBackground.visitFor(
         widget.animate ? movesFor : touchMovesFor,
         (widget.style ?? LiveGroupStyles.instance.styleOf(widget.colorId))

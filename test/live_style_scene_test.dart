@@ -317,6 +317,27 @@ void main() {
           reason: 'particles keep the 30 s visit');
     });
 
+    testWidgets('moves even when the device has animations off',
+        (tester) async {
+      // LOG-D6MCDD (onn 4K Pro): the box's animation scale at 0 made Flutter
+      // report disableAnimations, and every live style stayed still.
+      await tester.pumpWidget(MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: SizedBox(
+            width: 260,
+            height: 44,
+            child: LiveStyleBackground(
+                colorId: style.colorId, style: style, animate: true),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      expect(elapsed(tester), closeTo(2, 0.1));
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets('loop on focus, back to the rest moment after', (tester) async {
       Widget row(bool focused) => MaterialApp(
             home: SizedBox(
