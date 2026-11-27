@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
+import '../models/channel.dart';
 import 'archive_service.dart';
 import 'tracker_api.dart';
 import 'tracker_sync.dart';
@@ -47,6 +50,28 @@ class WatchTracker {
   void _drop(String channelId) => _items.remove(channelId);
 
   Future<void> started(String channelId) => _report(channelId, 'start', 0);
+
+  /// The players' start ([started]) with the channel: a provider movie
+  /// played without its page (the launcher row, History, Vesper) is
+  /// registered by its TMDB id, as the movie page does (owner, 2026-11-26:
+  /// only plays started from the page were reported). Episodes still need
+  /// their show's page (ids and numbers come from it).
+  Future<void> startedChannel(Channel channel) {
+    if (!_items.containsKey(channel.id)) {
+      if (providerMovieTmdb(channel) case final tmdb?) {
+        register(channel.id, TrackedItem.movie(null, tmdb: tmdb));
+      }
+    }
+    return started(channel.id);
+  }
+
+  /// An Xtream movie's own TMDB id (`get_vod_streams`), if it sent one.
+  @visibleForTesting
+  static String? providerMovieTmdb(Channel channel) {
+    if (!channel.rawId.startsWith('xt_vod_')) return null;
+    final id = channel.tmdbId?.trim();
+    return id == null || id.isEmpty || id == '0' ? null : id;
+  }
 
   /// Playback of [channelId] ended at [position] of [duration]: watched
   /// (80 %+, both services' rule) or paused there.

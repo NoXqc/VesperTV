@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
@@ -38,17 +40,22 @@ typedef TmdbTrendingItem = ({
 /// category's worth of items (typically tens to a few hundred) no matter
 /// how large the provider's full catalog is.
 class TmdbEnrichmentService {
-  TmdbEnrichmentService(this._storage, this._db);
+  TmdbEnrichmentService(this._storage, this._db,
+      {http.Client? client, DateTime Function()? now})
+      : _client = client ?? _sharedClient,
+        _now = now ?? DateTime.now;
 
   final StorageService _storage;
   final CatalogDatabase _db;
+  final http.Client _client;
+  final DateTime Function() _now;
 
   static const _base = 'https://api.themoviedb.org/3';
 
   /// TMDB's own image CDN — `w500` is a good balance for a TV poster grid
   /// (noticeably sharper than most providers' own art without pulling full
   /// originals). See `Channel.posterUrl`'s doc comment: this rides along in
-  /// the exact same response [_fetchDetails] already fetches for
+  /// the exact same response the title lookup ([_lookup]) already reads for
   /// [Channel.releaseDate]/[XtreamSeries.releaseDate], at no extra request.
   static const _imageBase = 'https://image.tmdb.org/t/p/w500';
 
@@ -59,191 +66,215 @@ class TmdbEnrichmentService {
   /// separate field from [_imageBase]'s poster at all.
   static const _backdropImageBase = 'https://image.tmdb.org/t/p/w1280';
 
-  /// Items in flight at once — plain sequential (one at a time) made a
-  /// few hundred items take minutes, which read as a *stuck/wrong* sort
-  /// rather than a still-loading one (reported directly: newer titles
-  /// sitting below older ones, because they just hadn't been fetched yet
-  /// — the list only re-sorts with whatever data exists *so far*). Five
-  /// concurrent requests is a meaningful speedup without hammering TMDB.
-  static const _concurrency = 5;
+  /// Lookups in flight at once, as a pool: each worker takes the next title
+  /// as soon as it's done (5 per batch with a pause after each waited for
+  /// every batch's slowest answer). TMDB allows about 40 requests a second
+  /// per address; 8 at ~150-300 ms each stays under it, and a 429 pauses
+  /// every worker ([_getJson]).
+  static const _concurrency = 8;
 
-  /// Small pause between batches, not per-item — TMDB's v3 API no longer
-  /// publishes a hard rate limit, but there's no reason to fire batch
-  /// after batch with zero spacing at all.
-  static const _batchPause = Duration(milliseconds: 150);
+  /// A title TMDB had nothing (or only part) for is asked again after this.
+  static const recheckAfter = Duration(days: 30);
 
-  /// Enriches whichever of [items] are still missing [Channel.releaseDate]
-  /// or [Channel.posterUrl] — the latter was added after the former, so an
-  /// item enriched before that point has a release date already but no
-  /// poster yet; re-including it here lets a later enrichment pass
-  /// backfill just the poster without re-fetching the date. No longer
-  /// gated on [Channel.tmdbId] already being set — confirmed directly on
-  /// a real provider (Trex/SRS-style) as the actual reason this whole
-  /// feature looked like it silently did nothing with a valid key saved:
-  /// most of its catalog sends no `tmdb` field at all, so every item was
-  /// filtered out before a single request was ever made. A missing
-  /// [Channel.tmdbId] is now resolved here too, via [_searchTmdbId], the
-  /// same way a human would search TMDB by the title itself.
-  /// [onProgress] fires after *every* attempt (hit or miss), not just
-  /// ones that found something, so a caller can show real "X of Y
-  /// processed" progress — distinguishing "still working, correct so far"
-  /// from "finished, this is the final order" is the whole point, since a
-  /// partially-enriched category's incremental sort is only valid up to
-  /// whatever point enrichment has actually reached.
+  /// One client for every lookup: its connections stay open between them
+  /// (`http.get` made a new connection and TLS handshake per request).
+  static final _sharedClient = http.Client();
+
+  /// True when a title still needs TMDB: no date or no poster yet, and not
+  /// asked in the last [recheckAfter] (owner, 2026-11-26: the TMDB sort
+  /// looked the same titles up at every Expand catalog open).
+  @visibleForTesting
+  static bool needsLookup(DateTime? releaseDate, String? posterUrl,
+          int? checkedMs, DateTime now) =>
+      (releaseDate == null || posterUrl == null) &&
+      (checkedMs == null ||
+          now.millisecondsSinceEpoch - checkedMs > recheckAfter.inMilliseconds);
+
+  /// Fills in [Channel.releaseDate] / [Channel.posterUrl] /
+  /// [Channel.backdropUrl] for the [items] that still need it
+  /// ([needsLookup]) and saves the answer with when it was asked
+  /// ([Channel.tmdbCheckedMs]), found or not, so the next open skips them;
+  /// a content update keeps all of it (`CatalogDatabase`). Only a title
+  /// TMDB didn't answer for (network, key, rate limit) is asked again next
+  /// time. [onProgress] fires after every title (hit or miss), so a caller
+  /// can show real "X of Y" progress.
   Future<void> enrichVod(List<Channel> items,
       {void Function(int done, int total)? onProgress}) async {
     final key = _storage.getTmdbApiKey();
-    // Deliberately NOT also gated on c.backdropUrl == null — this field
-    // didn't exist before this app version, so every item enriched by an
-    // earlier version has it null forever, same as every other item that
-    // genuinely still needs enriching. Including it here once looked like
-    // the obvious way to backfill backdrops onto already-enriched items,
-    // but reported directly as a real crash: reopening any category
-    // that had already been fully enriched silently re-queued its *entire*
-    // item count (hundreds to thousands) as "pending" again, firing that
-    // many TMDB requests and large w1280 image decodes in one burst. A
-    // backdrop only ever gets backfilled as a side effect of an item
-    // genuinely needing [releaseDate]/[posterUrl] enrichment for some
-    // other reason; items enriched before this field existed just never
-    // get one, and keep using the poster-beside-text/poster-crop fallback
-    // instead — a real trade-off, not an oversight, in exchange for not
-    // silently re-enriching a whole already-done catalog on every open.
+    final now = _now();
     final pending = items
-        .where((c) => c.releaseDate == null || c.posterUrl == null)
+        .where((c) =>
+            needsLookup(c.releaseDate, c.posterUrl, c.tmdbCheckedMs, now))
         .toList();
     if (key == null || key.isEmpty || pending.isEmpty) {
       onProgress?.call(0, 0);
       return;
     }
-    var done = 0;
-    final total = pending.length;
-    for (var i = 0; i < pending.length; i += _concurrency) {
-      final batch = pending.skip(i).take(_concurrency);
-      // A try/catch *per item* (not just around the whole batch) — one
-      // item throwing used to reject the whole `Future.wait`, which
-      // silently killed every remaining batch with nothing ever
-      // surfacing it. Confirmed directly as the real cause of "only one
-      // title ever moves, no matter the provider or how well-tagged its
-      // catalog is" — data availability was never the problem.
-      await Future.wait(batch.map((c) async {
-        try {
-          var id = c.tmdbId;
-          id ??= await _searchTmdbId(c.name, key, isMovie: true);
-          if (id != null && id != c.tmdbId) {
-            c.tmdbId = id;
-            unawaited(_db.setVodTmdbId(c.id, id));
-          }
-          if (id == null) return;
-          final details = await _fetchDetails(id, key, isMovie: true);
-          if (details != null) {
-            if (details.releaseDate != null) {
-              c.releaseDate = details.releaseDate;
-              unawaited(_db.setVodReleaseDate(c.id, details.releaseDate!));
-            }
-            if (details.posterUrl != null) {
-              c.posterUrl = details.posterUrl;
-              unawaited(_db.setVodPosterUrl(c.id, details.posterUrl!));
-            }
-            if (details.backdropUrl != null) {
-              c.backdropUrl = details.backdropUrl;
-              unawaited(_db.setVodBackdropUrl(c.id, details.backdropUrl!));
-            }
-          }
-        } catch (_) {
-          // A dead/invalid key, a rate limit, a title TMDB doesn't have —
-          // none of these are worth surfacing as an error to the viewer
-          // browsing a poster grid. The item just keeps showing no release
-          // date, same as if this service didn't run at all.
-        } finally {
-          done++;
-          onProgress?.call(done, total);
-        }
-      }));
-      await Future<void>.delayed(_batchPause);
-    }
+    await _enrich(pending, 'movies', items.length, onProgress, (c) async {
+      final art = await _lookup(c.name, c.tmdbId, key, isMovie: true);
+      final at = _now().millisecondsSinceEpoch;
+      if (art?.releaseDate case final d?) c.releaseDate = d;
+      if (art?.posterUrl case final p?) c.posterUrl = p;
+      if (art?.backdropUrl case final b?) c.backdropUrl = b;
+      c.tmdbCheckedMs = at;
+      unawaited(_db
+          .setVodTmdb(c.id,
+              releaseDate: art?.releaseDate,
+              posterUrl: art?.posterUrl,
+              backdropUrl: art?.backdropUrl,
+              checkedMs: at)
+          .catchError((Object _) {}));
+      return art != null;
+    });
   }
 
-  /// Same as [enrichVod] for series — TMDB's `/tv/{id}` endpoint and
-  /// `first_air_date` instead of `/movie/{id}`'s `release_date`.
+  /// Same as [enrichVod] for series (`/tv/{id}`, `first_air_date`).
   Future<void> enrichSeries(List<XtreamSeries> items,
       {void Function(int done, int total)? onProgress}) async {
     final key = _storage.getTmdbApiKey();
-    // See enrichVod's matching comment — same reasoning, same fix.
+    final now = _now();
     final pending = items
-        .where((s) => s.releaseDate == null || s.posterUrl == null)
+        .where((s) =>
+            needsLookup(s.releaseDate, s.posterUrl, s.tmdbCheckedMs, now))
         .toList();
     if (key == null || key.isEmpty || pending.isEmpty) {
       onProgress?.call(0, 0);
       return;
     }
-    var done = 0;
-    final total = pending.length;
-    for (var i = 0; i < pending.length; i += _concurrency) {
-      final batch = pending.skip(i).take(_concurrency);
-      await Future.wait(batch.map((s) async {
-        try {
-          var id = s.tmdbId;
-          id ??= await _searchTmdbId(s.name, key, isMovie: false);
-          if (id != null && id != s.tmdbId) {
-            s.tmdbId = id;
-            unawaited(_db.setSeriesTmdbId(s.id, id));
-          }
-          if (id == null) return;
-          final details = await _fetchDetails(id, key, isMovie: false);
-          if (details != null) {
-            if (details.releaseDate != null) {
-              s.releaseDate = details.releaseDate;
-              unawaited(_db.setSeriesReleaseDate(s.id, details.releaseDate!));
-            }
-            if (details.posterUrl != null) {
-              s.posterUrl = details.posterUrl;
-              unawaited(_db.setSeriesPosterUrl(s.id, details.posterUrl!));
-            }
-            if (details.backdropUrl != null) {
-              s.backdropUrl = details.backdropUrl;
-              unawaited(_db.setSeriesBackdropUrl(s.id, details.backdropUrl!));
-            }
-          }
-        } catch (_) {
-          // See the matching catch in enrichVod above.
-        } finally {
-          done++;
-          onProgress?.call(done, total);
-        }
-      }));
-      await Future<void>.delayed(_batchPause);
-    }
+    await _enrich(pending, 'shows', items.length, onProgress, (s) async {
+      final art = await _lookup(s.name, s.tmdbId, key, isMovie: false);
+      final at = _now().millisecondsSinceEpoch;
+      if (art?.releaseDate case final d?) s.releaseDate = d;
+      if (art?.posterUrl case final p?) s.posterUrl = p;
+      if (art?.backdropUrl case final b?) s.backdropUrl = b;
+      s.tmdbCheckedMs = at;
+      unawaited(_db
+          .setSeriesTmdb(s.id,
+              releaseDate: art?.releaseDate,
+              posterUrl: art?.posterUrl,
+              backdropUrl: art?.backdropUrl,
+              checkedMs: at)
+          .catchError((Object _) {}));
+      return art != null;
+    });
   }
 
-  /// Looks up a TMDB id by title for an item the provider sent no `tmdb`
-  /// field for — the fallback [enrichVod]/[enrichSeries] use instead of
-  /// just giving up. Provider titles are usually decorated (language/
-  /// quality prefixes like "FR - "/"4K-EN-HDR - ", trailing tags like
-  /// "[MULTI-SUB]") well beyond what TMDB's own search can match against,
-  /// so [_cleanTitleForSearch] strips those first. Takes the top result as-
-  /// is — TMDB's search endpoint already ranks by relevance/popularity,
-  /// and a wrong match here only ever costs a wrong-but-harmless poster/
-  /// date on one title, not anything the user acts on directly.
-  Future<String?> _searchTmdbId(String rawTitle, String apiKey,
-      {required bool isMovie}) async {
+  /// Runs [one] over [pending] with [_concurrency] workers; [one] is true
+  /// when TMDB had the title and throws when TMDB didn't answer. One Send
+  /// log line at the end.
+  Future<void> _enrich<T>(
+      List<T> pending,
+      String what,
+      int shown,
+      void Function(int done, int total)? onProgress,
+      Future<bool> Function(T item) one) async {
+    final watch = Stopwatch()..start();
+    var next = 0, done = 0, found = 0, missing = 0, failed = 0;
+    Future<void> worker() async {
+      while (next < pending.length) {
+        final item = pending[next++];
+        try {
+          (await one(item)) ? found++ : missing++;
+        } catch (_) {
+          // A dead key, the network, a rate limit that didn't pass: asked
+          // again next time. Never an error on a poster grid.
+          failed++;
+        } finally {
+          done++;
+          onProgress?.call(done, pending.length);
+        }
+      }
+    }
+
+    await Future.wait([
+      for (var i = 0; i < math.min(_concurrency, pending.length); i++) worker()
+    ]);
+    debugPrint('TmdbEnrich: $what ${pending.length} of $shown looked up in '
+        '${watch.elapsedMilliseconds} ms (found $found, not on TMDB $missing, '
+        'no answer $failed)');
+  }
+
+  /// TMDB's date, poster and backdrop for a title: by the provider's TMDB id
+  /// (one request), else a title search, whose top result already carries
+  /// them (one request; the details used to be asked as well). Null = TMDB
+  /// has no such title. Throws when TMDB didn't answer. A searched id is
+  /// never stamped into [Channel.tmdbId]: that stays the provider's own,
+  /// which Trakt / Simkl and Skip intro trust (a top search result can be
+  /// another film of the same name).
+  Future<({DateTime? releaseDate, String? posterUrl, String? backdropUrl})?>
+      _lookup(String rawTitle, String? providerId, String apiKey,
+          {required bool isMovie}) async {
+    final id = providerId?.trim();
+    if (id != null && id.isNotEmpty && id != '0') {
+      final data = await _getJson(
+          '${isMovie ? 'movie' : 'tv'}/${Uri.encodeComponent(id)}',
+          {'api_key': apiKey});
+      if (data != null) return _artOf(data, isMovie: isMovie);
+      // 404: the provider's id isn't one of TMDB's (or another kind): search.
+    }
     final cleaned = _cleanTitleForSearch(rawTitle);
     if (cleaned.title.isEmpty) return null;
-    try {
-      final path = isMovie ? 'search/movie' : 'search/tv';
-      final uri = Uri.parse('$_base/$path').replace(queryParameters: {
-        'api_key': apiKey,
-        'query': cleaned.title,
-        if (cleaned.year != null)
-          (isMovie ? 'year' : 'first_air_date_year'): cleaned.year.toString(),
-      });
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
-      if (response.statusCode != 200) return null;
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final results = (data['results'] as List?) ?? const [];
-      if (results.isEmpty) return null;
-      return (results.first as Map<String, dynamic>)['id']?.toString();
-    } catch (_) {
+    final data = await _getJson(isMovie ? 'search/movie' : 'search/tv', {
+      'api_key': apiKey,
+      'query': cleaned.title,
+      if (cleaned.year != null)
+        (isMovie ? 'year' : 'first_air_date_year'): cleaned.year.toString(),
+    });
+    final results = data?['results'];
+    if (results is! List || results.isEmpty || results.first is! Map) {
       return null;
+    }
+    return _artOf(results.first as Map, isMovie: isMovie);
+  }
+
+  static ({DateTime? releaseDate, String? posterUrl, String? backdropUrl})
+      _artOf(Map data, {required bool isMovie}) {
+    final rawDate =
+        '${(isMovie ? data['release_date'] : data['first_air_date']) ?? ''}';
+    final posterPath = data['poster_path'];
+    final backdropPath = data['backdrop_path'];
+    return (
+      releaseDate: rawDate.isNotEmpty ? DateTime.tryParse(rawDate) : null,
+      posterUrl: posterPath is String && posterPath.isNotEmpty
+          ? '$_imageBase$posterPath'
+          : null,
+      backdropUrl: backdropPath is String && backdropPath.isNotEmpty
+          ? '$_backdropImageBase$backdropPath'
+          : null,
+    );
+  }
+
+  /// When a 429 asked every lookup to wait (real time).
+  static DateTime? _pausedUntil;
+
+  /// [path]'s JSON, or null on a 404. A 429 pauses every lookup
+  /// (Retry-After, else 2 s, at most 10) and tries again, twice at most.
+  /// Anything else throws.
+  Future<Map<String, dynamic>?> _getJson(
+      String path, Map<String, String> query) async {
+    final uri = Uri.parse('$_base/$path').replace(queryParameters: query);
+    for (var attempt = 0;; attempt++) {
+      final wait = _pausedUntil?.difference(DateTime.now());
+      if (wait != null && wait > Duration.zero) {
+        await Future<void>.delayed(wait);
+      }
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 10));
+      switch (response.statusCode) {
+        case 200:
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          if (data is Map<String, dynamic>) return data;
+          throw const FormatException('TMDB answered something else');
+        case 404:
+          return null;
+        case 429 when attempt < 2:
+          final seconds =
+              int.tryParse(response.headers['retry-after'] ?? '') ?? 2;
+          _pausedUntil =
+              DateTime.now().add(Duration(seconds: seconds.clamp(1, 10)));
+        default:
+          throw Exception('TMDB HTTP ${response.statusCode}');
+      }
     }
   }
 
@@ -277,35 +308,6 @@ class TmdbEnrichmentService {
     return (title: title.trim(), year: year);
   }
 
-  Future<({DateTime? releaseDate, String? posterUrl, String? backdropUrl})?>
-      _fetchDetails(String tmdbId, String apiKey,
-          {required bool isMovie}) async {
-    try {
-      final path = isMovie ? 'movie' : 'tv';
-      final uri = Uri.parse('$_base/$path/$tmdbId?api_key=$apiKey');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
-      if (response.statusCode != 200) return null;
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final rawDate =
-          (isMovie ? data['release_date'] : data['first_air_date']) as String?;
-      final posterPath = data['poster_path'] as String?;
-      final backdropPath = data['backdrop_path'] as String?;
-      return (
-        releaseDate: (rawDate != null && rawDate.isNotEmpty)
-            ? DateTime.tryParse(rawDate)
-            : null,
-        posterUrl: (posterPath != null && posterPath.isNotEmpty)
-            ? '$_imageBase$posterPath'
-            : null,
-        backdropUrl: (backdropPath != null && backdropPath.isNotEmpty)
-            ? '$_backdropImageBase$backdropPath'
-            : null,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
   /// TMDB's own "what's actually popular right now" list — a completely
   /// different signal from everything else in this file, which only ever
   /// enriches titles the *provider's own catalog* already decided to
@@ -333,7 +335,8 @@ class TmdbEnrichmentService {
     try {
       final uri = Uri.parse('$_base/trending/$mediaType/week')
           .replace(queryParameters: {'api_key': apiKey, 'page': '$page'});
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return const [];
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final results = (data['results'] as List?) ?? const [];
@@ -392,7 +395,8 @@ class TmdbEnrichmentService {
     try {
       final path = isMovie ? 'movie' : 'tv';
       final uri = Uri.parse('$_base/$path/$tmdbId?api_key=$apiKey');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final title = (isMovie ? data['title'] : data['name'])?.toString() ?? '';

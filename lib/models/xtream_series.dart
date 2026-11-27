@@ -16,6 +16,7 @@ class XtreamSeries {
     this.posterUrl,
     this.backdropUrl,
     this.providerBackdropUrl,
+    this.tmdbCheckedMs,
   }) : id = '$playlistId::series_$seriesId';
 
   /// The raw per-provider integer Xtream itself uses — kept because
@@ -70,6 +71,9 @@ class XtreamSeries {
   /// `get_series_info` (hero dwell / detail open) and persisted. Keyless,
   /// unlike [backdropUrl].
   String? providerBackdropUrl;
+
+  /// See `Channel.tmdbCheckedMs`.
+  int? tmdbCheckedMs;
 
   /// Hero background order: TMDB backdrop, then the provider's.
   String? get anyBackdropUrl {

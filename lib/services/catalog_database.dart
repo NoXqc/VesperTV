@@ -95,7 +95,7 @@ class CatalogDatabase {
   Future<Database> _open(String path) async {
     final db = await openDatabase(
       path,
-      version: 10,
+      version: 11,
       // Write-ahead log: a commit appends to one file instead of copying
       // each page to a rollback journal first and syncing both - fewer
       // flash writes and syncs for a big import (a 1.28M-entry M3U
@@ -141,7 +141,8 @@ class CatalogDatabase {
             backdrop_url TEXT,
             provider_poster_url TEXT,
             provider_backdrop_url TEXT,
-            import_mark INTEGER
+            import_mark INTEGER,
+            tmdb_checked INTEGER
           )
         ''');
         await db.execute(
@@ -166,7 +167,8 @@ class CatalogDatabase {
             poster_url TEXT,
             backdrop_url TEXT,
             provider_backdrop_url TEXT,
-            import_mark INTEGER
+            import_mark INTEGER,
+            tmdb_checked INTEGER
           )
         ''');
         await db.execute(
@@ -323,6 +325,13 @@ class CatalogDatabase {
               db, 'series_items', 'import_mark', 'INTEGER');
           await db.execute(_m3uEpisodesTable);
         }
+        if (oldVersion < 11) {
+          // When TMDB was last asked about a title (TmdbEnrichmentService).
+          await _addColumnIfMissing(
+              db, 'vod_channels', 'tmdb_checked', 'INTEGER');
+          await _addColumnIfMissing(
+              db, 'series_items', 'tmdb_checked', 'INTEGER');
+        }
       },
     );
     // Rows are read and replaced by playlist + category; category alone
@@ -472,6 +481,7 @@ class CatalogDatabase {
         'backdrop_url': c.backdropUrl,
         'provider_poster_url': c.providerPosterUrl,
         'provider_backdrop_url': c.providerBackdropUrl,
+        'tmdb_checked': c.tmdbCheckedMs,
         if (importMark != null) 'import_mark': importMark,
       };
 
@@ -513,6 +523,7 @@ class CatalogDatabase {
       backdropUrl: row['backdrop_url'] as String?,
       providerPosterUrl: row['provider_poster_url'] as String?,
       providerBackdropUrl: row['provider_backdrop_url'] as String?,
+      tmdbCheckedMs: row['tmdb_checked'] as int?,
     );
   }
 
@@ -538,6 +549,7 @@ class CatalogDatabase {
         'poster_url': s.posterUrl,
         'backdrop_url': s.backdropUrl,
         'provider_backdrop_url': s.providerBackdropUrl,
+        'tmdb_checked': s.tmdbCheckedMs,
         if (importMark != null) 'import_mark': importMark,
       };
 
@@ -570,6 +582,25 @@ class CatalogDatabase {
       List<Map<String, Object?>> episodes = const []}) async {
     writeGeneration++;
     final db = await _database;
+    for (final (table, rows) in [
+      ('vod_channels', vod),
+      ('series_items', series)
+    ]) {
+      if (rows.isEmpty) continue;
+      final playlistId = rows.first['playlist_id'] as String;
+      final kept = await (_m3uKept['$table\u0000$playlistId'] ??=
+          _keptValues(db, table, 'playlist_id = ?', [playlistId]));
+      if (kept.isEmpty) continue;
+      for (final r in rows) {
+        final old = kept[r['id']];
+        if (old == null) continue;
+        for (final column in _keptColumns(table)) {
+          if (r.containsKey(column) && r[column] == null) {
+            r[column] = old[column];
+          }
+        }
+      }
+    }
     final batch = db.batch();
     for (final (table, rows) in [
       ('vod_channels', vod),
@@ -579,6 +610,80 @@ class CatalogDatabase {
       _insertMany(batch, table, rows);
     }
     await batch.commit(noResult: true);
+  }
+
+  /// An M3U import's kept values, read at its first batch (one per table
+  /// and playlist), dropped when it finishes.
+  final _m3uKept = <String, Future<Map<String, Map<String, Object?>>>>{};
+
+  /// What a content update must not lose: TMDB's date, poster and backdrop
+  /// (Expand catalog's TMDB sort), when TMDB was asked, and get_vod_info's
+  /// artwork. A category's rows are rewritten from the provider's list on
+  /// every update, which used to drop them all: the TMDB sort looked
+  /// everything up again at the next open (owner, 2026-11-26).
+  static List<String> _keptColumns(String table) => table == 'vod_channels'
+      ? const [
+          'release_date',
+          'poster_url',
+          'backdrop_url',
+          'provider_poster_url',
+          'provider_backdrop_url',
+          'tmdb_checked',
+        ]
+      : const [
+          'release_date',
+          'poster_url',
+          'backdrop_url',
+          'provider_backdrop_url',
+          'tmdb_checked',
+        ];
+
+  /// [where]'s rows that have any kept value, by id.
+  Future<Map<String, Map<String, Object?>>> _keptValues(
+      Database db, String table, String where, List<Object?> whereArgs) async {
+    final columns = _keptColumns(table);
+    final rows = await db.rawQuery(
+        'SELECT id, ${columns.join(', ')} FROM $table WHERE $where AND '
+        '(${columns.map((c) => '$c IS NOT NULL').join(' OR ')})',
+        whereArgs);
+    return {for (final r in rows) r['id'] as String: r};
+  }
+
+  static DateTime? _date(Object? ms) =>
+      ms is int ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
+
+  /// One title's TMDB answer ([TmdbEnrichmentService]) in one write:
+  /// what it found, and when it asked ([checkedMs]).
+  Future<void> setVodTmdb(String id,
+          {DateTime? releaseDate,
+          String? posterUrl,
+          String? backdropUrl,
+          required int checkedMs}) =>
+      _setTmdb(
+          'vod_channels', id, releaseDate, posterUrl, backdropUrl, checkedMs);
+
+  Future<void> setSeriesTmdb(String id,
+          {DateTime? releaseDate,
+          String? posterUrl,
+          String? backdropUrl,
+          required int checkedMs}) =>
+      _setTmdb(
+          'series_items', id, releaseDate, posterUrl, backdropUrl, checkedMs);
+
+  Future<void> _setTmdb(String table, String id, DateTime? releaseDate,
+      String? posterUrl, String? backdropUrl, int checkedMs) async {
+    final db = await _database;
+    await db.update(
+        table,
+        {
+          if (releaseDate != null)
+            'release_date': releaseDate.millisecondsSinceEpoch,
+          if (posterUrl != null) 'poster_url': posterUrl,
+          if (backdropUrl != null) 'backdrop_url': backdropUrl,
+          'tmdb_checked': checkedMs,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 
   /// Many rows per INSERT: one statement per row through the plugin made
@@ -617,6 +722,7 @@ class CatalogDatabase {
   /// gets here, so it leaves the previous catalog in place.
   Future<void> finishM3uImport(String playlistId, int importMark) async {
     writeGeneration++;
+    _m3uKept.removeWhere((k, _) => k.endsWith('\u0000$playlistId'));
     final db = await _database;
     for (final table in ['vod_channels', 'series_items', 'm3u_episodes']) {
       await db.delete(table,
@@ -676,6 +782,7 @@ class CatalogDatabase {
       posterUrl: row['poster_url'] as String?,
       backdropUrl: row['backdrop_url'] as String?,
       providerBackdropUrl: row['provider_backdrop_url'] as String?,
+      tmdbCheckedMs: row['tmdb_checked'] as int?,
     );
   }
 
@@ -715,6 +822,18 @@ class CatalogDatabase {
       String playlistId, String categoryName, List<Channel> items) async {
     writeGeneration++;
     final db = await _database;
+    final kept = await _keptValues(db, 'vod_channels',
+        'category_name = ? AND playlist_id = ?', [categoryName, playlistId]);
+    for (final c in items) {
+      if (kept[c.id] case final old?) {
+        c.releaseDate ??= _date(old['release_date']);
+        c.posterUrl ??= old['poster_url'] as String?;
+        c.backdropUrl ??= old['backdrop_url'] as String?;
+        c.providerPosterUrl ??= old['provider_poster_url'] as String?;
+        c.providerBackdropUrl ??= old['provider_backdrop_url'] as String?;
+        c.tmdbCheckedMs ??= old['tmdb_checked'] as int?;
+      }
+    }
     final batch = db.batch();
     batch.delete('vod_channels',
         where: 'category_name = ? AND playlist_id = ?',
@@ -888,6 +1007,17 @@ class CatalogDatabase {
       String playlistId, String categoryName, List<XtreamSeries> items) async {
     writeGeneration++;
     final db = await _database;
+    final kept = await _keptValues(db, 'series_items',
+        'category_name = ? AND playlist_id = ?', [categoryName, playlistId]);
+    for (final s in items) {
+      if (kept[s.id] case final old?) {
+        s.releaseDate ??= _date(old['release_date']);
+        s.posterUrl ??= old['poster_url'] as String?;
+        s.backdropUrl ??= old['backdrop_url'] as String?;
+        s.providerBackdropUrl ??= old['provider_backdrop_url'] as String?;
+        s.tmdbCheckedMs ??= old['tmdb_checked'] as int?;
+      }
+    }
     final batch = db.batch();
     batch.delete('series_items',
         where: 'category_name = ? AND playlist_id = ?',

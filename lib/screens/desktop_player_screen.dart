@@ -898,9 +898,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _matchDisplay(_currentChannel);
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
-    // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
+    // Trakt/Simkl: titles registered by their page, provider movies by
+    // their TMDB id (a no-op otherwise).
     if (!_currentChannel.transientPlayback) {
-      unawaited(WatchTracker.instance.started(_currentChannel.id));
+      unawaited(WatchTracker.instance.startedChannel(_currentChannel));
     }
     _siloPlaying();
     // DesktopPlayerScreen deliberately never calls PlaybackService.play()
@@ -1518,7 +1519,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     setState(() => _currentChannel = channel);
     await _openMedia(channel, start: start, play: play);
     if (!mounted) return;
-    unawaited(WatchTracker.instance.started(channel.id));
+    unawaited(WatchTracker.instance.startedChannel(channel));
     _siloPlaying();
     _applySeriesSubtitles();
     if (_isLive) _DesktopLiveHistory.record(channel);

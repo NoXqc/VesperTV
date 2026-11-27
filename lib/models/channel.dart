@@ -39,6 +39,7 @@ class Channel {
     this.backdropUrl,
     this.providerPosterUrl,
     this.providerBackdropUrl,
+    this.tmdbCheckedMs,
     this.transientPlayback = false,
     this.mediaFileInfo,
     this.onDemand = false,
@@ -261,6 +262,11 @@ class Channel {
   /// on-demand fetch and persistence as [providerPosterUrl].
   String? providerBackdropUrl;
 
+  /// When `TmdbEnrichmentService` last asked TMDB about this title (ms
+  /// since epoch), found or not: a title TMDB doesn't have isn't searched
+  /// again on every Expand catalog open (owner, 2026-11-26).
+  int? tmdbCheckedMs;
+
   /// Hero/detail background order: TMDB backdrop, then the provider's.
   String? get anyBackdropUrl {
     for (final u in [backdropUrl, providerBackdropUrl]) {
@@ -370,6 +376,7 @@ class Channel {
         posterUrl: posterUrl,
         backdropUrl: backdropUrl,
         providerPosterUrl: providerPosterUrl,
+        tmdbCheckedMs: tmdbCheckedMs,
         providerBackdropUrl: providerBackdropUrl,
         transientPlayback: transientPlayback,
         mediaFileInfo: mediaFileInfo ?? this.mediaFileInfo,

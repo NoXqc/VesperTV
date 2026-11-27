@@ -600,6 +600,21 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   stacks the steps over the QR, the code is one line (FittedBox), phones / computers get Open in browser + Copy code;
   scrolls inside its 520 px box (AlertDialog `scrollable` asks the QR's intrinsic height: LayoutBuilder assert). 8
   languages; remote.html "A Trakt or Simkl account for each profile" + guide.json. test/tracker_profiles_test.dart (7).
+- **Claude, 2026-11-26 - TMDB sort remembered + faster; provider movies tracked without their page (`claude/tmdb-cache`,
+  worktree `VesperTV-claude-tmdbcache`, from main 4c4ba57):** owner: Expand catalog's TMDB sort ("Fetching TMDB release
+  dates... x/y") took forever at every open. Causes: (1) a content update rewrites each category's rows from the provider
+  (`_upsertVodCategory` delete + insert, M3U `INSERT OR REPLACE`), dropping every TMDB date / poster / backdrop and
+  get_vod_info's artwork; (2) titles TMDB doesn't have were never marked, so they were searched again each open; (3) a search
+  hit cost a second (details) request, 5 per batch + 150 ms pauses, a new connection per request. Now: schema v11
+  `tmdb_checked` (`Channel` / `XtreamSeries.tmdbCheckedMs`); `CatalogDatabase._keptValues` carries release_date, poster_url,
+  backdrop_url, provider_poster/backdrop_url, tmdb_checked through Xtream category replaces and M3U imports (tmdb_id is NOT
+  carried: the provider's own id comes fresh); `TmdbEnrichmentService`: `needsLookup` (no date or poster AND not asked in
+  30 days), one request per title (search results carry the art; a provider id that 404s falls back to search), 8-worker
+  pool, one kept-alive `http.Client`, 429 pauses everyone (Retry-After), a title TMDB didn't answer for stays pending, one
+  `setVodTmdb` / `setSeriesTmdb` write, Send log `TmdbEnrich:`. A searched id is no longer stamped into `tmdbId` (Trakt /
+  Simkl / Skip intro trust it as the provider's). Trakt gap: `WatchTracker.startedChannel` (both players) registers an
+  Xtream movie (`xt_vod_`) with its own TMDB id when no page did (launcher row, History, Vesper); episodes still need the
+  show page. test/tmdb_cache_test.dart (7); catalog_search_test expects schema 11. Not box-tested, speed not measured.
 - **Claude, 2026-11-26 - YouTube's bot check: say why trailers don't play (`claude/yt-bot-notice`, worktree
   `VesperTV-claude-ytbot`):** LOG-FYXL6N (SHIELD, 1036): no card trailer, ever; every client answered `LOGIN_REQUIRED`
   "Sign in to confirm you're not a bot" while the owner's PC got the same trailers. The VPS's address got exactly that answer,

@@ -833,9 +833,10 @@ class PlaybackService extends ChangeNotifier {
       // idle-input timeout, exactly like they would for any non-video app —
       // there was nothing here telling the OS playback is active.
       unawaited(WakelockPlus.enable());
-      // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
+      // Trakt/Simkl: titles registered by their page, provider movies by
+      // their TMDB id (a no-op otherwise).
       if (!channel.transientPlayback) {
-        unawaited(WatchTracker.instance.started(channel.id));
+        unawaited(WatchTracker.instance.startedChannel(channel));
       }
       // A Silo server's play: its heartbeat + position (a no-op otherwise).
       SiloSessions.instance.playing(channel.url, () {

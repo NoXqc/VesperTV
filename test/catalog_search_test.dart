@@ -112,7 +112,8 @@ void main() {
                 .rawQuery("SELECT name FROM vod_channels WHERE id = 'p::1200'"))
             .single['name'],
         'Spider-Man: Homecoming');
-    expect(await db.getVersion(), 10);
+    // 11: tmdb_checked (TMDB lookups remembered, 2026-11-26).
+    expect(await db.getVersion(), 11);
   });
 
   test('catalog replacement refreshes normalized keys with the real title',
