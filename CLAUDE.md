@@ -539,6 +539,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-27 - black window after Update Content (`claude/update-content-black`, worktree
+  `VesperTV-claude-ucblack`, from main 9d2573c):** LOG-5L9ZYS (Mac 1.0.73, "also on iOS"): Back / Esc / back swipe closed the
+  progress page early and the update's closing `pop()` took the home off (empty navigator = black). `runBehindProgressPage`
+  closes only that page; Update Content (Xtream + M3U) and Add Playlist's warm-up use it. A progress page pushed and closed
+  around an await: never `navigator.pop()` blind. Row in dev-notes/bugs-and-fixes.md.
 - **Claude, 2026-11-27 - catch-up on computers / iPhone: the `.ts` switch (`claude/desktop-catchup-ts`, worktree
   `VesperTV-claude-dcatchup`, from main 0593622):** LOG-WFEVGV (Mac 1.0.73, NL panel, NPO): every catch-up black, the
   panel's `.m3u8` never served its first segment; the desktop `.ts` switch only listened to media_kit's error stream

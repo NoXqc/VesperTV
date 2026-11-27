@@ -834,14 +834,14 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     // warming up, competing for memory in the background).
     if (!mounted) return;
     final warmFuture = playlist.warmAllCategories(playlistId);
-    final navigator = Navigator.of(context);
-    unawaited(navigator.push(MaterialPageRoute(
-      builder: (_) => Scaffold(
+    // Closes the progress page only, even after Back took it off early.
+    await runBehindProgressPage(
+      Navigator.of(context),
+      warmFuture,
+      (_) => Scaffold(
           backgroundColor: Colors.black,
           body: CatalogSyncBody(playlist: playlist)),
-    )));
-    await warmFuture;
-    if (mounted) navigator.pop();
+    );
   }
 
   static Widget _scrollIfNarrow(bool narrow, Widget child) => narrow

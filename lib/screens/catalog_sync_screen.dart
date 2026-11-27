@@ -217,14 +217,41 @@ Future<bool> confirmAndRunFullCatalogSync(
 
   final syncFuture = playlist.runFullCatalogSync();
   if (!context.mounted) return false;
-  final navigator = Navigator.of(context);
-  unawaited(navigator.push(MaterialPageRoute(
-    builder: (_) => Scaffold(
+  await runBehindProgressPage(
+    Navigator.of(context),
+    syncFuture,
+    (_) => Scaffold(
         backgroundColor: Colors.black,
         body: CatalogSyncBody(playlist: playlist)),
-  )));
-  await syncFuture;
-  if (context.mounted) navigator.pop();
+  );
   refreshGuideAfterContentUpdate(epg);
   return true;
+}
+
+/// Shows [page] over the app until [work] ends, then closes that page and
+/// only that page.
+///
+/// It used to `pop()` the top of the navigator when the update ended. The
+/// page can be gone by then: Back / Esc / an iPhone's back swipe closes it
+/// and the update carries on behind the app. That pop then removed the
+/// home itself and left an empty, black window that only a restart cleared
+/// (LOG-5L9ZYS, Mac 1.0.73, 2026-11-27: "back on the TV home" 3 s after
+/// Update Content started, no frame after it ended). Now the page is
+/// closed by reference, whether it is on top, under another page, or
+/// already gone, and also when [work] fails.
+Future<T> runBehindProgressPage<T>(
+    NavigatorState navigator, Future<T> work, WidgetBuilder page) async {
+  final progress = MaterialPageRoute<void>(builder: page);
+  unawaited(navigator.push(progress));
+  try {
+    return await work;
+  } finally {
+    if (navigator.mounted && progress.isActive) {
+      if (progress.isCurrent) {
+        navigator.pop();
+      } else {
+        navigator.removeRoute(progress);
+      }
+    }
+  }
 }

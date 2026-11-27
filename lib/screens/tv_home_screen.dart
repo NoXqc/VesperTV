@@ -4390,22 +4390,20 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (!context.mounted) return;
     // The same progress screen as an Xtream update (it only showed a small
     // "Updating..." before, for a download and store that can take minutes).
-    final navigator = Navigator.of(context);
-    unawaited(navigator.push(MaterialPageRoute(
-      builder: (_) => PopScope(
+    await runBehindProgressPage(
+      Navigator.of(context),
+      () async {
+        for (final profile in m3uProfiles) {
+          await playlist.loadPlaylist(profile.id);
+        }
+      }(),
+      (_) => PopScope(
         canPop: false,
         child: Scaffold(
             backgroundColor: Colors.black,
             body: CatalogSyncBody(playlist: playlist)),
       ),
-    )));
-    try {
-      for (final profile in m3uProfiles) {
-        await playlist.loadPlaylist(profile.id);
-      }
-    } finally {
-      if (mounted) navigator.pop();
-    }
+    );
     refreshGuideAfterContentUpdate(epg);
   }
 
