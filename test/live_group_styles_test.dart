@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:nox_iptv/services/device_memory_service.dart';
 import 'package:nox_iptv/services/live_group_styles.dart';
 import 'package:nox_iptv/widgets/live_style_view.dart';
 
@@ -180,6 +181,9 @@ void main() {
 
   testWidgets('every bank style paints at any time, still until focused',
       (tester) async {
+    // A TV box (touch screens: the next test).
+    DeviceTypeService.television = true;
+    addTearDown(() => DeviceTypeService.television = false);
     final styles = LiveGroupStyles.parse(bankFile.readAsStringSync());
     final focus = FocusNode();
     addTearDown(focus.dispose);
@@ -248,6 +252,54 @@ void main() {
     expect(clock(), greaterThan(settled), reason: 'moves on the next visit');
     await tester.pumpWidget(page(false));
     await tester.pump();
+  });
+
+  // Owner on his phone, 2026-11-27: a tap opens the group, so a row never
+  // has focus and never moved.
+  testWidgets('a touch screen: rows move when they show, then rest',
+      (tester) async {
+    expect(FocusManager.instance.highlightMode, FocusHighlightMode.touch);
+    final style = LiveGroupStyles.parse(bankFile.readAsStringSync()).first;
+    var covered = false;
+    Widget page() => MaterialApp(
+          home: TickerMode(
+            enabled: !covered,
+            child: SizedBox(
+              width: 260,
+              height: 30,
+              child: LiveStyleBackground(
+                  colorId: style.colorId, style: style, animate: false),
+            ),
+          ),
+        );
+    double clock() => (tester
+            .widget<CustomPaint>(find
+                .descendant(
+                    of: find.byType(LiveStyleBackground),
+                    matching: find.byType(CustomPaint))
+                .first)
+            .painter! as LiveStylePainter)
+        .time
+        .value;
+    await tester.pumpWidget(page());
+    final start = clock();
+    await tester.pump(const Duration(seconds: 2));
+    expect(clock(), greaterThan(start + 1.5), reason: 'moves without focus');
+    await tester.pump(const Duration(seconds: 12));
+    final rested = clock();
+    await tester.pump(const Duration(seconds: 2));
+    expect(clock(), rested, reason: 'rests after a while');
+
+    // The page covered, then shown again: it moves again.
+    covered = true;
+    await tester.pumpWidget(page());
+    await tester.pump();
+    covered = false;
+    await tester.pumpWidget(page());
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(clock(), greaterThan(rested + 1.5), reason: 'moves again');
+    await tester.pump(const Duration(seconds: 15));
   });
 }
 

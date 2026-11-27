@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Make a Live Style · VesperTV</title>
+<meta name="description" content="Make your own moving background for VesperTV's TV groups: the live style format, a starter file and how to import it.">
+<meta name="theme-color" content="#070608">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE28C'/%3E%3Cstop offset='1' stop-color='%23C48412'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='%230B0907'/%3E%3Cpath d='M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z' fill='url(%23g)'/%3E%3Cpath d='M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z' fill='%23FFE9B0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens as index.html and remote.html. */
+:root{
+  --bg:#070608; --panel:rgba(255,255,255,.035); --panel-2:rgba(255,255,255,.06);
+  --hair:rgba(255,255,255,.10); --hair-2:rgba(255,255,255,.18);
+  --ink:#F6F1E7; --ink-2:#C4BAA6; --ink-3:#918771;
+  --gold:#D4A017; --gold-lift:#F0C75E; --gold-pale:#FFD98A; --amber-dp:#C9781A;
+  --r:16px; --pad:clamp(16px,5vw,40px); --maxw:1000px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 Inter,system-ui,sans-serif;
+  background-image:radial-gradient(900px 500px at 85% -10%,rgba(212,160,23,.10),transparent 60%)}
+a{color:var(--gold-lift)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
+header{border-bottom:1px solid var(--hair);position:sticky;top:0;z-index:5;background:rgba(7,6,8,.85);backdrop-filter:blur(10px)}
+header .wrap{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 18px 'Bricolage Grotesque',sans-serif}
+header nav{margin-left:auto;display:flex;gap:18px;font-size:14px}
+header nav a{color:var(--ink-2);text-decoration:none}
+header nav a:hover{color:var(--ink)}
+h1{font:800 clamp(32px,6vw,52px)/1.05 'Bricolage Grotesque',sans-serif;margin:40px 0 12px;letter-spacing:-.02em}
+h1 span{background:linear-gradient(100deg,var(--gold-lift),var(--gold-pale));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font:700 24px/1.2 'Bricolage Grotesque',sans-serif;margin:36px 0 8px}
+.lead{color:var(--ink-2);max-width:700px;margin:0 0 24px}
+.sub{color:var(--ink-3);font-size:14px;margin:0 0 14px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.step{background:var(--panel);border:1px solid var(--hair);border-radius:var(--r);padding:16px}
+.step b{display:block;font:700 16px 'Bricolage Grotesque',sans-serif;margin:6px 0 4px}
+.step p{margin:0;color:var(--ink-2);font-size:14px}
+.num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(100deg,var(--gold),var(--amber-dp));color:#140E02;font:700 13px Inter,sans-serif}
+pre{position:relative;background:#0D0A08;border:1px solid var(--hair);border-radius:var(--r);padding:16px;overflow:auto;font:500 13px/1.55 'JetBrains Mono',monospace;color:var(--ink)}
+code{font:500 13px 'JetBrains Mono',monospace;color:var(--gold-pale)}
+.copy{position:absolute;top:10px;right:10px;background:var(--panel-2);border:1px solid var(--hair-2);color:var(--ink);border-radius:999px;padding:6px 14px;font:600 13px Inter,sans-serif;cursor:pointer}
+.copy:hover,.copy:focus-visible{border-color:var(--gold);outline:0}
+.ai{background:linear-gradient(135deg,rgba(212,160,23,.12),rgba(212,160,23,.03));border:1px solid rgba(212,160,23,.35);border-radius:var(--r);padding:16px 18px}
+.ai p{margin:4px 0;color:var(--ink-2)}
+.ai q{color:var(--ink)}
+.rows{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.row{display:grid;grid-template-columns:minmax(110px,170px) 1fr;gap:16px;padding:11px 16px;border-top:1px solid var(--hair)}
+.row:first-child{border-top:0}
+.row p{margin:0;color:var(--ink-2);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips code{background:var(--panel-2);border:1px solid var(--hair);border-radius:7px;padding:2px 8px;font-size:12.5px}
+ul.tips{color:var(--ink-2);padding-left:20px}
+footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;padding:24px 0 40px;margin-top:36px}
+@media (max-width:640px){ header nav{display:none} .row{grid-template-columns:1fr;gap:4px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="../">
+      <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE28C"/><stop offset="1" stop-color="#C48412"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#0B0907"/><path d="M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z" fill="url(#lg)"/><path d="M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z" fill="#FFE9B0"/></svg>
+      VesperTV
+    </a>
+    <nav aria-label="Primary">
+      <a href="../remote.html">Remote tips</a>
+      <a href="../vesper-ai.html">Vesper AI</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <h1>Make a <span>live style</span></h1>
+  <p class="lead">A live style is a moving background for a group in VesperTV's TV tab: snow falling, stars
+  twinkling, a puck sliding by. It sits still while you're elsewhere and moves while the remote is on the
+  group. A style is a small text file (JSON) you can write yourself, share with friends, or have an AI make.</p>
+
+  <h2>Four steps</h2>
+  <div class="steps">
+    <div class="step"><span class="num">1</span><b>Start from the starter</b><p>Copy the file below (or <a href="starter.json" download>download it</a>). It has two styles to change.</p></div>
+    <div class="step"><span class="num">2</span><b>Make it yours</b><p>Change the colours, shapes and motions with the lists further down. Give it your own <code>id</code> and <code>name</code>.</p></div>
+    <div class="step"><span class="num">3</span><b>Bring it to the TV</b><p>Settings &gt; Appearance &gt; Look &gt; <b style="display:inline;font:inherit">Your live styles</b>. Paste a link to the file (a GitHub Gist's Raw link works), or press <b style="display:inline;font:inherit">From phone</b> and paste the text itself on your phone.</p></div>
+    <div class="step"><span class="num">4</span><b>Put it on a group</b><p>Hold OK on a group &gt; Colour… &gt; Live styles… &gt; <b style="display:inline;font:inherit">Your styles</b>. It follows your other devices with sync.</p></div>
+  </div>
+
+  <h2>Or ask your AI</h2>
+  <div class="ai">
+    <p>With an AI app connected to VesperTV (<a href="../vesper-ai.html">Vesper AI</a>), just describe it:</p>
+    <p><q>Make a live style with orange leaves falling slowly and put it on my Movies group.</q></p>
+    <p>The AI writes the style, imports it and puts it on the group. Reconnect the connector once after updating VesperTV so the AI sees the new <code>live_styles</code> tool.</p>
+  </div>
+
+  <h2>The starter file</h2>
+  <p class="sub">A pack: <code>{"styles": [ ... ]}</code>. One style on its own works too.</p>
+  <pre id="starter"><button class="copy" type="button" data-copy="starter">Copy</button>{
+  &quot;version&quot;: 1,
+  &quot;styles&quot;: [
+    {
+      &quot;id&quot;: &quot;autumn-leaves&quot;,
+      &quot;name&quot;: {&quot;en&quot;: &quot;Autumn leaves&quot;, &quot;fr&quot;: &quot;Feuilles d&#x27;automne&quot;},
+      &quot;fade&quot;: [&quot;#99B4541A&quot;, &quot;#4D7A2E0E&quot;, &quot;#00000000&quot;],
+      &quot;layers&quot;: [
+        {&quot;shape&quot;: &quot;glyph:eco&quot;, &quot;motion&quot;: &quot;fall&quot;, &quot;count&quot;: 9, &quot;size&quot;: [8, 13], &quot;speed&quot;: 12,
+         &quot;color&quot;: [&quot;#E8892B&quot;, &quot;#C8501E&quot;, &quot;#F2C14E&quot;], &quot;opacity&quot;: [0.6, 1], &quot;spin&quot;: 0.25, &quot;sway&quot;: 8}
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;night-sky&quot;,
+      &quot;name&quot;: &quot;Night sky&quot;,
+      &quot;fade&quot;: [&quot;#99101A3A&quot;, &quot;#4D0A1028&quot;, &quot;#00000000&quot;],
+      &quot;pulse&quot;: 0.2,
+      &quot;layers&quot;: [
+        {&quot;shape&quot;: &quot;star4&quot;, &quot;motion&quot;: &quot;twinkle&quot;, &quot;count&quot;: 14, &quot;size&quot;: [2, 5], &quot;speed&quot;: 0.6,
+         &quot;color&quot;: [&quot;#FFE9A8&quot;, &quot;#FFFFFF&quot;], &quot;opacity&quot;: [0.3, 1]},
+        {&quot;shape&quot;: &quot;star4&quot;, &quot;motion&quot;: &quot;streak&quot;, &quot;count&quot;: 1, &quot;size&quot;: 7, &quot;speed&quot;: 150, &quot;gap&quot;: 4,
+         &quot;color&quot;: &quot;#FFD54F&quot;, &quot;opacity&quot;: 1, &quot;glow&quot;: true, &quot;y&quot;: [0.1, 0.5]}
+      ]
+    }
+  ]
+}</pre>
+
+  <h2>A style</h2>
+  <div class="rows">
+<div class="row"><div class="keys"><code>id</code></div><div class="what"><p>Letters, numbers and dashes (&quot;autumn-leaves&quot;). Import the same id again to update the style. VesperTV puts &quot;my-&quot; in front of it.</p></div></div>
+<div class="row"><div class="keys"><code>name</code></div><div class="what"><p>A name, or one per language: {&quot;en&quot;: &quot;Autumn leaves&quot;, &quot;fr&quot;: &quot;Feuilles d&#x27;automne&quot;}.</p></div></div>
+<div class="row"><div class="keys"><code>fade</code></div><div class="what"><p>Colours behind the group, left to right, as #AARRGGBB (AA = opacity, 00 clear to FF solid). End with #00000000 so the group&#x27;s name and count stay easy to read.</p></div></div>
+<div class="row"><div class="keys"><code>pulse</code></div><div class="what"><p>Optional: the fade breathes, in cycles a second (0.2 is gentle; up to 4).</p></div></div>
+<div class="row"><div class="keys"><code>layers</code></div><div class="what"><p>Up to a few sets of particles (below). A style needs a fade, a layer, or both.</p></div></div>
+  </div>
+
+  <h2>A layer</h2>
+  <div class="rows">
+<div class="row"><div class="keys"><code>shape</code></div><div class="what"><p>What is drawn (list below).</p></div></div>
+<div class="row"><div class="keys"><code>motion</code></div><div class="what"><p>How it moves (list below).</p></div></div>
+<div class="row"><div class="keys"><code>count</code></div><div class="what"><p>How many, 1-40 (default 10). 6-16 looks best on a row.</p></div></div>
+<div class="row"><div class="keys"><code>size</code></div><div class="what"><p>Pixels: one number, or [smallest, largest]. A row is about 260 x 44 px.</p></div></div>
+<div class="row"><div class="keys"><code>speed</code></div><div class="what"><p>Pixels a second for moving motions; cycles a second for twinkle, chase and wave.</p></div></div>
+<div class="row"><div class="keys"><code>color</code></div><div class="what"><p>&quot;#RRGGBB&quot; (or #AARRGGBB), or a list: each particle picks one.</p></div></div>
+<div class="row"><div class="keys"><code>opacity</code></div><div class="what"><p>[lowest, highest] between 0 and 1, or one number.</p></div></div>
+<div class="row"><div class="keys"><code>spin</code></div><div class="what"><p>Turns a second (negative turns the other way).</p></div></div>
+<div class="row"><div class="keys"><code>sway</code></div><div class="what"><p>Pixels of side-to-side swing (fall, rise, drift); a wave&#x27;s height.</p></div></div>
+<div class="row"><div class="keys"><code>tilt</code></div><div class="what"><p>Pixels sideways for each pixel down (slanted rain).</p></div></div>
+<div class="row"><div class="keys"><code>gap</code></div><div class="what"><p>Seconds between passes (streak, slide, arc, burst).</p></div></div>
+<div class="row"><div class="keys"><code>glow</code></div><div class="what"><p>true = a soft glow around each particle.</p></div></div>
+<div class="row"><div class="keys"><code>fadeOut</code></div><div class="what"><p>true = fades away along its way (embers).</p></div></div>
+<div class="row"><div class="keys"><code>x / y</code></div><div class="what"><p>The part of the row it keeps to, as fractions: [0, 0.5] = the left half / the top half.</p></div></div>
+<div class="row"><div class="keys"><code>chars</code></div><div class="what"><p>For shape &quot;char&quot;: the characters it picks from (&quot;01&quot;).</p></div></div>
+  </div>
+
+  <h2>Shapes</h2>
+  <div class="rows">
+<div class="row"><div class="keys"><code>dot</code></div><div class="what"><p>a round dot</p></div></div>
+<div class="row"><div class="keys"><code>snowflake</code></div><div class="what"><p>six-armed flake</p></div></div>
+<div class="row"><div class="keys"><code>star4</code></div><div class="what"><p>Vesper&#x27;s four-point star</p></div></div>
+<div class="row"><div class="keys"><code>star5</code></div><div class="what"><p>a classic star</p></div></div>
+<div class="row"><div class="keys"><code>heart</code></div><div class="what"><p>a heart</p></div></div>
+<div class="row"><div class="keys"><code>spark</code></div><div class="what"><p>a small burst</p></div></div>
+<div class="row"><div class="keys"><code>bubble</code></div><div class="what"><p>a ring</p></div></div>
+<div class="row"><div class="keys"><code>confetti</code></div><div class="what"><p>a small paper strip</p></div></div>
+<div class="row"><div class="keys"><code>balloon</code></div><div class="what"><p>a balloon on a string</p></div></div>
+<div class="row"><div class="keys"><code>puck</code></div><div class="what"><p>a hockey puck</p></div></div>
+<div class="row"><div class="keys"><code>dash</code></div><div class="what"><p>a short line (rain)</p></div></div>
+<div class="row"><div class="keys"><code>vline</code></div><div class="what"><p>a vertical line</p></div></div>
+<div class="row"><div class="keys"><code>hline</code></div><div class="what"><p>a horizontal line</p></div></div>
+<div class="row"><div class="keys"><code>band</code></div><div class="what"><p>a soft wide band (aurora, neon)</p></div></div>
+<div class="row"><div class="keys"><code>char</code></div><div class="what"><p>letters from &quot;chars&quot; (digital rain)</p></div></div>
+    <div class="row"><div class="keys"><code>glyph:&lt;icon&gt;</code></div><div class="what"><p>An icon, for example <code>glyph:sports_soccer</code>:</p><div class="chips"><code>sports_soccer</code><code>sports_hockey</code><code>sports_football</code><code>sports_basketball</code><code>sports_baseball</code><code>sports_tennis</code><code>sports_golf</code><code>sports_motorsports</code><code>sports_rugby</code><code>sports_volleyball</code><code>sports_cricket</code><code>sports_mma</code><code>sports_esports</code><code>emoji_events</code><code>music_note</code><code>movie</code><code>eco</code><code>local_florist</code><code>ac_unit</code><code>favorite</code><code>bolt</code><code>pets</code><code>cake</code><code>rocket_launch</code><code>park</code><code>nightlight</code><code>local_fire_department</code><code>celebration</code></div></div></div>
+  </div>
+
+  <h2>Motions</h2>
+  <div class="rows">
+<div class="row"><div class="keys"><code>fall</code></div><div class="what"><p>falls down the row, swaying with &quot;sway&quot;</p></div></div>
+<div class="row"><div class="keys"><code>rise</code></div><div class="what"><p>rises (bubbles, embers)</p></div></div>
+<div class="row"><div class="keys"><code>drift</code></div><div class="what"><p>floats left to right</p></div></div>
+<div class="row"><div class="keys"><code>drift-left</code></div><div class="what"><p>floats right to left</p></div></div>
+<div class="row"><div class="keys"><code>twinkle</code></div><div class="what"><p>stays in place, brightness pulses (&quot;speed&quot; = cycles a second)</p></div></div>
+<div class="row"><div class="keys"><code>chase</code></div><div class="what"><p>evenly spaced lights, a bright one runs along (Christmas or cinema lights)</p></div></div>
+<div class="row"><div class="keys"><code>streak</code></div><div class="what"><p>a shooting star with a tail, then a pause of &quot;gap&quot; seconds</p></div></div>
+<div class="row"><div class="keys"><code>bounce</code></div><div class="what"><p>bounces along the bottom</p></div></div>
+<div class="row"><div class="keys"><code>roll</code></div><div class="what"><p>rolls along the bottom, turning</p></div></div>
+<div class="row"><div class="keys"><code>slide</code></div><div class="what"><p>a fast pass with a short trail (a puck)</p></div></div>
+<div class="row"><div class="keys"><code>arc</code></div><div class="what"><p>thrown in an arc (a football)</p></div></div>
+<div class="row"><div class="keys"><code>burst</code></div><div class="what"><p>fireworks</p></div></div>
+<div class="row"><div class="keys"><code>still</code></div><div class="what"><p>does not move (rink or pitch lines)</p></div></div>
+<div class="row"><div class="keys"><code>wave</code></div><div class="what"><p>soft bands rolling (&quot;sway&quot; = height)</p></div></div>
+  </div>
+
+  <h2>Tips</h2>
+  <ul class="tips">
+    <li>A group row is about 260 x 44 pixels: 1 to 3 layers of 6 to 16 particles look best.</li>
+    <li>Keep the fade soft (about 60 % at the left, <code>99</code> in #AARRGGBB) and end it clear so the group's name stays readable.</li>
+    <li>A layer with a shape or motion VesperTV doesn't know is left out; a style with nothing left isn't imported. Import tells you how many were left out.</li>
+    <li>All 25 built-in styles are in <a href="group-styles.json">group-styles.json</a>: borrow from them.</li>
+    <li>A link is downloaded again when the gallery opens (once each time VesperTV starts), so changes to your file reach the TV by themselves.</li>
+  </ul>
+</main>
+<div class="wrap"><footer>Made something nice? Share it on <a href="https://discord.gg/nwb2mtYatk">Discord</a> or <a href="https://www.reddit.com/r/VesperTV/">r/VesperTV</a>. <a href="../">Back to vespertv.app</a></footer></div>
+<script>
+document.querySelectorAll('.copy').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var pre = document.getElementById(b.getAttribute('data-copy'));
+    var text = pre.textContent.replace(/^Copy(ed)?/, '');
+    navigator.clipboard.writeText(text).then(function () {
+      b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>

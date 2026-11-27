@@ -41,6 +41,7 @@ import '../vesper_ai/phone_mic_sheet.dart';
 import 'addons_screen.dart';
 import 'archive_posters_screen.dart';
 import 'stream_badges_screen.dart';
+import 'my_live_styles_screen.dart';
 import 'archive_sources_screen.dart';
 import 'backup_screen.dart';
 import 'check_updates_screen.dart';
@@ -421,6 +422,14 @@ class SettingsCatalog {
               ],
               selected: prefs.columnLines,
               onPick: prefs.setColumnLines),
+          // Owner, 2026-11-27: styles users make themselves.
+          SettingsLink(
+              id: 'my_live_styles',
+              icon: Icons.auto_awesome_outlined,
+              title: tr('Your live styles'),
+              help: tr(
+                  'Moving group backgrounds you make yourself: bring them in by link or from your phone, then pick them in Colour… > Live styles….'),
+              page: (_) => const MyLiveStylesScreen()),
           SettingsChoice(
               id: 'layout',
               icon: Icons.devices_outlined,

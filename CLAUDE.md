@@ -539,6 +539,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-27 - Your own live styles (`claude/live-styles-import`, worktree `VesperTV-claude-mystyles`, from main
+  0593622):** owner: "import custom live groups so if users want to build their own". Colour… > Live styles… > **Your own
+  styles…** / Settings > Appearance > Look > **Your live styles** (`MyLiveStylesScreen`): a link to a style file or the text
+  (typed, a computer's paste, **From phone** = `PairingKind.styles`, 200 KB); `MyLiveStyles` makes ids `my-<id>`, saves
+  `vesper_live_styles_mine` (household, synced), refreshes links once a run when the gallery opens; "Your styles" first in
+  the gallery. Vesper AI / AI apps: tool `live_styles` (list / add / remove; the format is in its description). Site:
+  vespertv.app/styles/make.html + starter.json. Details: dev-notes/live-group-styles.md "Your own styles".
+  test/my_live_styles_test.dart. Same branch: on a touch screen (phone / tablet: no remote focus, a tap opens the group)
+  styled rows and gallery previews move for 12 s when they show, then rest (`LiveStyleBackground.touchMovesFor`).
 - **Claude, 2026-11-27 - black window after Update Content (`claude/update-content-black`, worktree
   `VesperTV-claude-ucblack`, from main 9d2573c):** LOG-5L9ZYS (Mac 1.0.73, "also on iOS"): Back / Esc / back swipe closed the
   progress page early and the update's closing `pop()` took the home off (empty navigator = black). `runBehindProgressPage`

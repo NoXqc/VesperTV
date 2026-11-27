@@ -106,7 +106,51 @@ that ends clear). To see them: `flutter test tool/live_styles_sheet_test.dart
 --dart-define=OUT=<folder>` writes `live_styles_sheet.png` (every style at 4 moments, with the SDK's
 Roboto + MaterialIcons fonts; not part of the suite). Rows are about 260 x 44 px on the TV.
 
+## Your own styles (2026-11-27)
+
+Owner: "import custom live groups so if users want to build their own they could import it into
+Vesper"; picked import by **link + pasted text**, a **format page + starter**, and **Vesper AI through
+the MCP connector** (no web builder).
+
+- **Where:** Colour… > Live styles… > **Your own styles…** (first row of the gallery) and Settings >
+  Appearance > Look > **Your live styles**: one page (`screens/settings/my_live_styles_screen.dart`)
+  with a field (a link, or the text on a computer), **Import**, **From phone** (`PairingKind.styles`:
+  pair.html's link form worded for it, mode `styles`, up to 200 KB of text, whitespace kept; Wi-Fi
+  only like every non-playlist kind) and the viewer's styles below (OK = remove; a style from a link
+  removes the link and all its styles, or the next refresh would bring it back). On a TV box a small QR code (96
+  px, `MyLiveStylesScreen.qrSize`) beside "How to make one" opens vespertv.app/styles/make.html on the phone (owner:
+  "not too big ... TV only"); phones and computers get the address as text.
+- **Format:** the bank's (above): a pack `{"styles": [...]}`, a list, or one style. `MyLiveStyles.ours`
+  lower-cases the id to a-z 0-9 -, puts **`my-`** in front (the bank must never use that prefix: a
+  test checks), takes a name in any language as the English one (or the id), sets category `mine`
+  ("Your styles", first in the gallery). An entry the app can't draw is left out and counted.
+- **Saved:** `vesper_live_styles_mine` (`AppConstants.keyMyLiveStyles`): a JSON list of sources
+  `{"url": link or null, "styles": [...]}`, one per household, synced / transferred / backed up like
+  the group colours that name the styles (not a live sync key: a pulled change lands at the next
+  launch). Read at startup by `MyLiveStyles.attach` (a small preference) and handed to
+  `LiveGroupStyles.useMine` (viewer's styles + the bank in `styles` and `styleOf`). At most 60 styles
+  (the oldest go); the same id again replaces it; the same link again replaces its styles.
+- **Links** are downloaded again when the gallery opens, once a run, in the background (15 s timeout,
+  200 KB cap); a failed refresh keeps the saved copy.
+- **AI apps (MCP) / Your AI:** tool `live_styles` (`list` / `add` with `style` object or `url` /
+  `remove`); its description carries the whole format, shapes, motions and icons, so an AI can write
+  a style from a sentence, then put it on a group with `groups` colour `style my-<id>` (`groups` also
+  finds `my-<name>` by the plain name). An AI app sees the new tool after reconnecting the connector.
+- **Site:** https://vespertv.app/styles/make.html (`docs/styles/make.html`: steps, Ask your AI, the
+  fields, shapes, motions, icons, tips) + `docs/styles/starter.json` (two styles). A test checks the
+  starter imports whole and the page lists every shape / motion / icon the app knows: a new one =
+  add it to the page too.
+- Tests: test/my_live_styles_test.dart.
+
 ## Drawing and frame cost
+
+**Touch screens (2026-11-27, owner on his phone: "one click opens a group so we don't really see the
+animations"):** a phone / tablet has no remote focus, so a row never moved. `LiveStyleBackground` now
+moves every styled row for `touchMovesFor` (12 s) when it shows on a touch screen
+(`FocusManager.highlightMode == touch` and not `DeviceTypeService.television`: a TV box counts as touch
+until its first key press), then rests; covering the page (TickerMode) and coming back replays it. The
+gallery's previews do the same. TV boxes are unchanged (remote focus, 30 s per visit). Tests that check
+the TV behaviour set `DeviceTypeService.television = true`.
 
 `lib/widgets/live_style_view.dart`: `LiveStyleBackground` (a 30 fps timer, only while the row has
 focus and for at most 30 s per visit, then still until the remote comes back; off when the page is

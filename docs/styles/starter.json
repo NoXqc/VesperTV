@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "styles": [
+    {
+      "id": "autumn-leaves",
+      "name": {"en": "Autumn leaves", "fr": "Feuilles d'automne"},
+      "fade": ["#99B4541A", "#4D7A2E0E", "#00000000"],
+      "layers": [
+        {"shape": "glyph:eco", "motion": "fall", "count": 9, "size": [8, 13], "speed": 12,
+         "color": ["#E8892B", "#C8501E", "#F2C14E"], "opacity": [0.6, 1], "spin": 0.25, "sway": 8}
+      ]
+    },
+    {
+      "id": "night-sky",
+      "name": "Night sky",
+      "fade": ["#99101A3A", "#4D0A1028", "#00000000"],
+      "pulse": 0.2,
+      "layers": [
+        {"shape": "star4", "motion": "twinkle", "count": 14, "size": [2, 5], "speed": 0.6,
+         "color": ["#FFE9A8", "#FFFFFF"], "opacity": [0.3, 1]},
+        {"shape": "star4", "motion": "streak", "count": 1, "size": 7, "speed": 150, "gap": 4,
+         "color": "#FFD54F", "opacity": 1, "glow": true, "y": [0.1, 0.5]}
+      ]
+    }
+  ]
+}

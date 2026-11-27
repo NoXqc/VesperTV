@@ -38,8 +38,11 @@ class LiveGroupStyle {
   /// Language code -> name ('en' always there).
   final Map<String, String> names;
 
-  /// seasonal / vesper / sports / fun (anything else shows under More).
+  /// seasonal / vesper / sports / fun (anything else shows under More);
+  /// [LiveGroupStyles.mineCategory] for the viewer's own (`MyLiveStyles`).
   final String category;
+
+  bool get isMine => category == LiveGroupStyles.mineCategory;
 
   /// The fade behind the row, left to right, evenly spaced (alpha
   /// included: the bank ends them transparent so the count stays readable).
@@ -60,7 +63,7 @@ class LiveGroupStyle {
   static LiveGroupStyle? fromJson(Object? json) {
     if (json is! Map) return null;
     final id = json['id'];
-    if (id is! String || !RegExp(r'^[a-z0-9][a-z0-9-]{0,40}$').hasMatch(id)) {
+    if (id is! String || !RegExp(r'^[a-z0-9][a-z0-9-]{0,44}$').hasMatch(id)) {
       return null;
     }
     final engine = json['engine'];
@@ -277,6 +280,10 @@ class LiveGroupStyles {
 
   static const prefix = 'style:';
 
+  /// The category of the viewer's own styles (`MyLiveStyles`), shown first
+  /// as "Your styles".
+  static const mineCategory = 'mine';
+
   /// Shapes / motions version this app draws (a style may ask for more).
   static const engine = 1;
 
@@ -298,9 +305,12 @@ class LiveGroupStyles {
   static bool isStyleId(String? colorId) =>
       colorId != null && colorId.startsWith(prefix);
 
-  /// The styles in bank order; empty until read.
+  /// The viewer's own styles, then the bank's in bank order; empty until
+  /// read.
   final styles = ValueNotifier<List<LiveGroupStyle>>(const []);
   Map<String, LiveGroupStyle> _byId = const {};
+  List<LiveGroupStyle> _bank = const [];
+  List<LiveGroupStyle> _mine = const [];
 
   Future<void>? _reading;
   Future<List<LiveGroupStyle>>? _downloading;
@@ -336,8 +346,8 @@ class LiveGroupStyles {
     if (missing || old) unawaited(download().catchError((_) => styles.value));
   }
 
-  /// The picker: the bank fresh from the site (once a run), else the saved
-  /// one; throws when there is neither.
+  /// The picker: the viewer's own styles + the bank fresh from the site
+  /// (once a run), else the saved one; throws when there is none of them.
   Future<List<LiveGroupStyle>> load() async {
     if (!_read) {
       _reading ??= _readSaved().whenComplete(() {
@@ -346,13 +356,20 @@ class LiveGroupStyles {
       });
       await _reading;
     }
-    if (_downloaded && styles.value.isNotEmpty) return styles.value;
+    if (_downloaded && _bank.isNotEmpty) return styles.value;
     try {
-      return await download();
+      await download();
+      return styles.value;
     } catch (e) {
       if (styles.value.isNotEmpty) return styles.value;
       rethrow;
     }
+  }
+
+  /// The viewer's own styles (`MyLiveStyles`), shown before the bank's.
+  void useMine(List<LiveGroupStyle> mine) {
+    _mine = List.unmodifiable(mine);
+    _publish();
   }
 
   /// Downloads and saves the bank (one at a time).
@@ -402,8 +419,14 @@ class LiveGroupStyles {
   }
 
   void _use(List<LiveGroupStyle> list) {
-    _byId = {for (final s in list) s.id: s};
-    styles.value = List.unmodifiable(list);
+    _bank = list;
+    _publish();
+  }
+
+  void _publish() {
+    final all = [..._mine, ..._bank];
+    _byId = {for (final s in all) s.id: s};
+    styles.value = List.unmodifiable(all);
   }
 
   /// The bank file's styles (bad entries left out).
@@ -414,11 +437,7 @@ class LiveGroupStyles {
     } on FormatException {
       return const [];
     }
-    final list = switch (json) {
-      {'styles': final List l} => l,
-      final List l => l,
-      _ => const [],
-    };
+    final list = entriesOf(json);
     final seen = <String>{};
     return [
       for (final s in list)
@@ -426,6 +445,15 @@ class LiveGroupStyles {
           if (seen.add(style.id)) style,
     ];
   }
+
+  /// The style entries of a decoded file: a pack (`{"styles": [...]}`), a
+  /// list of styles, or one style.
+  static List<Object?> entriesOf(Object? json) => switch (json) {
+        {'styles': final List l} => l,
+        final List l => l,
+        {'id': _} => [json],
+        _ => const [],
+      };
 
   static Future<File?> _file() async {
     if (kIsWeb) return null;
@@ -436,6 +464,8 @@ class LiveGroupStyles {
   @visibleForTesting
   void debugReset() {
     _byId = const {};
+    _bank = const [];
+    _mine = const [];
     styles.value = const [];
     _read = false;
     _downloaded = false;

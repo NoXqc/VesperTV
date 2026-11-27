@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../screens/settings/my_live_styles_screen.dart';
 import '../services/live_group_styles.dart';
+import '../services/my_live_styles.dart';
 import 'glass_menu.dart';
 import 'live_style_view.dart';
 import 'tv_dialog_option.dart';
@@ -23,10 +27,17 @@ Future<String?> showLiveStylePicker(BuildContext context,
       ),
     );
 
-/// Category ids the bank uses, in the order shown.
-const _categories = ['seasonal', 'vesper', 'sports', 'fun'];
+/// Category ids, in the order shown: the viewer's own first.
+const _categories = [
+  LiveGroupStyles.mineCategory,
+  'seasonal',
+  'vesper',
+  'sports',
+  'fun'
+];
 
 String _categoryName(String id) => switch (id) {
+      LiveGroupStyles.mineCategory => tr('Your styles'),
       'seasonal' => tr('Seasonal'),
       // The brand's own look: never translated.
       'vesper' => 'Vesper',
@@ -51,7 +62,23 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
   @override
   void initState() {
     super.initState();
+    LiveGroupStyles.instance.styles.addListener(_changed);
+    // The viewer's links, fetched again in the background (once a run).
+    unawaited(MyLiveStyles.instance.refreshLinks());
     _load();
+  }
+
+  @override
+  void dispose() {
+    LiveGroupStyles.instance.styles.removeListener(_changed);
+    super.dispose();
+  }
+
+  /// A link refreshed or a style imported / removed while open.
+  void _changed() {
+    if (mounted && _styles != null) {
+      setState(() => _styles = LiveGroupStyles.instance.styles.value);
+    }
   }
 
   Future<void> _load() async {
@@ -63,6 +90,18 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
       if (mounted) setState(() => _failed = true);
     }
   }
+
+  Widget _yourOwn(BuildContext context) => TvDialogOption(
+        key: const ValueKey('live-style-your-own'),
+        onPressed: () => MyLiveStylesScreen.open(context),
+        child: Row(
+          children: [
+            const Icon(Icons.add_circle_outline, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(tr('Your own styles…'))),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +123,7 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
             onPressed: _load,
             child: Text(tr('Try again')),
           ),
+          _yourOwn(context),
         ],
       );
     }
@@ -132,6 +172,7 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _yourOwn(context),
         for (final (category, list) in groups)
           if (list.isNotEmpty) ...[
             Padding(
@@ -152,7 +193,7 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
                 autofocus: style == first,
                 padding: const EdgeInsets.all(3),
                 onPressed: () => Navigator.of(context).pop(style.colorId),
-                child: _StylePreview(style: style, on: style == current),
+                child: LiveStylePreview(style: style, on: style == current),
               ),
           ],
       ],
@@ -161,11 +202,15 @@ class _LiveStyleGalleryState extends State<_LiveStyleGallery> {
 }
 
 /// A group-row-sized preview: moves while its option has the remote.
-class _StylePreview extends StatelessWidget {
-  const _StylePreview({required this.style, required this.on});
+class LiveStylePreview extends StatelessWidget {
+  const LiveStylePreview(
+      {super.key, required this.style, this.on = false, this.subtitle});
 
   final LiveGroupStyle style;
   final bool on;
+
+  /// A small line after the name (where the style came from).
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +245,20 @@ class _StylePreview extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                      ),
+                    ),
+                  ),
                 if (on) const Icon(Icons.check, size: 18, color: Colors.white),
               ],
             ),

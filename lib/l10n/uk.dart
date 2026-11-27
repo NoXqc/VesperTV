@@ -4017,4 +4017,42 @@ const Map<String, String> kUk = {
       "Очистити улюблене…",
   "Delete watched history…":
       "Видалити історію переглядів…",
+
+  // Your live styles (import your own, 2026-11-27).
+  "Your live styles":
+      "Ваші анімовані стилі",
+  "Moving group backgrounds you make yourself: bring them in by link or from your phone, then pick them in Colour… > Live styles….":
+      "Анімовані фони для груп, створені вами: додайте їх посиланням або з телефона, потім виберіть у Колір… > Анімовані стилі….",
+  "Scan this code with your phone camera and paste a link to your style file, or the style itself — it appears here for you to check and import.":
+      "Відскануйте цей код камерою телефона і вставте посилання на файл стилю або сам стиль — він з’явиться тут, щоб ви перевірили та імпортували його.",
+  "1 style imported. Hold OK on a group > Colour… > Live styles… to use it.":
+      "Імпортовано 1 стиль. Утримуйте OK на групі > Колір… > Анімовані стилі…, щоб застосувати його.",
+  "{n} styles imported. Hold OK on a group > Colour… > Live styles… to use them.":
+      "Імпортовано стилів: {n}. Утримуйте OK на групі > Колір… > Анімовані стилі…, щоб застосувати їх.",
+  "{n} left out: nothing this version can draw.":
+      "Пропущено: {n}. Ця версія не вміє їх намалювати.",
+  "Could not download the style file ({error}).":
+      "Не вдалося завантажити файл стилю ({error}).",
+  "This is too big for a style file.":
+      "Це завелике для файлу стилю.",
+  "No style in it can be drawn: check the shapes and motions it uses.":
+      "Жоден стиль тут не можна намалювати: перевірте форми й рухи, які він використовує.",
+  "This is not a live style. Paste a link to a style file or the style itself.":
+      "Це не анімований стиль. Вставте посилання на файл стилю або сам стиль.",
+  "It came from a link with {n} styles: they all go (the link would bring it back).":
+      "Він з посилання, де {n} стилів: зникнуть усі (посилання повернуло б його).",
+  "Make your own moving backgrounds for groups and bring them in here: a link to a style file, or the style itself.":
+      "Створюйте власні анімовані фони для груп і додавайте їх сюди: посилання на файл стилю або сам стиль.",
+  "How to make one, with a starter file: {address}. An AI app connected to VesperTV can also make one for you.":
+      "Як створити, з початковим файлом: {address}. ШІ-застосунок, під’єднаний до VesperTV, теж може створити його для вас.",
+  "Link or style":
+      "Посилання або стиль",
+  "No styles of your own yet.":
+      "Власних стилів поки немає.",
+  "Your styles":
+      "Ваші стилі",
+  "OK on a style removes it.":
+      "OK на стилі видаляє його.",
+  "Your own styles…":
+      "Власні стилі…",
 };

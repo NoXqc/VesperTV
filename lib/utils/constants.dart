@@ -63,6 +63,11 @@ class AppConstants {
   static const String keyProviderExpiryNoticeDay =
       'vesper_provider_expiry_notice_day';
   static const String keyStreamBadgesUrl = 'vesper_stream_badges_url';
+
+  /// The viewer's own live styles (`MyLiveStyles`): a JSON list of sources
+  /// (`{"url": link or null, "styles": [...]}`). One per household: synced,
+  /// transferred and backed up like the group colours that name them.
+  static const String keyMyLiveStyles = 'vesper_live_styles_mine';
   static const String keyStreamBadgesFetched = 'vesper_stream_badges_fetched';
   static const String keyStreamBadgesOn = 'vesper_stream_badges_on';
   // Stremio-style subtitle add-ons (AddonService), JSON list.

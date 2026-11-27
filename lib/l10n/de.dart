@@ -4448,4 +4448,42 @@ const Map<String, String> kDe = {
       "Favoriten leeren…",
   "Delete watched history…":
       "Gesehenen Verlauf löschen…",
+
+  // Your live styles (import your own, 2026-11-27).
+  "Your live styles":
+      "Deine animierten Stile",
+  "Moving group backgrounds you make yourself: bring them in by link or from your phone, then pick them in Colour… > Live styles….":
+      "Selbst gemachte bewegte Hintergründe für Gruppen: per Link oder vom Handy hinzufügen, dann unter Farbe… > Animierte Stile… auswählen.",
+  "Scan this code with your phone camera and paste a link to your style file, or the style itself — it appears here for you to check and import.":
+      "Scanne diesen Code mit der Handykamera und füge den Link zu deiner Stildatei oder den Stil selbst ein – er erscheint hier zum Prüfen und Importieren.",
+  "1 style imported. Hold OK on a group > Colour… > Live styles… to use it.":
+      "1 Stil importiert. Halte OK auf einer Gruppe > Farbe… > Animierte Stile…, um ihn zu verwenden.",
+  "{n} styles imported. Hold OK on a group > Colour… > Live styles… to use them.":
+      "{n} Stile importiert. Halte OK auf einer Gruppe > Farbe… > Animierte Stile…, um sie zu verwenden.",
+  "{n} left out: nothing this version can draw.":
+      "{n} ausgelassen: nichts, was diese Version zeichnen kann.",
+  "Could not download the style file ({error}).":
+      "Die Stildatei konnte nicht geladen werden ({error}).",
+  "This is too big for a style file.":
+      "Das ist zu groß für eine Stildatei.",
+  "No style in it can be drawn: check the shapes and motions it uses.":
+      "Kein Stil darin lässt sich zeichnen: prüfe die verwendeten Formen und Bewegungen.",
+  "This is not a live style. Paste a link to a style file or the style itself.":
+      "Das ist kein animierter Stil. Füge den Link zu einer Stildatei oder den Stil selbst ein.",
+  "It came from a link with {n} styles: they all go (the link would bring it back).":
+      "Er stammt von einem Link mit {n} Stilen: alle werden entfernt (der Link würde ihn zurückbringen).",
+  "Make your own moving backgrounds for groups and bring them in here: a link to a style file, or the style itself.":
+      "Mach deine eigenen bewegten Hintergründe für Gruppen und hol sie hierher: den Link zu einer Stildatei oder den Stil selbst.",
+  "How to make one, with a starter file: {address}. An AI app connected to VesperTV can also make one for you.":
+      "So machst du einen, mit einer Startdatei: {address}. Auch eine mit VesperTV verbundene KI-App kann einen für dich machen.",
+  "Link or style":
+      "Link oder Stil",
+  "No styles of your own yet.":
+      "Noch keine eigenen Stile.",
+  "Your styles":
+      "Deine Stile",
+  "OK on a style removes it.":
+      "OK auf einem Stil entfernt ihn.",
+  "Your own styles…":
+      "Eigene Stile…",
 };

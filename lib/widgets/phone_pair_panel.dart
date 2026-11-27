@@ -158,23 +158,26 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         Text(
           isPhoto
               ? tr('Scan with your phone to add a photo')
-              : isKey
+              : widget.kind == PairingKind.styles
                   ? tr(
-                      'Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.')
-                  : saves
+                      'Scan this code with your phone camera and paste a link to your style file, or the style itself — it appears here for you to check and import.')
+                  : isKey
                       ? tr(
-                          'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.')
-                      : isLink
+                          'Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.')
+                      : saves
                           ? tr(
-                              'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-                          : isServer
+                              'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.')
+                          : isLink
                               ? tr(
-                                  'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
-                              : isFolder
+                                  'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                              : isServer
                                   ? tr(
-                                      'Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.')
-                                  : tr(
-                                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                                      'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
+                                  : isFolder
+                                      ? tr(
+                                          'Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.')
+                                      : tr(
+                                          'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),

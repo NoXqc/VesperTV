@@ -59,13 +59,24 @@ enum PairingKind {
 
   /// [mediaServer] worded for a Tuliprox Web UI login (Settings >
   /// Playlists & sources > Tuliprox); same 'server' payload.
-  tuliprox;
+  tuliprox,
+
+  /// Your live styles (`MyLiveStyles`): a link to a style file or the
+  /// style text itself, in [PairingResult.link] (mode 'styles', up to
+  /// [stylesMaxChars]).
+  styles;
+
+  static const stylesMaxChars = 200 * 1024;
 
   bool get isWifiOnly => this != playlist;
 
   /// One pasted value back ([PairingResult.link]).
   bool get isLink =>
-      this == link || this == apiKey || this == poster || this == badges;
+      this == link ||
+      this == apiKey ||
+      this == poster ||
+      this == badges ||
+      this == styles;
 
   /// The result `mode` this kind accepts (null = 'xtream' or 'm3u').
   String? get mode => switch (this) {
@@ -74,6 +85,7 @@ enum PairingKind {
         mediaServer || dispatcharr || tuliprox => 'server',
         photo || wallpaper => 'photo',
         networkFolder => 'smb',
+        styles => 'styles',
       };
 }
 
@@ -150,10 +162,12 @@ class PairingResult {
       password: s('password', 200),
       m3uUrl: s('m3u', 2000),
       epgUrl: s('epg', 2000),
-      link: s('link', 4000),
+      link: s('link', mode == 'styles' ? PairingKind.stylesMaxChars : 4000),
       apiKey: s('key', 200),
     );
-    if (mode == 'link') return r.link.isNotEmpty ? r : null;
+    if (mode == 'link' || mode == 'styles') {
+      return r.link.isNotEmpty ? r : null;
+    }
     if (mode == 'smb') return r.server.isNotEmpty ? r : null;
     if (mode == 'server') {
       return r.server.isNotEmpty &&
@@ -209,6 +223,7 @@ class PhonePairingSession {
         PairingKind.networkFolder => 'smb',
         PairingKind.dispatcharr => 'dispatcharr',
         PairingKind.tuliprox => 'tuliprox',
+        PairingKind.styles => 'styles',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null
@@ -313,9 +328,12 @@ class PhonePairingSession {
       }
       final body = await _readLimited(
           req,
-          kind == PairingKind.photo || kind == PairingKind.wallpaper
-              ? 2800000
-              : 16 * 1024);
+          switch (kind) {
+            PairingKind.photo || PairingKind.wallpaper => 2800000,
+            // JSON escaping can grow the pasted text.
+            PairingKind.styles => PairingKind.stylesMaxChars * 2,
+            _ => 16 * 1024,
+          });
       final result = body == null ? null : _decodeResult(body);
       if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;

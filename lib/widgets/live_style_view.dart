@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../services/device_memory_service.dart';
 import '../services/live_group_styles.dart';
 
 /// A live style behind a group row ([LiveGroupStyle]): still while the
@@ -18,6 +19,12 @@ import '../services/live_group_styles.dart';
 /// the change, so any moving row costs the box real work (1034 / 1035). The
 /// style moves while the remote rests, then settles until it comes back
 /// (like Sports Trak's RedZone pill).
+///
+/// A touch screen has no remote focus (a tap opens the group, owner on his
+/// phone, 2026-11-27: "we don't really see the animations"): there every
+/// styled row moves for [touchMovesFor] when it shows, then rests, and
+/// again each time its page comes back ([TickerMode]). Not on a TV box,
+/// which counts as touch until its first key press.
 class LiveStyleBackground extends StatefulWidget {
   const LiveStyleBackground({
     super.key,
@@ -50,6 +57,14 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
   /// How long one visit moves.
   static const movesFor = Duration(seconds: 30);
 
+  /// How long a row moves on a touch screen after it shows.
+  static const touchMovesFor = Duration(seconds: 12);
+
+  /// A phone / tablet used by touch (no remote focus to follow).
+  static bool get _touch =>
+      !DeviceTypeService.television &&
+      FocusManager.instance.highlightMode == FocusHighlightMode.touch;
+
   final _time = ValueNotifier<double>(restAt);
   Timer? _timer;
   double _base = restAt;
@@ -73,10 +88,10 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
     }
   }
 
-  void _sync(bool moving) {
+  void _sync(bool moving, Duration length) {
     if (moving) {
       if (_timer != null || _settled) return;
-      final last = movesFor.inMilliseconds * fps ~/ 1000;
+      final last = length.inMilliseconds * fps ~/ 1000;
       // Timer ticks count periods gone by, also when one fires late.
       _timer =
           Timer.periodic(const Duration(microseconds: 1000000 ~/ fps), (t) {
@@ -118,12 +133,14 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
 
   @override
   Widget build(BuildContext context) {
-    final moving = widget.animate &&
+    final touch = _touch;
+    final moving = (widget.animate || touch) &&
         TickerMode.valuesOf(context).enabled &&
         !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+    final length = widget.animate ? movesFor : touchMovesFor;
     // After the frame: never start or stop during a build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _sync(moving);
+      if (mounted) _sync(moving, length);
     });
     if (widget.style case final style?) return _paint(style);
     return ValueListenableBuilder<List<LiveGroupStyle>>(

@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart' as mk;
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../live_group_styles.dart';
+import '../my_live_styles.dart';
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
 import '../../models/channel.dart';
@@ -537,6 +538,81 @@ const _colourRows = {
   '__recent__': ['Recently added', 'Recent'],
 };
 
+/// The live_styles tool: the bank + the viewer's own (`MyLiveStyles`).
+Future<Map<String, Object?>> _liveStyles(
+    VesperToolbox box, Map<String, Object?> args) async {
+  final action = _str(args, 'action');
+  if (action == 'list') {
+    List<LiveGroupStyle> styles;
+    try {
+      styles = await LiveGroupStyles.instance.load();
+    } catch (_) {
+      styles = MyLiveStyles.instance.styles;
+    }
+    return {
+      'styles': [
+        for (final s in styles)
+          {
+            'id': s.id,
+            'name': s.name,
+            'category': s.category,
+            if (s.isMine) 'yours': true,
+          }
+      ],
+    };
+  }
+  if (box.restrictedViewer) {
+    throw VesperToolError('This profile cannot change live styles.');
+  }
+  if (action == 'remove') {
+    final id = _str(args, 'id');
+    final mine = MyLiveStyles.instance.styles;
+    final hit = mine.where((s) =>
+        s.id == id || s.id == '${MyLiveStyles.idPrefix}$id' || s.name == id);
+    if (hit.isEmpty) {
+      throw VesperToolError('The viewer\'s own styles: '
+          '${mine.isEmpty ? 'none' : [
+              for (final s in mine) s.id
+            ].join(', ')}.');
+    }
+    await MyLiveStyles.instance.remove(hit.first.id);
+    return {'removed': hit.first.id};
+  }
+  if (action != 'add') throw VesperToolError('Actions: list, add, remove.');
+  final url = _str(args, 'url');
+  final style = args['style'];
+  final MyStylesImport result;
+  try {
+    if (url.isNotEmpty) {
+      result = await MyLiveStyles.instance.import(url);
+    } else if (style is String) {
+      result = await MyLiveStyles.instance.import(style);
+    } else if (style != null) {
+      result = await MyLiveStyles.instance.importJson(style);
+    } else {
+      throw VesperToolError('Give style (the style object) or url.');
+    }
+  } on MyStylesError catch (e) {
+    throw VesperToolError(switch (e.problem) {
+      MyStylesProblem.download =>
+        'The link could not be downloaded (${e.detail}).',
+      MyStylesProblem.tooBig => 'Too big (200 KB at most).',
+      MyStylesProblem.nothingUsable => 'No style in it can be drawn: it needs '
+          'an id, a fade or a layer with a known shape and motion.',
+      MyStylesProblem.notStyles => 'Not a style: give a style object, a '
+          '{"styles": [...]} pack or a link to one.',
+    });
+  }
+  return {
+    'added': result.ids,
+    if (result.replaced > 0) 'replaced': result.replaced,
+    if (result.skipped > 0) 'left_out': result.skipped,
+    'next': 'Put it on groups with the groups tool: action colour, style '
+        '${result.ids.first}. The viewer also finds it in Colour… > Live '
+        'styles… > Your styles.',
+  };
+}
+
 /// groups action colour (owner, 2026-11-25: "can the AI add colours to
 /// groups"): TV groups, the viewer's own groups and the rows above, by
 /// exact name or by words, one save per playlist. Cosmetic and undone the
@@ -562,6 +638,7 @@ Future<Map<String, Object?>> _colourGroups(
     final wanted = styleName.toLowerCase().replaceAll(' ', '-');
     final style = styles.where((s) =>
         s.id == wanted ||
+        s.id == '${MyLiveStyles.idPrefix}$wanted' ||
         s.names.values.any((n) => n.toLowerCase() == styleName.toLowerCase()));
     if (style.isEmpty) {
       throw VesperToolError(
@@ -1426,6 +1503,59 @@ final List<VesperTool> vesperTools = [
       ]
     },
   ),
+  // Owner, 2026-11-27: styles users make, through an AI app (MCP) too.
+  VesperTool(
+    name: 'live_styles',
+    description:
+        'Live styles: moving backgrounds for TV groups (drawn behind the '
+        'group name, still at rest, moving while the remote is on it). '
+        'list: every style (the bank on vespertv.app and the viewer\'s own, '
+        'with ids). add: make or update one of the viewer\'s own from a '
+        'style object (or a {"styles": [...]} pack), or import a link to a '
+        'style file; the answer gives its id (with "my-" in front); then put '
+        'it on groups with the groups tool, action colour, style <id>. '
+        'remove: one of the viewer\'s own by id. '
+        'A style: {"id": "pumpkins" (a-z, 0-9, -), "name": "Pumpkin patch" '
+        'or {"en": ..., "fr": ...}, "fade": ["#AARRGGBB", ...] (colours '
+        'behind the row, left to right; end with #00000000 so the name '
+        'stays readable), "pulse": cycles a second the fade breathes '
+        '(optional, 0-4), "layers": [{"shape", "motion", "count" 1-40, '
+        '"size" px or [min, max], "speed" px a second (cycles a second for '
+        'twinkle, chase, wave), "color" "#RRGGBB" or a list, "opacity" '
+        '[min, max], "spin" turns a second, "sway" px side to side, "tilt" '
+        'px sideways per px down, "gap" seconds between passes (streak, '
+        'slide, arc, burst), "glow" true, "fadeOut" true, "x" / "y" the '
+        'part of the row as fractions [from, to], "chars" for shape char}]}. '
+        'Shapes: ${LiveStyleLayer.shapes.join(', ')}, glyph:<icon> (icons: '
+        '${liveStyleGlyphs.keys.join(', ')}). Motions: '
+        '${LiveStyleLayer.motions.join(', ')}. A group row is about 260 x '
+        '44 px: 6-16 particles a layer, 1-3 layers, soft colours. A layer '
+        'with an unknown shape or motion is left out.',
+    schema: {
+      'type': 'object',
+      'properties': {
+        'action': {
+          'type': 'string',
+          'enum': ['list', 'add', 'remove'],
+        },
+        'style': {
+          'type': 'object',
+          'description': 'For add: the style (or a pack {"styles": [...]}).',
+        },
+        'url': {
+          'type': 'string',
+          'description': 'For add, instead of style: a link to a style file '
+              '(fetched again when the viewer opens the gallery).',
+        },
+        'id': {
+          'type': 'string',
+          'description': 'For remove: the style id.',
+        },
+      },
+      'required': ['action'],
+    },
+    run: (box, args, caller) => _liveStyles(box, args),
+  ),
   VesperTool(
     name: 'groups',
     description:
@@ -1459,8 +1589,9 @@ final List<VesperTool> vesperTools = [
           'description': 'For colour, instead of a colour: a live style, a '
               'moving background from the bank, by id or name (christmas, '
               'snowfall, new-year, shooting-stars, aurora, soccer, hockey, '
-              'football, basketball, fire, neon, movie-night...). An '
-              'unknown one answers with the whole list.',
+              'football, basketball, fire, neon, movie-night...) or one of '
+              'the viewer\'s own (live_styles tool). An unknown one answers '
+              'with the whole list.',
         },
         'tab': {
           'type': 'string',

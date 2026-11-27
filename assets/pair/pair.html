@@ -187,7 +187,10 @@
   // "badges" (Stream badges): a badge pack address, Save like "poster".
   var badgeKind = parts[parts.length - 1] === "badges";
   if (badgeKind) posterKind = true;
-  if (keyKind || posterKind) linkKind = true;
+  // "styles" (Your live styles): a link to a style file or the style text
+  // itself; sends {"mode":"styles"} with the text as it is.
+  var stylesKind = parts[parts.length - 1] === "styles";
+  if (keyKind || posterKind || stylesKind) linkKind = true;
   if (linkKind || serverKind || photoKind || smbKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (photoKind) {
@@ -242,6 +245,16 @@
       document.title = "VesperTV · Send a key";
     }
     if (posterKind) $("link").placeholder = badgeKind ? "https://…/badges.json" : "https://…/{imdb_id}…";
+    if (stylesKind) {
+      $("link-view").querySelector("h1").innerHTML = "Send a live style to <span>VesperTV</span>";
+      $("link-view").querySelector(".lead").innerHTML = "Paste a link to your style file, or the style itself (its JSON text). How to make one: <a href=\"https://vespertv.app/styles/make.html\" target=\"_blank\" rel=\"noopener\">vespertv.app/styles/make</a>";
+      $("link-view").querySelector("label").textContent = "Link or style";
+      $("link").placeholder = "https://…/my-styles.json  or  { \"id\": \"pumpkins\", … }";
+      $("link").setAttribute("inputmode", "text");
+      $("link").setAttribute("maxlength", "200000");
+      $("link").style.minHeight = "220px";
+      document.title = "VesperTV · Live style";
+    }
   }
   if (serverKind) {
     $("form-view").hidden = true;
@@ -340,6 +353,11 @@
   }
 
   function collectLink() {
+    if (stylesKind) {
+      var text = $("link").value.trim();
+      if (!text) return "Paste the link or the style first.";
+      return { v: 1, mode: "styles", link: text };
+    }
     var link = $("link").value.replace(/\s+/g, "");
     if (!link) return keyKind ? "Paste the key first." : "Paste the link first.";
     return { v: 1, mode: "link", link: link };
@@ -379,7 +397,9 @@
       $("smb-view").hidden = true;
       $("photo-view").hidden = true;
       if (photoKind) $("done-hint").textContent = wallKind ? "Your wallpaper is on the TV. You can close this page." : "Your photo is on the TV. You can close this page.";
-      if (linkKind) $("done-hint").textContent = keyKind || posterKind
+      if (linkKind) $("done-hint").textContent = stylesKind
+        ? "Check it there, then press Import. You can close this page."
+        : keyKind || posterKind
         ? "Check it there, then press Save. You can close this page."
         : "Check it there, then press Add. You can close this page.";
       if (serverKind) $("done-hint").textContent = "Check the details there, then press Connect. You can close this page.";

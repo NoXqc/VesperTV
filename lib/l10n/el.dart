@@ -4507,4 +4507,42 @@ const Map<String, String> kEl = {
       "Καθαρισμός αγαπημένων…",
   "Delete watched history…":
       "Διαγραφή ιστορικού παρακολούθησης…",
+
+  // Your live styles (import your own, 2026-11-27).
+  "Your live styles":
+      "Τα δικά σας κινούμενα στυλ",
+  "Moving group backgrounds you make yourself: bring them in by link or from your phone, then pick them in Colour… > Live styles….":
+      "Κινούμενα φόντα για ομάδες που φτιάχνετε εσείς: προσθέστε τα με σύνδεσμο ή από το κινητό και διαλέξτε τα στο Χρώμα… > Κινούμενα στυλ….",
+  "Scan this code with your phone camera and paste a link to your style file, or the style itself — it appears here for you to check and import.":
+      "Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού και επικολλήστε τον σύνδεσμο του αρχείου στυλ ή το ίδιο το στυλ — εμφανίζεται εδώ για έλεγχο και εισαγωγή.",
+  "1 style imported. Hold OK on a group > Colour… > Live styles… to use it.":
+      "Εισήχθη 1 στυλ. Κρατήστε OK σε μια ομάδα > Χρώμα… > Κινούμενα στυλ… για να το χρησιμοποιήσετε.",
+  "{n} styles imported. Hold OK on a group > Colour… > Live styles… to use them.":
+      "Εισήχθησαν {n} στυλ. Κρατήστε OK σε μια ομάδα > Χρώμα… > Κινούμενα στυλ… για να τα χρησιμοποιήσετε.",
+  "{n} left out: nothing this version can draw.":
+      "{n} παραλείφθηκαν: τίποτα που μπορεί να σχεδιάσει αυτή η έκδοση.",
+  "Could not download the style file ({error}).":
+      "Δεν ήταν δυνατή η λήψη του αρχείου στυλ ({error}).",
+  "This is too big for a style file.":
+      "Είναι πολύ μεγάλο για αρχείο στυλ.",
+  "No style in it can be drawn: check the shapes and motions it uses.":
+      "Κανένα στυλ δεν μπορεί να σχεδιαστεί: ελέγξτε τα σχήματα και τις κινήσεις που χρησιμοποιεί.",
+  "This is not a live style. Paste a link to a style file or the style itself.":
+      "Αυτό δεν είναι κινούμενο στυλ. Επικολλήστε τον σύνδεσμο ενός αρχείου στυλ ή το ίδιο το στυλ.",
+  "It came from a link with {n} styles: they all go (the link would bring it back).":
+      "Ήρθε από σύνδεσμο με {n} στυλ: φεύγουν όλα (ο σύνδεσμος θα το έφερνε πίσω).",
+  "Make your own moving backgrounds for groups and bring them in here: a link to a style file, or the style itself.":
+      "Φτιάξτε τα δικά σας κινούμενα φόντα για ομάδες και φέρτε τα εδώ: τον σύνδεσμο ενός αρχείου στυλ ή το ίδιο το στυλ.",
+  "How to make one, with a starter file: {address}. An AI app connected to VesperTV can also make one for you.":
+      "Πώς να φτιάξετε ένα, με αρχείο εκκίνησης: {address}. Μια εφαρμογή AI συνδεδεμένη με το VesperTV μπορεί επίσης να το φτιάξει για εσάς.",
+  "Link or style":
+      "Σύνδεσμος ή στυλ",
+  "No styles of your own yet.":
+      "Δεν έχετε ακόμη δικά σας στυλ.",
+  "Your styles":
+      "Τα στυλ σας",
+  "OK on a style removes it.":
+      "OK σε ένα στυλ το αφαιρεί.",
+  "Your own styles…":
+      "Τα δικά σας στυλ…",
 };

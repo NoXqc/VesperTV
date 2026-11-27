@@ -471,6 +471,13 @@ class StorageService {
       _prefs.setString(AppConstants.keyProviderExpiryNoticeDay, day);
 
   /// Settings > Playback > Stream badges — see `StreamBadges`.
+  /// See [AppConstants.keyMyLiveStyles] (`MyLiveStyles`).
+  String getMyLiveStyles() =>
+      _prefs.getString(AppConstants.keyMyLiveStyles) ?? '';
+  Future<void> setMyLiveStyles(String json) => json.isEmpty
+      ? _prefs.remove(AppConstants.keyMyLiveStyles)
+      : _prefs.setString(AppConstants.keyMyLiveStyles, json);
+
   String getStreamBadgesUrl() =>
       _prefs.getString(AppConstants.keyStreamBadgesUrl) ?? '';
   Future<void> setStreamBadgesUrl(String url) =>

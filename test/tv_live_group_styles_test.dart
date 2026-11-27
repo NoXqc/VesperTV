@@ -9,6 +9,7 @@ import 'package:nox_iptv/models/m3u_group.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
+import 'package:nox_iptv/services/device_memory_service.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/live_group_styles.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -65,6 +66,9 @@ class _NoGuide extends EpgService {
 
 void main() {
   setUp(() {
+    // TV boxes: styles follow the remote (touch screens move on show).
+    DeviceTypeService.television = true;
+    addTearDown(() => DeviceTypeService.television = false);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler(
             'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',

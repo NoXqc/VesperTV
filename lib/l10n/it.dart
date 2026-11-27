@@ -4552,4 +4552,42 @@ const Map<String, String> kIt = {
       "Svuota preferiti…",
   "Delete watched history…":
       "Elimina cronologia…",
+
+  // Your live styles (import your own, 2026-11-27).
+  "Your live styles":
+      "I tuoi stili animati",
+  "Moving group backgrounds you make yourself: bring them in by link or from your phone, then pick them in Colour… > Live styles….":
+      "Sfondi animati per i gruppi fatti da te: aggiungili con un link o dal telefono, poi sceglili in Colore… > Stili animati….",
+  "Scan this code with your phone camera and paste a link to your style file, or the style itself — it appears here for you to check and import.":
+      "Inquadra questo codice con la fotocamera del telefono e incolla il link del tuo file di stile, o lo stile stesso: compare qui per controllarlo e importarlo.",
+  "1 style imported. Hold OK on a group > Colour… > Live styles… to use it.":
+      "1 stile importato. Tieni premuto OK su un gruppo > Colore… > Stili animati… per usarlo.",
+  "{n} styles imported. Hold OK on a group > Colour… > Live styles… to use them.":
+      "{n} stili importati. Tieni premuto OK su un gruppo > Colore… > Stili animati… per usarli.",
+  "{n} left out: nothing this version can draw.":
+      "{n} esclusi: niente che questa versione sappia disegnare.",
+  "Could not download the style file ({error}).":
+      "Impossibile scaricare il file di stile ({error}).",
+  "This is too big for a style file.":
+      "È troppo grande per un file di stile.",
+  "No style in it can be drawn: check the shapes and motions it uses.":
+      "Nessuno stile si può disegnare: controlla le forme e i movimenti usati.",
+  "This is not a live style. Paste a link to a style file or the style itself.":
+      "Questo non è uno stile animato. Incolla il link di un file di stile o lo stile stesso.",
+  "It came from a link with {n} styles: they all go (the link would bring it back).":
+      "Viene da un link con {n} stili: vengono tolti tutti (il link lo riporterebbe).",
+  "Make your own moving backgrounds for groups and bring them in here: a link to a style file, or the style itself.":
+      "Crea i tuoi sfondi animati per i gruppi e aggiungili qui: il link di un file di stile, o lo stile stesso.",
+  "How to make one, with a starter file: {address}. An AI app connected to VesperTV can also make one for you.":
+      "Come crearne uno, con un file di partenza: {address}. Anche un’app di IA collegata a VesperTV può crearlo per te.",
+  "Link or style":
+      "Link o stile",
+  "No styles of your own yet.":
+      "Ancora nessuno stile tuo.",
+  "Your styles":
+      "I tuoi stili",
+  "OK on a style removes it.":
+      "OK su uno stile lo rimuove.",
+  "Your own styles…":
+      "I tuoi stili…",
 };

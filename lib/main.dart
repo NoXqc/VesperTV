@@ -44,6 +44,7 @@ import 'services/archive_posters.dart';
 import 'services/dispatcharr.dart';
 import 'services/tuliprox.dart';
 import 'services/stream_badges.dart';
+import 'services/my_live_styles.dart';
 import 'services/catalog_database.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/content_updates.dart';
@@ -857,6 +858,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       ArchivePosters.pattern = _storage.getArchivePosterPattern();
       // Loads its pack the first time a source list needs it.
       StreamBadges.instance.attach(_storage);
+      // The viewer's own live styles (a small setting; usually none).
+      MyLiveStyles.instance.attach(_storage);
       Dispatcharr.instance.attach(_storage);
       Tuliprox.instance.attach(_storage);
 
