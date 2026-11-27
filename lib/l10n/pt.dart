@@ -4370,7 +4370,7 @@ const Map<String, String> kPt = {
       "Para usar botões como TV, YouTube ou Prime, adiciona o complemento gratuito «{name}», uma pequena aplicação separada. Prime OK para o transferir e instalar.",
 
   // Strings added to the app after this translation was started (2026-11-24..26),
-  // filled in by the maintainers in the same style: please review.
+  // filled in by the maintainers in the same style, reviewed by Ricardo (PR #27).
   "A recording on the Tuliprox server failed.":
       "Uma gravação no servidor Tuliprox falhou.",
   "A recording on the Tuliprox server is ready.":
@@ -4450,7 +4450,7 @@ const Map<String, String> kPt = {
   "{n} % reliable":
       "{n} % fiável",
   "{title} · every {day} at {time}":
-      "{title} · todas(os) as {day} às {time}",
+      "{title} · semanalmente, {day} às {time}",
   "{used} of {cap} used on the server":
       "{used} de {cap} usados no servidor",
   "{used} used on the server":
