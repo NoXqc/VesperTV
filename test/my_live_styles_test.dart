@@ -410,6 +410,79 @@ void main() {
       expect(mineIds(), isEmpty);
     });
 
+    test('a scene is added; what was left out comes back (scene_notes)',
+        () async {
+      final answer = await box.call('live_styles', {
+        'action': 'add',
+        'style': {
+          'id': 'walker',
+          'name': 'Walker',
+          'scene': {
+            'sprites': {
+              'dot': {
+                'palette': {'r': '#FF0000'},
+                'frames': [
+                  ['rr', 'rr']
+                ],
+              },
+            },
+            'actors': [
+              {
+                'sprite': 'dot',
+                'at': [0.5, 1]
+              },
+              {
+                'sprite': 'ghost',
+                'at': [0.2, 1]
+              },
+            ],
+          },
+        },
+      });
+      expect(answer['added'], ['my-walker']);
+      expect('${answer['scene_notes']}', contains('"ghost": no such sprite'));
+      expect(MyLiveStyles.instance.styles.single.scene?.actors.length, 1);
+    });
+
+    test('a scene with nothing to draw is refused with its notes (as text)',
+        () async {
+      final answer = await box.call('live_styles', {
+        'action': 'add',
+        'style': jsonEncode({
+          'id': 'empty',
+          'name': 'Empty',
+          'scene': {
+            'sprites': <String, Object?>{},
+            'actors': [
+              {
+                'sprite': 'ghost',
+                'at': [0.5, 1]
+              },
+            ],
+          },
+        }),
+      });
+      expect('${answer['error']}', contains('"ghost": no such sprite'));
+      expect('${answer['error']}', contains('scene with a sprite'));
+      expect(mineIds(), isEmpty);
+    });
+
+    test('the description has the scene format and the editor', () {
+      final tool = vesperTools.firstWhere((t) => t.name == 'live_styles');
+      for (final words in [
+        'SCENES',
+        '"engine": 2',
+        '"sprites"',
+        '"actors"',
+        '"path"',
+        'original characters',
+        'scene_notes',
+        'vespertv.app/styles/editor.html',
+      ]) {
+        expect(tool.description, contains(words), reason: words);
+      }
+    });
+
     test('the description lists the shapes and motions', () {
       final tool = vesperTools.firstWhere((t) => t.name == 'live_styles');
       for (final shape in LiveStyleLayer.shapes) {

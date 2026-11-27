@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../l10n/l10n.dart';
+import 'live_style_scene.dart';
 
 /// Live styles for TV groups (owner, 2026-11-26: "a bank of live group[s]
 /// that users could download ... a Christmas theme one with snowflakes
@@ -31,6 +32,7 @@ class LiveGroupStyle {
     required this.fade,
     required this.layers,
     this.pulse = 0,
+    this.scene,
   });
 
   final String id;
@@ -51,6 +53,10 @@ class LiveGroupStyle {
   /// Cycles a second the fade breathes (0 = steady).
   final double pulse;
   final List<LiveStyleLayer> layers;
+
+  /// Sprites on a timeline (engine 2, [LiveStyleScene]); null = particles
+  /// only.
+  final LiveStyleScene? scene;
 
   String get name => names[L10n.code] ?? names['en'] ?? id;
 
@@ -87,7 +93,8 @@ class LiveGroupStyle {
       for (final l in (json['layers'] as List?) ?? const [])
         if (LiveStyleLayer.fromJson(l) case final layer?) layer,
     ];
-    if (fade.isEmpty && layers.isEmpty) return null;
+    final scene = LiveStyleScene.fromJson(json['scene']);
+    if (fade.isEmpty && layers.isEmpty && scene == null) return null;
     return LiveGroupStyle(
       id: id,
       names: names,
@@ -95,6 +102,7 @@ class LiveGroupStyle {
       fade: fade,
       pulse: _num(json['pulse'], 0, 0, 4),
       layers: layers,
+      scene: scene,
     );
   }
 }
@@ -285,7 +293,8 @@ class LiveGroupStyles {
   static const mineCategory = 'mine';
 
   /// Shapes / motions version this app draws (a style may ask for more).
-  static const engine = 1;
+  /// 2 = sprite scenes ([LiveStyleScene], 2026-11-27).
+  static const engine = 2;
 
   /// A test build can point at a PC (`--dart-define=VESPER_STYLES_URL=...`).
   static const bankUrl = String.fromEnvironment('VESPER_STYLES_URL',

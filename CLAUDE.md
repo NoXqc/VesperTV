@@ -545,6 +545,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   breathes every 8 ms (`_Breather`), reads only each game's window of guide hits (sorted once, titles normalized once),
   same-league `namesOtherGame`, memoized `_fewestTerms`. Same results (dump compared); PC hold 482 -> 27 ms. Row in
   dev-notes/bugs-and-fixes.md; test/sports_matcher_speed_test.dart.
+- **Claude, 2026-11-27 - live style scenes: sprites on a timeline + the editor (`claude/live-style-scenes`, worktree
+  `VesperTV-claude-scenes`, from main bde3ba0):** owner: "Scope the sprite-scene engine", then "Loop on focus ... Rest when
+  out of focus/highlight. Editor page now and AI connector updated". A style's `scene` (`services/live_style_scene.dart`,
+  engine 2): pixel sprites (palette characters, frame sets, fps) and actors still or on a path of timed points (play,
+  flip, hop `arc`, ease, show windows); `scene.at(t)` is stateless. Still = its `rest` moment; focused = plays from rest and
+  loops, a visit is whole loops of >= 30 s (`LiveStyleBackground.visitFor`) so it stops on the rest moment; remote leaves
+  = rest at once. `paintScene`: crisp (whole device pixels, cached frame images). Bank +4 original scenes (fox-trail,
+  rocket-ride, sleigh-ride, slapshot); 1.0.73 and older leave engine-2 styles out. Site: **vespertv.app/styles/editor.html**
+  (pixel editor + path table + live preview + notes + copy / load / built-ins, autosave) with `docs/styles/scene.js` = the
+  Dart rules in JS (change both; `node tools/styles_editor/scene.test.mjs`), make.html `#scenes`. AI `live_styles`: SCENES
+  format + `scene_notes`. Details: dev-notes/live-group-styles.md "Scenes". test/live_style_scene_test.dart.
 - **Claude, 2026-11-27 - Your own live styles (`claude/live-styles-import`, worktree `VesperTV-claude-mystyles`, from main
   0593622):** owner: "import custom live groups so if users want to build their own". Colour… > Live styles… > **Your own
   styles…** / Settings > Appearance > Look > **Your live styles** (`MyLiveStylesScreen`): a link to a style file or the text

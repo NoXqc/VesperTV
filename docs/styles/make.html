@@ -68,6 +68,7 @@ footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;paddin
       VesperTV
     </a>
     <nav aria-label="Primary">
+      <a href="editor.html">Scene editor</a>
       <a href="../remote.html">Remote tips</a>
       <a href="../vesper-ai.html">Vesper AI</a>
     </nav>
@@ -77,7 +78,9 @@ footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;paddin
   <h1>Make a <span>live style</span></h1>
   <p class="lead">A live style is a moving background for a group in VesperTV's TV tab: snow falling, stars
   twinkling, a puck sliding by. It sits still while you're elsewhere and moves while the remote is on the
-  group. A style is a small text file (JSON) you can write yourself, share with friends, or have an AI make.</p>
+  group. A style is a small text file (JSON) you can write yourself, share with friends, or have an AI make.
+  It can also hold <a href="#scenes">little pixel characters</a> that run, hop and slide along the row: draw them in the
+  <a href="editor.html">scene editor</a>.</p>
 
   <h2>Four steps</h2>
   <div class="steps">
@@ -91,6 +94,7 @@ footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;paddin
   <div class="ai">
     <p>With an AI app connected to VesperTV (<a href="../vesper-ai.html">Vesper AI</a>), just describe it:</p>
     <p><q>Make a live style with orange leaves falling slowly and put it on my Movies group.</q></p>
+    <p><q>Make a scene with a little robot rolling along my Kids group and waving at the end.</q></p>
     <p>The AI writes the style, imports it and puts it on the group. Reconnect the connector once after updating VesperTV so the AI sees the new <code>live_styles</code> tool.</p>
   </div>
 
@@ -129,7 +133,9 @@ footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;paddin
 <div class="row"><div class="keys"><code>name</code></div><div class="what"><p>A name, or one per language: {&quot;en&quot;: &quot;Autumn leaves&quot;, &quot;fr&quot;: &quot;Feuilles d&#x27;automne&quot;}.</p></div></div>
 <div class="row"><div class="keys"><code>fade</code></div><div class="what"><p>Colours behind the group, left to right, as #AARRGGBB (AA = opacity, 00 clear to FF solid). End with #00000000 so the group&#x27;s name and count stay easy to read.</p></div></div>
 <div class="row"><div class="keys"><code>pulse</code></div><div class="what"><p>Optional: the fade breathes, in cycles a second (0.2 is gentle; up to 4).</p></div></div>
-<div class="row"><div class="keys"><code>layers</code></div><div class="what"><p>Up to a few sets of particles (below). A style needs a fade, a layer, or both.</p></div></div>
+<div class="row"><div class="keys"><code>layers</code></div><div class="what"><p>Up to a few sets of particles (below).</p></div></div>
+<div class="row"><div class="keys"><code>scene</code></div><div class="what"><p>Optional: <a href="#scenes">pixel characters on a timeline</a>. A style needs a fade, a layer or a scene (any mix of them).</p></div></div>
+<div class="row"><div class="keys"><code>engine</code></div><div class="what"><p>Set it to 2 when the style has a scene: an older VesperTV then leaves the style out instead of drawing it without its characters.</p></div></div>
   </div>
 
   <h2>A layer</h2>
@@ -189,12 +195,68 @@ footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;paddin
 <div class="row"><div class="keys"><code>wave</code></div><div class="what"><p>soft bands rolling (&quot;sway&quot; = height)</p></div></div>
   </div>
 
+  <h2 id="scenes">Scenes: little characters</h2>
+  <p class="sub">A scene is pixel art on a timeline: a fox that runs and jumps over a log, a rocket that flies by. While the
+  remote stays on the group it loops from its rest moment (about 30 s, in whole loops); when the remote leaves, it&#x27;s
+  back at its rest moment. On a phone it plays for about 12 s when the row shows. Needs VesperTV 1.0.74 or newer.</p>
+  <div class="ai">
+    <p><b style="color:var(--ink)">The easy way: the <a href="editor.html">scene editor</a>.</b> Draw each sprite pixel by
+    pixel, give it a path, watch the row play the way your TV will, then copy the file. Start from a blank scene or
+    from one of the built-in ones. Draw your own characters, not known ones or logos, so your styles can be shared freely.</p>
+  </div>
+  <p class="sub" style="margin-top:14px">A small one to start from: a ball bouncing across the row.</p>
+  <pre id="scene-example"><button class="copy" type="button" data-copy="scene-example">Copy</button>{
+  &quot;id&quot;: &quot;bouncy-ball&quot;,
+  &quot;name&quot;: &quot;Bouncy ball&quot;,
+  &quot;engine&quot;: 2,
+  &quot;fade&quot;: [&quot;#991A237E&quot;, &quot;#4D1A237E&quot;, &quot;#00000000&quot;],
+  &quot;scene&quot;: {
+    &quot;length&quot;: 6,
+    &quot;rest&quot;: 3,
+    &quot;grid&quot;: 18,
+    &quot;sprites&quot;: {
+      &quot;ball&quot;: {
+        &quot;palette&quot;: {&quot;r&quot;: &quot;#E53935&quot;, &quot;w&quot;: &quot;#FFFFFF&quot;, &quot;d&quot;: &quot;#9E1E1B&quot;},
+        &quot;frames&quot;: [[&quot;.rrr.&quot;, &quot;rwrrr&quot;, &quot;rrrrd&quot;, &quot;rrrdd&quot;, &quot;.ddd.&quot;]]
+      }
+    },
+    &quot;actors&quot;: [
+      {
+        &quot;sprite&quot;: &quot;ball&quot;,
+        &quot;path&quot;: [
+          {&quot;t&quot;: 0, &quot;x&quot;: -0.05, &quot;y&quot;: 1, &quot;arc&quot;: 0.6},
+          {&quot;t&quot;: 1.5, &quot;x&quot;: 0.3, &quot;y&quot;: 1, &quot;arc&quot;: 0.45},
+          {&quot;t&quot;: 3, &quot;x&quot;: 0.6, &quot;y&quot;: 1, &quot;arc&quot;: 0.3},
+          {&quot;t&quot;: 4.5, &quot;x&quot;: 0.85, &quot;y&quot;: 1, &quot;arc&quot;: 0.2},
+          {&quot;t&quot;: 6, &quot;x&quot;: 1.1, &quot;y&quot;: 1}
+        ]
+      }
+    ]
+  }
+}</pre>
+  <div class="rows">
+<div class="row"><div class="keys"><code>length</code></div><div class="what"><p>Seconds in one loop (0.5 to 60; 6 to 10 works well).</p></div></div>
+<div class="row"><div class="keys"><code>rest</code></div><div class="what"><p>The second shown while the group is still. Pick a moment with the main character between the middle and 80 % across: the name is on the left, the count on the right.</p></div></div>
+<div class="row"><div class="keys"><code>grid</code></div><div class="what"><p>How many sprite pixels tall the row is (8 to 64). 16 to 22 suits most rows: smaller = bigger characters.</p></div></div>
+<div class="row"><div class="keys"><code>sprites</code></div><div class="what"><p>Up to 12 characters or props, each with a name: <code>{"fox": {...}, "log": {...}}</code>.</p></div></div>
+<div class="row"><div class="keys"><code>palette</code></div><div class="what"><p>A sprite&#x27;s colours, one character each: <code>{"o": "#E8892B", "k": "#2E2118"}</code> (up to 24). <code>.</code> and a space are always clear.</p></div></div>
+<div class="row"><div class="keys"><code>frames</code></div><div class="what"><p>Pictures made of rows of palette characters, up to 32 x 32 (8 to 16 rows tall reads best). One list of frames, or named sets: <code>{"run": [[rows], [rows]], "jump": [[rows]]}</code> (up to 6 sets of 8 frames).</p></div></div>
+<div class="row"><div class="keys"><code>fps</code></div><div class="what"><p>Frames a second for the sprite (0 to 24, 6 by default).</p></div></div>
+<div class="row"><div class="keys"><code>actors</code></div><div class="what"><p>Up to 16 sprites on the row; later ones are drawn in front. Still: <code>{"sprite": "log", "at": [0.55, 1]}</code>. Moving: <code>{"sprite": "fox", "path": [points]}</code>.</p></div></div>
+<div class="row"><div class="keys"><code>path</code></div><div class="what"><p>Points in time (up to 48): <code>{"t": 2.6, "x": 0.46, "y": 1, "play": "jump", "arc": 0.5}</code>. Between two points the sprite moves in a straight line; before the first and after the last it stays put.</p></div></div>
+<div class="row"><div class="keys"><code>x, y</code></div><div class="what"><p><code>x</code> across the row (0 left, 1 right) is the sprite&#x27;s middle; <code>y</code> down the row (0 top, 1 bottom) is its feet. Below 0 or above 1 = off the row, for coming in and going out.</p></div></div>
+<div class="row"><div class="keys"><code>play, flip</code></div><div class="what"><p>From this point on: the frame set to play, and <code>"flip": true</code> to face left (<code>false</code> faces right again).</p></div></div>
+<div class="row"><div class="keys"><code>arc, ease</code></div><div class="what"><p>To the next point: a hop as high as <code>arc</code> rows (0.5 = half the row), and <code>ease</code> <code>in</code> (slow start), <code>out</code> (slow end), <code>inout</code> or <code>linear</code>.</p></div></div>
+<div class="row"><div class="keys"><code>show</code></div><div class="what"><p>Optional: only part of the loop, <code>[1, 4]</code> seconds, or several: <code>[[0, 2], [5, 6]]</code>. <code>[7, 1]</code> crosses the loop&#x27;s end.</p></div></div>
+  </div>
+
   <h2>Tips</h2>
   <ul class="tips">
     <li>A group row is about 260 x 44 pixels: 1 to 3 layers of 6 to 16 particles look best.</li>
     <li>Keep the fade soft (about 60 % at the left, <code>99</code> in #AARRGGBB) and end it clear so the group's name stays readable.</li>
     <li>A layer with a shape or motion VesperTV doesn't know is left out; a style with nothing left isn't imported. Import tells you how many were left out.</li>
-    <li>All 25 built-in styles are in <a href="group-styles.json">group-styles.json</a>: borrow from them.</li>
+    <li>All 29 built-in styles are in <a href="group-styles.json">group-styles.json</a>: borrow from them. The scene editor opens the built-in scenes too.</li>
+    <li>A scene&#x27;s sprite or actor VesperTV can&#x27;t draw (a missing sprite, a frame set it doesn&#x27;t have) is left out; the scene editor lists what and why.</li>
     <li>A link is downloaded again when the gallery opens (once each time VesperTV starts), so changes to your file reach the TV by themselves.</li>
   </ul>
 </main>

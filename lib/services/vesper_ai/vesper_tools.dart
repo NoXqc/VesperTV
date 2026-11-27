@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart' as mk;
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../live_group_styles.dart';
+import '../live_style_scene.dart';
 import '../my_live_styles.dart';
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
@@ -581,6 +582,22 @@ Future<Map<String, Object?>> _liveStyles(
   if (action != 'add') throw VesperToolError('Actions: list, add, remove.');
   final url = _str(args, 'url');
   final style = args['style'];
+  // What of each scene can't be drawn, for the AI to fix (scene_notes);
+  // the style may come as its JSON text.
+  Object? styleJson = style;
+  if (style is String) {
+    try {
+      styleJson = jsonDecode(style);
+    } catch (_) {
+      styleJson = null;
+    }
+  }
+  final sceneNotes = <String>[
+    for (final entry in LiveGroupStyles.entriesOf(styleJson))
+      if (entry is Map && entry['scene'] != null)
+        for (final n in LiveStyleScene.check(entry['scene']))
+          '${entry['id'] ?? 'style'}: $n',
+  ];
   final MyStylesImport result;
   try {
     if (url.isNotEmpty) {
@@ -598,7 +615,9 @@ Future<Map<String, Object?>> _liveStyles(
         'The link could not be downloaded (${e.detail}).',
       MyStylesProblem.tooBig => 'Too big (200 KB at most).',
       MyStylesProblem.nothingUsable => 'No style in it can be drawn: it needs '
-          'an id, a fade or a layer with a known shape and motion.',
+          'an id, and a fade, a layer with a known shape and motion or a '
+          'scene with a sprite to draw.'
+          '${sceneNotes.isEmpty ? '' : ' Scene: ${sceneNotes.join('; ')}'}',
       MyStylesProblem.notStyles => 'Not a style: give a style object, a '
           '{"styles": [...]} pack or a link to one.',
     });
@@ -607,6 +626,7 @@ Future<Map<String, Object?>> _liveStyles(
     'added': result.ids,
     if (result.replaced > 0) 'replaced': result.replaced,
     if (result.skipped > 0) 'left_out': result.skipped,
+    if (sceneNotes.isNotEmpty) 'scene_notes': sceneNotes,
     'next': 'Put it on groups with the groups tool: action colour, style '
         '${result.ids.first}. The viewer also finds it in Colour… > Live '
         'styles… > Your styles.',
@@ -1530,7 +1550,31 @@ final List<VesperTool> vesperTools = [
         '${liveStyleGlyphs.keys.join(', ')}). Motions: '
         '${LiveStyleLayer.motions.join(', ')}. A group row is about 260 x '
         '44 px: 6-16 particles a layer, 1-3 layers, soft colours. A layer '
-        'with an unknown shape or motion is left out.',
+        'with an unknown shape or motion is left out. '
+        'SCENES (sprites on a timeline; set "engine": 2): "scene": '
+        '{"length": seconds per loop (it loops while the remote is on the '
+        'group), "rest": the second shown while still (park the main sprite '
+        'between the middle and x 0.8: the name is on the left, the count '
+        'on the right), "grid": sprite pixels the row is tall (16-22; 16 = '
+        'bigger), "sprites": {"fox": {"palette": {"o": "#E8892B", "k": '
+        '"#2E2118"} (one character each; "." and space are clear), '
+        '"frames": {"run": [[rows], [rows]], "jump": [[rows]]} (or one list '
+        'of frames), each frame rows of palette characters, up to 32 x 32 '
+        '(8-16 tall reads best), "fps": frames a second}}, "actors": [{'
+        '"sprite": "log", "at": [x, y]} (still) or {"sprite": "fox", '
+        '"path": [{"t": 0, "x": -0.1, "y": 1, "play": "run"}, {"t": 2.6, '
+        '"x": 0.46, "y": 1, "play": "jump", "arc": 0.5}, {"t": 3.3, "x": '
+        '0.74, "y": 1, "play": "run"}, {"t": 6, "x": 1.12, "y": 1}], "show": '
+        '[from, to] seconds (optional)}]}. x across the row (0 left, 1 '
+        'right: the sprite\'s middle; below 0 or above 1 = off screen), y '
+        'down the row (0 top, 1 bottom: the sprite\'s feet). A point\'s '
+        '"play" (frame set), "flip" (true = faces left), "ease" (linear, '
+        'in, out, inout) and "arc" (a hop to the next point, in rows) hold '
+        'until the next point. Later actors draw in front. Up to 12 sprites, '
+        '16 actors, 48 points each, 60 s. Draw original characters only '
+        '(no known characters or logos). The answer lists anything of a '
+        'scene that was left out (scene_notes). People can also draw '
+        'scenes themselves at vespertv.app/styles/editor.html.',
     schema: {
       'type': 'object',
       'properties': {

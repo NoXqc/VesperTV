@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/device_memory_service.dart';
 import '../services/live_group_styles.dart';
+import '../services/live_style_scene.dart';
 
 /// A live style behind a group row ([LiveGroupStyle]): still while the
 /// remote is elsewhere, moving while [animate] (the row has focus), at most
@@ -33,6 +35,15 @@ class LiveStyleBackground extends StatefulWidget {
     this.borderRadius = 8,
     this.style,
   });
+
+  /// How long a visit moves: a scene plays whole loops (at least [cap]),
+  /// so it ends on its rest moment instead of jumping back to it mid-loop.
+  static Duration visitFor(Duration cap, LiveStyleScene? scene) {
+    if (scene == null || scene.length <= 0) return cap;
+    final loops = (cap.inMilliseconds / 1000 / scene.length).ceil();
+    return Duration(
+        milliseconds: (math.max(1, loops) * scene.length * 1000).round());
+  }
 
   /// `style:<id>`; drawn once the bank names it.
   final String colorId;
@@ -66,6 +77,11 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
       FocusManager.instance.highlightMode == FocusHighlightMode.touch;
 
   final _time = ValueNotifier<double>(restAt);
+
+  /// Seconds this visit has moved, for a scene ([LiveStyleScene]); null =
+  /// still, the scene shows its rest moment (owner: "loop on focus, rest
+  /// when out of focus").
+  final _sceneElapsed = ValueNotifier<double?>(null);
   Timer? _timer;
   double _base = restAt;
 
@@ -96,6 +112,7 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
       _timer =
           Timer.periodic(const Duration(microseconds: 1000000 ~/ fps), (t) {
         _time.value = _base + t.tick / fps;
+        _sceneElapsed.value = t.tick / fps;
         if (t.tick >= last) {
           _stop();
           _settled = true;
@@ -112,12 +129,15 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
     _timer!.cancel();
     _timer = null;
     _base = _time.value;
+    // A scene goes back to its rest moment.
+    _sceneElapsed.value = null;
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _time.dispose();
+    _sceneElapsed.dispose();
     super.dispose();
   }
 
@@ -125,7 +145,10 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: CustomPaint(
-            painter: LiveStylePainter(style, _time),
+            painter: LiveStylePainter(style, _time,
+                sceneElapsed: style.scene == null ? null : _sceneElapsed,
+                devicePixelRatio:
+                    MediaQuery.maybeDevicePixelRatioOf(context) ?? 1),
             child: const SizedBox.expand(),
           ),
         ),
@@ -137,7 +160,10 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
     final moving = (widget.animate || touch) &&
         TickerMode.valuesOf(context).enabled &&
         !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
-    final length = widget.animate ? movesFor : touchMovesFor;
+    final length = LiveStyleBackground.visitFor(
+        widget.animate ? movesFor : touchMovesFor,
+        (widget.style ?? LiveGroupStyles.instance.styleOf(widget.colorId))
+            ?.scene);
     // After the frame: never start or stop during a build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _sync(moving, length);
@@ -157,10 +183,22 @@ class _LiveStyleBackgroundState extends State<LiveStyleBackground> {
 /// place comes from its seed and the time alone, so a still row is one
 /// frame and a moving one never keeps state.
 class LiveStylePainter extends CustomPainter {
-  LiveStylePainter(this.style, this.time) : super(repaint: time);
+  LiveStylePainter(this.style, this.time,
+      {this.sceneElapsed, this.devicePixelRatio = 1})
+      : super(
+            repaint: sceneElapsed == null
+                ? time
+                : Listenable.merge([time, sceneElapsed]));
 
   final LiveGroupStyle style;
   final ValueListenable<double> time;
+
+  /// Seconds the scene has moved this visit; null (or no listenable) = its
+  /// rest moment.
+  final ValueListenable<double?>? sceneElapsed;
+
+  /// Sprite pixels are whole device pixels (crisp pixel art).
+  final double devicePixelRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -185,11 +223,116 @@ class LiveStylePainter extends CustomPainter {
     for (var l = 0; l < style.layers.length; l++) {
       _LayerPainter(canvas, size, style.layers[l], seed * 31 + l, t).paint();
     }
+    final scene = style.scene;
+    if (scene != null) {
+      final elapsed = sceneElapsed?.value;
+      paintScene(
+          canvas,
+          size,
+          scene,
+          elapsed == null ? scene.rest : scene.rest + elapsed,
+          devicePixelRatio);
+    }
   }
 
   @override
   bool shouldRepaint(LiveStylePainter old) =>
-      old.style != style || old.time != time;
+      old.style != style ||
+      old.time != time ||
+      old.sceneElapsed != sceneElapsed ||
+      old.devicePixelRatio != devicePixelRatio;
+}
+
+/// Draws [scene] at [t] seconds: each sprite pixel a whole number of device
+/// pixels (the row height / the scene's grid, rounded, at least 1: rounding
+/// down halved the sprites on a row a little shorter than the grid),
+/// positions snapped to device pixels, no smoothing.
+@visibleForTesting
+void paintScene(Canvas canvas, Size size, LiveStyleScene scene, double t,
+    double devicePixelRatio) {
+  final dpr = devicePixelRatio <= 0 ? 1.0 : devicePixelRatio;
+  final unitDevice = math.max(1, (size.height * dpr / scene.grid).round());
+  final unit = unitDevice / dpr;
+  double snap(double v) => (v * dpr).roundToDouble() / dpr;
+  final paint = Paint()
+    ..filterQuality = FilterQuality.none
+    ..isAntiAlias = false;
+  for (final p in scene.at(t)) {
+    final s = p.sprite;
+    final w = s.width * unit, h = s.height * unit;
+    final left = snap(p.x * size.width - w / 2);
+    final top = snap(p.y * size.height - h);
+    final image = _SpriteImages.of(s, p.set, p.frame);
+    canvas.save();
+    canvas.translate(left, top);
+    if (p.flip) {
+      canvas.translate(w, 0);
+      canvas.scale(-1, 1);
+    }
+    if (image != null) {
+      canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, s.width.toDouble(), s.height.toDouble()),
+          Rect.fromLTWH(0, 0, w, h),
+          paint);
+    } else {
+      // No image (a test canvas without a GPU): the pixels one by one.
+      final pixels = s.sets[p.set]![p.frame];
+      for (var y = 0; y < s.height; y++) {
+        for (var x = 0; x < s.width; x++) {
+          final c = pixels[y * s.width + x];
+          if (c >> 24 == 0) continue;
+          canvas.drawRect(Rect.fromLTWH(x * unit, y * unit, unit, unit),
+              paint..color = Color(c));
+        }
+      }
+    }
+    canvas.restore();
+  }
+}
+
+/// Each sprite frame drawn once into a tiny image (1 sprite pixel = 1 image
+/// pixel), then scaled up without smoothing: a few image draws a frame
+/// instead of hundreds of squares.
+class _SpriteImages {
+  static final _images = Expando<Map<String, ui.Image?>>('liveSpriteImages');
+
+  static ui.Image? of(LiveSceneSprite sprite, String set, int frame) {
+    final map = _images[sprite] ??= <String, ui.Image?>{};
+    final key = '$set/$frame';
+    if (map.containsKey(key)) return map[key];
+    ui.Image? image;
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final paint = Paint()..isAntiAlias = false;
+      final pixels = sprite.sets[set]![frame];
+      for (var y = 0; y < sprite.height; y++) {
+        // One rectangle per run of the same colour.
+        var x = 0;
+        while (x < sprite.width) {
+          final c = pixels[y * sprite.width + x];
+          var end = x + 1;
+          while (end < sprite.width && pixels[y * sprite.width + end] == c) {
+            end++;
+          }
+          if (c >> 24 != 0) {
+            canvas.drawRect(
+                Rect.fromLTWH(
+                    x.toDouble(), y.toDouble(), (end - x).toDouble(), 1),
+                paint..color = Color(c));
+          }
+          x = end;
+        }
+      }
+      final picture = recorder.endRecording();
+      image = picture.toImageSync(sprite.width, sprite.height);
+      picture.dispose();
+    } catch (_) {
+      image = null;
+    }
+    return map[key] = image;
+  }
 }
 
 /// A particle's fixed numbers, 0..1, from its seed.

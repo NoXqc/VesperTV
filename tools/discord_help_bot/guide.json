@@ -115,7 +115,7 @@
     "id": "a5ceac8d9a4dfd7f",
     "category": "Live TV",
     "title": "Make your own live style",
-    "answer": "A live style is a small text file you can write yourself ( how to, with a starter file ) or ask an AI app connected to VesperTV to make (\"make a live style with orange leaves falling and put it on my Movies group\"). Bring it in from Your own styles… at the top of the Live styles gallery, or Settings → Appearance → Look → Your live styles: paste a link to the file, or press From phone and paste the text itself. Your styles show first in the gallery, follow your other devices with sync, and a link is downloaded again each time the gallery opens after a restart. OK on one of your styles there removes it.",
+    "answer": "A live style is a small text file you can write yourself ( how to, with a starter file ) or ask an AI app connected to VesperTV to make (\"make a live style with orange leaves falling and put it on my Movies group\"). It can also hold little pixel characters that run and hop along the row: draw them in the scene editor ; a scene loops while the remote is on the group and rests when it leaves. Bring it in from Your own styles… at the top of the Live styles gallery, or Settings → Appearance → Look → Your live styles: paste a link to the file, or press From phone and paste the text itself. Your styles show first in the gallery, follow your other devices with sync, and a link is downloaded again each time the gallery opens after a restart. OK on one of your styles there removes it.",
     "controls": "Live styles… → Your own styles…",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },

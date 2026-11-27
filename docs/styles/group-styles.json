@@ -1218,6 +1218,658 @@
      "sway": 2
     }
    ]
+  },
+  {
+   "id": "fox-trail",
+   "category": "fun",
+   "engine": 2,
+   "name": {
+    "en": "Fox trail",
+    "fr": "Sentier du renard",
+    "es": "Paseo del zorro",
+    "it": "Passeggiata della volpe",
+    "el": "Η βόλτα της αλεπούς",
+    "de": "Fuchspfad",
+    "pl": "Lisi szlak",
+    "uk": "Лисяча стежка",
+    "pt": "Trilho da raposa"
+   },
+   "fade": [
+    "#99A4612A",
+    "#4D6D4C2E",
+    "#00000000"
+   ],
+   "layers": [],
+   "scene": {
+    "length": 8,
+    "rest": 3.4,
+    "grid": 16,
+    "sprites": {
+     "fox": {
+      "palette": {
+       "o": "#E8892B",
+       "d": "#A8521A",
+       "w": "#FFF1DC",
+       "k": "#2E2118",
+       "e": "#141414"
+      },
+      "frames": {
+       "run": [
+        [
+         "............d...",
+         "...........odd..",
+         "w..........oooo.",
+         "wwo.......oooeoo",
+         ".wooo....ooooook",
+         "..oooooooooowww.",
+         "...ooooooooowww.",
+         "....k.k...k.k...",
+         "...k...k.k...k.."
+        ],
+        [
+         "............d...",
+         "...........odd..",
+         "w..........oooo.",
+         "wwo.......oooeoo",
+         ".wooo....ooooook",
+         "..oooooooooowww.",
+         "...ooooooooowww.",
+         ".....kk....kk...",
+         ".....k.k..k..k.."
+        ]
+       ],
+       "jump": [
+        [
+         "............d...",
+         "...........odd..",
+         "...........oooo.",
+         "ww.......ooooeoo",
+         "wwooo...ooooooook",
+         ".ooooooooooowww..",
+         "..ooooooooowww...",
+         "..kk.......kk....",
+         ".k...........k..."
+        ]
+       ]
+      },
+      "fps": 10
+     },
+     "log": {
+      "palette": {
+       "b": "#7A4A26",
+       "l": "#A0683A",
+       "r": "#5A341A",
+       "c": "#D9B07A"
+      },
+      "frames": [
+       [
+        ".bbbbbbbbbbb.",
+        "blllllllllllc",
+        "bbbbbbbbbbbrc",
+        ".rrrrrrrrrrr."
+       ]
+      ]
+     },
+     "leaf": {
+      "palette": {
+       "r": "#D84315",
+       "y": "#F9A825"
+      },
+      "frames": [
+       [
+        ".r.",
+        "ryr",
+        ".r."
+       ],
+       [
+        "r..",
+        ".yr",
+        "..r"
+       ],
+       [
+        ".r.",
+        "ryr",
+        ".r."
+       ],
+       [
+        "..r",
+        "ry.",
+        "r.."
+       ]
+      ],
+      "fps": 4
+     }
+    },
+    "actors": [
+     {
+      "sprite": "log",
+      "at": [
+       0.6,
+       1.0
+      ]
+     },
+     {
+      "sprite": "leaf",
+      "show": [
+       3.0,
+       7.4
+      ],
+      "path": [
+       {
+        "t": 3.0,
+        "x": 0.64,
+        "y": 0.1
+       },
+       {
+        "t": 5.0,
+        "x": 0.56,
+        "y": 0.55,
+        "ease": "inout"
+       },
+       {
+        "t": 7.0,
+        "x": 0.68,
+        "y": 1.0,
+        "ease": "inout"
+       }
+      ]
+     },
+     {
+      "sprite": "fox",
+      "path": [
+       {
+        "t": 0,
+        "x": -0.1,
+        "y": 1,
+        "play": "run"
+       },
+       {
+        "t": 2.6,
+        "x": 0.46,
+        "y": 1,
+        "play": "jump",
+        "arc": 0.5
+       },
+       {
+        "t": 3.3,
+        "x": 0.74,
+        "y": 1,
+        "play": "run"
+       },
+       {
+        "t": 6.0,
+        "x": 1.12,
+        "y": 1
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "rocket-ride",
+   "category": "fun",
+   "engine": 2,
+   "name": {
+    "en": "Rocket ride",
+    "fr": "Virée en fusée",
+    "es": "Viaje en cohete",
+    "it": "Giro in razzo",
+    "el": "Βόλτα με πύραυλο",
+    "de": "Raketenflug",
+    "pl": "Lot rakietą",
+    "uk": "Політ на ракеті",
+    "pt": "Passeio de foguetão"
+   },
+   "fade": [
+    "#B30D1B3D",
+    "#4D1A237E",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "star4",
+     "motion": "twinkle",
+     "count": 12,
+     "size": [
+      1.5,
+      3.5
+     ],
+     "speed": 0.5,
+     "color": [
+      "#FFE082",
+      "#FFFFFF"
+     ],
+     "opacity": [
+      0.35,
+      0.9
+     ]
+    }
+   ],
+   "scene": {
+    "length": 7,
+    "rest": 4.0,
+    "grid": 18,
+    "sprites": {
+     "rocket": {
+      "palette": {
+       "w": "#ECEFF1",
+       "g": "#90A4AE",
+       "r": "#E53935",
+       "b": "#42A5F5",
+       "y": "#FFD54F",
+       "o": "#FF7043",
+       "k": "#37474F"
+      },
+      "frames": [
+       [
+        "........rr......",
+        ".......rww......",
+        "..yo.gwwwwwwwr..",
+        ".yyooggwwbbwwwr.",
+        ".yyooggwwbbwwwr.",
+        "..yo.gwwwwwwwr..",
+        ".......rww......",
+        "........rr......"
+       ],
+       [
+        "........rr......",
+        ".......rww......",
+        ".oyo.gwwwwwwwr..",
+        "yyyooggwwbbwwwr.",
+        "yyyooggwwbbwwwr.",
+        ".oyo.gwwwwwwwr..",
+        ".......rww......",
+        "........rr......"
+       ]
+      ],
+      "fps": 12
+     },
+     "planet": {
+      "palette": {
+       "p": "#7E57C2",
+       "l": "#B39DDB",
+       "d": "#4527A0",
+       "r": "#FFCA28"
+      },
+      "frames": [
+       [
+        "...pppp...",
+        ".rrpllpprr",
+        "r.pplpppp.",
+        "..pppppdd.",
+        "...pppdd..",
+        "..........",
+        ".........."
+       ]
+      ]
+     }
+    },
+    "actors": [
+     {
+      "sprite": "planet",
+      "at": [
+       0.76,
+       0.9
+      ]
+     },
+     {
+      "sprite": "rocket",
+      "path": [
+       {
+        "t": 0,
+        "x": -0.15,
+        "y": 0.85,
+        "ease": "inout"
+       },
+       {
+        "t": 3.5,
+        "x": 0.5,
+        "y": 0.55,
+        "ease": "inout"
+       },
+       {
+        "t": 6.2,
+        "x": 1.2,
+        "y": 0.4
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "sleigh-ride",
+   "category": "seasonal",
+   "engine": 2,
+   "name": {
+    "en": "Sleigh ride",
+    "fr": "Promenade en traîneau",
+    "es": "Paseo en trineo",
+    "it": "Giro in slitta",
+    "el": "Βόλτα με έλκηθρο",
+    "de": "Schlittenfahrt",
+    "pl": "Kulig",
+    "uk": "Прогулянка на санях",
+    "pt": "Passeio de trenó"
+   },
+   "fade": [
+    "#99102A4A",
+    "#4D0D2135",
+    "#00000000"
+   ],
+   "layers": [
+    {
+     "shape": "dot",
+     "motion": "fall",
+     "count": 14,
+     "size": [
+      1.5,
+      3
+     ],
+     "speed": 12,
+     "color": "#FFFFFF",
+     "opacity": [
+      0.4,
+      0.85
+     ],
+     "sway": 3
+    }
+   ],
+   "scene": {
+    "length": 9,
+    "rest": 5.0,
+    "grid": 18,
+    "sprites": {
+     "reindeer": {
+      "palette": {
+       "b": "#8D5A3B",
+       "d": "#5D3A24",
+       "t": "#E8D3B0",
+       "n": "#3E2723",
+       "a": "#C8A26B"
+      },
+      "frames": [
+       [
+        "........a.a..",
+        ".........aa..",
+        ".........bbn.",
+        ".bbbbbbbbbb..",
+        "tbbbbbbbbb...",
+        ".bbbbbbbb....",
+        ".d.d...d.d...",
+        "d...d.d...d.."
+       ],
+       [
+        "........a.a..",
+        ".........aa..",
+        ".........bbn.",
+        ".bbbbbbbbbb..",
+        "tbbbbbbbbb...",
+        ".bbbbbbbb....",
+        "..dd....dd...",
+        "..d.d..d.d..."
+       ]
+      ],
+      "fps": 7
+     },
+     "sleigh": {
+      "palette": {
+       "r": "#C62828",
+       "g": "#FFD54F",
+       "s": "#8D6E63",
+       "c": "#2E7D32",
+       "w": "#FFFFFF",
+       "k": "#3E2723",
+       "f": "#FFCCBC"
+      },
+      "frames": [
+       [
+        "....ss.......",
+        "...ssss..ww..",
+        "...ssss.rrrr.",
+        "...ccss.rffr.",
+        "rrrrrrrrrrrr.",
+        "rggrrrrrrrrrr",
+        ".rrrrrrrrrrr.",
+        "g..........gg",
+        ".gggggggggg.."
+       ]
+      ]
+     },
+     "moon": {
+      "palette": {
+       "m": "#FFF8E1",
+       "s": "#FFE082"
+      },
+      "frames": [
+       [
+        "..mmm.",
+        ".mmm..",
+        "mmm...",
+        "mmm...",
+        "mmms..",
+        ".mmmm.",
+        "..mmm."
+       ]
+      ]
+     }
+    },
+    "actors": [
+     {
+      "sprite": "moon",
+      "at": [
+       0.78,
+       0.55
+      ]
+     },
+     {
+      "sprite": "sleigh",
+      "path": [
+       {
+        "t": 0,
+        "x": -0.3,
+        "y": 0.95,
+        "ease": "inout"
+       },
+       {
+        "t": 4.5,
+        "x": 0.45,
+        "y": 0.7
+       },
+       {
+        "t": 9.0,
+        "x": 1.25,
+        "y": 0.5
+       }
+      ]
+     },
+     {
+      "sprite": "reindeer",
+      "path": [
+       {
+        "t": 0,
+        "x": -0.16,
+        "y": 0.9,
+        "ease": "inout"
+       },
+       {
+        "t": 4.5,
+        "x": 0.59,
+        "y": 0.65
+       },
+       {
+        "t": 9.0,
+        "x": 1.39,
+        "y": 0.45
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "slapshot",
+   "category": "sports",
+   "engine": 2,
+   "name": {
+    "en": "Slapshot",
+    "fr": "Lancer frappé",
+    "es": "Tiro de golpe",
+    "it": "Tiro a schiaffo",
+    "el": "Δυνατό σουτ",
+    "de": "Schlagschuss",
+    "pl": "Strzał z zamachu",
+    "uk": "Кидок з розмаху",
+    "pt": "Remate em força"
+   },
+   "fade": [
+    "#990277BD",
+    "#3329B6F6",
+    "#00000000"
+   ],
+   "layers": [],
+   "scene": {
+    "length": 6.5,
+    "rest": 2.6,
+    "grid": 16,
+    "sprites": {
+     "skater": {
+      "palette": {
+       "h": "#1565C0",
+       "j": "#1E88E5",
+       "w": "#FFFFFF",
+       "s": "#FFCCBC",
+       "p": "#263238",
+       "k": "#90A4AE",
+       "b": "#6D4C41"
+      },
+      "frames": {
+       "skate": [
+        [
+         "...hh.....",
+         "..hsss....",
+         "..jjjj....",
+         ".jjwjjj...",
+         ".jjjjj.b..",
+         "..pppp..b.",
+         "..pp.pp..b",
+         ".kk...kk.b",
+         "...........bb"
+        ],
+        [
+         "...hh.....",
+         "..hsss....",
+         "..jjjj....",
+         ".jjwjjj...",
+         ".jjjjj.b..",
+         "..pppp..b.",
+         "...ppp...b",
+         "...kkk...b",
+         "...........bb"
+        ]
+       ],
+       "shoot": [
+        [
+         "...hh.......",
+         "..hsss......",
+         "..jjjj.bbb..",
+         ".jjwjjjb....",
+         ".jjjjj......",
+         "..pppp......",
+         "..pp.pp.....",
+         ".kk...kk....",
+         "............"
+        ]
+       ]
+      },
+      "fps": 6
+     },
+     "puck": {
+      "palette": {
+       "k": "#111111"
+      },
+      "frames": [
+       [
+        "kkk"
+       ]
+      ]
+     },
+     "net": {
+      "palette": {
+       "r": "#E53935",
+       "w": "#ECEFF1"
+      },
+      "frames": [
+       [
+        "rrrrrr",
+        "r.w.wr",
+        "rw.w.r",
+        "r.w.wr",
+        "rw.w.r",
+        "r.w.wr"
+       ]
+      ]
+     }
+    },
+    "actors": [
+     {
+      "sprite": "net",
+      "at": [
+       0.8,
+       1.0
+      ]
+     },
+     {
+      "sprite": "puck",
+      "show": [
+       2.5,
+       3.3
+      ],
+      "path": [
+       {
+        "t": 2.5,
+        "x": 0.6,
+        "y": 0.97
+       },
+       {
+        "t": 3.0,
+        "x": 0.79,
+        "y": 0.9
+       }
+      ]
+     },
+     {
+      "sprite": "skater",
+      "path": [
+       {
+        "t": 0,
+        "x": -0.1,
+        "y": 1,
+        "play": "skate"
+       },
+       {
+        "t": 2.2,
+        "x": 0.52,
+        "y": 1,
+        "play": "shoot"
+       },
+       {
+        "t": 3.0,
+        "x": 0.54,
+        "y": 1,
+        "play": "skate",
+        "flip": true
+       },
+       {
+        "t": 5.8,
+        "x": -0.12,
+        "y": 1
+       }
+      ]
+     }
+    ]
+   }
   }
  ]
 }

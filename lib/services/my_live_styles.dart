@@ -308,6 +308,12 @@ class MyLiveStyles {
       style['name'] = id.substring(idPrefix.length);
     }
     style['category'] = LiveGroupStyles.mineCategory;
+    // A scene needs engine 2: an older app leaves the style out instead of
+    // drawing it without its sprites.
+    final engine = style['engine'];
+    if (style['scene'] != null && (engine is! num || engine < 2)) {
+      style['engine'] = 2;
+    }
     return LiveGroupStyle.fromJson(style) == null ? null : style;
   }
 

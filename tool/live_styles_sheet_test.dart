@@ -38,6 +38,10 @@ void main() {
     addTearDown(tester.view.reset);
     final key = GlobalKey();
     final clocks = [for (final t in times) ValueNotifier<double>(t)];
+    // Scenes: the rest moment, then 1.5 / 3 / 4.5 s after the remote came.
+    final sceneClocks = [
+      for (final e in const [null, 1.5, 3.0, 4.5]) ValueNotifier<double?>(e)
+    ];
     Widget row(LiveGroupStyle s, int i) => Container(
           width: 260,
           height: 44,
@@ -49,7 +53,9 @@ void main() {
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: CustomPaint(painter: LiveStylePainter(s, clocks[i])),
+                child: CustomPaint(
+                    painter: LiveStylePainter(s, clocks[i],
+                        sceneElapsed: s.scene == null ? null : sceneClocks[i])),
               ),
             ),
             Padding(

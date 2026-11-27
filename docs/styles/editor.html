@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live Style Editor · VesperTV</title>
+<meta name="description" content="Draw little pixel sprites, give them a path across a VesperTV group row and send the moving style to your TV.">
+<meta name="theme-color" content="#070608">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE28C'/%3E%3Cstop offset='1' stop-color='%23C48412'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='%230B0907'/%3E%3Cpath d='M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z' fill='url(%23g)'/%3E%3Cpath d='M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z' fill='%23FFE9B0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens as index.html, remote.html and make.html. */
+:root{
+  --bg:#070608; --panel:rgba(255,255,255,.035); --panel-2:rgba(255,255,255,.06);
+  --hair:rgba(255,255,255,.10); --hair-2:rgba(255,255,255,.18);
+  --ink:#F6F1E7; --ink-2:#C4BAA6; --ink-3:#918771;
+  --gold:#D4A017; --gold-lift:#F0C75E; --gold-pale:#FFD98A; --amber-dp:#C9781A;
+  --bad:#FF8A80; --good:#A5D6A7;
+  --r:16px; --pad:clamp(16px,4vw,32px); --maxw:1240px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Inter,system-ui,sans-serif;
+  background-image:radial-gradient(900px 500px at 85% -10%,rgba(212,160,23,.10),transparent 60%)}
+a{color:var(--gold-lift)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
+header{border-bottom:1px solid var(--hair);position:sticky;top:0;z-index:5;background:rgba(7,6,8,.85);backdrop-filter:blur(10px)}
+header .wrap{display:flex;align-items:center;gap:14px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 18px 'Bricolage Grotesque',sans-serif}
+header nav{margin-left:auto;display:flex;gap:18px;font-size:14px}
+header nav a{color:var(--ink-2);text-decoration:none}
+header nav a:hover{color:var(--ink)}
+h1{font:800 clamp(28px,5vw,44px)/1.05 'Bricolage Grotesque',sans-serif;margin:28px 0 8px;letter-spacing:-.02em}
+h1 span{background:linear-gradient(100deg,var(--gold-lift),var(--gold-pale));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font:700 19px/1.2 'Bricolage Grotesque',sans-serif;margin:0 0 10px}
+h3{font:600 14px/1.3 Inter,sans-serif;margin:14px 0 6px;color:var(--ink-2)}
+.lead{color:var(--ink-2);max-width:760px;margin:0 0 18px}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:var(--r);padding:16px;min-width:0}
+.cols{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr) minmax(280px,380px);gap:14px;margin:14px 0}
+@media (max-width:1100px){.cols{grid-template-columns:1fr 1fr}.cols #spritePanel{grid-column:1 / -1;order:-1}}
+@media (max-width:720px){.cols{grid-template-columns:1fr} header nav{display:none}}
+.btn{background:var(--panel-2);border:1px solid var(--hair-2);color:var(--ink);border-radius:999px;padding:6px 12px;font:600 13px Inter,sans-serif;cursor:pointer;white-space:nowrap}
+.btn:hover,.btn:focus-visible{border-color:var(--gold);outline:0}
+.btn.gold{background:linear-gradient(100deg,var(--gold),var(--amber-dp));border-color:transparent;color:#140E02}
+.btn.small{padding:3px 9px;font-size:12px}
+.btn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold-pale);background:rgba(212,160,23,.12)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}
+label{color:var(--ink-2);font-size:13px}
+input[type=text],input[type=number],select,textarea{background:#0D0A08;border:1px solid var(--hair-2);color:var(--ink);border-radius:8px;padding:5px 8px;font:500 13px Inter,sans-serif;min-width:0}
+input[type=number]{width:72px}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--gold)}
+input[type=color]{width:34px;height:28px;border:1px solid var(--hair-2);border-radius:6px;background:none;padding:1px;cursor:pointer}
+.field{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:8px;margin:6px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel-2);border:1px solid var(--hair);color:var(--ink-2);border-radius:999px;padding:4px 10px;font:600 12px Inter,sans-serif;cursor:pointer}
+.chip[aria-selected="true"]{background:linear-gradient(100deg,var(--gold),var(--amber-dp));border-color:transparent;color:#140E02}
+.preview-card{background:var(--panel);border:1px solid var(--hair);border-radius:var(--r);padding:14px}
+#preview{width:100%;max-width:780px;display:block;border-radius:12px;cursor:crosshair;background:#0B0B10;image-rendering:pixelated}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px}
+.transport input[type=range]{flex:1 1 220px;accent-color:var(--gold)}
+#clock{font:700 13px 'JetBrains Mono',monospace;color:var(--gold-pale);min-width:64px}
+.hint{color:var(--ink-3);font-size:13px;margin:8px 0 0}
+.notes{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+.notes li{padding:4px 10px;border-radius:8px;margin:3px 0;background:rgba(255,138,128,.08);color:var(--bad)}
+.notes li.ok{background:rgba(165,214,167,.08);color:var(--good)}
+.notes li.tip{background:rgba(212,160,23,.08);color:var(--gold-pale)}
+.palette{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.swatch{position:relative;width:34px;height:34px;border-radius:8px;border:2px solid var(--hair-2);cursor:pointer;font:700 11px 'JetBrains Mono',monospace;color:#fff;text-shadow:0 0 3px #000;display:grid;place-items:end center;padding-bottom:1px;
+  background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0}
+.swatch i{position:absolute;inset:0;border-radius:6px}
+.swatch span{position:relative}
+.swatch[aria-selected="true"]{border-color:var(--gold-pale);box-shadow:0 0 0 2px rgba(212,160,23,.5)}
+.frames{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.frames canvas{border:2px solid var(--hair);border-radius:6px;cursor:pointer;image-rendering:pixelated;background:#141018}
+.frames canvas[aria-selected="true"]{border-color:var(--gold)}
+#pixels{display:block;margin:8px 0;max-width:100%;touch-action:none;cursor:crosshair;border-radius:8px;image-rendering:pixelated}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{color:var(--ink-3);font-weight:600;text-align:left;padding:3px 4px}
+td{padding:2px 3px}
+td input[type=number]{width:54px;padding:3px 5px}
+td select{padding:3px 4px;max-width:84px}
+.tablewrap{overflow-x:auto;margin:6px 0;max-width:100%}
+tr.sel td{background:rgba(212,160,23,.10)}
+.actors{list-style:none;padding:0;margin:6px 0}
+.actors li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--hair);border-radius:10px;margin:4px 0;cursor:pointer;font-size:13px}
+.actors li[aria-selected="true"]{border-color:var(--gold);background:rgba(212,160,23,.08)}
+.actors li b{font-weight:600}
+textarea#json{width:100%;min-height:260px;font:500 12px/1.45 'JetBrains Mono',monospace;resize:vertical}
+.ways{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+.way{background:var(--panel-2);border:1px solid var(--hair);border-radius:12px;padding:12px;font-size:13px;color:var(--ink-2)}
+.way b{display:block;color:var(--ink);margin-bottom:4px}
+.muted{color:var(--ink-3);font-size:12px}
+footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;padding:22px 0 36px;margin-top:24px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="../">
+      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE28C"/><stop offset="1" stop-color="#C48412"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#0B0907"/><path d="M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z" fill="url(#lg)"/><path d="M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z" fill="#FFE9B0"/></svg>
+      VesperTV
+    </a>
+    <nav aria-label="Primary">
+      <a href="make.html">How to make a style</a>
+      <a href="../remote.html">Remote tips</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <h1>Live style <span>editor</span></h1>
+  <p class="lead">Draw little pixel sprites, give them a path across a group row, and bring the result into VesperTV.
+  The row below plays it the way your TV will: it loops while the remote is on the group and shows its rest moment
+  when it's not. Your work stays in this browser until you copy or download it. Draw your own characters.</p>
+
+  <section class="preview-card" aria-label="Preview">
+    <canvas id="preview" width="780" height="132"></canvas>
+    <div class="transport">
+      <button class="btn gold" id="play" type="button">Pause</button>
+      <input type="range" id="time" min="0" max="8" step="0.01" value="0" aria-label="Time in the loop">
+      <span id="clock">0.00 s</span>
+      <button class="btn" id="toRest" type="button">Show the rest moment</button>
+      <label><input type="checkbox" id="showText" checked> Group name and count</label>
+    </div>
+    <p class="hint">Pause, pick a path point (or a still actor) on the right, then click the row to put it there.
+    On the TV a scene starts at its rest moment, loops while the remote stays on the group (about 30 s, whole loops)
+    and is back at the rest moment when the remote leaves. On a phone it plays for about 12 s when the row shows.</p>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <div class="cols">
+    <section class="panel" id="stylePanel" aria-label="Style">
+      <h2>Style</h2>
+      <div class="field"><label for="startFrom">Start from</label>
+        <select id="startFrom"><option value="">Choose…</option><option value="blank">A blank scene</option></select></div>
+      <div class="field"><label for="styleId">Id</label><input type="text" id="styleId" spellcheck="false"></div>
+      <div class="field"><label for="styleName">Name</label><input type="text" id="styleName"></div>
+      <h3>Fade behind the row</h3>
+      <div id="fade"></div>
+      <div class="row"><button class="btn small" id="addFade" type="button">+ Colour</button>
+        <span class="muted">Left to right. Keep the last one clear so the name stays readable.</span></div>
+      <div class="field"><label for="pulse">Pulse</label><input type="number" id="pulse" min="0" max="4" step="0.05"></div>
+      <h3>Scene</h3>
+      <div class="field"><label for="length">Loop (s)</label><input type="number" id="length" min="0.5" max="60" step="0.1"></div>
+      <div class="field"><label for="rest">Rest at (s)</label>
+        <span class="row" style="margin:0"><input type="number" id="rest" min="0" step="0.1"><button class="btn small" id="restNow" type="button">Use now</button></span></div>
+      <div class="field"><label for="grid">Row height</label><input type="number" id="grid" min="8" max="64" step="1"></div>
+      <p class="muted" style="margin:0 0 6px">Row height is in sprite pixels: smaller = bigger sprites (16-22 suits most rows).</p>
+      <p class="muted" id="layersNote"></p>
+    </section>
+
+    <section class="panel" id="spritePanel" aria-label="Sprites">
+      <h2>Sprites</h2>
+      <div class="chips" id="sprites"></div>
+      <div class="row">
+        <button class="btn small" id="addSprite" type="button">+ Sprite</button>
+        <button class="btn small" id="renameSprite" type="button">Rename</button>
+        <button class="btn small" id="dupSprite" type="button">Duplicate</button>
+        <button class="btn small" id="delSprite" type="button">Delete</button>
+      </div>
+      <h3>Colours</h3>
+      <div class="palette" id="palette"></div>
+      <div class="row">
+        <button class="btn small" id="addColor" type="button">+ Colour</button>
+        <input type="color" id="colorPick" aria-label="Colour">
+        <label>Opacity <input type="range" id="alphaPick" min="0" max="100" value="100" style="width:90px;accent-color:#D4A017"></label>
+        <button class="btn small" id="delColor" type="button">Remove colour</button>
+      </div>
+      <h3>Frame sets</h3>
+      <div class="chips" id="sets"></div>
+      <div class="row">
+        <button class="btn small" id="addSet" type="button">+ Set</button>
+        <button class="btn small" id="renameSet" type="button">Rename</button>
+        <button class="btn small" id="delSet" type="button">Delete</button>
+        <label>Frames a second <input type="number" id="fps" min="0" max="24" step="1"></label>
+      </div>
+      <div class="frames" id="frames"></div>
+      <div class="row">
+        <button class="btn small" id="addFrame" type="button">+ Frame</button>
+        <button class="btn small" id="dupFrame" type="button">Duplicate</button>
+        <button class="btn small" id="delFrame" type="button">Delete</button>
+        <button class="btn small" id="frameLeft" type="button" aria-label="Move the frame left">◀</button>
+        <button class="btn small" id="frameRight" type="button" aria-label="Move the frame right">▶</button>
+      </div>
+      <h3>Draw</h3>
+      <div class="row" id="tools">
+        <button class="btn small" data-tool="pencil" type="button">Pencil</button>
+        <button class="btn small" data-tool="eraser" type="button">Eraser</button>
+        <button class="btn small" data-tool="fill" type="button">Fill</button>
+        <button class="btn small" id="flipFrame" type="button">Flip</button>
+        <button class="btn small" id="clearFrame" type="button">Clear</button>
+        <label><input type="checkbox" id="onion" checked> Onion skin</label>
+      </div>
+      <canvas id="pixels"></canvas>
+      <div class="row">
+        <label>Size <input type="number" id="spriteW" min="1" max="32"> × <input type="number" id="spriteH" min="1" max="32"></label>
+        <button class="btn small" id="resize" type="button">Resize</button>
+        <span class="muted">Right click erases. 8-16 pixels tall reads best.</span>
+      </div>
+    </section>
+
+    <section class="panel" id="actorPanel" aria-label="Actors">
+      <h2>Actors</h2>
+      <ul class="actors" id="actors"></ul>
+      <div class="row">
+        <button class="btn small" id="addActor" type="button">+ Actor</button>
+        <button class="btn small" id="actorUp" type="button" aria-label="Draw sooner (behind)">Behind</button>
+        <button class="btn small" id="actorDown" type="button" aria-label="Draw later (in front)">In front</button>
+        <button class="btn small" id="delActor" type="button">Delete</button>
+      </div>
+      <div id="actorEdit"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Your style file">
+    <h2>Your style file</h2>
+    <textarea id="json" spellcheck="false" aria-label="The style as JSON"></textarea>
+    <div class="row">
+      <button class="btn gold" id="copy" type="button">Copy</button>
+      <button class="btn" id="download" type="button">Download .json</button>
+      <button class="btn" id="load" type="button">Load what's in the box</button>
+      <span class="muted" id="size"></span>
+    </div>
+    <h3>Bring it into VesperTV</h3>
+    <div class="ways">
+      <div class="way"><b>From your phone</b>On the TV: Settings &gt; Appearance &gt; Look &gt; Your live styles &gt; From phone. Scan the code, paste the copied text, send.</div>
+      <div class="way"><b>As a link</b>Put the file online (a GitHub Gist's Raw link works) and paste the link in Your live styles. Changes reach the TV by themselves.</div>
+      <div class="way"><b>On a computer</b>Open VesperTV, Your live styles, paste the text in the box and press Import.</div>
+    </div>
+    <p class="hint">Then hold OK on a group &gt; Colour… &gt; Live styles… &gt; Your styles. Scenes need VesperTV 1.0.74 or newer; an older version leaves the style out.</p>
+  </section>
+</main>
+<div class="wrap"><footer>Made something nice? Share it on <a href="https://discord.gg/nwb2mtYatk">Discord</a> or <a href="https://www.reddit.com/r/VesperTV/">r/VesperTV</a>. The format: <a href="make.html#scenes">vespertv.app/styles/make</a>.</footer></div>
+
+<script type="module">
+import { parseScene, placements, drawFade, drawScene, parseColor, LIMITS } from './scene.js';
+
+const $ = (id) => document.getElementById(id);
+const STORE = 'vespertv-style-editor-v1';
+const CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#*+=%&@!?~^';
+
+// An original sparkle: the blank scene.
+const blank = () => ({
+  id: 'my-scene',
+  name: 'My scene',
+  engine: 2,
+  fade: ['#991A237E', '#4D1A237E', '#00000000'],
+  layers: [],
+  scene: {
+    length: 6, rest: 2.5, grid: 18,
+    sprites: {
+      spark: {
+        palette: { y: '#FFD54F', w: '#FFFFFF' },
+        frames: { glow: [
+          ['..y..', '.yyy.', 'yywyy', '.yyy.', '..y..'],
+          ['..w..', '.yyy.', 'wyyyw', '.yyy.', '..w..'],
+        ] },
+        fps: 4,
+      },
+    },
+    actors: [
+      { sprite: 'spark', path: [
+        { t: 0, x: -0.05, y: 0.75, play: 'glow', arc: 0.35 },
+        { t: 2.5, x: 0.62, y: 0.75, arc: 0.35 },
+        { t: 5, x: 1.05, y: 0.75 },
+      ] },
+    ],
+  },
+});
+
+let doc;
+const ui = { sprite: null, set: null, frame: 0, color: null, tool: 'pencil', onion: true,
+  actor: 0, point: 0, time: 0, clock: 2.6, playing: true, showText: true };
+let parsed = null;
+let bank = [];
+
+// ---------------------------------------------------------------- model
+
+function normalize(d) {
+  if (!d || typeof d !== 'object') d = blank();
+  d.engine = 2;
+  if (typeof d.id !== 'string') d.id = 'my-scene';
+  if (typeof d.name !== 'string' && (typeof d.name !== 'object' || !d.name)) d.name = 'My scene';
+  if (!Array.isArray(d.fade)) d.fade = ['#00000000'];
+  if (!Array.isArray(d.layers)) d.layers = [];
+  if (!d.scene || typeof d.scene !== 'object') d.scene = { length: 8, rest: 4, grid: 18, sprites: {}, actors: [] };
+  const s = d.scene;
+  if (typeof s.length !== 'number') s.length = 8;
+  if (typeof s.rest !== 'number') s.rest = s.length / 2;
+  if (typeof s.grid !== 'number') s.grid = 22;
+  if (!s.sprites || typeof s.sprites !== 'object') s.sprites = {};
+  for (const sp of Object.values(s.sprites)) {
+    if (!sp.palette || typeof sp.palette !== 'object') sp.palette = {};
+    if (Array.isArray(sp.frames)) sp.frames = { default: sp.frames };
+    if (!sp.frames || typeof sp.frames !== 'object') sp.frames = { default: [['.']] };
+    for (const [k, v] of Object.entries(sp.frames)) {
+      sp.frames[k] = (Array.isArray(v) ? v : []).map((f) => (typeof f === 'string' ? f.split('\n') : (Array.isArray(f) ? f.map(String) : [])));
+      if (!sp.frames[k].length) delete sp.frames[k];
+    }
+    if (!Object.keys(sp.frames).length) sp.frames = { default: [['.']] };
+    if (typeof sp.fps !== 'number') sp.fps = 6;
+  }
+  if (!Array.isArray(s.actors)) s.actors = [];
+  return d;
+}
+
+function spriteSize(sp) {
+  let w = 1, h = 1;
+  for (const frames of Object.values(sp.frames)) {
+    for (const f of frames) { h = Math.max(h, f.length); for (const r of f) w = Math.max(w, r.length); }
+  }
+  return [w, h];
+}
+
+function padFrame(rows, w, h) {
+  const out = [];
+  for (let y = 0; y < h; y++) out.push(((rows[y] ?? '') + '.'.repeat(w)).slice(0, w));
+  return out;
+}
+
+const sprite = () => doc.scene.sprites[ui.sprite];
+const frameRows = () => sprite()?.frames[ui.set]?.[ui.frame];
+const actor = () => doc.scene.actors[ui.actor];
+
+function pickValid() {
+  const names = Object.keys(doc.scene.sprites);
+  if (!names.includes(ui.sprite)) ui.sprite = names[0] ?? null;
+  const sp = sprite();
+  if (sp) {
+    const sets = Object.keys(sp.frames);
+    if (!sets.includes(ui.set)) ui.set = sets[0];
+    ui.frame = Math.min(ui.frame, sp.frames[ui.set].length - 1);
+    if (ui.color !== '.' && !(ui.color in sp.palette)) ui.color = Object.keys(sp.palette)[0] ?? '.';
+  }
+  ui.actor = Math.min(ui.actor, Math.max(0, doc.scene.actors.length - 1));
+  const a = actor();
+  ui.point = a?.path ? Math.min(ui.point, Math.max(0, a.path.length - 1)) : 0;
+}
+
+function commit({ list = true } = {}) {
+  pickValid();
+  const notes = [];
+  parsed = parseScene(doc.scene, notes);
+  renderNotes(notes);
+  $('json').value = JSON.stringify(doc, null, 1);
+  const kb = new Blob([$('json').value]).size / 1024;
+  $('size').textContent = `${kb.toFixed(1)} KB of 200 KB`;
+  try { localStorage.setItem(STORE, $('json').value); } catch (_) { /* private window */ }
+  $('time').max = String(doc.scene.length);
+  if (list) renderAll();
+}
+
+// ---------------------------------------------------------------- notes
+
+function renderNotes(notes) {
+  const out = [];
+  if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(doc.id)) {
+    out.push(['tip', 'Id: VesperTV keeps lower-case letters, numbers and dashes (and adds "my-" in front). Two styles with one id: the last one wins.']);
+  }
+  const last = parseColor(doc.fade[doc.fade.length - 1]);
+  if (last && last[3] > 0.15) out.push(['tip', 'Tip: end the fade with a clear colour so the group name stays readable.']);
+  for (const n of notes) out.push(['bad', n]);
+  if (parsed) {
+    for (const [name, s] of Object.entries(parsed.sprites)) {
+      if (s.height > parsed.grid) out.push(['tip', `Sprite "${name}" is taller than the row (${s.height} > ${parsed.grid}): it will be cut.`]);
+    }
+  }
+  if (doc.layers.length) out.push(['tip', `This style also has ${doc.layers.length} particle layer(s): the app draws them, this preview doesn't.`]);
+  if (!out.some(([k]) => k === 'bad')) out.unshift(['ok', 'Ready: every sprite and actor will be drawn.']);
+  $('notes').innerHTML = '';
+  for (const [kind, text] of out) {
+    const li = document.createElement('li');
+    if (kind !== 'bad') li.className = kind;
+    li.textContent = text;
+    $('notes').append(li);
+  }
+}
+
+// ---------------------------------------------------------------- preview
+
+const preview = $('preview');
+const pctx = preview.getContext('2d');
+
+function previewSize() {
+  const w = preview.clientWidth || 780;
+  return [w, Math.round(w * 44 / 260)];
+}
+
+function drawPreview() {
+  const dpr = window.devicePixelRatio || 1;
+  const [w, h] = previewSize();
+  if (preview.width !== Math.round(w * dpr) || preview.height !== Math.round(h * dpr)) {
+    preview.width = Math.round(w * dpr);
+    preview.height = Math.round(h * dpr);
+    preview.style.height = `${h}px`;
+  }
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  pctx.clearRect(0, 0, w, h);
+  pctx.fillStyle = '#16131C';
+  pctx.fillRect(0, 0, w, h);
+  const pulse = doc.pulse > 0 ? 0.72 + 0.28 * Math.sin(ui.clock * doc.pulse * 2 * Math.PI) : 1;
+  drawFade(pctx, doc.fade, w, h, pulse);
+  pctx.imageSmoothingEnabled = false;
+  if (parsed) drawScene(pctx, parsed, ui.time, w, h, dpr);
+  if (ui.showText) {
+    const s = h / 44;
+    pctx.fillStyle = 'rgba(255,255,255,.7)';
+    for (const [dx, dy] of [[0, 0], [7, 0], [0, 7], [7, 7]]) pctx.fillRect((12 + dx) * s, (15 + dy) * s, 6 * s, 6 * s);
+    pctx.font = `500 ${15 * s}px Inter, system-ui, sans-serif`;
+    pctx.textBaseline = 'middle';
+    pctx.shadowColor = 'rgba(0,0,0,.9)';
+    pctx.shadowBlur = 4 * s;
+    pctx.fillStyle = '#fff';
+    pctx.fillText(typeof doc.name === 'string' ? doc.name : (doc.name.en ?? 'Group'), 40 * s, 22 * s);
+    pctx.font = `500 ${13 * s}px Inter, system-ui, sans-serif`;
+    pctx.fillStyle = 'rgba(255,255,255,.6)';
+    pctx.textAlign = 'right';
+    pctx.fillText('128', w - 12 * s, 22 * s);
+    pctx.textAlign = 'left';
+    pctx.shadowBlur = 0;
+  }
+  // The picked actor's path, while paused.
+  const a = actor();
+  if (!ui.playing && a) {
+    const pts = a.path ? a.path : (a.at ? [{ x: a.at[0], y: a.at[1] }] : []);
+    pctx.strokeStyle = 'rgba(240,199,94,.7)';
+    pctx.setLineDash([4, 4]);
+    pctx.beginPath();
+    pts.forEach((p, i) => (i ? pctx.lineTo(p.x * w, p.y * h) : pctx.moveTo(p.x * w, p.y * h)));
+    pctx.stroke();
+    pctx.setLineDash([]);
+    pts.forEach((p, i) => {
+      pctx.fillStyle = i === ui.point || !a.path ? '#FFD98A' : 'rgba(255,217,138,.45)';
+      pctx.beginPath();
+      pctx.arc(p.x * w, p.y * h, i === ui.point ? 5 : 3.5, 0, Math.PI * 2);
+      pctx.fill();
+    });
+  }
+}
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  if (ui.playing && doc) {
+    ui.time = (ui.time + dt) % doc.scene.length;
+    ui.clock += dt;
+    $('time').value = String(ui.time);
+    $('clock').textContent = `${ui.time.toFixed(2)} s`;
+  }
+  if (doc) drawPreview();
+  requestAnimationFrame(loop);
+}
+
+function setPlaying(on) {
+  ui.playing = on;
+  $('play').textContent = on ? 'Pause' : 'Play';
+}
+
+$('play').onclick = () => setPlaying(!ui.playing);
+$('time').oninput = () => { setPlaying(false); ui.time = Number($('time').value); $('clock').textContent = `${ui.time.toFixed(2)} s`; };
+$('toRest').onclick = () => { setPlaying(false); ui.time = doc.scene.rest; $('time').value = String(ui.time); $('clock').textContent = `${ui.time.toFixed(2)} s`; };
+$('showText').onchange = () => { ui.showText = $('showText').checked; };
+
+preview.addEventListener('click', (e) => {
+  const a = actor();
+  if (!a) return;
+  const r = preview.getBoundingClientRect();
+  const x = Math.round(((e.clientX - r.left) / r.width) * 100) / 100;
+  const y = Math.round(((e.clientY - r.top) / r.height) * 100) / 100;
+  setPlaying(false);
+  if (a.path && a.path[ui.point]) { a.path[ui.point].x = x; a.path[ui.point].y = y; }
+  else a.at = [x, y];
+  commit();
+});
+
+// ---------------------------------------------------------------- style panel
+
+function bindNumber(id, get, set) {
+  const el = $(id);
+  el.value = String(get());
+  el.onchange = () => { const v = Number(el.value); if (Number.isFinite(v)) { set(v); commit(); } };
+}
+
+function renderStyle() {
+  $('styleId').value = doc.id;
+  $('styleName').value = typeof doc.name === 'string' ? doc.name : (doc.name.en ?? '');
+  bindNumber('pulse', () => doc.pulse ?? 0, (v) => { doc.pulse = Math.max(0, Math.min(4, v)); });
+  bindNumber('length', () => doc.scene.length, (v) => { doc.scene.length = Math.max(0.5, Math.min(LIMITS.length, v)); });
+  bindNumber('rest', () => doc.scene.rest, (v) => { doc.scene.rest = Math.max(0, Math.min(doc.scene.length, v)); });
+  bindNumber('grid', () => doc.scene.grid, (v) => { doc.scene.grid = Math.round(Math.max(8, Math.min(64, v))); });
+  $('layersNote').textContent = doc.layers.length ? `${doc.layers.length} particle layer(s) kept from the style file.` : '';
+  const box = $('fade');
+  box.innerHTML = '';
+  doc.fade.forEach((hex, i) => {
+    const c = parseColor(hex) ?? [0, 0, 0, 0];
+    const row = document.createElement('div');
+    row.className = 'row';
+    const pick = document.createElement('input');
+    pick.type = 'color';
+    pick.value = '#' + c.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('');
+    const alpha = document.createElement('input');
+    alpha.type = 'range'; alpha.min = '0'; alpha.max = '100'; alpha.value = String(Math.round(c[3] * 100));
+    alpha.style.cssText = 'width:110px;accent-color:#D4A017';
+    alpha.setAttribute('aria-label', 'Opacity');
+    const label = document.createElement('span');
+    label.className = 'muted';
+    label.textContent = `${Math.round(c[3] * 100)}%`;
+    const del = document.createElement('button');
+    del.className = 'btn small'; del.type = 'button'; del.textContent = '✕';
+    del.setAttribute('aria-label', 'Remove this colour');
+    const update = () => {
+      doc.fade[i] = toHex(pick.value, Number(alpha.value));
+      label.textContent = `${alpha.value}%`;
+      commit({ list: false });
+    };
+    pick.oninput = update; alpha.oninput = update;
+    del.onclick = () => { doc.fade.splice(i, 1); commit(); };
+    row.append(pick, alpha, label, del);
+    box.append(row);
+  });
+}
+
+function toHex(rgb, alphaPercent) {
+  const a = Math.round((alphaPercent * 255) / 100);
+  const body = rgb.slice(1).toUpperCase();
+  return a >= 255 ? `#${body}` : `#${a.toString(16).padStart(2, '0').toUpperCase()}${body}`;
+}
+
+$('styleId').onchange = () => { doc.id = $('styleId').value.trim().toLowerCase(); commit(); };
+$('styleName').onchange = () => {
+  const v = $('styleName').value.trim() || 'My scene';
+  if (typeof doc.name === 'object') doc.name.en = v; else doc.name = v;
+  commit();
+};
+$('addFade').onclick = () => { doc.fade.push('#00000000'); commit(); };
+$('restNow').onclick = () => { doc.scene.rest = Math.round(ui.time * 10) / 10; commit(); };
+
+// ---------------------------------------------------------------- sprites
+
+function renderSprites() {
+  const chips = $('sprites');
+  chips.innerHTML = '';
+  for (const name of Object.keys(doc.scene.sprites)) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.textContent = name;
+    b.setAttribute('aria-selected', String(name === ui.sprite));
+    b.onclick = () => { ui.sprite = name; ui.set = null; ui.frame = 0; pickValid(); renderAll(); };
+    chips.append(b);
+  }
+  const sp = sprite();
+  for (const id of ['renameSprite', 'dupSprite', 'delSprite', 'addColor', 'delColor', 'addSet', 'renameSet', 'delSet', 'addFrame', 'dupFrame', 'delFrame', 'frameLeft', 'frameRight', 'flipFrame', 'clearFrame', 'resize']) {
+    $(id).disabled = !sp;
+  }
+  $('palette').innerHTML = '';
+  $('sets').innerHTML = '';
+  $('frames').innerHTML = '';
+  if (!sp) { drawPixels(); return; }
+  // Palette: the clear swatch, then each colour.
+  const swatch = (ch, hex) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.title = ch === '.' ? 'Clear' : `${ch} ${hex}`;
+    b.setAttribute('aria-selected', String(ui.color === ch));
+    const fill = document.createElement('i');
+    const c = ch === '.' ? null : parseColor(hex);
+    fill.style.background = c ? `rgba(${c[0]},${c[1]},${c[2]},${c[3]})` : 'transparent';
+    const lab = document.createElement('span');
+    lab.textContent = ch === '.' ? '∅' : ch;
+    b.append(fill, lab);
+    b.onclick = () => {
+      ui.color = ch;
+      if (ui.tool === 'eraser') ui.tool = 'pencil';
+      syncColorPick();
+      renderSprites();
+    };
+    return b;
+  };
+  $('palette').append(swatch('.', null));
+  for (const [ch, hex] of Object.entries(sp.palette)) $('palette').append(swatch(ch, hex));
+  syncColorPick();
+  for (const name of Object.keys(sp.frames)) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.textContent = `${name} (${sp.frames[name].length})`;
+    b.setAttribute('aria-selected', String(name === ui.set));
+    b.onclick = () => { ui.set = name; ui.frame = 0; renderSprites(); };
+    $('sets').append(b);
+  }
+  $('fps').value = String(sp.fps ?? 6);
+  const [w, h] = spriteSize(sp);
+  $('spriteW').value = String(w);
+  $('spriteH').value = String(h);
+  sp.frames[ui.set].forEach((rows, i) => {
+    const c = document.createElement('canvas');
+    const scale = Math.max(2, Math.floor(40 / Math.max(w, h)));
+    c.width = w * scale; c.height = h * scale;
+    c.setAttribute('aria-selected', String(i === ui.frame));
+    c.title = `Frame ${i + 1}`;
+    paintRows(c.getContext('2d'), sp, padFrame(rows, w, h), scale, 1);
+    c.onclick = () => { ui.frame = i; renderSprites(); };
+    $('frames').append(c);
+  });
+  for (const b of document.querySelectorAll('#tools [data-tool]')) b.setAttribute('aria-pressed', String(b.dataset.tool === ui.tool));
+  drawPixels();
+}
+
+function syncColorPick() {
+  const sp = sprite();
+  const c = sp && ui.color !== '.' ? parseColor(sp.palette[ui.color]) : null;
+  $('colorPick').disabled = !c;
+  $('alphaPick').disabled = !c;
+  if (c) {
+    $('colorPick').value = '#' + c.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('');
+    $('alphaPick').value = String(Math.round(c[3] * 100));
+  }
+}
+
+function paintRows(ctx, sp, rows, scale, alpha) {
+  for (let y = 0; y < rows.length; y++) {
+    for (let x = 0; x < rows[y].length; x++) {
+      const ch = rows[y][x];
+      if (ch === '.' || ch === ' ') continue;
+      const c = parseColor(sp.palette[ch]);
+      if (!c) continue;
+      ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${c[3] * alpha})`;
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+}
+
+const pixels = $('pixels');
+const xctx = pixels.getContext('2d');
+let cell = 20;
+
+function drawPixels() {
+  const sp = sprite();
+  if (!sp) { pixels.width = 0; pixels.height = 0; return; }
+  const [w, h] = spriteSize(sp);
+  const room = Math.min(pixels.parentElement.clientWidth - 4, 560);
+  cell = Math.max(8, Math.min(30, Math.floor(room / Math.max(w, h))));
+  pixels.width = w * cell; pixels.height = h * cell;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      xctx.fillStyle = (x + y) % 2 ? '#211C2A' : '#1A1622';
+      xctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  const frames = sp.frames[ui.set];
+  if (ui.onion && frames.length > 1) {
+    const prev = frames[(ui.frame - 1 + frames.length) % frames.length];
+    paintRows(xctx, sp, padFrame(prev, w, h), cell, 0.28);
+  }
+  paintRows(xctx, sp, padFrame(frameRows() ?? [], w, h), cell, 1);
+  xctx.strokeStyle = 'rgba(255,255,255,.07)';
+  xctx.lineWidth = 1;
+  for (let x = 0; x <= w; x++) { xctx.beginPath(); xctx.moveTo(x * cell + 0.5, 0); xctx.lineTo(x * cell + 0.5, h * cell); xctx.stroke(); }
+  for (let y = 0; y <= h; y++) { xctx.beginPath(); xctx.moveTo(0, y * cell + 0.5); xctx.lineTo(w * cell, y * cell + 0.5); xctx.stroke(); }
+}
+
+function setPixel(x, y, ch) {
+  const sp = sprite();
+  const [w, h] = spriteSize(sp);
+  if (x < 0 || y < 0 || x >= w || y >= h) return false;
+  const rows = padFrame(frameRows(), w, h);
+  if (rows[y][x] === ch) return false;
+  rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1);
+  sp.frames[ui.set][ui.frame] = rows;
+  return true;
+}
+
+function fill(x, y, ch) {
+  const sp = sprite();
+  const [w, h] = spriteSize(sp);
+  const rows = padFrame(frameRows(), w, h).map((r) => r.split(''));
+  const from = rows[y]?.[x];
+  if (from === undefined || from === ch) return;
+  const stack = [[x, y]];
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= w || cy >= h || rows[cy][cx] !== from) continue;
+    rows[cy][cx] = ch;
+    stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+  }
+  sp.frames[ui.set][ui.frame] = rows.map((r) => r.join(''));
+}
+
+let drawing = null;
+pixels.addEventListener('contextmenu', (e) => e.preventDefault());
+pixels.addEventListener('pointerdown', (e) => {
+  if (!sprite()) return;
+  pixels.setPointerCapture(e.pointerId);
+  const ch = e.button === 2 || ui.tool === 'eraser' ? '.' : ui.color;
+  const [x, y] = cellAt(e);
+  if (ui.tool === 'fill' && e.button !== 2) { fill(x, y, ch); commit({ list: false }); renderSprites(); return; }
+  drawing = ch;
+  if (setPixel(x, y, ch)) drawPixels();
+});
+pixels.addEventListener('pointermove', (e) => {
+  if (drawing === null) return;
+  const [x, y] = cellAt(e);
+  if (setPixel(x, y, drawing)) drawPixels();
+});
+const endDraw = () => { if (drawing !== null) { drawing = null; commit({ list: false }); renderSprites(); } };
+pixels.addEventListener('pointerup', endDraw);
+pixels.addEventListener('pointercancel', endDraw);
+
+function cellAt(e) {
+  const r = pixels.getBoundingClientRect();
+  return [Math.floor(((e.clientX - r.left) / r.width) * pixels.width / cell),
+    Math.floor(((e.clientY - r.top) / r.height) * pixels.height / cell)];
+}
+
+for (const b of document.querySelectorAll('#tools [data-tool]')) {
+  b.onclick = () => { ui.tool = b.dataset.tool; renderSprites(); };
+}
+$('onion').onchange = () => { ui.onion = $('onion').checked; drawPixels(); };
+
+function askName(question, fallback, taken) {
+  const raw = window.prompt(question, fallback);
+  if (raw === null) return null;
+  const name = raw.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!name) return null;
+  if (taken.includes(name)) { window.alert(`"${name}" is already used.`); return null; }
+  return name;
+}
+
+$('addSprite').onclick = () => {
+  const names = Object.keys(doc.scene.sprites);
+  if (names.length >= LIMITS.sprites) { window.alert(`At most ${LIMITS.sprites} sprites.`); return; }
+  const name = askName('Name of the new sprite', `sprite${names.length + 1}`, names);
+  if (!name) return;
+  doc.scene.sprites[name] = { palette: { a: '#FFFFFF' }, frames: { default: [Array(8).fill('........')] }, fps: 6 };
+  ui.sprite = name; ui.set = 'default'; ui.frame = 0; ui.color = 'a';
+  commit();
+};
+$('renameSprite').onclick = () => {
+  const names = Object.keys(doc.scene.sprites);
+  const name = askName('New name', ui.sprite, names.filter((n) => n !== ui.sprite));
+  if (!name || name === ui.sprite) return;
+  const entries = Object.entries(doc.scene.sprites).map(([k, v]) => [k === ui.sprite ? name : k, v]);
+  doc.scene.sprites = Object.fromEntries(entries);
+  for (const a of doc.scene.actors) if (a.sprite === ui.sprite) a.sprite = name;
+  ui.sprite = name;
+  commit();
+};
+$('dupSprite').onclick = () => {
+  const names = Object.keys(doc.scene.sprites);
+  if (names.length >= LIMITS.sprites) return;
+  let name = `${ui.sprite}-copy`, n = 2;
+  while (names.includes(name)) name = `${ui.sprite}-copy${n++}`;
+  doc.scene.sprites[name] = JSON.parse(JSON.stringify(sprite()));
+  ui.sprite = name;
+  commit();
+};
+$('delSprite').onclick = () => {
+  const used = doc.scene.actors.filter((a) => a.sprite === ui.sprite).length;
+  if (!window.confirm(used ? `Delete "${ui.sprite}" and its ${used} actor(s)?` : `Delete "${ui.sprite}"?`)) return;
+  delete doc.scene.sprites[ui.sprite];
+  doc.scene.actors = doc.scene.actors.filter((a) => a.sprite !== ui.sprite);
+  ui.sprite = null;
+  commit();
+};
+
+$('addColor').onclick = () => {
+  const sp = sprite();
+  if (Object.keys(sp.palette).length >= LIMITS.colors) { window.alert(`At most ${LIMITS.colors} colours.`); return; }
+  const ch = [...CHARS].find((c) => !(c in sp.palette));
+  sp.palette[ch] = '#FFFFFF';
+  ui.color = ch;
+  commit();
+};
+const updateColor = () => {
+  const sp = sprite();
+  if (!sp || ui.color === '.') return;
+  sp.palette[ui.color] = toHex($('colorPick').value, Number($('alphaPick').value));
+  commit({ list: false });
+  renderSprites();
+};
+$('colorPick').oninput = updateColor;
+$('alphaPick').oninput = updateColor;
+$('delColor').onclick = () => {
+  const sp = sprite();
+  if (ui.color === '.' || !(ui.color in sp.palette)) return;
+  if (!window.confirm(`Remove colour "${ui.color}"? Its pixels become clear.`)) return;
+  const ch = ui.color;
+  delete sp.palette[ch];
+  for (const set of Object.keys(sp.frames)) {
+    sp.frames[set] = sp.frames[set].map((rows) => rows.map((r) => r.split(ch).join('.')));
+  }
+  ui.color = '.';
+  commit();
+};
+
+$('addSet').onclick = () => {
+  const sp = sprite();
+  const sets = Object.keys(sp.frames);
+  if (sets.length >= LIMITS.sets) { window.alert(`At most ${LIMITS.sets} frame sets.`); return; }
+  const name = askName('Name of the frame set (walk, jump, idle…)', 'walk', sets);
+  if (!name) return;
+  const [w, h] = spriteSize(sp);
+  sp.frames[name] = [JSON.parse(JSON.stringify(padFrame(frameRows() ?? [], w, h)))];
+  ui.set = name; ui.frame = 0;
+  commit();
+};
+$('renameSet').onclick = () => {
+  const sp = sprite();
+  const sets = Object.keys(sp.frames);
+  const name = askName('New name', ui.set, sets.filter((n) => n !== ui.set));
+  if (!name || name === ui.set) return;
+  sp.frames = Object.fromEntries(Object.entries(sp.frames).map(([k, v]) => [k === ui.set ? name : k, v]));
+  for (const a of doc.scene.actors) {
+    if (a.sprite !== ui.sprite) continue;
+    if (a.play === ui.set) a.play = name;
+    for (const p of a.path ?? []) if (p.play === ui.set) p.play = name;
+  }
+  ui.set = name;
+  commit();
+};
+$('delSet').onclick = () => {
+  const sp = sprite();
+  if (Object.keys(sp.frames).length <= 1) { window.alert('A sprite keeps at least one frame set.'); return; }
+  if (!window.confirm(`Delete the set "${ui.set}"?`)) return;
+  delete sp.frames[ui.set];
+  ui.set = null;
+  commit();
+};
+$('fps').onchange = () => { const v = Number($('fps').value); if (Number.isFinite(v)) { sprite().fps = Math.max(0, Math.min(24, v)); commit(); } };
+
+$('addFrame').onclick = () => {
+  const sp = sprite();
+  const frames = sp.frames[ui.set];
+  if (frames.length >= LIMITS.frames) { window.alert(`At most ${LIMITS.frames} frames a set.`); return; }
+  const [w, h] = spriteSize(sp);
+  frames.splice(ui.frame + 1, 0, padFrame([], w, h));
+  ui.frame++;
+  commit();
+};
+$('dupFrame').onclick = () => {
+  const frames = sprite().frames[ui.set];
+  if (frames.length >= LIMITS.frames) return;
+  frames.splice(ui.frame + 1, 0, [...frames[ui.frame]]);
+  ui.frame++;
+  commit();
+};
+$('delFrame').onclick = () => {
+  const frames = sprite().frames[ui.set];
+  if (frames.length <= 1) return;
+  frames.splice(ui.frame, 1);
+  ui.frame = Math.max(0, ui.frame - 1);
+  commit();
+};
+const moveFrame = (d) => {
+  const frames = sprite().frames[ui.set];
+  const j = ui.frame + d;
+  if (j < 0 || j >= frames.length) return;
+  [frames[ui.frame], frames[j]] = [frames[j], frames[ui.frame]];
+  ui.frame = j;
+  commit();
+};
+$('frameLeft').onclick = () => moveFrame(-1);
+$('frameRight').onclick = () => moveFrame(1);
+$('flipFrame').onclick = () => {
+  const sp = sprite();
+  const [w, h] = spriteSize(sp);
+  sp.frames[ui.set][ui.frame] = padFrame(frameRows(), w, h).map((r) => [...r].reverse().join(''));
+  commit();
+};
+$('clearFrame').onclick = () => {
+  const sp = sprite();
+  const [w, h] = spriteSize(sp);
+  sp.frames[ui.set][ui.frame] = padFrame([], w, h);
+  commit();
+};
+$('resize').onclick = () => {
+  const sp = sprite();
+  const w = Math.max(1, Math.min(LIMITS.side, Math.round(Number($('spriteW').value) || 1)));
+  const h = Math.max(1, Math.min(LIMITS.side, Math.round(Number($('spriteH').value) || 1)));
+  for (const set of Object.keys(sp.frames)) sp.frames[set] = sp.frames[set].map((rows) => padFrame(rows, w, h));
+  commit();
+};
+
+// ---------------------------------------------------------------- actors
+
+function renderActors() {
+  const list = $('actors');
+  list.innerHTML = '';
+  doc.scene.actors.forEach((a, i) => {
+    const li = document.createElement('li');
+    li.setAttribute('aria-selected', String(i === ui.actor));
+    li.innerHTML = `<b></b><span class="muted"></span>`;
+    li.querySelector('b').textContent = `${i + 1}. ${a.sprite}`;
+    li.querySelector('span').textContent = a.path ? `path, ${a.path.length} point(s)` : 'still';
+    li.onclick = () => { ui.actor = i; ui.point = 0; renderActors(); };
+    list.append(li);
+  });
+  const box = $('actorEdit');
+  box.innerHTML = '';
+  const a = actor();
+  if (!a) {
+    box.innerHTML = '<p class="muted">No actor yet: add one to put a sprite on the row.</p>';
+    return;
+  }
+  const sp = doc.scene.sprites[a.sprite];
+  const sets = sp ? Object.keys(sp.frames) : [];
+  const select = (options, value, onChange, label) => {
+    const s = document.createElement('select');
+    if (label) s.setAttribute('aria-label', label);
+    for (const [v, text] of options) {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = text; o.selected = v === value;
+      s.append(o);
+    }
+    s.onchange = () => onChange(s.value);
+    return s;
+  };
+  const num = (value, onChange, step = 0.05, label = '') => {
+    const n = document.createElement('input');
+    n.type = 'number'; n.step = String(step); n.value = String(value ?? 0);
+    if (label) n.setAttribute('aria-label', label);
+    n.onchange = () => { const v = Number(n.value); if (Number.isFinite(v)) onChange(v); };
+    return n;
+  };
+  const field = (labelText, el) => {
+    const d = document.createElement('div');
+    d.className = 'field';
+    const l = document.createElement('label');
+    l.textContent = labelText;
+    d.append(l, el);
+    box.append(d);
+  };
+  field('Sprite', select(Object.keys(doc.scene.sprites).map((n) => [n, n]), a.sprite, (v) => { a.sprite = v; commit(); }, 'Sprite'));
+  field('Kind', select([['still', 'Stays in one place'], ['path', 'Moves along a path']], a.path ? 'path' : 'still', (v) => {
+    if (v === 'path' && !a.path) {
+      const [x, y] = a.at ?? [0.5, 1];
+      a.path = [{ t: 0, x, y }, { t: Math.min(doc.scene.length, 3), x: Math.min(1.1, x + 0.3), y }];
+      delete a.at;
+    } else if (v === 'still' && a.path) {
+      a.at = [a.path[0]?.x ?? 0.5, a.path[0]?.y ?? 1];
+      delete a.path;
+    }
+    ui.point = 0;
+    commit();
+  }, 'Kind'));
+  const playOptions = [['', '(first set)'], ...sets.map((n) => [n, n])];
+  if (!a.path) {
+    const [x, y] = a.at ?? [0.5, 1];
+    field('Across (x)', num(x, (v) => { a.at = [v, (a.at ?? [0.5, 1])[1]]; commit(); }, 0.01, 'x'));
+    field('Down (y)', num(y, (v) => { a.at = [(a.at ?? [0.5, 1])[0], v]; commit(); }, 0.01, 'y'));
+    field('Frame set', select(playOptions, a.play ?? '', (v) => { if (v) a.play = v; else delete a.play; commit(); }, 'Frame set'));
+    const flip = document.createElement('input');
+    flip.type = 'checkbox'; flip.checked = a.flip === true;
+    flip.onchange = () => { if (flip.checked) a.flip = true; else delete a.flip; commit(); };
+    field('Faces left', flip);
+  } else {
+    const table = document.createElement('table');
+    table.innerHTML = '<thead><tr><th>s</th><th>x</th><th>y</th><th>set</th><th>hop</th><th>ease</th><th>face</th><th></th></tr></thead>';
+    const body = document.createElement('tbody');
+    a.path.forEach((p, j) => {
+      const tr = document.createElement('tr');
+      if (j === ui.point) tr.className = 'sel';
+      tr.onclick = (e) => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') { ui.point = j; renderActors(); } };
+      const cells = [
+        num(p.t, (v) => { p.t = Math.max(0, Math.min(doc.scene.length, v)); a.path.sort((m, n) => m.t - n.t); commit(); }, 0.1, 'Time'),
+        num(p.x, (v) => { p.x = v; commit(); }, 0.01, 'x'),
+        num(p.y, (v) => { p.y = v; commit(); }, 0.01, 'y'),
+        select([['', '–'], ...sets.map((n) => [n, n])], p.play ?? '', (v) => { if (v) p.play = v; else delete p.play; commit(); }, 'Frame set'),
+        num(p.arc ?? 0, (v) => { if (v) p.arc = v; else delete p.arc; commit(); }, 0.05, 'Hop'),
+        select([['linear', 'straight'], ['in', 'in'], ['out', 'out'], ['inout', 'in-out']], p.ease ?? 'linear', (v) => { if (v === 'linear') delete p.ease; else p.ease = v; commit(); }, 'Ease'),
+        select([['', '–'], ['right', '→'], ['left', '←']], p.flip === true ? 'left' : (p.flip === false ? 'right' : ''), (v) => { if (v === 'left') p.flip = true; else if (v === 'right') p.flip = false; else delete p.flip; commit(); }, 'Facing'),
+      ];
+      for (const c of cells) {
+        const td = document.createElement('td');
+        td.append(c);
+        c.addEventListener('focus', () => { if (ui.point !== j) { ui.point = j; tr.className = 'sel'; } });
+        tr.append(td);
+      }
+      const del = document.createElement('button');
+      del.className = 'btn small'; del.type = 'button'; del.textContent = '✕';
+      del.setAttribute('aria-label', 'Remove this point');
+      del.onclick = () => { if (a.path.length > 1) { a.path.splice(j, 1); ui.point = Math.max(0, ui.point - 1); commit(); } };
+      const td = document.createElement('td');
+      td.append(del);
+      tr.append(td);
+      body.append(tr);
+    });
+    table.append(body);
+    const wrap = document.createElement('div');
+    wrap.className = 'tablewrap';
+    wrap.append(table);
+    box.append(wrap);
+    const add = document.createElement('button');
+    add.className = 'btn small'; add.type = 'button'; add.textContent = '+ Point at the current time';
+    add.onclick = () => {
+      if (a.path.length >= LIMITS.keys) return;
+      const t = Math.round(ui.time * 10) / 10;
+      const alone = parseScene({ ...doc.scene, actors: [a] });
+      const here = alone ? placements(alone, t)[0] : null;
+      a.path.push({ t, x: Math.round((here?.x ?? 0.5) * 100) / 100, y: Math.round((here?.y ?? 1) * 100) / 100 });
+      a.path.sort((m, n) => m.t - n.t);
+      ui.point = a.path.findIndex((p) => p.t === t);
+      setPlaying(false);
+      commit();
+    };
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.append(add);
+    const hint = document.createElement('span');
+    hint.className = 'muted';
+    hint.textContent = 'Set, hop, ease and facing hold until the next point.';
+    row.append(hint);
+    box.append(row);
+  }
+  // Shown only part of the loop.
+  const show = Array.isArray(a.show) && typeof a.show[0] === 'number' ? a.show : null;
+  const only = document.createElement('input');
+  only.type = 'checkbox'; only.checked = !!show;
+  only.onchange = () => { if (only.checked) a.show = [0, Math.min(doc.scene.length, 2)]; else delete a.show; commit(); };
+  field('Only part of the loop', only);
+  if (show) {
+    const span = document.createElement('span');
+    span.className = 'row';
+    span.style.margin = '0';
+    span.append(num(show[0], (v) => { a.show = [v, a.show[1]]; commit(); }, 0.1, 'From'), document.createTextNode(' to '),
+      num(show[1], (v) => { a.show = [a.show[0], v]; commit(); }, 0.1, 'To'), document.createTextNode(' s'));
+    field('Shown', span);
+  }
+}
+
+$('addActor').onclick = () => {
+  if (doc.scene.actors.length >= LIMITS.actors) { window.alert(`At most ${LIMITS.actors} actors.`); return; }
+  const first = Object.keys(doc.scene.sprites)[0];
+  if (!first) { window.alert('Add a sprite first.'); return; }
+  doc.scene.actors.push({ sprite: ui.sprite ?? first, at: [0.6, 1] });
+  ui.actor = doc.scene.actors.length - 1;
+  commit();
+};
+$('delActor').onclick = () => { if (actor()) { doc.scene.actors.splice(ui.actor, 1); commit(); } };
+const moveActor = (d) => {
+  const list = doc.scene.actors;
+  const j = ui.actor + d;
+  if (j < 0 || j >= list.length) return;
+  [list[ui.actor], list[j]] = [list[j], list[ui.actor]];
+  ui.actor = j;
+  commit();
+};
+$('actorUp').onclick = () => moveActor(-1);
+$('actorDown').onclick = () => moveActor(1);
+
+// ---------------------------------------------------------------- file
+
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('json').value); $('copy').textContent = 'Copied'; }
+  catch (_) { $('json').select(); document.execCommand('copy'); $('copy').textContent = 'Copied'; }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1500);
+};
+$('download').onclick = () => {
+  const blob = new Blob([$('json').value], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${doc.id || 'live-style'}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('load').onclick = () => {
+  try {
+    const json = JSON.parse($('json').value);
+    const list = Array.isArray(json) ? json : (Array.isArray(json.styles) ? json.styles : [json]);
+    const pick = list.find((s) => s && s.scene) ?? list[0];
+    if (!pick || typeof pick !== 'object') throw new Error('no style');
+    open(pick);
+  } catch (e) {
+    window.alert(`That isn't a style file (${e.message}).`);
+  }
+};
+
+function open(style) {
+  doc = normalize(JSON.parse(JSON.stringify(style)));
+  ui.sprite = null; ui.set = null; ui.frame = 0; ui.actor = 0; ui.point = 0;
+  ui.time = doc.scene.rest;
+  commit();
+}
+
+$('startFrom').onchange = () => {
+  const v = $('startFrom').value;
+  $('startFrom').value = '';
+  if (!v) return;
+  if (!window.confirm('Replace what is in the editor?')) return;
+  if (v === 'blank') open(blank());
+  else {
+    const found = bank.find((s) => s.id === v);
+    if (found) open({ ...found, id: `${found.id}-mine` });
+  }
+};
+
+function renderAll() {
+  renderStyle();
+  renderSprites();
+  renderActors();
+}
+
+window.addEventListener('resize', () => drawPixels());
+
+// ---------------------------------------------------------------- start
+
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (_) { saved = null; }
+open(saved && saved.scene ? saved : blank());
+requestAnimationFrame(loop);
+
+fetch('group-styles.json').then((r) => r.json()).then((json) => {
+  bank = (json.styles || []).filter((s) => s.scene);
+  for (const s of bank) {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = `Built in: ${typeof s.name === 'string' ? s.name : s.name.en}`;
+    $('startFrom').append(o);
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>

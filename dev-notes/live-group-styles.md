@@ -100,7 +100,7 @@ out. A new shape or motion = an app update + `engine: 2` on the styles that use 
 
 ### Adding a style
 
-Edit `docs/styles/group-styles.json` (25 styles on 2026-11-26), keep names in the 9 languages
+Edit `docs/styles/group-styles.json` (29 styles on 2026-11-27, 4 of them scenes), keep names in the 9 languages
 (test/live_group_styles_test.dart checks every style parses whole, has every language and a fade
 that ends clear). To see them: `flutter test tool/live_styles_sheet_test.dart
 --dart-define=OUT=<folder>` writes `live_styles_sheet.png` (every style at 4 moments, with the SDK's
@@ -110,7 +110,7 @@ Roboto + MaterialIcons fonts; not part of the suite). Rows are about 260 x 44 px
 
 Owner: "import custom live groups so if users want to build their own they could import it into
 Vesper"; picked import by **link + pasted text**, a **format page + starter**, and **Vesper AI through
-the MCP connector** (no web builder).
+the MCP connector** (no web builder; the scene editor came the same day, see Scenes).
 
 - **Where:** Colour… > Live styles… > **Your own styles…** (first row of the gallery) and Settings >
   Appearance > Look > **Your live styles**: one page (`screens/settings/my_live_styles_screen.dart`)
@@ -142,6 +142,57 @@ the MCP connector** (no web builder).
   add it to the page too.
 - Tests: test/my_live_styles_test.dart.
 
+## Scenes (engine 2, 2026-11-27)
+
+Owner, after the Claude app wouldn't make a Mario style (a known character; and the particle engine
+couldn't draw a character anyway): "Scope the sprite-scene engine", then "Loop on focus ... Rest when
+out of focus/highlight. Editor page now and AI connector updated". Branch `claude/live-style-scenes`
+(worktree `VesperTV-claude-scenes`, from main bde3ba0).
+
+- **What:** a style's `scene` = pixel-art sprites on a timeline (`lib/services/live_style_scene.dart`,
+  `LiveStyleScene`). A sprite: a `palette` (one character per colour, up to 24; `.` and space are
+  always clear), `frames` = rows of palette characters (up to 32 x 32), one list or named sets (up to
+  6 sets x 8 frames), `fps` (default 6). An actor: a sprite `at` [x, y] (still) or on a `path` of up to
+  48 points `{t, x, y, play, flip, arc, ease}`, optional `show` windows ([a, b] or a list; b < a crosses
+  the loop's end). x = the sprite's middle across the row, y = its feet down the row (0..1; outside =
+  off the row). Between two points: straight, eased (`in`, `out`, `inout`), `arc` = a hop of that many
+  rows peaking halfway in time; `play` and `flip` hold until a point changes them; before the first
+  and after the last point the sprite stays. Scene: `length` (0.5-60 s, default 8), `rest` (the still
+  moment, default length / 2), `grid` (sprite pixels per row height, 8-64, default 22). Limits: 12
+  sprites, 16 actors. Anything it can't draw is left out with a note (`LiveStyleScene.check`).
+- **Stateless:** `scene.at(t)` gives every placement from the time alone (like the particles).
+- **Focus (owner: loop on focus, rest out of it):** still = the `rest` moment. With the remote on the
+  row the scene plays from `rest` (`rest + elapsed`, `LiveStyleBackground._sceneElapsed`) and loops.
+  A visit is whole loops of at least the usual 30 s (`LiveStyleBackground.visitFor`: an 8 s scene
+  moves 32 s), so it stops exactly on its rest moment; the remote leaving = the rest moment at once.
+  Touch screens: whole loops of at least 12 s.
+- **Drawing:** `paintScene` (live_style_view.dart): a sprite pixel = `max(1, round(row height x dpr /
+  grid))` device pixels (rounding down halved the sprites on rows a little shorter than the grid),
+  positions snapped to device pixels, no smoothing; each frame is drawn once into an image
+  (`toImageSync`, cached per sprite / set / frame in an Expando; rects if that fails). A sprite taller
+  than `grid` is cut by the row. Same frame cost as a moving particle row (30 fps, one row at a time).
+- **Older apps:** a style with a scene says `"engine": 2` (`LiveGroupStyles.engine` is 2): 1.0.73 and
+  older leave it out. `MyLiveStyles.ours` marks an imported style with a scene engine 2.
+- **Bank:** 4 scenes drawn for VesperTV: `fox-trail` (fun: a fox runs, jumps a log, a leaf falls),
+  `rocket-ride` (fun), `sleigh-ride` (seasonal), `slapshot` (sports). Never a known character or logo:
+  the bank and the editor are public.
+- **Editor:** https://vespertv.app/styles/editor.html (`docs/styles/editor.html`, one page, plain JS
+  module): pixel editor (pencil, eraser / right click, fill, flip, onion skin, colours with opacity,
+  frame sets and frames, resize), actors with a path table (paused: pick a point, click the row to put
+  it there; + Point at the current time), the fade and pulse, a preview playing the way the TV does,
+  notes (what the app would leave out and why), copy / download / load the JSON, Start from a built-in
+  scene, autosave in the browser (localStorage). Its maths are **`docs/styles/scene.js`, a copy of the
+  Dart rules: change both together**; `node tools/styles_editor/scene.test.mjs` runs the Dart test's
+  cases, the bank and make.html's example on it. Checked in headless Edge over the DevTools protocol
+  (38 interactions incl. 390 px wide, no page errors; the driver script was not kept).
+- **Vesper AI / AI apps:** the `live_styles` description has the SCENES format (with "draw original
+  characters only") and `add` answers `scene_notes` (what of each scene was left out). AI apps see
+  it after reconnecting the connector.
+- **make.html:** a Scenes section (`#scenes`) with an example (`#scene-example`) and every key; the
+  editor in the header. live_style_scene_test checks the example draws and the keys are listed.
+- Tests: test/live_style_scene_test.dart (16), tools/styles_editor/scene.test.mjs (8).
+  `tool/live_styles_sheet_test.dart` draws scene styles at 4 moments.
+
 ## Drawing and frame cost
 
 **Touch screens (2026-11-27, owner on his phone: "one click opens a group so we don't really see the
@@ -170,6 +221,8 @@ GPU busy). Video plays on its own surface and keeps its frames.
 ## Code
 
 - `lib/services/live_group_styles.dart` - model, parser, bank download / cache.
+- `lib/services/live_style_scene.dart` - scenes (engine 2): model, parser, timeline.
+- `docs/styles/editor.html` + `docs/styles/scene.js` - the scene editor (scene.js = the Dart rules in JS).
 - `lib/widgets/live_style_view.dart` - background widget + painter.
 - `lib/widgets/live_style_picker.dart` - the gallery (`showLiveStylePicker`).
 - `tv_home_screen.dart` - `_askGroupColor` (Live styles… row), `_specialRowMenu`, `_StyledRowBox`
