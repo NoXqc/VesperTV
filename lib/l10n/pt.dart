@@ -4609,4 +4609,7 @@ const Map<String, String> kPt = {
       "Copiado",
   "Copy code":
       "Copiar código",
+  // Pause & rewind live TV on computers / iPhone / Apple TV (mpv).
+  "Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.":
+      "Os canais em direto guardam os últimos minutos neste dispositivo enquanto vês em ecrã inteiro, na mesma ligação: Pausa pára a imagem, não o stream, e Reproduzir continua onde paraste. Os botões recuar / avançar andam para trás e para a frente nele, EM DIRETO salta para agora; com um comando, Cima a partir dos botões chega à linha do tempo (Esquerda / Direita, depois OK). Usa armazenamento enquanto vês (cerca de 2 GB por 30 minutos de um canal HD, apagados quando mudas de canal ou paras). Aplica-se a partir do próximo canal.",
 };

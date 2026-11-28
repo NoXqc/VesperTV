@@ -1029,14 +1029,18 @@ class SettingsCatalog {
                       await _storage.setLiveBufferMs(ms);
                       await VodBuffering.setLiveBufferDefault(ms);
                     })),
-            // The Android player only (vendored ExoPlayer's Timeshift).
-            if (Platform.isAndroid)
+            // The Android player (vendored ExoPlayer's Timeshift) and the
+            // media_kit one (mpv's cache on disk, DesktopTimeshift).
+            if (Platform.isAndroid || usesMediaKit)
               SettingsChoice(
                   id: 'live_rewind',
                   icon: Icons.history,
                   title: tr('Pause & rewind live TV'),
-                  help: tr(
-                      'Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don\'t have it. Applies from the next channel.'),
+                  help: Platform.isAndroid
+                      ? tr(
+                          'Live channels keep their last minutes on this device while you watch, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons and Rewind go back and forward in it (a replay), LIVE jumps to now. Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel); with little free space it keeps about 30 seconds in memory. Channels in the HLS format (.m3u8) don\'t have it. Applies from the next channel.')
+                      : tr(
+                          'Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.'),
                   options: [
                     for (final m in LiveTimeshift.choices)
                       SettingsOption('$m',

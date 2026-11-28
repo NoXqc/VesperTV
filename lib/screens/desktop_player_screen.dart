@@ -36,6 +36,9 @@ import '../widgets/player_clock_pill.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_audio_button.dart';
 import '../services/desktop_catchup.dart';
+import '../services/desktop_timeshift.dart';
+import '../services/live_timeshift.dart';
+import '../widgets/desktop_live_timeline.dart';
 import '../utils/time_format.dart';
 import '../widgets/desktop_data_pool_card.dart';
 import '../widgets/desktop_quality_badges.dart';
@@ -281,6 +284,17 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// When the live channel was paused: Play after more than 90 s resumes
   /// from there as catch-up (timeshift, like Android).
   DateTime? _livePausedAt;
+
+  /// Live pause & rewind on this player ([DesktopTimeshift], Settings >
+  /// Playback > Live TV): mpv keeps the live stream behind the picture
+  /// while it plays here (not in catch-up, Multiview or the preview).
+  DesktopTimeshift get _timeshift => DesktopTimeshift.of(_player);
+  bool _timeshiftOn = false;
+
+  /// The remote bar's live timeline ([DesktopLiveTimeline]).
+  final _liveScrub = LiveScrubController();
+  final FocusNode _liveScrubFocus =
+      FocusNode(debugLabel: 'desktop-live-timeline');
 
   /// Holds the keys while the picture has them; never an arrow's target
   /// (requestFocus still works). Screen-sized, its centre was nearer than
@@ -903,6 +917,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (widget.existingPlayer != null || widget.catchupAt != null) {
       _matchDisplay(_currentChannel);
     }
+    _timeshift.state.addListener(_onTimeshiftChanged);
+    // Taken from the guide's preview: the stream already plays, mpv keeps
+    // it from now on (measured: the options apply to an open stream).
+    if (widget.existingPlayer != null && _isLive && !_inCatchup) {
+      unawaited(_armTimeshift(_currentChannel, 'from the preview'));
+    }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
     // Trakt/Simkl: titles registered by their page, provider movies by
     // their TMDB id (a no-op otherwise).
@@ -1352,6 +1372,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _tuliproxOpened = channel;
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
+      // Live pause & rewind: mpv's options before the stream opens.
+      if (channel.isLive) {
+        await _armTimeshift(channel, 'open');
+        if (!current()) return;
+      } else if (_timeshift.armed) {
+        await _timeshift.disarm('not live');
+      }
       await openDesktopStream(_player, channel, start: resume, play: play);
       if (!current()) return;
       if (channel.isLive) Tuliprox.instance.noteStarted(channel);
@@ -1435,6 +1462,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _sourceBackGuard.dispose();
     _fileInfoRequests.dispose();
     _progressTimer?.cancel();
+    _timeshift.state.removeListener(_onTimeshiftChanged);
+    // Closed here (Stop, an error): the player and its copy file go now.
+    if (!_handedOffToMiniPlayer) DesktopTimeshift.release(_player);
+    _liveScrub.dispose();
+    _liveScrubFocus.dispose();
     ++_openGeneration;
     if (!_handedOffToMiniPlayer) {
       _saveProgress();
@@ -1498,6 +1530,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       return;
     }
     if (_isLive) {
+      // The preview keeps no rewind: back to live, the copy stops (a big
+      // copy file is freed by opening the channel again at live).
+      final player = _player, channel = _currentChannel;
+      _liveScrub.cancel('leaving full screen');
+      unawaited(_timeshift.leave(reopen: () async {
+        await openDesktopStream(player, channel);
+        DesktopLiveRecovery.of(player).watch(channel);
+      }));
       DesktopMiniPlayer.instance
           .minimize(_currentChannel, _player, _videoController);
       _handedOffToMiniPlayer = true;
@@ -1651,6 +1691,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     });
     ++_openGeneration;
     DesktopLiveRecovery.of(_player).stop();
+    await _timeshift.disarm('Multiview');
     await _player.stop();
     // Multiview's first screen opens this channel again: on a Tuliprox
     // one-connection account the old stream must be gone first.
@@ -1675,6 +1716,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   Future<void> _startCatchup(DateTime at, {bool toProgrammeEnd = true}) async {
     DesktopLiveRecovery.of(_player).stop();
     _livePausedAt = null;
+    _liveScrub.cancel('catch-up');
+    // The archive stream is finite and seekable: no copy file for it (back
+    // to live arms it again through _openMedia).
+    if (_timeshift.armed) {
+      await _timeshift.disarm('catch-up');
+      if (!mounted) return;
+    }
     final started = await _catchupCtl.play(_currentChannel, at,
         toProgrammeEnd: toProgrammeEnd);
     if (mounted) setState(() {});
@@ -1696,9 +1744,139 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     LogicalKeyboardKey.mediaPause,
   };
 
+  /// Arms Live pause & rewind for [channel] on this player.
+  Future<bool> _armTimeshift(Channel channel, String why) =>
+      _timeshift.arm(channel,
+          why: why,
+          catchup: (at) => _startCatchup(at, toProgrammeEnd: false),
+          restart: (reason) {
+            if (!mounted || _currentChannel.id != channel.id) return;
+            debugPrint('Timeshift: ${channel.name} opens again at live '
+                '($reason)');
+            _reload();
+          });
+
+  void _onTimeshiftChanged() {
+    final on = _timeshift.state.value != null;
+    if (on != _timeshiftOn && mounted) setState(() => _timeshiftOn = on);
+  }
+
+  /// Live pause & rewind runs on the live channel playing here.
+  bool get _liveShift => _timeshiftOn && _isLive && !_inCatchup;
+
+  /// "−1:23" while behind live (or where gathered skips land).
+  Widget _timeshiftTag({double? fontSize}) => DesktopTimeshiftTag(
+      state: _timeshift.state,
+      target: _timeshift.target,
+      fontSize: fontSize,
+      margin: EdgeInsets.zero);
+
+  /// The computer bar's right end on a live channel: the programme's time
+  /// left, after the "−1:23" tag while Live pause & rewind runs.
+  Widget _liveTimeLeft() {
+    final left = _LiveRemainingLabel(channelId: _currentChannel.epgId);
+    if (!_liveShift) return left;
+    return Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+      _timeshiftTag(),
+      const SizedBox(width: 8),
+      Flexible(child: left),
+    ]);
+  }
+
+  /// The computer / iPhone bar's LIVE while behind live.
+  Widget _timeshiftLiveButton() => ValueListenableBuilder<TimeshiftState?>(
+        valueListenable: _timeshift.state,
+        builder: (context, ts, _) => ts == null || ts.atLive
+            ? const SizedBox.shrink()
+            : TextButton.icon(
+                icon: const Icon(Icons.fiber_manual_record,
+                    color: Colors.redAccent, size: 14),
+                label: Text(tr('LIVE'),
+                    style: const TextStyle(color: Colors.white)),
+                onPressed: () =>
+                    unawaited(_timeshift.toLive(why: 'LIVE button')),
+              ),
+      );
+
+  /// Remote, line 3 of the live info bar: -N / Play-Pause / +N, and LIVE
+  /// when behind (Android's `_withTimeshift`).
+  Widget _tvTimeshiftButtons(Widget playPause) =>
+      ValueListenableBuilder<TimeshiftState?>(
+        valueListenable: _timeshift.state,
+        builder: (context, ts, _) {
+          final on = ts != null && _liveShift;
+          void nudge(int sign) {
+            _armTvBarIdle();
+            _skip(SkipStep.tap * sign);
+          }
+
+          const none = SizedBox.shrink();
+          // Fixed slots: Play / Pause keeps its place (and its focus) when
+          // the copy starts or stops.
+          return Row(mainAxisSize: MainAxisSize.min, children: [
+            on
+                ? LiveInfoBar.roundButton(
+                    label: tr(
+                        'Back {seconds} s', {'seconds': '${SkipStep.seconds}'}),
+                    onPressed: () => nudge(-1),
+                    child: const SkipIcon(
+                        forward: false, size: 24, color: Colors.white),
+                  )
+                : none,
+            SizedBox(width: on ? 8 : 0),
+            playPause,
+            SizedBox(width: on ? 8 : 0),
+            on
+                ? LiveInfoBar.roundButton(
+                    label: tr('Ahead {seconds} s',
+                        {'seconds': '${SkipStep.seconds}'}),
+                    onPressed: () => nudge(1),
+                    child: const SkipIcon(
+                        forward: true, size: 24, color: Colors.white),
+                  )
+                : none,
+            SizedBox(width: on && !ts.atLive ? 8 : 0),
+            on && !ts.atLive
+                ? LiveInfoBar.textButton(
+                    label: tr('LIVE'),
+                    icon: Icons.fast_forward,
+                    onPressed: () {
+                      _armTvBarIdle();
+                      // LIVE goes away at live: focus waits on Play / Pause.
+                      _playPauseFocus.requestFocus();
+                      unawaited(_timeshift.toLive(why: 'LIVE button'));
+                    },
+                  )
+                : none,
+          ]);
+        },
+      );
+
+  /// OK on the remote bar's timeline: what mpv keeps first (past it,
+  /// catch-up on a catch-up channel), else catch-up.
+  void _liveScrubGo(DateTime target) {
+    _armTvBarIdle();
+    final behind = DateTime.now().difference(target);
+    if (_liveShift && _timeshift.range != null) {
+      debugPrint('LiveScrub: -> what is kept (${behind.inSeconds} s back)');
+      unawaited(_timeshift.goTo(behind, live: _currentChannel, why: 'scrub'));
+      return;
+    }
+    if (!_currentChannel.hasCatchup || behind < CatchupSession.liveEdge) {
+      debugPrint('LiveScrub: -> stays live (${behind.inSeconds} s back, '
+          '${_currentChannel.hasCatchup ? 'under catch-up\'s ${CatchupSession.liveEdge.inSeconds} s' : 'no catch-up'})');
+      return;
+    }
+    debugPrint('LiveScrub: -> catch-up from ${liveScrubClock(target)}');
+    unawaited(_startCatchup(target));
+  }
+
   void _togglePlay(bool playing) {
     if (playing) {
-      if (_isLive && !_inCatchup) _livePausedAt = DateTime.now();
+      if (_isLive && !_inCatchup) {
+        _livePausedAt = DateTime.now();
+        _timeshift.notePause();
+      }
       _player.pause();
       return;
     }
@@ -1706,6 +1884,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _livePausedAt = null;
     if (_inCatchup) {
       _catchupCtl.resume();
+      return;
+    }
+    // Live pause & rewind kept it: Play carries on from the paused frame
+    // (past what's kept: catch-up or the oldest kept moment).
+    if (_liveShift &&
+        _timeshift.resume(live: _currentChannel, pausedAt: pausedAt)) {
       return;
     }
     if (pausedAt != null &&
@@ -1727,6 +1911,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void _skip(Duration amount) {
     if (_inCatchup) {
       unawaited(_catchupCtl.seekBy(amount));
+      return;
+    }
+    // Live pause & rewind: inside what mpv keeps (presses gather, one
+    // jump, past it = catch-up on a catch-up channel).
+    if (_liveShift) {
+      _timeshift.nudge(amount, live: _currentChannel);
       return;
     }
     final current = _player.state.position;
@@ -1920,7 +2110,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Previous episode'),
                 onPressed: () => _switchTo(_previousEpisode!),
               ),
-            if (!_isLive || _inCatchup)
+            if (!_isLive || _inCatchup || _liveShift)
               IconButton(
                 tooltip:
                     tr('Back {seconds} s', {'seconds': '${SkipStep.seconds}'}),
@@ -1935,13 +2125,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               icon: Icon(playing ? Icons.pause : Icons.play_arrow),
               onPressed: () => _togglePlay(playing),
             ),
-            if (!_isLive || _inCatchup)
+            if (!_isLive || _inCatchup || _liveShift)
               IconButton(
                 tooltip:
                     tr('Ahead {seconds} s', {'seconds': '${SkipStep.seconds}'}),
                 icon: const SkipIcon(forward: true, color: Colors.white),
                 onPressed: () => _skip(SkipStep.tap),
               ),
+            // Live pause & rewind behind live: back to now.
+            if (_liveShift) _timeshiftLiveButton(),
             if (_nextEpisode != null)
               IconButton(
                 icon: const Icon(Icons.skip_next, color: Colors.white),
@@ -2087,8 +2279,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                             ),
                           )
                         : _isLive
-                            ? _LiveRemainingLabel(
-                                channelId: _currentChannel.epgId)
+                            ? _liveTimeLeft()
                             : StreamBuilder<Duration>(
                                 stream: _player.stream.position,
                                 initialData: _player.state.position,
@@ -2177,13 +2368,31 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         onSchedule: _openSchedule,
         onActivity: _armTvBarIdle,
         badges: [
+          if (_liveShift) _timeshiftTag(fontSize: 12),
+          if (_liveShift) const SizedBox(width: 8),
           DesktopQualityBadges(
               key: ValueKey('tv-badges-${_currentChannel.id}'),
               player: _player,
               gold: true),
         ],
-        timeline: _TvLiveProgress(epgId: _currentChannel.epgId),
-        playPause: StreamBuilder<bool>(
+        // Up from the buttons: Left / Right go back in time, OK plays
+        // there (what's kept, then catch-up), Back cancels.
+        timeline: DesktopLiveTimeline(
+          key: ValueKey('tv-timeline-${_currentChannel.id}'),
+          channel: _currentChannel,
+          epgId: _currentChannel.epgId,
+          timeshift: _timeshift.state,
+          scrub: _liveScrub,
+          focusNode: _liveScrubFocus,
+          onGo: _liveScrubGo,
+          onDown: () {
+            if (_playPauseFocus.context != null) {
+              _playPauseFocus.requestFocus();
+            }
+          },
+          onActivity: _armTvBarIdle,
+        ),
+        playPause: _tvTimeshiftButtons(StreamBuilder<bool>(
           stream: _player.stream.playing,
           initialData: _player.state.playing,
           builder: (context, snapshot) {
@@ -2197,7 +2406,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               },
             );
           },
-        ),
+        )),
       );
 
   /// Remote, movie / episode / catch-up: Android's TV bar (title left,
@@ -2450,6 +2659,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           : next > range.duration
               ? range.duration
               : next;
+    } else if (_liveShift) {
+      // Live pause & rewind: Android's remote Rewind / FF, Skip buttons
+      // steps (a held key's grow) through the gathered jump.
+      final step = _scrubSteps.next(repeat: repeat);
+      if (step != null) _timeshift.nudge(step * sign, live: _currentChannel);
+      _skipCommit?.cancel();
+      _skipCommit = Timer(const Duration(milliseconds: 700), _scrubSteps.reset);
+      return;
     } else {
       final live = _currentChannel;
       if (sign > 0 || !live.isLive || !live.hasCatchup) return;
@@ -2665,8 +2882,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ? null
                       : '${delay > 0 ? '+' : '-'}${delay.abs()} ms')
             ),
-            // Android's Skip tile: how far the -/+ buttons jump.
-            if (!live)
+            // Android's Skip tile: how far the -/+ buttons jump (live
+            // too with Live pause & rewind on, like Android's).
+            if (!live || LiveTimeshift.minutes > 0)
               (
                 'skip_step',
                 tile(Icons.fast_forward_outlined, tr('Skip buttons'), () async {
@@ -2713,7 +2931,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// the middle; seek bar, badges and the other buttons at full touch size
   /// along the bottom. No volume slider: the phone has its own buttons.
   List<Widget> _touchControls(PlaylistManager playlist) {
-    final seekable = !_isLive || _inCatchup;
+    final seekable = !_isLive || _inCatchup || _liveShift;
     final prefs = context.watch<AppPreferences>();
     final playlistName = _isLive
         ? playlist.playlistNameFor(_currentChannel.playlistId).trim()
@@ -2729,10 +2947,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         DesktopQualityBadges(
             key: ValueKey('badges-${_currentChannel.id}'), player: _player),
         if (playlistName.isNotEmpty) GoldTag(label: playlistName),
+        if (_liveShift) _timeshiftTag(),
         // Its Align would take a whole line of the Wrap.
         if (_isLive && !_inCatchup)
           IntrinsicWidth(
               child: _LiveRemainingLabel(channelId: _currentChannel.epgId)),
+        if (_liveShift) _timeshiftLiveButton(),
       ],
     );
     final buttons = SingleChildScrollView(
@@ -3045,6 +3265,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _sourceBackGuard.blocksBack) return;
+        // A timeline target OK hasn't confirmed: Back drops it first.
+        if (_liveScrub.cancel('Back')) return;
         if (_scheduleOpen) {
           _closeSchedule();
         } else if (_panelOpen) {
@@ -3093,6 +3315,18 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 return KeyEventResult.handled;
               }
               if (_tvBarScope.hasFocus) {
+                // Live info bar: Up from its buttons = the timeline (on a
+                // catch-up channel or with Live pause & rewind on).
+                if (press &&
+                    up &&
+                    _isLive &&
+                    !_inCatchup &&
+                    _liveScrubFocus.context != null &&
+                    _liveScrubFocus.canRequestFocus &&
+                    !_liveScrubFocus.hasFocus) {
+                  _liveScrubFocus.requestFocus();
+                  return KeyEventResult.handled;
+                }
                 if (press &&
                     !_tryTvBarMove(
                         up ? TraversalDirection.up : TraversalDirection.down)) {
@@ -3179,7 +3413,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       : -1;
               if (_tvRemote) {
                 _tvSkipKey(sign, repeat: event is KeyRepeatEvent);
-              } else if (!_isLive || _inCatchup) {
+              } else if (!_isLive || _inCatchup || _liveShift) {
                 _skip(SkipStep.tap * sign);
                 _flashControls();
               }
@@ -3436,6 +3670,24 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                           live: _skipLive,
                           position: _seekRange?.position ?? Duration.zero,
                           duration: _seekRange?.duration ?? Duration.zero,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Live pause & rewind: where gathered skips land (Android's
+                // TimeshiftCue).
+                if (_tvRemote && _liveShift)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: ValueListenableBuilder<Duration?>(
+                          valueListenable: _timeshift.target,
+                          builder: (context, t, _) => t == null
+                              ? const SizedBox.shrink()
+                              : TimeshiftCue(
+                                  target: t,
+                                  from: _timeshift.state.value?.behind ??
+                                      Duration.zero),
                         ),
                       ),
                     ),
@@ -3754,7 +4006,11 @@ class _ScreenControl extends DesktopPlayerControl {
 
   @override
   Future<void> backToLive() async {
-    if (s._inCatchup) await s._catchupCtl.backToLive();
+    if (s._inCatchup) {
+      await s._catchupCtl.backToLive();
+    } else if (s._liveShift) {
+      await s._timeshift.toLive(why: 'Vesper back to live');
+    }
   }
 
   @override
@@ -3764,82 +4020,6 @@ class _ScreenControl extends DesktopPlayerControl {
   Future<void> replaceStream(Channel replacement) {
     final state = s._player.state;
     return s._switchTo(replacement, start: state.position, play: state.playing);
-  }
-}
-
-/// Line 2 of the Apple TV live info bar: the programme's start, how far
-/// it is, its end (Android's live timeline at rest; going back into
-/// catch-up from it is Android's only for now: Start over and Channel
-/// schedule do it here).
-class _TvLiveProgress extends StatefulWidget {
-  const _TvLiveProgress({required this.epgId});
-
-  final String epgId;
-
-  @override
-  State<_TvLiveProgress> createState() => _TvLiveProgressState();
-}
-
-class _TvLiveProgressState extends State<_TvLiveProgress> {
-  Timer? _tick;
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final programme =
-        context.watch<EpgService>().getCurrentProgram(widget.epgId);
-    if (programme == null) return const SizedBox.shrink();
-    final span = programme.stop.difference(programme.start).inSeconds;
-    if (span <= 0) return const SizedBox.shrink();
-    final at = (DateTime.now().difference(programme.start).inSeconds / span)
-        .clamp(0.0, 1.0);
-    final accent = Theme.of(context).colorScheme.primary;
-    const style = LiveInfoBar.timeStyle;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(children: [
-        Text(TimeFormat.hm.format(programme.start), style: style),
-        const SizedBox(width: 10),
-        Expanded(
-          child: SizedBox(
-            height: 18,
-            child: LayoutBuilder(
-              builder: (context, box) => Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  Container(
-                      height: 3,
-                      decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(3))),
-                  Container(
-                      width: box.maxWidth * at,
-                      height: 3,
-                      decoration: BoxDecoration(
-                          color: accent,
-                          borderRadius: BorderRadius.circular(3))),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(TimeFormat.hm.format(programme.stop), style: style),
-      ]),
-    );
   }
 }
 

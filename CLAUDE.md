@@ -546,6 +546,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-28 - Pause & rewind live TV + the live timeline on mpv (`claude/atv-timeshift`, worktree
+  `VesperTV-claude-atv-timeshift`):** Android's Live pause & rewind on computers / iPhone / Apple TV through mpv's demuxer
+  cache on disk (`services/desktop_timeshift.dart`: `cache=yes`, `demuxer-seekable-cache=yes`, `cache-on-disk=yes` +
+  `demuxer-cache-dir` in the temp folder, `demuxer-donate-buffer=no`, `demuxer-max-back-bytes` = minutes x 2 MiB of index),
+  full-screen live only; skips / LIVE / "−1:23" tag / Play after a pause like Android; past what's kept = catch-up; copy
+  file limits (append-only file: reopen at live past it). Apple TV bar's live timeline is a remote target
+  (`widgets/desktop_live_timeline.dart`: Left / Right, OK, Back cancels) into the copy and catch-up. Settings row on
+  media_kit too. Measured on Windows libmpv 0.36 (harness + a real Player); not on an Apple TV yet. Details + Send-log
+  lines: dev-notes/live-pause.md "Computers / iPhone / Apple TV".
 - **Claude, 2026-11-28 - Apple TV catch-up round + sideload .ipa (`claude/appletv-catchup`, worktree
   `VesperTV-claude-atvcatchup`, from main d32d2d4, uncommitted):** owner borrows an Apple TV 4K 1st gen (A1842, tvOS 26)
   and asked for a sideload path + "any Linux Windows or Android bug and features that is missing on the TvOS". (1)

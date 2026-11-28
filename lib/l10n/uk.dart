@@ -4074,4 +4074,7 @@ const Map<String, String> kUk = {
       "Скопійовано",
   "Copy code":
       "Копіювати код",
+  // Pause & rewind live TV on computers / iPhone / Apple TV (mpv).
+  "Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.":
+      "Канали прямого ефіру зберігають останні хвилини на цьому пристрої, поки ви дивитеся на весь екран, через те саме з'єднання: Пауза зупиняє зображення, а не потік, і Відтворення продовжує з місця паузи. Кнопки назад / вперед рухаються в ньому, НАЖИВО повертає до зараз; з пультом Вгору від кнопок веде до шкали часу (Ліворуч / Праворуч, потім OK). Займає пам'ять пристрою під час перегляду (близько 2 ГБ на 30 хвилин HD-каналу, видаляється при зміні каналу або зупинці). Діє з наступного каналу.",
 };
