@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/live_sources.dart';
+import '../widgets/live_buffer_picker.dart';
 import '../widgets/live_source_drawer.dart';
 import '../widgets/episode_drawer.dart';
 import '../widgets/skip_step_picker.dart';
@@ -22,11 +23,13 @@ import '../services/desktop_mini_player.dart';
 import '../services/desktop_vod_progress.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
+import '../services/remote_buttons.dart';
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/app_log.dart';
 import '../services/apple_tv_comeback.dart';
+import '../services/held_key_swallow.dart';
 import '../services/apple_tv_display.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
@@ -154,8 +157,11 @@ class DesktopPlayerScreen extends StatefulWidget {
 
 /// Recall's backing history — see [DesktopPlayerScreen]'s doc comment for
 /// why this is separate from `PlaybackService.recentlyPlayed` rather than
-/// reusing it. A plain static list (not persisted): good enough for "go
-/// back to the live channel I was just on" within one run of the app.
+/// reusing it. This run's channels first, then the viewer's saved live
+/// History (`PlaybackService.recentLiveChannels`, which this screen feeds
+/// through `recordWatched`): after a relaunch, Right (last channel) and
+/// Recall did nothing until a second channel had played (Apple TV audit,
+/// 2026-11-28; Android's list survives a restart).
 class _DesktopLiveHistory {
   static final List<Channel> _recent = [];
 
@@ -165,8 +171,13 @@ class _DesktopLiveHistory {
     if (_recent.length > 6) _recent.removeRange(6, _recent.length);
   }
 
-  static List<Channel> recentExcluding(String id) =>
-      _recent.where((c) => c.id != id).take(4).toList();
+  static List<Channel> recentExcluding(String id, [PlaybackService? saved]) {
+    final seen = <String>{id};
+    return [
+      for (final c in [..._recent, ...?saved?.recentLiveChannels()])
+        if (seen.add(c.id)) c,
+    ].take(4).toList();
+  }
 }
 
 class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
@@ -503,7 +514,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   /// Remote Right on a live channel: the channel watched before it.
   void _lastChannel() {
-    final previous = _DesktopLiveHistory.recentExcluding(_currentChannel.id);
+    final previous =
+        _DesktopLiveHistory.recentExcluding(_currentChannel.id, _history);
     if (previous.isEmpty) return;
     _flashControls();
     unawaited(_switchTo(previous.first));
@@ -1421,6 +1433,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   void dispose() {
     _comeback?.dispose();
+    _endArrowHold();
     Tuliprox.instance.fallbackNotice.removeListener(_onTuliproxFallback);
     Tuliprox.instance.eventNotice.removeListener(_onTuliproxEvent);
     _touchHide?.cancel();
@@ -1575,6 +1588,169 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     debugPrint('AppleTvComeback: ${_currentChannel.name} opened again after '
         '${away.inSeconds} s away');
     _reload();
+  }
+
+  static PlayerArrow? _arrowOf(LogicalKeyboardKey key) => switch (key) {
+        LogicalKeyboardKey.arrowLeft => PlayerArrow.left,
+        LogicalKeyboardKey.arrowRight => PlayerArrow.right,
+        LogicalKeyboardKey.arrowUp => PlayerArrow.up,
+        LogicalKeyboardKey.arrowDown => PlayerArrow.down,
+        _ => null,
+      };
+
+  static LogicalKeyboardKey _arrowKey(PlayerArrow arrow) => switch (arrow) {
+        PlayerArrow.left => LogicalKeyboardKey.arrowLeft,
+        PlayerArrow.right => LogicalKeyboardKey.arrowRight,
+        PlayerArrow.up => LogicalKeyboardKey.arrowUp,
+        PlayerArrow.down => LogicalKeyboardKey.arrowDown,
+      };
+
+  /// Settings > Remote > Hold <arrow> (Android's 550 ms): the arrow held,
+  /// its timer, whether the hold ran.
+  static const _arrowHoldTime = Duration(milliseconds: 550);
+  PlayerArrow? _heldArrow;
+  Timer? _arrowHoldTimer;
+  bool _arrowHoldRan = false;
+  DateTime? _arrowAt;
+
+  /// A live arrow with nothing on screen, as Settings > Remote says
+  /// (Android's PlayerScreen._runArrow; the rows were shown on Apple TV but
+  /// this player had its defaults built in).
+  void _runArrow(PlayerArrow arrow) {
+    final buttons = RemoteButtons.instance;
+    if (buttons.arrowHold(arrow) != PlayerArrow.defaultHold) {
+      // Press or hold is known at the release (or after _arrowHoldTime).
+      if (_heldArrow != arrow) _startArrowHold(arrow);
+      return;
+    }
+    final action = buttons.arrowAction(arrow);
+    // What it opens must not get the rest of a longer press.
+    if (action != 'channel_up' && action != 'channel_down') {
+      HeldKeySwallow.restOfPress(_arrowKey(arrow));
+    }
+    _runArrowAction(action);
+  }
+
+  void _startArrowHold(PlayerArrow arrow) {
+    _endArrowHold();
+    _heldArrow = arrow;
+    _arrowHoldRan = false;
+    // Watches the release only (never handles it).
+    HardwareKeyboard.instance.addHandler(_onArrowHoldKey);
+    _arrowHoldTimer = Timer(_arrowHoldTime, () {
+      if (!mounted || _heldArrow != arrow) return;
+      _arrowHoldRan = true;
+      HeldKeySwallow.restOfPress(_arrowKey(arrow));
+      _runArrowAction(RemoteButtons.instance.arrowHold(arrow));
+    });
+  }
+
+  bool _onArrowHoldKey(KeyEvent event) {
+    final arrow = _heldArrow;
+    if (arrow == null || event is! KeyUpEvent) return false;
+    if (event.logicalKey != _arrowKey(arrow)) return false;
+    final held = _arrowHoldRan;
+    _endArrowHold();
+    if (!held && mounted) {
+      _runArrowAction(RemoteButtons.instance.arrowAction(arrow));
+    }
+    return false;
+  }
+
+  void _endArrowHold() {
+    _arrowHoldTimer?.cancel();
+    _arrowHoldTimer = null;
+    if (_heldArrow != null) {
+      HardwareKeyboard.instance.removeHandler(_onArrowHoldKey);
+    }
+    _heldArrow = null;
+  }
+
+  void _runArrowAction(String action) {
+    if (!mounted) return;
+    if (action == 'channel_up') {
+      _zapChannel(-1);
+      return;
+    }
+    if (action == 'channel_down') {
+      _zapChannel(1);
+      return;
+    }
+    final now = DateTime.now();
+    final last = _arrowAt;
+    _arrowAt = now;
+    if (last != null &&
+        now.difference(last) < const Duration(milliseconds: 400)) {
+      return;
+    }
+    if (PlayerArrow.optionTileOf(action) case final tile?) {
+      _pressOptionTile(tile);
+      return;
+    }
+    switch (action) {
+      case 'panel':
+        _openPanel();
+      case 'last':
+        _lastChannel();
+      case 'bar':
+        _showBarFocused();
+      case 'back':
+        // Back's own path: the PopScope decides (_handleBack).
+        unawaited(Navigator.of(context).maybePop());
+    }
+  }
+
+  /// An options-row tile from an arrow (`opt:<id>`): its action straight
+  /// away where this screen has one, else the row opens and the tile is
+  /// pressed there (Audio, Subtitles, Audio sync, Skip buttons build their
+  /// own sheets). A tile this channel doesn't have does nothing.
+  void _pressOptionTile(String id) {
+    final live = _isLive && !_inCatchup;
+    switch (id) {
+      case 'live_sources' when live:
+        unawaited(_openLiveSources());
+        return;
+      case 'episodes' when _hasEpisodeList:
+        unawaited(_openEpisodes());
+        return;
+      case 'recall' when live:
+        unawaited(_openRecallPicker());
+        return;
+      case 'start_over' when live && _currentChannel.hasCatchup:
+        _startOver();
+        return;
+      case 'reload' when live:
+        _reload();
+        return;
+      case 'buffer' when live:
+        unawaited(_pickLiveBuffer());
+        return;
+      case 'stream_info' when context.read<AppPreferences>().dataPool:
+        _showTvDataPool();
+        return;
+      case 'multiview' when live:
+        unawaited(_openMultiview());
+        return;
+      case 'picture':
+        _cycleFit();
+        return;
+      case 'search':
+        _openTvSearch();
+        return;
+    }
+    _openTvOptions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _tvOptions) PlayerOptionsOrder.activate(id);
+    });
+  }
+
+  /// Options row > Buffer: the new live buffer applies at the next open.
+  Future<void> _pickLiveBuffer() async {
+    final channel = _currentChannel;
+    final picked = await pickLiveBuffer(context);
+    if (picked == null || !mounted || _currentChannel.id != channel.id) return;
+    setState(() {});
+    if (_isLive && !_inCatchup) _reload();
   }
 
   int _serverSwitchGen = 0;
@@ -1738,7 +1914,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   }
 
   Future<void> _openRecallPicker() async {
-    final history = _DesktopLiveHistory.recentExcluding(_currentChannel.id);
+    final history =
+        _DesktopLiveHistory.recentExcluding(_currentChannel.id, _history);
     final chosen = await showModalBottomSheet<Channel>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -2639,6 +2816,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tile(Icons.refresh, tr('Reload channel'), _reload,
                     shortLabel: tr('Reload'))
               ),
+            // Settings > Playback's Live buffer from the player, like
+            // Android's tile (same id): mpv takes it when the stream opens
+            // (openDesktopStream), so a pick reopens the channel.
+            if (live)
+              (
+                'buffer',
+                tile(Icons.hourglass_bottom, tr('Buffer'), _pickLiveBuffer,
+                    detail: liveBufferShortName(
+                        context.read<StorageService>().getLiveBufferMs()))
+              ),
             (
               'audio',
               DesktopAudioButton(
@@ -3125,18 +3312,25 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               _openSources();
               return KeyEventResult.handled;
             }
-            // Remote, live: Right = the channel watched before (Android's
-            // default for Right).
+            // Remote, live, nothing on screen: Settings > Remote's player
+            // arrows and holds (Android's PlayerScreen._runArrow; defaults
+            // Left = side drawer, Right = last channel, Up / Down = zap).
+            // One action per press: a held key's repeats would open a
+            // stream per repeat.
             if (_tvRemote &&
-                event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                event is! KeyUpEvent &&
                 _rootFocus.hasPrimaryFocus &&
                 _isLive &&
                 !_inCatchup &&
                 !_panelOpen &&
-                !_scheduleOpen) {
-              _lastChannel();
-              return KeyEventResult.handled;
+                !_scheduleOpen &&
+                !_inPip &&
+                !_pipStarting) {
+              final arrow = _arrowOf(event.logicalKey);
+              if (arrow != null) {
+                if (event is KeyDownEvent) _runArrow(arrow);
+                return KeyEventResult.handled;
+              }
             }
             // I = Data pool (when it's on in Settings > Playback).
             if (event is KeyDownEvent &&
