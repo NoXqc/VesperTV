@@ -4507,4 +4507,7 @@ const Map<String, String> kDe = {
       "Code kopieren",
   "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
       "Noch nichts auf dem Tuliprox-Server. Halte OK auf einem Live-Sender und wähle Auf dem Server aufnehmen.",
+  // Pause & rewind live TV on computers / iPhone / Apple TV (mpv).
+  "Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.":
+      "Live-Sender behalten beim Zuschauen im Vollbild ihre letzten Minuten auf diesem Gerät, über dieselbe Verbindung: Pause hält das Bild an, nicht den Stream, und Wiedergabe macht dort weiter, wo du angehalten hast. Die Zurück- / Vor-Tasten bewegen sich darin, LIVE springt zu jetzt; mit einer Fernbedienung führt Hoch von den Tasten zur Zeitleiste (Links / Rechts, dann OK). Belegt beim Zuschauen Speicher (etwa 2 GB für 30 Minuten eines HD-Senders, beim Senderwechsel oder Stoppen gelöscht). Gilt ab dem nächsten Sender.",
 };

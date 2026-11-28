@@ -4566,4 +4566,7 @@ const Map<String, String> kEl = {
       "Αντιγραφή κωδικού",
   "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
       "Τίποτα ακόμα στον διακομιστή Tuliprox. Κρατήστε OK σε ένα ζωντανό κανάλι και επιλέξτε Εγγραφή στον διακομιστή.",
+  // Pause & rewind live TV on computers / iPhone / Apple TV (mpv).
+  "Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.":
+      "Τα ζωντανά κανάλια κρατούν τα τελευταία τους λεπτά σε αυτή τη συσκευή όσο βλέπετε σε πλήρη οθόνη, με την ίδια σύνδεση: η Παύση σταματά την εικόνα, όχι τη ροή, και η Αναπαραγωγή συνεχίζει από εκεί που σταματήσατε. Τα κουμπιά πίσω / μπροστά κινούνται μέσα σε αυτά, το ΖΩΝΤΑΝΑ πηγαίνει στο τώρα· με τηλεχειριστήριο, το Πάνω από τα κουμπιά φτάνει στη γραμμή χρόνου (Αριστερά / Δεξιά, μετά OK). Χρησιμοποιεί αποθηκευτικό χώρο όσο βλέπετε (περίπου 2 GB για 30 λεπτά ενός καναλιού HD, διαγράφεται όταν αλλάζετε κανάλι ή σταματάτε). Ισχύει από το επόμενο κανάλι.",
 };

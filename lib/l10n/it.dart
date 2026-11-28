@@ -4611,4 +4611,7 @@ const Map<String, String> kIt = {
       "Copia codice",
   "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
       "Ancora niente sul server Tuliprox. Tieni premuto OK su un canale in diretta e scegli Registra sul server.",
+  // Pause & rewind live TV on computers / iPhone / Apple TV (mpv).
+  "Live channels keep their last minutes on this device while you watch in full screen, on the same connection: Pause stops the picture, not the stream, and Play carries on where you paused. The back / ahead buttons go back and forward in it, LIVE jumps to now; with a remote, Up from the buttons reaches the timeline (Left / Right, then OK). Uses storage while you watch (about 2 GB for 30 minutes of an HD channel, deleted when you change channel or stop). Applies from the next channel.":
+      "I canali in diretta tengono gli ultimi minuti su questo dispositivo mentre guardi a schermo intero, con la stessa connessione: Pausa ferma l'immagine, non lo stream, e Play riprende da dove eri. I pulsanti indietro / avanti si muovono al suo interno, LIVE torna al presente; con un telecomando, Su dai pulsanti raggiunge la linea del tempo (Sinistra / Destra, poi OK). Usa spazio di archiviazione mentre guardi (circa 2 GB per 30 minuti di un canale HD, cancellato al cambio canale o allo stop). Vale dal canale successivo.",
 };

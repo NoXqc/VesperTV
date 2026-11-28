@@ -217,7 +217,9 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // media_kit turns on cache-on-disk; inside the macOS sandbox mpv can't
   // create its cache folder ("Failed to create file cache"). iPhone apps are
   // sandboxed the same way. The demuxer cache stays in memory
-  // (demuxer-max-bytes).
+  // (demuxer-max-bytes). Live pause & rewind ([DesktopTimeshift]) turns it
+  // on for the full-screen live player only, with a folder in the app's
+  // temporary directory, and turns it off again when it stops.
   if (Platform.isMacOS || Platform.isIOS) {
     native.setProperty('cache-on-disk', 'no');
   }
@@ -247,9 +249,21 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
   String? lastWarning;
   var lastWarningAt = DateTime(0);
+  String? lastError;
+  var lastErrorAt = DateTime(0);
   player.stream.log.listen((log) {
     if (log.level == 'error' || log.level == 'fatal') {
-      debugPrint('DesktopPlayer[$tag] mpv ${log.prefix}: ${log.text.trim()}');
+      // The same line again within 1 s once is enough (a copy file that
+      // can't be written fails on every packet).
+      final text = log.text.trim();
+      final now = DateTime.now();
+      if (text == lastError &&
+          now.difference(lastErrorAt) < const Duration(seconds: 1)) {
+        return;
+      }
+      lastError = text;
+      lastErrorAt = now;
+      debugPrint('DesktopPlayer[$tag] mpv ${log.prefix}: $text');
     } else if (log.level == 'warn' && isHlsTroubleLog(log.prefix, log.text)) {
       // The same line again within 5 s (each segment retry) once is enough.
       final text = log.text.trim();
