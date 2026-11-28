@@ -1315,6 +1315,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// Hold OK on a live game > Play in Multiview: OK checks more live games,
   /// Play/Pause, hold OK or "Open Multiview" opens them, Back cancels.
   void _startMultiviewPicks(SportsGame game) {
+    if (_desktopSports) {
+      debugPrint('DesktopMultiview: Sports Trak Play in Multiview started on '
+          '${game.league.id} ${game.away.abbreviation}@'
+          '${game.home.abbreviation}');
+    }
     setState(() => _mvPicks = [_gameKey(game)]);
     _toast(tr('Check up to 4 live games, then choose Open Multiview'));
   }
@@ -1352,6 +1357,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         if (_matches[key]?.firstOrNull case final m?) m.channel,
     ];
     setState(() => _mvPicks = null);
+    if (_desktopSports) {
+      debugPrint('DesktopMultiview: Sports Trak Open Multiview with '
+          '${picks.length} pick(s), ${channels.length} with a channel'
+          '${channels.isEmpty ? '' : ': ${channels.map((c) => c.name).join(' | ')}'}');
+    }
     if (channels.isEmpty) {
       _toast(tr('Check at least one live game'));
       return;
