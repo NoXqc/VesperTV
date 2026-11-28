@@ -165,6 +165,9 @@ class DesktopPlayerScreen extends StatefulWidget {
 class _DesktopLiveHistory {
   static final List<Channel> _recent = [];
 
+  /// For the Send log: channels this run knows before the saved History.
+  static int get runCount => _recent.length;
+
   static void record(Channel channel) {
     _recent.removeWhere((c) => c.id == channel.id);
     _recent.insert(0, channel);
@@ -516,6 +519,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void _lastChannel() {
     final previous =
         _DesktopLiveHistory.recentExcluding(_currentChannel.id, _history);
+    debugPrint('Recall: last channel: ${_DesktopLiveHistory.runCount} this '
+        'run, ${previous.length} offered'
+        '${previous.isEmpty ? '' : ' -> ${previous.first.name}'}');
     if (previous.isEmpty) return;
     _flashControls();
     unawaited(_switchTo(previous.first));
@@ -1583,8 +1589,21 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   AppLifecycleListener? _comeback;
 
   void _onBackOnScreen(Duration away) {
-    if (!mounted || !_isLive || _inCatchup || _inPip || _pipStarting) return;
-    if (_livePausedAt != null) return;
+    if (!mounted) return;
+    final why = !_isLive
+        ? 'a movie / episode: stays paused'
+        : _inCatchup
+            ? 'catch-up'
+            : (_inPip || _pipStarting)
+                ? 'picture in picture'
+                : _livePausedAt != null
+                    ? 'paused by the viewer'
+                    : null;
+    if (why != null) {
+      debugPrint('AppleTvComeback: back after ${away.inSeconds} s away, '
+          'not reopened ($why)');
+      return;
+    }
     debugPrint('AppleTvComeback: ${_currentChannel.name} opened again after '
         '${away.inSeconds} s away');
     _reload();
@@ -1624,6 +1643,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       return;
     }
     final action = buttons.arrowAction(arrow);
+    debugPrint('RemoteArrow: ${arrow.name} press -> $action');
     // What it opens must not get the rest of a longer press.
     if (action != 'channel_up' && action != 'channel_down') {
       HeldKeySwallow.restOfPress(_arrowKey(arrow));
@@ -1641,7 +1661,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       if (!mounted || _heldArrow != arrow) return;
       _arrowHoldRan = true;
       HeldKeySwallow.restOfPress(_arrowKey(arrow));
-      _runArrowAction(RemoteButtons.instance.arrowHold(arrow));
+      final hold = RemoteButtons.instance.arrowHold(arrow);
+      debugPrint('RemoteArrow: ${arrow.name} held -> $hold');
+      _runArrowAction(hold);
     });
   }
 
@@ -1652,7 +1674,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     final held = _arrowHoldRan;
     _endArrowHold();
     if (!held && mounted) {
-      _runArrowAction(RemoteButtons.instance.arrowAction(arrow));
+      final action = RemoteButtons.instance.arrowAction(arrow);
+      debugPrint('RemoteArrow: ${arrow.name} press (hold set) -> $action');
+      _runArrowAction(action);
     }
     return false;
   }
@@ -1681,6 +1705,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _arrowAt = now;
     if (last != null &&
         now.difference(last) < const Duration(milliseconds: 400)) {
+      debugPrint('RemoteArrow: $action skipped (within 400 ms of the last)');
       return;
     }
     if (PlayerArrow.optionTileOf(action) case final tile?) {
@@ -1706,6 +1731,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// own sheets). A tile this channel doesn't have does nothing.
   void _pressOptionTile(String id) {
     final live = _isLive && !_inCatchup;
+    debugPrint('RemoteArrow: tile $id (live $live, catch-up $_inCatchup)');
     switch (id) {
       case 'live_sources' when live:
         unawaited(_openLiveSources());
@@ -1740,7 +1766,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
     _openTvOptions();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _tvOptions) PlayerOptionsOrder.activate(id);
+      if (!mounted || !_tvOptions) {
+        debugPrint('RemoteArrow: tile $id: the options row closed first');
+        return;
+      }
+      final pressed = PlayerOptionsOrder.activate(id);
+      debugPrint('RemoteArrow: tile $id through the options row: '
+          '${pressed ? 'pressed' : 'not on this channel'}');
     });
   }
 
@@ -1749,6 +1781,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     final channel = _currentChannel;
     final picked = await pickLiveBuffer(context);
     if (picked == null || !mounted || _currentChannel.id != channel.id) return;
+    debugPrint('LiveBuffer: $picked ms picked in the player, '
+        '${_isLive && !_inCatchup ? 'reopening the channel' : 'next live open'}');
     setState(() {});
     if (_isLive && !_inCatchup) _reload();
   }

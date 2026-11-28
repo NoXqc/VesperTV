@@ -5620,6 +5620,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         final channel = back is Channel && back.isLive
             ? back
             : (before != null && before.isLive ? before : null);
+        debugPrint(
+            'MultiviewBack: heard ${back is Channel ? back.name : 'none'}'
+            ', before ${before?.name ?? 'none'} -> '
+            '${channel?.name ?? 'nothing'} (tab $_tab)');
         if (channel == null) return;
         _parkedDesktopChannel = channel;
         // Elsewhere it waits for the TV tab ([_onTabChanged]).

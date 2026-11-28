@@ -143,7 +143,11 @@ class DesktopMiniPlayer {
   void _onBackOnScreen(Duration away) {
     final ch = channel.value;
     final player = _player;
-    if (ch == null || player == null || !ch.isLive || _catchup != null) return;
+    if (ch == null || player == null || !ch.isLive || _catchup != null) {
+      debugPrint('AppleTvComeback: back after ${away.inSeconds} s away, '
+          'preview ${ch == null ? 'empty' : _catchup != null ? 'in catch-up' : 'not live'}');
+      return;
+    }
     debugPrint('AppleTvComeback: preview ${ch.name} opened again after '
         '${away.inSeconds} s away');
     unawaited(openDesktopStream(player, ch).then((_) {
@@ -167,9 +171,15 @@ class DesktopMiniPlayer {
       // Android's PlaybackService.play (the guide's preview zapped without
       // it on computers / iPhone / Apple TV). At most 1.5 s.
       if (leaving != null && leaving.url != ch.url) {
+        final at = DateTime.now();
         await Tuliprox.instance
             .release(leaving)
             .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+        final ms = DateTime.now().difference(at).inMilliseconds;
+        if (ms > 50) {
+          debugPrint('MiniPlayer: ${ch.name} after releasing ${leaving.name} '
+              '($ms ms)');
+        }
         if (!current()) return;
       }
       // Waits, retries and copies: DesktopLiveRecovery (it stays with the

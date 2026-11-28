@@ -85,8 +85,29 @@ class AppleTvDisplayMatch {
 
   /// Called when the full-screen player starts (or takes over) [player];
   /// [isCurrent] says whether that stream is still the one playing.
+  static bool _statusLogged = false;
+
+  /// Once per run, at the first full-screen play: the Apple TV's own Match
+  /// Content switch and VesperTV's, for the Send log (GitHub #20 only broke
+  /// with both on).
+  static Future<void> _logStatusOnce(StorageService storage) async {
+    if (!isAppleTv || _statusLogged) return;
+    _statusLogged = true;
+    try {
+      final s = await _channel.invokeMapMethod<String, Object?>('status');
+      debugPrint('DisplayMatch: tvOS Match Content '
+          '${s?['enabled'] == true ? 'on' : 'off'} (supported '
+          '${s?['supported']}), VesperTV Match frame rate '
+          '${storage.getMatchFrameRate() ? 'on' : 'off'}, 50/60 only '
+          '${storage.getMatch5060Only()}');
+    } catch (e) {
+      debugPrint('DisplayMatch: status failed ($e)');
+    }
+  }
+
   static Future<void> start(
       StorageService storage, Player player, bool Function() isCurrent) async {
+    unawaited(_logStatusOnce(storage));
     if (!enabled(storage)) return;
     _listen();
     _pendingReset?.cancel();
