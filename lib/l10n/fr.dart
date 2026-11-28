@@ -4615,4 +4615,6 @@ const Map<String, String> kFr = {
       "Copié",
   "Copy code":
       "Copier le code",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Rien sur le serveur Tuliprox pour l'instant. Maintenez OK sur une chaîne en direct et choisissez Enregistrer sur le serveur.",
 };

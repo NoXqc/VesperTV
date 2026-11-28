@@ -114,7 +114,7 @@ All in `lib/services/tuliprox.dart` (`Tuliprox` singleton, `TuliproxApi`).
       `fallbackNotice` are shown by both players (`DesktopPlayerScreen` listens now too).
     - **DVR** (4.6 - 4.10): `recordOnServer` (one-off, 1 min before / 5 after, `Idempotency-Key`, retried without
       padding on `recording_padding_limit_exceeded`), `recordWeeklyOnServer` (`weekly_timeslot` in the device's IANA zone
-      from Android `device_type.timeZoneId`, UTC elsewhere), cancel / delete / edit, rules list / create / delete,
+      from Android `device_type.timeZoneId` / Apple TV `vespertv/tvos` `timeZoneId`, UTC elsewhere: Dart has no IANA name), cancel / delete / edit, rules list / create / delete,
       conflicts preview, availability, media URLs (`Authorization: Bearer`), and the **recordings snapshot over the
       binary `/ws` socket** (byte 4, `{"Auth": token}`, `"RecordingSnapshotRequest"`). **Target:** a one-off request
       carries `source.target_id`; a playlist user is never told it. Sent: an own rule's `source.target_id` when

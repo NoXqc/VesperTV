@@ -66,6 +66,12 @@ class RecordingService extends ChangeNotifier {
   static bool get downloadsSupported =>
       debugDownloadsSupported ?? (Platform.isAndroid || Platform.isWindows);
 
+  /// Neither recording nor downloads here (Apple TV, iPhone, Mac, Linux):
+  /// the Recordings page lists only what a Tuliprox server records for the
+  /// playlists ("Record on the server" in the hold menu), and is offered
+  /// only while a server says its DVR is on (`Tuliprox.serverDvr`).
+  static bool get serverRecordingsOnly => !downloadsSupported;
+
   /// Tests: the suite runs on Windows hosts, where downloads are on; the
   /// screens' tests were tuned without them (test/flutter_test_config.dart).
   @visibleForTesting

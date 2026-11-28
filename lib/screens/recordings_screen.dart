@@ -26,7 +26,10 @@ import 'player_screen.dart';
 import '../widgets/ink_layer.dart';
 
 /// The Recordings tab (Android): what's recording or downloading, what's
-/// scheduled, and what's been recorded or downloaded. A game shows as a Sports Trak style card with
+/// scheduled, and what's been recorded or downloaded. Apple TV and other
+/// devices that neither record nor download
+/// ([RecordingService.serverRecordingsOnly]): the Tuliprox server's part only.
+/// A game shows as a Sports Trak style card with
 /// both teams (never the score); a channel recording as a card with the
 /// channel's logo and the guide programme that was on. OK = play (a
 /// recording in progress plays live through the recorder's tap), hold
@@ -54,6 +57,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   /// Weekly rules' channel names from the playlist, by server channel id.
   Map<String, String> _ruleNames = const {};
 
+  /// [_server] has been read once (the server-only page says Loading… until).
+  bool _serverRead = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,15 +80,22 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final manager = context.read<PlaylistManager>();
     await manager.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    final checked = <String>{};
-    final tuliprox = <Channel>[];
-    for (final c in manager.visibleChannels(category: 'tv')) {
-      if (!checked.add(c.playlistId)) continue;
-      if (Tuliprox.instance.refOf(c) != null) tuliprox.add(c);
+    final tuliprox = Tuliprox.instance
+        .onePerPlaylist(manager.visibleChannels(category: 'tv'));
+    if (tuliprox.isEmpty) {
+      debugPrint('TuliproxRec: Recordings page: no Tuliprox playlist '
+          '(serverOnly=${RecordingService.serverRecordingsOnly})');
+      setState(() => _serverRead = true);
+      return;
     }
-    if (tuliprox.isEmpty) return;
     final list = await Tuliprox.instance.serverRecordings(tuliprox);
     if (!mounted) return;
+    debugPrint('TuliproxRec: Recordings page: ${tuliprox.length} Tuliprox '
+        'playlist(s), ${list.length} with a DVR: '
+        '${list.map((s) => 'tasks=${s.snapshot.tasks.length} '
+            '(done=${s.snapshot.tasks.where((r) => r.completed).length}) '
+            'rules=${s.rules.length} (own=${s.rules.where((r) => r.own).length})').join('; ')} '
+        '(serverOnly=${RecordingService.serverRecordingsOnly})');
     // A weekly rule names its channel by the server's id (and guide id):
     // the playlist's own channel name instead ("ADDIKTV.CA", owner's box).
     final want = {
@@ -102,6 +115,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     setState(() {
       _server = list;
       _ruleNames = names;
+      _serverRead = true;
     });
   }
 
@@ -333,6 +347,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final offered = _service.networkFilesToOffer(_netFiles);
     final networkBytes =
         all.fold<int>(0, (s, r) => r.onNetwork ? s + r.bytes : s);
+    final serverOnly = RecordingService.serverRecordingsOnly;
     var first = true;
     Widget section(String title, List<RecordingEntry> list) {
       final autofocus = first;
@@ -402,8 +417,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       (context) => SettingsScaffold(
         // A multi-pane tool: the glass panel spans the screen.
         wide: true,
-        // Windows has downloads only.
-        title: RecordingService.supported ? tr('Recordings') : tr('Downloads'),
+        // Windows has downloads only; Apple TV the server's recordings only.
+        title: RecordingService.supported || serverOnly
+            ? tr('Recordings')
+            : tr('Downloads'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           children: [
@@ -423,14 +440,19 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (all.isEmpty &&
                 series.isEmpty &&
                 offered.isEmpty &&
-                _server.isEmpty &&
+                !_server.any(_serverHasItems) &&
                 !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
-                  '${tr('Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.', {
-                        'tab': AppConstants.sportsTabName
-                      })}\n${tr('Downloads: the Download button on a movie or show page.')}',
+                  serverOnly
+                      ? _serverRead
+                          ? tr(
+                              'Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.')
+                          : tr('Loading…')
+                      : '${tr('Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.', {
+                              'tab': AppConstants.sportsTabName
+                            })}\n${tr('Downloads: the Download button on a movie or show page.')}',
                   style: const TextStyle(color: Colors.white60, fontSize: 16),
                 ),
               ),
@@ -467,11 +489,17 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     );
   }
 
+  /// [_serverSection] has something to show for [at].
+  static bool _serverHasItems(TuliproxServerRecordings at) =>
+      at.snapshot.tasks.any((r) => r.status != 'cancelled') ||
+      at.rules.any((r) => r.own);
+
   /// "On the Tuliprox server": what the server records for this playlist
   /// user (its DVR, even with this box off) and its weekly rules. Null when
   /// there is nothing to show.
   Widget? _serverSection(TuliproxServerRecordings at,
       {required bool autofocus, required bool several}) {
+    if (!_serverHasItems(at)) return null;
     final tasks = [
       for (final r in at.snapshot.tasks)
         if (r.status != 'cancelled') r
@@ -481,7 +509,6 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       for (final r in at.rules)
         if (r.own) r
     ];
-    if (tasks.isEmpty && rules.isEmpty) return null;
     final limit = at.snapshot.privateLimitBytes;
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),

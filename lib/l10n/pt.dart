@@ -4609,4 +4609,6 @@ const Map<String, String> kPt = {
       "Copiado",
   "Copy code":
       "Copiar código",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Ainda não há nada no servidor Tuliprox. Mantém OK premido num canal em direto e escolhe Gravar no servidor.",
 };

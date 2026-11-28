@@ -5750,7 +5750,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               collapsed: collapsed,
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const RecordingsScreen())),
-            ),
+            )
+          // Apple TV (no recording, no downloads): the Tuliprox server's.
+          else if (RecordingService.serverRecordingsOnly &&
+              !context.watch<AppPreferences>().hideRecordings)
+            _ServerRecordingsRow(collapsed: collapsed),
         ],
         Divider(height: 16, color: _columnLineColor ?? Colors.white24),
         // Vesper AI, under the tabs (Settings > Vesper AI > Vesper shortcut, on by default).
@@ -8810,6 +8814,64 @@ class _SelectableRowState extends State<_SelectableRow> {
       ),
     );
   }
+}
+
+/// Apple TV (and other devices that neither record nor download,
+/// [RecordingService.serverRecordingsOnly]): Recordings for what a Tuliprox
+/// server records ("Record on the server"), shown once a playlist's server
+/// says its DVR is on for this account ([Tuliprox.serverDvr]). The servers
+/// are asked once a run when the live lists are in, so the row doesn't wait
+/// for a channel to play.
+class _ServerRecordingsRow extends StatefulWidget {
+  const _ServerRecordingsRow({required this.collapsed});
+
+  final bool collapsed;
+
+  @override
+  State<_ServerRecordingsRow> createState() => _ServerRecordingsRowState();
+}
+
+class _ServerRecordingsRowState extends State<_ServerRecordingsRow> {
+  final _dvr = Tuliprox.instance.serverDvr;
+
+  @override
+  void initState() {
+    super.initState();
+    _dvr.addListener(_logChange);
+    debugPrint('TuliproxRec: Recordings row '
+        '${_dvr.value ? 'shown (a server DVR is on)' : 'hidden until a Tuliprox server says its DVR is on'}');
+    final manager = context.read<PlaylistManager>();
+    unawaited(() async {
+      await manager.ensureLiveChannelsLoaded();
+      if (!mounted) return;
+      await Tuliprox.instance
+          .checkServerDvrOnce(manager.visibleChannels(category: 'tv'));
+    }());
+  }
+
+  void _logChange() => debugPrint('TuliproxRec: Recordings row '
+      '${_dvr.value ? 'shown (a server DVR is on)' : 'hidden (no server DVR on for this account)'}');
+
+  @override
+  void dispose() {
+    _dvr.removeListener(_logChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: _dvr,
+        builder: (context, dvr, _) => !dvr
+            ? const SizedBox.shrink()
+            : _SelectableRow(
+                icon: Icons.fiber_smart_record_outlined,
+                label: tr('Recordings'),
+                selected: false,
+                collapsed: widget.collapsed,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const RecordingsScreen())),
+              ),
+      );
 }
 
 /// A group row's colour layer: its fade ([decoration]) and, for a live

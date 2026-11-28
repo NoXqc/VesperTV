@@ -1,3 +1,4 @@
+import AVFoundation
 import AVKit
 import CloudKit
 import CoreMedia
@@ -26,6 +27,7 @@ import UIKit
     VesperDisplay.register(engineBridge.pluginRegistry)
     VesperTopShelf.register(engineBridge.pluginRegistry)
     VesperCrashNote.register(engineBridge.pluginRegistry)
+    VesperSpeech.register(engineBridge.pluginRegistry)
   }
 }
 
@@ -271,6 +273,10 @@ enum VesperMenu {
       case "armMenuExit":
         armedUntil = Date().addingTimeInterval(10)
         result(true)
+      case "timeZoneId":
+        // The device's IANA zone ("Europe/Paris"): Tuliprox weekly
+        // recordings (Dart Tuliprox.deviceTimeZone).
+        result(TimeZone.current.identifier)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -598,5 +604,114 @@ final class VesperICloud {
       }
     }
     return FlutterError(code: code, message: error.localizedDescription, details: nil)
+  }
+}
+
+/// Vesper's Read replies aloud on Apple TV (`vespertv/voice`, Dart `VoiceInput`): the
+/// iPhone's VesperVoice (ios/Runner/AppDelegate.swift) and Android's VoiceBridge.kt speak
+/// on the same channel. Speaking only: tvOS has no speech recognizer (no Speech
+/// framework), so `available` is false, the Vesper panel shows no Talk button and the
+/// viewer types or talks from the phone. `speak` answers with the voice picked and the
+/// synthesizer reports started / finished / cancelled (`speech`): Dart's `Speech:`
+/// Send-log lines. Never the words themselves.
+final class VesperSpeech: NSObject, AVSpeechSynthesizerDelegate {
+  private static let shared = VesperSpeech()
+  private let synth = AVSpeechSynthesizer()
+  private var channel: FlutterMethodChannel?
+  private var startedAt: Date?
+
+  override init() {
+    super.init()
+    synth.delegate = self
+  }
+
+  static func register(_ registry: FlutterPluginRegistry) {
+    guard let registrar = registry.registrar(forPlugin: "VesperSpeech") else { return }
+    let channel = FlutterMethodChannel(
+      name: "vespertv/voice", binaryMessenger: registrar.messenger())
+    shared.channel = channel
+    channel.setMethodCallHandler { call, result in
+      shared.handle(call, result: result)
+    }
+  }
+
+  private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any]
+    switch call.method {
+    case "speak":
+      let text = args?["text"] as? String ?? ""
+      guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        result(FlutterError(code: "EMPTY", message: "nothing to say", details: nil))
+        return
+      }
+      result(speak(text, lang: args?["lang"] as? String ?? "en-US"))
+    case "stopSpeaking":
+      let was = synth.isSpeaking
+      synth.stopSpeaking(at: .immediate)
+      result(was ? "stopped while speaking" : "stop (nothing was speaking)")
+    case "available", "hasPermission", "requestPermission", "takeAssist":
+      result(false)
+    case "stop", "cancel":
+      result(nil)
+    case "start":
+      result(
+        FlutterError(
+          code: "UNAVAILABLE", message: "no speech recognizer on Apple TV", details: nil))
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// A new reply cuts the one being read. The app's language ("fr-CA"), else that
+  /// language's other voice ("fr"), else the Apple TV's own. Returns the Send-log line.
+  private func speak(_ text: String, lang: String) -> String {
+    let cut = synth.isSpeaking
+    synth.stopSpeaking(at: .immediate)
+    let prefix = String(lang.prefix(2))
+    let exact = AVSpeechSynthesisVoice(language: lang)
+    let voice = exact ?? AVSpeechSynthesisVoice(language: prefix)
+    let installed = AVSpeechSynthesisVoice.speechVoices().filter {
+      $0.language.hasPrefix(prefix)
+    }.count
+    let utterance = AVSpeechUtterance(string: text)
+    utterance.voice = voice
+    synth.speak(utterance)
+    let missing = exact == nil ? " (no \(lang) voice)" : ""
+    let picked: String
+    if let voice = voice {
+      picked = "voice \(voice.language) '\(voice.name)'\(missing)"
+    } else {
+      picked = "no \(prefix) voice: the Apple TV's default"
+    }
+    let session = AVAudioSession.sharedInstance()
+    let previous = cut ? ", cut the previous reply" : ""
+    return "speaking with \(picked), \(installed) \(prefix) voice(s) installed, "
+      + "audio session \(session.category.rawValue)\(previous)"
+  }
+
+  private func report(_ event: String) {
+    DispatchQueue.main.async { self.channel?.invokeMethod("speech", arguments: event) }
+  }
+
+  func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+    startedAt = Date()
+    report("started")
+  }
+
+  func speechSynthesizer(
+    _ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance
+  ) {
+    report("finished after \(seconds()) s")
+  }
+
+  func speechSynthesizer(
+    _ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance
+  ) {
+    report("cancelled after \(seconds()) s")
+  }
+
+  private func seconds() -> String {
+    guard let at = startedAt else { return "?" }
+    return String(format: "%.1f", Date().timeIntervalSince(at))
   }
 }

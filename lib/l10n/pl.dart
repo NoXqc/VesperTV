@@ -4196,4 +4196,6 @@ const Map<String, String> kPl = {
       "Skopiowano",
   "Copy code":
       "Kopiuj kod",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Na serwerze Tuliprox jeszcze nic nie ma. Przytrzymaj OK na kanale na żywo i wybierz Nagraj na serwerze.",
 };

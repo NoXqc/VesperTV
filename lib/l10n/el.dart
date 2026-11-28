@@ -4564,4 +4564,6 @@ const Map<String, String> kEl = {
       "Αντιγράφηκε",
   "Copy code":
       "Αντιγραφή κωδικού",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Τίποτα ακόμα στον διακομιστή Tuliprox. Κρατήστε OK σε ένα ζωντανό κανάλι και επιλέξτε Εγγραφή στον διακομιστή.",
 };
