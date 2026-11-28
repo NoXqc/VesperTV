@@ -14,7 +14,6 @@ import 'sync_profile_match.dart' show syncProfileNameKey;
 import '../utils/adult_groups.dart';
 import '../utils/app_store.dart';
 import '../utils/constants.dart';
-import '../utils/desktop_platform.dart' show isAppleTv;
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
 /// directory for larger cached payloads (parsed playlist/catalog JSON) —
@@ -921,11 +920,12 @@ class StorageService {
   Future<void> setUiTexture(bool value) =>
       _prefs.setBool(AppConstants.keyUiTexture, value);
 
-  /// Off by default on Android; on by default on Apple TV, where the
-  /// viewer's own Settings > Video and Audio > Match Content > Match Frame
-  /// Rate (off by default) decides whether the TV really switches.
+  /// Off by default everywhere. Apple TV was on by default (TestFlight 968):
+  /// with the Apple TV's own Match Frame Rate on, every movie closed the app
+  /// (GitHub #20; off = they play), cause not found yet: off until a test box
+  /// shows the switch works (dev-notes/apple-tv.md, "Match frame rate").
   bool getMatchFrameRate() =>
-      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? isAppleTv;
+      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
   Future<void> setMatchFrameRate(bool value) =>
       _prefs.setBool(AppConstants.keyMatchFrameRate, value);
   bool getMatch5060Only() =>

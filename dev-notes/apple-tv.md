@@ -162,6 +162,59 @@ after 6 moves, Less sensitive 0.65 / 8, Very sensitive = the engine's own.
 Settings > Backup & devices > Remote > Touch surface, Apple TV only,
 `vesper_tvos_touch`, this device only. Not tried on hardware before 954.
 
+## Text fields: leaving the keyboard (after TestFlight 954)
+
+Mycue66 (2026-11-22, Discord): on the main Search tab you could type and
+get results, but the remote never left the search box. Every TV text field
+sits behind `TvTextFieldGate` ("press OK to type"): OK makes the field
+editable and opens the input connection, and the gate stops "typing" when
+the keyboard reports going away (an inset dropping to 0, Back reaching the
+app, focus leaving, the app going to the background). While it is typing,
+arrows belong to the keyboard, so the field's cursor takes them and
+Search's own Up / Down (`TvNavigationActivator`) stand aside.
+
+Apple TV's keyboard is a full-screen system page, not an overlay:
+flutter-tvos opens it from a hidden proxy text field (engine strings
+`tvosKeyboardPending`, `tvosActivateKeyboard`, `tvosDismissKeyboard`,
+`textFieldDidEndEditing:`; the engine source isn't public). It reports no
+inset, and Menu on it closes it inside UIKit: the app gets no Back and the
+input connection stays open. So none of those signals came, the gate stayed
+"typing", and every Down moved the cursor. The keyboard has the remote to
+itself while it is up (the engine's press recognizers and touch swipes sit
+on the Flutter view, which the full-screen keyboard covers), so on Apple TV
+an arrow that reaches a typing field means the keyboard is gone:
+`_keyboardGone` ends typing in the gate's HardwareKeyboard handler, which
+runs before the focus tree, so the same press is Search's Down to the first
+result row (other screens: the gate's `_move`). OK on the field opens the
+keyboard again. Android is unchanged (Gboard forwards cursor arrows while
+it is up, so an arrow there proves nothing).
+
+Same day, cleverclogs17 (TestFlight 954): Add Playlist's Xtream fields at
+first launch needed Back, then Down. Same cause, plus an ordering detail:
+Add Playlist, the Multiview picker, channel linking and EPG matching move
+between fields from their own HardwareKeyboard handler, registered before
+the gate's, and stand aside while `TvTextFieldGate.isEditing`. So on Apple
+TV `isEditing` is always false (an arrow only arrives once the keyboard is
+gone) and their first Down works. Back: Menu also reaches the app only once
+the keyboard is closed, so the gate's PopScope lets the page go at once on
+Apple TV (it used to end typing first: that was his extra Back).
+
+His "voice search shuts it down immediately, as if it were a pop-up being
+canceled out by the system": VesperTV's Vesper AI panel has no microphone on
+Apple TV (no voice bridge; it opens on "Or type here"), so this is most
+likely the Siri button's dictation into Apple's keyboard. Hypothesis: the
+dictation page sends the app to the background (hidden / paused), and the
+gate ended typing on that, closing the input connection and with it the
+keyboard. On Apple TV the gate now keeps typing through the app leaving the
+screen (the next arrow or Menu ends it). Unconfirmed: `TextGate:` lines in
+Send log (typing, each lifecycle state while typing, typing ended: down /
+focus left / Back) will show it. If dictation still closes the keyboard with
+no `hidden` / `paused` line, it is the engine's keyboard proxy, not the app.
+
+Tests: the five "Apple TV" cases in `test/tv_text_field_gate_test.dart`
+(`TvTextFieldGate.debugFullScreenKeyboard`), all failing with the rule off.
+Not tried on a box yet.
+
 ## App icon and Top Shelf
 
 `assets/icon/gen_tvos_icons.py` (repo root) writes the layered App Icon
@@ -217,7 +270,117 @@ Match frame rate (tvOS 17+, SDR only), 128 MiB player buffer, surround (no passt
 archive signing that keeps entitlements (iCloud, App Group) in the uploaded build. Plan, what was
 built and what is unverified: `dev-notes/apple-tv-parity-plan.md`.
 
+## Match frame rate: movies closed the app (GitHub #20)
+
+TestFlight 968, Apple TV 4K on tvOS 27.3 (GitHub michaelhew66-stack; Mycue66
+reported the same on Discord): every
+movie and episode closed the app, live was fine; VesperTV's Match frame rate
+off = they play. The logs (LOG-34U96Y, LOG-W7DT8Y) stop right after the open,
+no error: the Dart log is written asynchronously and loses its last lines in a
+native crash. Films ask 23.976 Hz, so they are what makes the TV really switch
+(the tester's channels are 59.94 / 60 like the menu). Cause not found (no crash
+report; nothing in our Swift or the video plugin reacts to a mode change).
+
+Since 2026-11-28 (`claude/appletv-catchup`):
+- **Off by default** (`StorageService.getMatchFrameRate`; it was on for Apple
+  TV). A viewer's own choice is kept.
+- `VesperDisplay` passes tvOS's `AVDisplayManagerModeSwitchStart` / `End` to
+  Dart: `DisplayMatch: the TV started / finished switching` lines, and the
+  switch is an `AppLog.step`, so a crash during it reads `LastStep: ... the TV
+  is switching to 23.976 Hz` next session (the ask itself was already a step).
+- `VesperCrashNote`: an uncaught Objective-C exception is written to Caches and
+  printed next session as `NativeCrash:` lines (name, reason, 24 frames).
+  Signals (a bad pointer in the engine or a GL driver) only get the step.
+
+On the test box: tvOS Settings > Video and Audio > Match Content > Match Frame
+Rate on, VesperTV's on, play a 24 fps film. A crash report can come off a
+paired Apple TV without a Mac with pymobiledevice3 (`remote pair`, then the
+crash-report commands through its tunnel; untried here).
+
+## Catch-up round (2026-11-28, `claude/appletv-catchup`)
+
+Owner: "review any Linux Windows or Android bug and features that is missing on
+the TvOS and add it". Two read-only audits of origin/main d32d2d4 (features
+gated off, fixes that went to the Android stack only), then:
+
+- **Back from the Home screen** (`services/apple_tv_comeback.dart`): media_kit
+  pauses players when the app leaves (`mediaKitPausesInBackground` is true on
+  Apple TV) and never plays them again; tvOS cuts the connection too. Live
+  came back as a still picture. Now the full-screen player, the guide's
+  preview and Multiview open live again (`AppleTvComeback:` lines); a movie or
+  a channel the viewer paused stays paused.
+- **Tuliprox streams released by the preview and on close**
+  (`DesktopMiniPlayer.play` / `clear` / `minimize`, `DesktopPlayerScreen`
+  take-over, `dispose`, `_openMultiview`), like Android's
+  `PlaybackService.play` / `stop`: a one-connection account was still busy.
+- **Multiview from the tabs** plays the screen with the sound (else the channel
+  from before) in the guide afterwards, like Android's 27438e0.
+- **Dispatcharr source pick reconnects** after Dispatcharr's delay, holding the
+  channel (`_reconnectAfterServerSwitch`; mpv's buffer kept the old stream
+  playing for half a minute).
+- Stream User-Agent names the device (`desktopDeviceName`: Apple TV, iPhone,
+  Mac, Linux, Windows; was "VesperTV Windows" everywhere).
+- Sports Trak hints in remote words on Apple TV (`_mouseHints`; said "Click ...
+  Esc: stop").
+- Vesper AI: `sources` says it is Android-only on every media_kit device (it
+  answered "No live channel is playing"); the settings tool lists Skip intro and
+  Dispatcharr Sources everywhere and Match frame rate / 50-60 / Catch-up group
+  on Apple TV (`_AiSetting.appleTv`).
+- Settings > Remote hides Remote buttons, the player arrows and Reset on Apple
+  TV (they did nothing there; the touch-surface row stays).
+- Also merged in: the text-field fix 10e5528 (TestFlight 962 only until now)
+  and the Receive keypad layout (`claude/tvos-receive-keypad`, uncommitted
+  until now; `test/transfer_keypad_fits_test.dart`).
+
+### Not on Apple TV yet (from the audits, biggest first)
+
+1. Scrub live back into catch-up on the bar's timeline (Android
+   `_LiveTimeline`, player_controls.dart; the Siri Remote has no Rewind key).
+2. Pause & rewind live without catch-up (Android `Timeshift.java`): mpv could
+   do it with a bigger back buffer + cache dir.
+3. The player's arrow actions and holds (`PlayerArrow`, `opt:<tile>`,
+   `HeldKeySwallow`) in `DesktopPlayerScreen`; then show Settings > Remote's
+   arrow rows again.
+4. Backup-server failover for live (`PlaybackService._retryOnBackupServers`;
+   `DesktopLiveRecovery` reopens the same address only).
+5. Right = last channel / Recall after a relaunch (`_DesktopLiveHistory` is
+   in memory, full screen only; `PlaybackService.recentlyPlayed` has the list).
+6. Sports Trak hold a game > Play in Multiview (`DesktopMultiviewScreen` takes
+   one `initialChannel`).
+7. A frozen-picture watchdog like `LiveFreezeGuard` on mpv properties.
+8. Live buffer tile in the options row; Multiview connections tip; Read
+   replies aloud (AVSpeechSynthesizer); the Tuliprox server recordings list
+   (Recordings is hidden on Apple TV); instant full-screen resume at startup.
+
+## Sideloading (no Mac, no TestFlight review)
+
+Every `tvos-build.yml` run (TestFlight or not) uploads the artifact
+**VesperTV-tvOS-ipa**: the release device build as an unsigned
+`VesperTV-tvOS-<version>-<build>.ipa` (`tools/tvos/package_ipa.sh`). Install it
+from Windows with **atvloadly** (github.com/bitxeno/atvloadly, Windows installer
+on its releases page; it uses Impactor to sign):
+
+1. Apple TV: Settings > Remotes and Devices > Remote App and Devices (pairing
+   mode), same network as the PC.
+2. atvloadly: pair the Apple TV (PIN on the TV), sign in with an Apple ID (2FA
+   once), pick the .ipa, Install.
+3. A paid developer Apple ID = the install lasts a year; a free one = 7 days,
+   atvloadly renews it while the PC is on. A free account can't take the
+   `app.vespertv.player` bundle id (the owner's team has it): use atvloadly's
+   custom bundle id there.
+
+A sideloaded copy may lack iCloud backups, the App Group and Top Shelf (the
+tool's profile decides the entitlements); the player, remote, guide and
+settings are the real thing. Sideloadly lists Apple TV too but says its
+pairing is Mac-only. Download the artifact: run page > Artifacts, or
+`gh run download <run> -n VesperTV-tvOS-ipa`.
+
 ## Test box
 
-Apple TV 4K 2nd gen (2021) or 3rd gen (2022). Not the Apple TV HD
-(4th gen, 2015): 1080p only, no HDR, reportedly no tvOS 27.
+Apple TV 4K 2nd gen (2021) or 3rd gen (2022) run tvOS 27. The owner can also
+use a friend's **Apple TV 4K 1st gen (A1842, 2017, A10X, 3 GB)**: tvOS 27
+dropped it, so it stays on tvOS 26 (our target is tvOS 15; Match frame rate
+needs 17), HDR10 / Dolby Vision, 4K60 max, shipped with the touch-surface Siri
+Remote. Good for the player, remote and speed (the slowest 4K box); it can't
+show tvOS 27-only behaviour. Not the Apple TV HD (4th gen, 2015): 1080p only,
+no HDR, no tvOS 27.

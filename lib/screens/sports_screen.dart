@@ -82,6 +82,10 @@ import '../widgets/desktop_video_status.dart';
 // Android widget tests on a Windows development PC exercise the TV path.
 bool get _desktopSports => usesMediaKitTarget;
 
+/// Hints worded for a mouse and keyboard (Click, Esc): computers only, not
+/// Apple TV's remote (it said "Click ... Esc: stop" there).
+bool get _mouseHints => _desktopSports && !isAppleTv;
+
 /// [games] grouped by league in [leagues]' order (start order kept inside
 /// each league), so a night of NHL + NBA + NFL reads as blocks with a league
 /// divider between them (user request: "each league on its own row" — kept
@@ -5418,12 +5422,12 @@ class _Hero extends StatelessWidget {
         showingOther
             ? touch
                 ? tr('Tap: watch here  ·  Hold: pick the channel')
-                : _desktopSports
+                : _mouseHints
                     ? tr('Click: watch here  ·  Hold: pick the channel')
                     : tr('OK: watch here  ·  Hold: pick the channel')
             : touch
                 ? tr('Tap the game again: full screen  ·  Back: stop')
-                : _desktopSports
+                : _mouseHints
                     ? tr(
                         'Click the game again or Enter: full screen  ·  Esc: stop')
                     : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
@@ -5778,7 +5782,7 @@ class _HoldHint extends StatelessWidget {
                 Icon(Icons.touch_app, size: 11, color: scheme.primary),
                 const SizedBox(width: 4),
                 _KeyHintText(
-                    _desktopSports
+                    _mouseHints
                         ? tr('Click: watch here  ·  Hold: pick the channel')
                         : !context.read<AppPreferences>().isTelevision
                             ? tr('Tap: watch here  ·  Hold: pick the channel')

@@ -13,6 +13,7 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    VesperCrashNote.install()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -24,6 +25,48 @@ import UIKit
     }
     VesperDisplay.register(engineBridge.pluginRegistry)
     VesperTopShelf.register(engineBridge.pluginRegistry)
+    VesperCrashNote.register(engineBridge.pluginRegistry)
+  }
+}
+
+/// An Objective-C exception that ends the app (an AVFoundation call refusing its
+/// arguments, say) is written to Caches before tvOS ends it; the next session's
+/// Send log prints it (`NativeCrash:`, lib/services/app_log.dart). Signals (a bad
+/// pointer in the engine or a driver) never get here: `AppLog.step` names what was
+/// running then (`LastStep:`). GitHub #20: movies closed the app on 968, no trace.
+enum VesperCrashNote {
+  static var file: URL? {
+    FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+      .appendingPathComponent("vespertv_native_crash.txt")
+  }
+
+  static func install() {
+    NSSetUncaughtExceptionHandler { exception in
+      let frames = exception.callStackSymbols.prefix(24).joined(separator: "\n")
+      let note =
+        "\(Date()) \(exception.name.rawValue): \(exception.reason ?? "no reason")\n\(frames)"
+      if let url = VesperCrashNote.file {
+        try? note.write(to: url, atomically: true, encoding: .utf8)
+      }
+    }
+  }
+
+  static func register(_ registry: FlutterPluginRegistry) {
+    guard let registrar = registry.registrar(forPlugin: "VesperCrashNote") else { return }
+    let channel = FlutterMethodChannel(
+      name: "vespertv/crash", binaryMessenger: registrar.messenger())
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "take" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let url = file, let note = try? String(contentsOf: url, encoding: .utf8) else {
+        result(nil)
+        return
+      }
+      try? FileManager.default.removeItem(at: url)
+      result(note)
+    }
   }
 }
 
@@ -129,10 +172,23 @@ final class VesperTopShelf: NSObject, FlutterSceneLifeCycleDelegate {
 /// tvOS 17+. Always SDR (BT.709): mpv tone-maps HDR into the 8-bit Flutter texture, so an
 /// HDR mode would show wrong colours.
 enum VesperDisplay {
+  private static var observers: [NSObjectProtocol] = []
+
   static func register(_ registry: FlutterPluginRegistry) {
     guard let registrar = registry.registrar(forPlugin: "VesperDisplay") else { return }
     let channel = FlutterMethodChannel(
       name: "vespertv/display", binaryMessenger: registrar.messenger())
+    // The TV's own mode switch, for the Send log and `AppLog.step` (GitHub #20:
+    // did the app end while the TV was switching, or after?).
+    let center = NotificationCenter.default
+    observers = [
+      center.addObserver(forName: .AVDisplayManagerModeSwitchStart, object: nil, queue: .main) {
+        _ in channel.invokeMethod("modeSwitch", arguments: "start")
+      },
+      center.addObserver(forName: .AVDisplayManagerModeSwitchEnd, object: nil, queue: .main) {
+        _ in channel.invokeMethod("modeSwitch", arguments: "end")
+      },
+    ]
     channel.setMethodCallHandler { call, result in
       DispatchQueue.main.async {
         switch call.method {

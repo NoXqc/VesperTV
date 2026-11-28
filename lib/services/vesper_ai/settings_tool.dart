@@ -21,6 +21,7 @@ class _AiSetting {
     this.max,
     this.unit = '',
     this.androidOnly = false,
+    this.appleTv = false,
     this.nextStart = false,
     this.shown,
   });
@@ -42,6 +43,10 @@ class _AiSetting {
 
   final bool androidOnly;
 
+  /// An [androidOnly] setting Apple TV has too (its TV home or its player's
+  /// Swift side does it; computers don't).
+  final bool appleTv;
+
   /// Read once at launch: a change applies at the next app start.
   final bool nextStart;
 
@@ -62,11 +67,13 @@ _AiSetting _switch(
         bool Function(VesperToolbox box) read,
         FutureOr<void> Function(VesperToolbox box, bool on) write,
         {bool androidOnly = false,
+        bool appleTv = false,
         bool nextStart = false}) =>
     _AiSetting(key, section, label, about,
         read: read,
         write: (box, value) async => write(box, value as bool),
         androidOnly: androidOnly,
+        appleTv: appleTv,
         nextStart: nextStart);
 
 /// Live buffer choices: (key, ms, name in Settings).
@@ -99,8 +106,7 @@ final List<_AiSetting> _aiSettings = [
       'Skip intro',
       'Skip intro / recap / credits buttons on episodes.',
       (b) => b.storage.getSkipSegments(),
-      (b, on) => b.storage.setSkipSegments(on),
-      androidOnly: true),
+      (b, on) => b.storage.setSkipSegments(on)),
   _AiSetting('up_next', 'playback', 'Up Next',
       'When the next episode starts by itself.',
       choices: const [
@@ -186,7 +192,8 @@ final List<_AiSetting> _aiSettings = [
       'Switches the TV to the video\'s frame rate.',
       (b) => b.prefs.matchFrameRate,
       (b, on) => b.prefs.setMatchFrameRate(on),
-      androidOnly: true),
+      androidOnly: true,
+      appleTv: true),
   _switch(
       'match_50_60_only',
       'playback',
@@ -194,7 +201,8 @@ final List<_AiSetting> _aiSettings = [
       'With match_frame_rate: never 24 Hz.',
       (b) => b.prefs.match5060Only,
       (b, on) => b.prefs.setMatch5060Only(on),
-      androidOnly: true),
+      androidOnly: true,
+      appleTv: true),
   _switch(
       'match_resolution',
       'playback',
@@ -332,8 +340,7 @@ final List<_AiSetting> _aiSettings = [
       ],
       read: (b) => Dispatcharr.instance.sources.name,
       write: (b, v) => Dispatcharr.instance
-          .setSources(DispatcharrSources.parse(v as String)),
-      androidOnly: true),
+          .setSources(DispatcharrSources.parse(v as String))),
   _switch(
       'catchup_keep_playing',
       'playback',
@@ -647,7 +654,8 @@ final List<_AiSetting> _aiSettings = [
       'Hides the TV tab\'s Catch-up group.',
       (b) => b.prefs.hideCatchupGroup,
       (b, on) => b.prefs.setHideCatchupGroup(on),
-      androidOnly: true),
+      androidOnly: true,
+      appleTv: true),
   _switch(
       'recently_added_group',
       'tabs',
@@ -827,7 +835,9 @@ String _subtitleSizeKey(double scale) => _subtitleScales.entries
 /// The settings this device has (Android-only ones left out on a computer).
 List<_AiSetting> get _visibleSettings => [
       for (final s in _aiSettings)
-        if ((!s.androidOnly || !usesMediaKitTarget) &&
+        if ((!s.androidOnly ||
+                !usesMediaKitTarget ||
+                (s.appleTv && isAppleTv)) &&
             !(appStoreBuild && s.key == 'betting_odds'))
           s
     ];

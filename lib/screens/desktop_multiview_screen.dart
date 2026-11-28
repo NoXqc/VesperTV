@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../utils/desktop_platform.dart';
 import '../models/channel.dart';
 import '../services/app_preferences.dart';
+import '../services/apple_tv_comeback.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
@@ -157,6 +158,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   @override
   void initState() {
     super.initState();
+    _comeback = AppleTvComeback.listen(_onBackOnScreen);
     final storage = context.read<StorageService>();
     _layout = storage.getMultiviewMain()
         ? _MultiviewLayout.main
@@ -605,8 +607,22 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     setState(() => _layout = layout);
   }
 
+  /// Apple TV: back from the Home screen every screen opens again at live
+  /// (media_kit paused them, tvOS cut their connections: [AppleTvComeback]).
+  AppLifecycleListener? _comeback;
+
+  void _onBackOnScreen(Duration away) {
+    if (!mounted) return;
+    debugPrint('AppleTvComeback: Multiview opened again after '
+        '${away.inSeconds} s away');
+    for (var i = 0; i < _cells.length; i++) {
+      _reload(i);
+    }
+  }
+
   @override
   void dispose() {
+    _comeback?.dispose();
     _headerTimer?.cancel();
     _headerScope.dispose();
     _headerFirst.dispose();

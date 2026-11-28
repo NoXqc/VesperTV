@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
+import 'apple_tv_comeback.dart';
 import 'apple_tv_display.dart';
 import 'desktop_catchup.dart';
 import 'epg_service.dart';
@@ -12,6 +13,7 @@ import 'playlist_manager.dart';
 import 'storage_service.dart';
 import 'desktop_live_recovery.dart';
 import 'desktop_stream_setup.dart';
+import 'tuliprox.dart';
 
 /// Windows-only holder for a live channel's `Player`/`VideoController`
 /// after `DesktopPlayerScreen`'s back button minimizes it — the Windows
@@ -126,22 +128,62 @@ class DesktopMiniPlayer {
   /// click goes fullscreen" path. Reuses the current `Player` when there is
   /// one (just opens the new stream on it) so switching channels in the
   /// preview box never stacks up decoders.
-  void play(Channel ch) {
-    _catchup?.dispose();
-    _catchup = null;
-    final player = _ensurePlayer();
-    // Waits, retries and copies: DesktopLiveRecovery (it stays with the
-    // player when full screen takes it over).
+  /// Apple TV: back from the Home screen, a live preview opens again at
+  /// live (media_kit paused it, tvOS cut its connection: [AppleTvComeback]).
+  /// Made with the first session (the app's bindings exist by then).
+  AppLifecycleListener? _comeback;
+  bool _comebackSet = false;
+
+  void _listenForComeback() {
+    if (_comebackSet) return;
+    _comebackSet = true;
+    _comeback ??= AppleTvComeback.listen(_onBackOnScreen);
+  }
+
+  void _onBackOnScreen(Duration away) {
+    final ch = channel.value;
+    final player = _player;
+    if (ch == null || player == null || !ch.isLive || _catchup != null) return;
+    debugPrint('AppleTvComeback: preview ${ch.name} opened again after '
+        '${away.inSeconds} s away');
     unawaited(openDesktopStream(player, ch).then((_) {
       if (_player == player && channel.value?.id == ch.id) {
         DesktopLiveRecovery.of(player).watch(ch);
       }
     }));
+  }
+
+  void play(Channel ch) {
+    _listenForComeback();
+    _catchup?.dispose();
+    _catchup = null;
+    final player = _ensurePlayer();
+    final leaving = channel.value;
     channel.value = ch;
+    bool current() => _player == player && channel.value?.id == ch.id;
+    unawaited(() async {
+      // Leaving a Tuliprox stream ends it on the server first, so a
+      // one-connection account is free for the next channel, like
+      // Android's PlaybackService.play (the guide's preview zapped without
+      // it on computers / iPhone / Apple TV). At most 1.5 s.
+      if (leaving != null && leaving.url != ch.url) {
+        await Tuliprox.instance
+            .release(leaving)
+            .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+        if (!current()) return;
+      }
+      // Waits, retries and copies: DesktopLiveRecovery (it stays with the
+      // player when full screen takes it over).
+      await openDesktopStream(player, ch);
+      if (!current()) return;
+      DesktopLiveRecovery.of(player).watch(ch);
+      if (ch.isLive) Tuliprox.instance.noteStarted(ch);
+    }());
   }
 
   void minimize(Channel ch, Player player, VideoController controller,
       {DesktopCatchup? catchup}) {
+    _listenForComeback();
     _completedSub?.cancel();
     _completedSub = null;
     if (_catchup != catchup) _catchup?.dispose();
@@ -153,6 +195,10 @@ class DesktopMiniPlayer {
     // decoding in the background forever with nothing left to stop it.
     if (_player != null && _player != player) {
       DesktopLiveRecovery.disposePlayer(_player);
+      final old = channel.value;
+      if (old != null && old.url != ch.url) {
+        unawaited(Tuliprox.instance.release(old));
+      }
     }
     _player = player;
     _controller = controller;
@@ -196,6 +242,9 @@ class DesktopMiniPlayer {
   /// audio in the background forever, with the resume pill still pointed
   /// at it even though a different channel was now also playing on top.
   void clear() {
+    // Its Tuliprox stream ends on the server now ([Tuliprox.release]).
+    final leaving = channel.value;
+    if (leaving != null) unawaited(Tuliprox.instance.release(leaving));
     _completedSub?.cancel();
     _completedSub = null;
     _catchup?.dispose();

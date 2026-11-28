@@ -1832,64 +1832,70 @@ class SettingsCatalog {
               await _storage.setAppleTvTouch(v);
               refresh();
             }),
-      SettingsLink(
-          id: 'remote_buttons',
-          floating: true,
-          icon: Icons.settings_remote_outlined,
-          title: tr('Remote buttons'),
-          subtitle: tr('Give spare buttons a job'),
-          help: tr(
-              'Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.'),
-          value: count == 0 ? null : '$count',
-          page: (_) => const RemoteButtonsScreen()),
-      for (final arrow in PlayerArrow.values) ...[
-        SettingsChoice(
-            id: 'player_arrow_${arrow.name}',
-            icon: switch (arrow) {
-              PlayerArrow.left => Icons.arrow_back,
-              PlayerArrow.right => Icons.arrow_forward,
-              PlayerArrow.up => Icons.arrow_upward,
-              PlayerArrow.down => Icons.arrow_downward,
-            },
-            title: tr(switch (arrow) {
-              PlayerArrow.left => 'Left in the player',
-              PlayerArrow.right => 'Right in the player',
-              PlayerArrow.up => 'Up in the player',
-              PlayerArrow.down => 'Down in the player',
-            }),
+      // Apple TV: its player (DesktopPlayerScreen) has the default arrows
+      // and no learned buttons yet: these rows did nothing there
+      // (dev-notes/apple-tv.md, "Not on Apple TV yet").
+      if (!isAppleTv)
+        SettingsLink(
+            id: 'remote_buttons',
+            floating: true,
+            icon: Icons.settings_remote_outlined,
+            title: tr('Remote buttons'),
+            subtitle: tr('Give spare buttons a job'),
             help: tr(
-                'In the full-screen player on a live channel, with nothing on screen.'),
-            options: [
-              for (final (id, _) in PlayerArrow.actions)
-                SettingsOption(id, playerArrowLabel(id),
-                    subtitle: id == arrow.defaultAction ? tr('Default') : null),
-            ],
-            selected: buttons.arrowAction(arrow),
-            onPick: (v) => _saveViewer(() => buttons.setArrow(arrow, v))),
-        // Owner, 2026-11-21: Left = guide, hold Left = side drawer.
-        SettingsChoice(
-            id: 'player_arrow_${arrow.holdKey}',
-            icon: Icons.touch_app_outlined,
-            title: tr(switch (arrow) {
-              PlayerArrow.left => 'Hold Left in the player',
-              PlayerArrow.right => 'Hold Right in the player',
-              PlayerArrow.up => 'Hold Up in the player',
-              PlayerArrow.down => 'Hold Down in the player',
-            }),
-            help: tr(
-                'Held about half a second. With one set, the normal press waits until you let go.'),
-            options: [
-              SettingsOption(PlayerArrow.defaultHold,
-                  playerArrowLabel(PlayerArrow.defaultHold),
-                  subtitle: tr('Default')),
-              for (final (id, _) in PlayerArrow.actions)
-                if (id != PlayerArrow.defaultHold)
-                  SettingsOption(id, playerArrowLabel(id)),
-            ],
-            selected: buttons.arrowHold(arrow),
-            onPick: (v) => _saveViewer(() => buttons.setArrowHold(arrow, v))),
-      ],
-      if (buttons.isCustomised)
+                'Press a button on your remote, then choose what a short press and a hold do: open Favourites or the guide, change the audio track, record... For this profile on this device.'),
+            value: count == 0 ? null : '$count',
+            page: (_) => const RemoteButtonsScreen()),
+      if (!isAppleTv)
+        for (final arrow in PlayerArrow.values) ...[
+          SettingsChoice(
+              id: 'player_arrow_${arrow.name}',
+              icon: switch (arrow) {
+                PlayerArrow.left => Icons.arrow_back,
+                PlayerArrow.right => Icons.arrow_forward,
+                PlayerArrow.up => Icons.arrow_upward,
+                PlayerArrow.down => Icons.arrow_downward,
+              },
+              title: tr(switch (arrow) {
+                PlayerArrow.left => 'Left in the player',
+                PlayerArrow.right => 'Right in the player',
+                PlayerArrow.up => 'Up in the player',
+                PlayerArrow.down => 'Down in the player',
+              }),
+              help: tr(
+                  'In the full-screen player on a live channel, with nothing on screen.'),
+              options: [
+                for (final (id, _) in PlayerArrow.actions)
+                  SettingsOption(id, playerArrowLabel(id),
+                      subtitle:
+                          id == arrow.defaultAction ? tr('Default') : null),
+              ],
+              selected: buttons.arrowAction(arrow),
+              onPick: (v) => _saveViewer(() => buttons.setArrow(arrow, v))),
+          // Owner, 2026-11-21: Left = guide, hold Left = side drawer.
+          SettingsChoice(
+              id: 'player_arrow_${arrow.holdKey}',
+              icon: Icons.touch_app_outlined,
+              title: tr(switch (arrow) {
+                PlayerArrow.left => 'Hold Left in the player',
+                PlayerArrow.right => 'Hold Right in the player',
+                PlayerArrow.up => 'Hold Up in the player',
+                PlayerArrow.down => 'Hold Down in the player',
+              }),
+              help: tr(
+                  'Held about half a second. With one set, the normal press waits until you let go.'),
+              options: [
+                SettingsOption(PlayerArrow.defaultHold,
+                    playerArrowLabel(PlayerArrow.defaultHold),
+                    subtitle: tr('Default')),
+                for (final (id, _) in PlayerArrow.actions)
+                  if (id != PlayerArrow.defaultHold)
+                    SettingsOption(id, playerArrowLabel(id)),
+              ],
+              selected: buttons.arrowHold(arrow),
+              onPick: (v) => _saveViewer(() => buttons.setArrowHold(arrow, v))),
+        ],
+      if (buttons.isCustomised && !isAppleTv)
         SettingsAction(
             id: 'remote_reset',
             icon: Icons.restart_alt,

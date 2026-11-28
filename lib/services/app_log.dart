@@ -5,11 +5,13 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/playlist_profile.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 import 'content_updates.dart';
 import 'device_defaults.dart';
 import 'device_memory_service.dart';
@@ -100,6 +102,18 @@ class AppLog {
       final last = await takeLastStep(step);
       if (last != null) {
         add('LastStep: the previous session ended during: $last');
+      }
+      // Apple TV: an Objective-C exception that ended the previous session
+      // (Swift `VesperCrashNote`, tvos/Runner/AppDelegate.swift).
+      if (isAppleTv) {
+        final note = await const MethodChannel('vespertv/crash')
+            .invokeMethod<String>('take')
+            .catchError((Object _) => null);
+        if (note != null && note.trim().isNotEmpty) {
+          for (final line in note.trim().split('\n').take(25)) {
+            add('NativeCrash: $line');
+          }
+        }
       }
     } catch (_) {
       _sink = null;

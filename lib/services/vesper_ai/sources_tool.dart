@@ -34,8 +34,13 @@ final _sourcesTool = VesperTool(
     'required': ['action'],
   },
   run: (box, args, caller) async {
-    if (isDesktop) {
-      throw VesperToolError('Sources is in the Android TV player only.');
+    // Computers, iPhone and Apple TV play in DesktopPlayerScreen, which
+    // PlaybackService doesn't know about: say so instead of "No live
+    // channel is playing" (isDesktop missed iPhone / Apple TV).
+    if (usesMediaKit) {
+      throw VesperToolError(
+          'Sources from an AI app work on Android TV boxes only. On this '
+          'device, open Sources in the player.');
     }
     final playing = box.playback.currentChannel;
     if (playing == null || !playing.isLive) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +120,182 @@ void main() {
     expect(below.hasFocus, isTrue);
     expect(controller.selection.baseOffset, 3);
     expect(textField().readOnly, isTrue);
+  });
+
+  // Apple TV's keyboard is a full-screen page with the remote to itself;
+  // Menu closes it without telling the app (no inset, no Back), so the
+  // first arrow the app sees comes after it closed (Mycue66, TestFlight 954:
+  // Search results unreachable, the remote stuck in the search box).
+  testWidgets('Apple TV: an arrow after the keyboard closed leaves the field',
+      (tester) async {
+    TvTextFieldGate.debugFullScreenKeyboard = true;
+    addTearDown(() => TvTextFieldGate.debugFullScreenKeyboard = null);
+    await pump(tester, tv: true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select); // opens typing
+    await tester.pumpAndSettle();
+    TextField textField() => tester.widget<TextField>(find.byType(TextField));
+    expect(textField().readOnly, isFalse);
+    controller.value = const TextEditingValue(
+        text: 'nba finals', selection: TextSelection.collapsed(offset: 10));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(below.hasFocus, isTrue);
+    expect(textField().readOnly, isTrue);
+    expect(TvTextFieldGate.isEditing(field), isFalse);
+    expect(controller.text, 'nba finals');
+    // OK on the field opens the keyboard again.
+    field.requestFocus();
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(textField().readOnly, isFalse);
+  });
+
+  testWidgets(
+      "Apple TV: the screen's own Down (Search's rows) wins on the first press",
+      (tester) async {
+    TvTextFieldGate.debugFullScreenKeyboard = true;
+    addTearDown(() => TvTextFieldGate.debugFullScreenKeyboard = null);
+    final search = FocusNode(debugLabel: 'search');
+    final firstResult = FocusNode(debugLabel: 'result 0');
+    final other = FocusNode(debugLabel: 'nearest below');
+    addTearDown(search.dispose);
+    addTearDown(firstResult.dispose);
+    addTearDown(other.dispose);
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final prefs = AppPreferences(storage)..isTelevision = true;
+    // Like SearchScreen: Up / Down shortcuts around the whole page pick the
+    // row themselves (the first result row, not the nearest widget below).
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+      value: prefs,
+      child: MaterialApp(
+        home: CallbackShortcuts(
+          bindings: {
+            const TvNavigationActivator(LogicalKeyboardKey.arrowDown): () =>
+                firstResult.requestFocus(),
+          },
+          child: Scaffold(
+            body: Column(children: [
+              TvTextFieldGate(
+                focusNode: search,
+                builder: (context, readOnly) => TextField(
+                    focusNode: search, readOnly: readOnly, autofocus: true),
+              ),
+              TextButton(
+                  focusNode: other, onPressed: () {}, child: const Text('B')),
+              TextButton(
+                  focusNode: firstResult,
+                  onPressed: () {},
+                  child: const Text('Result')),
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(search.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+    tester.testTextInput.enterText('news');
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(firstResult.hasFocus, isTrue);
+    expect(TvTextFieldGate.isEditing(search), isFalse);
+  });
+
+  // Add Playlist (and the Multiview picker, channel linking, EPG matching)
+  // move between fields from a HardwareKeyboard handler registered before
+  // the gate's own, and stand aside while a field is editing
+  // (cleverclogs17's Xtream fields needed Menu before Down).
+  testWidgets("Apple TV: a screen's earlier key handler takes the first Down",
+      (tester) async {
+    TvTextFieldGate.debugFullScreenKeyboard = true;
+    addTearDown(() => TvTextFieldGate.debugFullScreenKeyboard = null);
+    bool handler(KeyEvent e) {
+      if (e is! KeyDownEvent ||
+          e.logicalKey != LogicalKeyboardKey.arrowDown ||
+          TvTextFieldGate.isEditing(FocusManager.instance.primaryFocus)) {
+        return false;
+      }
+      above.requestFocus(); // the screen's own pick, not the nearest below
+      return true;
+    }
+
+    HardwareKeyboard.instance.addHandler(handler); // before the gate's
+    addTearDown(() => HardwareKeyboard.instance.removeHandler(handler));
+    await pump(tester, tv: true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(above.hasFocus, isTrue);
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
+  });
+
+  testWidgets('Apple TV: Menu after the keyboard closed goes back at once',
+      (tester) async {
+    TvTextFieldGate.debugFullScreenKeyboard = true;
+    addTearDown(() => TvTextFieldGate.debugFullScreenKeyboard = null);
+    await pump(tester, tv: true);
+    final page = FocusNode(debugLabel: 'page field');
+    addTearDown(page.dispose);
+    final nav = tester.state<NavigatorState>(find.byType(Navigator));
+    unawaited(nav.push(MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        body: TvTextFieldGate(
+          focusNode: page,
+          builder: (context, readOnly) =>
+              TextField(focusNode: page, readOnly: readOnly, autofocus: true),
+        ),
+      ),
+    )));
+    await tester.pumpAndSettle();
+    expect(page.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(TvTextFieldGate.isEditing(page), isFalse); // never, on Apple TV
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+    expect(find.byType(TextField, skipOffstage: false), findsNWidgets(2));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    // One press: the page is gone (it used to end typing first).
+    expect(find.byType(TextField, skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('Apple TV: the app leaving the screen keeps typing (dictation)',
+      (tester) async {
+    TvTextFieldGate.debugFullScreenKeyboard = true;
+    addTearDown(() => TvTextFieldGate.debugFullScreenKeyboard = null);
+    await pump(tester, tv: true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pump();
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+    for (final state in [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(below.hasFocus, isTrue);
   });
 
   testWidgets('TV: inactive IME ownership preserves editing; Home ends it',

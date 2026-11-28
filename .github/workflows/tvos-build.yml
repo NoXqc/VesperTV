@@ -14,7 +14,10 @@
 # - Player smoke test: lib/tvos_player_smoke.dart plays an HLS, a raw .ts and
 #   an MKV sample through media_kit on the simulator (screenshots + log).
 # - Compiles a release (AOT) device build without signing, to catch what
-#   only breaks there. Not installable.
+#   only breaks there. That build also comes back as an unsigned .ipa (the
+#   "VesperTV-tvOS-ipa" artifact, both kinds of run) for sideloading with
+#   atvloadly / Sideloadly, which sign it with an Apple ID for one Apple TV
+#   (tools/tvos/package_ipa.sh, dev-notes/apple-tv.md "Sideloading").
 # - By hand with "testflight" ticked: instead of the simulator steps, a signed
 #   release archive uploaded to App Store Connect, like the iPhone's
 #   (ios-build.yml): same four secrets, Xcode signs through the API key.
@@ -292,6 +295,21 @@ jobs:
       - name: Remove the signing keychain
         if: ${{ always() && inputs.testflight }}
         run: security delete-keychain "$RUNNER_TEMP/vesper-signing.keychain-db" 2>/dev/null || true
+
+      # The release build of either path (the compile check, or the one
+      # staged before the TestFlight archive) as an .ipa to sideload.
+      - name: Package the release build as an .ipa (sideloading)
+        if: always()
+        run: bash tools/tvos/package_ipa.sh out-ipa
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VesperTV-tvOS-ipa
+          path: out-ipa/*.ipa
+          if-no-files-found: ignore
+          retention-days: 30
+          compression-level: 0
 
       - uses: actions/upload-artifact@v4
         if: always()

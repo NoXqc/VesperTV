@@ -754,10 +754,20 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
           // takes focus itself (it could swallow it when the keypad goes).
           canRequestFocus: false,
           onKeyEvent: _onKey,
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: _received != null ? _summary(context) : _entry(context),
+          child: LayoutBuilder(
+            builder: (context, box) => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: _received != null
+                    ? _summary(context)
+                    // A TV screen (960x540; Apple TV less its safe area) is
+                    // too short for the code over the keypad: the Back / 0 /
+                    // OK row was cut off (Apple TV photo, 2026-11-22; an
+                    // Android box had to scroll). Wide and short: side by side.
+                    : box.maxWidth >= 720 && box.maxHeight < 600
+                        ? _entrySideBySide(context)
+                        : _entry(context),
+              ),
             ),
           ),
         ),
@@ -765,7 +775,34 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
     );
   }
 
-  Widget _entry(BuildContext context) {
+  Widget _entry(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ..._codeInfo(context),
+          const SizedBox(height: 8),
+          ..._keypad(),
+        ],
+      );
+
+  /// The code and its notes on the left, the keypad on the right.
+  Widget _entrySideBySide(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _codeInfo(context),
+              ),
+            ),
+          ),
+          const SizedBox(width: 40),
+          Column(mainAxisSize: MainAxisSize.min, children: _keypad()),
+        ],
+      );
+
+  List<Widget> _codeInfo(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // 16 slots (4-4-4-4) — the internet code is the main one; a 9-digit
     // Wi-Fi code just fills part of it. Address entry (Wi-Fi only) shows the
@@ -779,22 +816,24 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
           '${shown.substring(0, 3)} ${shown.substring(3, 6)} ${shown.substring(6)}';
     }
     final address = _address;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-            address == null
-                ? tr('Enter the code shown on the other device')
-                : tr(
-                    'Enter the address shown under the code on the other device (This device: …)'),
+    return [
+      Text(
+          address == null
+              ? tr('Enter the code shown on the other device')
+              : tr(
+                  'Enter the address shown under the code on the other device (This device: …)'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70, fontSize: 16)),
+      if (address == null)
+        Text(tr('9 digits on the same Wi-Fi, 16 digits over the internet'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 16)),
-        if (address == null)
-          Text(tr('9 digits on the same Wi-Fi, 16 digits over the internet'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13)),
-        const SizedBox(height: 16),
-        Text(
+            style: const TextStyle(color: Colors.white54, fontSize: 13)),
+      const SizedBox(height: 16),
+      // Shrinks rather than wraps when the column is narrow (the 16-digit
+      // code beside the keypad on Apple TV).
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
           address == null ? codeText : (address.isEmpty ? '_' : address),
           style: TextStyle(
               color: scheme.primary,
@@ -802,25 +841,29 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
               fontWeight: FontWeight.w800,
               letterSpacing: 4),
         ),
-        if (address != null)
-          Text(tr('Code: {code}', {'code': codeText}),
-              style: const TextStyle(color: Colors.white54, fontSize: 13)),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 40,
-          child: _busy
-              ? const Center(
-                  child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2)))
-              : _error == null
-                  ? null
-                  : Text(_error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: scheme.error, fontSize: 14)),
-        ),
-        const SizedBox(height: 8),
+      ),
+      if (address != null)
+        Text(tr('Code: {code}', {'code': codeText}),
+            style: const TextStyle(color: Colors.white54, fontSize: 13)),
+      const SizedBox(height: 8),
+      SizedBox(
+        height: 40,
+        child: _busy
+            ? const Center(
+                child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2)))
+            : _error == null
+                ? null
+                : Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: scheme.error, fontSize: 14)),
+      ),
+    ];
+  }
+
+  List<Widget> _keypad() => [
         for (final (r, row) in _keys.indexed)
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -847,9 +890,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
             onPressed: _startAddressEntry,
           ),
         ],
-      ],
-    );
-  }
+      ];
 
   Widget _summary(BuildContext context) {
     final values = _received!;

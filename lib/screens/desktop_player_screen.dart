@@ -26,6 +26,7 @@ import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/app_log.dart';
+import '../services/apple_tv_comeback.dart';
 import '../services/apple_tv_display.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
@@ -714,7 +715,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         if (picked != liveSourceAdd) {
           final note = await playPickedLiveSource(
               playing, sources[picked], _playLiveSource,
-              playChannel: (c) => _switchTo(c));
+              playChannel: (c) => _switchTo(c),
+              reconnect: _reconnectAfterServerSwitch);
           if (note != null && mounted) TopNotice.show(note);
           return;
         }
@@ -786,9 +788,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   bool _progressReady = false;
   int _openGeneration = 0;
 
-  /// The live channel last opened here: a channel change ends its Tuliprox
-  /// stream on the server first ([Tuliprox.release]). Not on close: the
-  /// mini player may carry the stream on.
+  /// The live channel last opened here (or taken from the guide's preview):
+  /// a channel change, Multiview or a close that doesn't hand it to the
+  /// mini player ends its Tuliprox stream on the server ([Tuliprox.release]).
   Channel? _tuliproxOpened;
 
   bool get _isLive => _currentChannel.isLive;
@@ -841,6 +843,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     WatchGameOffer.current.addListener(_onWatchOfferChanged);
     Tuliprox.instance.fallbackNotice.addListener(_onTuliproxFallback);
     Tuliprox.instance.eventNotice.addListener(_onTuliproxEvent);
+    _comeback = AppleTvComeback.listen(_onBackOnScreen);
     _armWatchTimer();
     _progress = DesktopVodProgress(context.read<StorageService>());
     _history = context.read<PlaybackService>();
@@ -859,6 +862,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         DesktopLiveRecovery.of(_player).stop();
       } else {
         DesktopLiveRecovery.of(_player).watch(widget.channel);
+        // The preview started it ([DesktopMiniPlayer.play] noted it): a zap
+        // from here ends it on the server like one opened here.
+        if (widget.channel.isLive) _tuliproxOpened = widget.channel;
       }
     } else {
       _player = newDesktopPlayer(bigCache: true);
@@ -1414,6 +1420,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    _comeback?.dispose();
     Tuliprox.instance.fallbackNotice.removeListener(_onTuliproxFallback);
     Tuliprox.instance.eventNotice.removeListener(_onTuliproxEvent);
     _touchHide?.cancel();
@@ -1455,6 +1462,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.disposePlayer(_player);
+    // Closed without the mini player taking it (Stop, a movie, Back from an
+    // error): its Tuliprox stream ends on the server now, like Android's
+    // PlaybackService.stop.
+    final opened = _tuliproxOpened;
+    if (!_handedOffToMiniPlayer && opened != null) {
+      unawaited(Tuliprox.instance.release(opened));
+    }
     // Apple TV: nothing plays on: the TV's own mode back (the preview
     // that takes a live channel keeps the stream's mode).
     if (!_handedOffToMiniPlayer) AppleTvDisplayMatch.reset();
@@ -1549,6 +1563,66 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         .catchError((Object _) => false));
   }
 
+  /// Apple TV: back from the Home screen ([AppleTvComeback]). media_kit
+  /// paused the player and tvOS cut its connection: a live channel opens
+  /// again at live. Not a channel the viewer paused, catch-up, PiP or a
+  /// movie (it waits, paused, for Play).
+  AppLifecycleListener? _comeback;
+
+  void _onBackOnScreen(Duration away) {
+    if (!mounted || !_isLive || _inCatchup || _inPip || _pipStarting) return;
+    if (_livePausedAt != null) return;
+    debugPrint('AppleTvComeback: ${_currentChannel.name} opened again after '
+        '${away.inSeconds} s away');
+    _reload();
+  }
+
+  int _serverSwitchGen = 0;
+
+  /// Dispatcharr switched the stream on the open connection (an admin's
+  /// Sources pick): the new stream only shows once mpv's buffer of the old
+  /// one has played out (128 MiB on Apple TV, 256 MiB on computers; Android
+  /// waited 29-42 s per pick), so after Dispatcharr's delay the channel
+  /// opens again, held so Dispatcharr keeps the switch. Android:
+  /// `PlaybackService.reconnectAfterServerSwitch`.
+  Future<void> _reconnectAfterServerSwitch(
+      Duration after, String name, ServerHold hold) async {
+    final gen = ++_serverSwitchGen;
+    final ch = _currentChannel;
+    if (!ch.isLive || _inCatchup) return;
+    final opened = _openGeneration;
+    bool stillOn() =>
+        mounted &&
+        gen == _serverSwitchGen &&
+        opened == _openGeneration &&
+        _currentChannel.id == ch.id &&
+        _currentChannel.url == ch.url &&
+        !_inCatchup &&
+        _livePausedAt == null;
+    debugPrint('SourceSwitch: Dispatcharr switched to $name, reconnecting in '
+        '${after.inSeconds} s');
+    await Future<void>.delayed(after);
+    if (!stillOn()) {
+      debugPrint('SourceSwitch: channel changed or paused, no reconnect');
+      return;
+    }
+    final release = await hold(ch);
+    if (release == null) {
+      debugPrint('SourceSwitch: the channel could not be held, no reconnect');
+      return;
+    }
+    try {
+      if (!stillOn()) return;
+      await openDesktopStream(_player, ch);
+      if (stillOn()) DesktopLiveRecovery.of(_player).watch(ch);
+      debugPrint('SourceSwitch: reconnected (same player)');
+    } catch (e) {
+      debugPrint('SourceSwitch: reconnect failed ($e)');
+    } finally {
+      await release();
+    }
+  }
+
   /// Manual reconnect for a stalled live stream — this screen has none of
   /// `PlaybackService`'s automatic backup-server retry, so a simple
   /// re-open is the only recovery available.
@@ -1578,6 +1652,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     ++_openGeneration;
     DesktopLiveRecovery.of(_player).stop();
     await _player.stop();
+    // Multiview's first screen opens this channel again: on a Tuliprox
+    // one-connection account the old stream must be gone first.
+    final opened = _tuliproxOpened;
+    _tuliproxOpened = null;
+    if (opened != null) {
+      await Tuliprox.instance
+          .release(opened)
+          .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+    }
     if (!mounted) return;
     final back = await Navigator.of(context).push<Channel>(MaterialPageRoute(
         builder: (_) => DesktopMultiviewScreen(initialChannel: channel)));

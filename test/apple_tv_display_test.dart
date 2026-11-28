@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/services/app_log.dart';
 import 'package:nox_iptv/services/apple_tv_display.dart';
 
 /// mpv properties that change as the "stream" plays.
@@ -156,6 +160,42 @@ void main() {
               openWait: const Duration(seconds: 1),
               measureWait: const Duration(milliseconds: 80)),
           isNull);
+    });
+  });
+
+  group('the TV\'s mode switch (GitHub #20)', () {
+    late Directory dir;
+    late File stepFile;
+    final printed = <String>[];
+    final realPrint = debugPrint;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('vesper_step');
+      stepFile = File('${dir.path}/vespertv_step.txt');
+      AppLog.stepFileForTest = stepFile;
+      printed.clear();
+      debugPrint = (String? m, {int? wrapWidth}) => printed.add(m ?? '');
+    });
+    tearDown(() {
+      debugPrint = realPrint;
+      AppLog.stepFileForTest = null;
+      dir.deleteSync(recursive: true);
+    });
+
+    test('a switch is a step until it ends, with a log line each way', () {
+      AppleTvDisplayMatch.onModeSwitch(true);
+      expect(stepFile.readAsStringSync(), contains('the TV is switching to'));
+      AppleTvDisplayMatch.onModeSwitch(false);
+      expect(stepFile.existsSync(), isFalse);
+      expect(
+          printed.first, startsWith('DisplayMatch: the TV started switching'));
+      expect(printed.last,
+          startsWith('DisplayMatch: the TV finished switching after'));
+    });
+
+    test('a crash during the switch leaves it for the next session', () async {
+      AppleTvDisplayMatch.onModeSwitch(true);
+      expect(await AppLog.takeLastStep(stepFile), contains('switching'));
     });
   });
 }

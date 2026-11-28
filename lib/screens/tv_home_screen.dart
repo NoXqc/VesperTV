@@ -5606,9 +5606,25 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// Multiview from the tabs column or the phone's gear menu.
   void _openMultiview() {
     if (usesMediaKit) {
-      DesktopMiniPlayer.instance.clear();
-      Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const DesktopMultiviewScreen()));
+      // Back from Multiview the guide plays the screen that had the sound
+      // (DesktopMultiviewScreen._leave pops it), else the channel from
+      // before, like Android below (Apple TV / computers played nothing).
+      final mini = DesktopMiniPlayer.instance;
+      final before = mini.channel.value;
+      mini.clear();
+      unawaited(Navigator.of(context)
+          .push<Object?>(
+              MaterialPageRoute(builder: (_) => const DesktopMultiviewScreen()))
+          .then((back) {
+        if (!mounted) return;
+        final channel = back is Channel && back.isLive
+            ? back
+            : (before != null && before.isLive ? before : null);
+        if (channel == null) return;
+        _parkedDesktopChannel = channel;
+        // Elsewhere it waits for the TV tab ([_onTabChanged]).
+        if (_tab == 'TV') _resumeParkedDesktop();
+      }));
       return;
     }
     // PlaybackService's own background-kept-alive live channel

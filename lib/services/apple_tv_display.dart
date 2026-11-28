@@ -45,11 +45,50 @@ class AppleTvDisplayMatch {
   static bool enabled(StorageService storage) =>
       isAppleTv && storage.getMatchFrameRate();
 
+  static bool _listening = false;
+  static int? _switchStep;
+  static DateTime? _switchStarted;
+
+  /// tvOS's own mode switch (Swift `AVDisplayManagerModeSwitchStart` /
+  /// `End`): a Send-log line each, and the switch is an [AppLog.step], so a
+  /// crash during it is named next session (GitHub #20: the app ended
+  /// around the switch on 968, nothing said whether during or after).
+  static void _listen() {
+    if (_listening) return;
+    _listening = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method != 'modeSwitch') return null;
+      onModeSwitch(call.arguments == 'start');
+      return null;
+    });
+  }
+
+  @visibleForTesting
+  static void onModeSwitch(bool started) {
+    if (started) {
+      _switchStarted = DateTime.now();
+      final rate = _asked == null ? 'its own mode' : '${_asked!} Hz';
+      _switchStep = AppLog.step('DisplayMatch: the TV is switching to $rate');
+      debugPrint('DisplayMatch: the TV started switching to $rate');
+      return;
+    }
+    final step = _switchStep;
+    if (step != null) AppLog.stepDone(step);
+    _switchStep = null;
+    final began = _switchStarted;
+    _switchStarted = null;
+    final took = began == null
+        ? ''
+        : ' after ${DateTime.now().difference(began).inMilliseconds} ms';
+    debugPrint('DisplayMatch: the TV finished switching$took');
+  }
+
   /// Called when the full-screen player starts (or takes over) [player];
   /// [isCurrent] says whether that stream is still the one playing.
   static Future<void> start(
       StorageService storage, Player player, bool Function() isCurrent) async {
     if (!enabled(storage)) return;
+    _listen();
     _pendingReset?.cancel();
     _pendingReset = null;
     final generation = ++_generation;

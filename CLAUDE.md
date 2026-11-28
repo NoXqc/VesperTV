@@ -442,7 +442,14 @@ Widevine / PlayReady / ClearKey license servers) arrives as the reserved header 
   handler handled it (Add Playlist's `_handleFieldEscapeKey`), and that handler must win.
   `test/tv_text_field_gate_test.dart`. Those overrides are enabled only while the field itself has focus
   (`_FieldArrowAction`): they also cover buttons inside the field (clear X, password eye), where an always-enabled
-  one swallowed the arrow (Settings search, 2026-11-27).
+  one swallowed the arrow (Settings search, 2026-11-27). **Apple TV (2026-11-22):** the system keyboard is a full-screen
+  page that has the remote to itself, and Menu closes it without telling the app (no inset, no Back,
+  the input connection stays open), so the gate stayed "typing" and Down moved the cursor: Search
+  results were unreachable (Mycue66, TestFlight 954). On Apple TV only (`_fullScreenKeyboard`): an
+  arrow reaching a typing field ends typing in the HardwareKeyboard handler; `isEditing` is always
+  false (screens' own field handlers registered before the gate's, like Add Playlist's, take the first
+  Down); Menu pops the page at once; the app going to the background keeps typing (Siri dictation,
+  unconfirmed: `TextGate:` Send-log lines). Never on Android: Gboard forwards cursor arrows while up.
 - **Sports Trak, Settings and Search keep a background live channel playing** (owner reverted the
   1.0.24 parking on all three, 2026-10-20). Movies/TV Shows/Media Hub still park it
   (`_parkLiveChannel`). The parking was added because the video stayed on screen over those pages
@@ -539,6 +546,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL/DE/PL/UK/PT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-28 - Apple TV catch-up round + sideload .ipa (`claude/appletv-catchup`, worktree
+  `VesperTV-claude-atvcatchup`, from main d32d2d4, uncommitted):** owner borrows an Apple TV 4K 1st gen (A1842, tvOS 26)
+  and asked for a sideload path + "any Linux Windows or Android bug and features that is missing on the TvOS". (1)
+  `tvos-build.yml` uploads the release build as an unsigned `.ipa` on every run (artifact `VesperTV-tvOS-ipa`,
+  `tools/tvos/package_ipa.sh`) for atvloadly on Windows (dev-notes/apple-tv.md "Sideloading"). (2) GitHub #20 (968: every
+  movie closed the app; the tester's Match frame rate off = fixed): **Match frame rate off by default**, tvOS mode-switch
+  start / end logged + an `AppLog.step`, `VesperCrashNote` (uncaught NSException -> `NativeCrash:` next session); cause
+  still unknown. (3) Merged in: text-field fix 10e5528, Receive keypad layout. (4) From two audits: back from the Home
+  screen reopens live (`AppleTvComeback`: media_kit paused it forever), Tuliprox release in the preview / on close / before
+  Multiview, Multiview from the tabs resumes in the guide, Dispatcharr source-pick reconnect on media_kit, User-Agent names
+  the device, Sports Trak remote hints, Vesper `sources` / settings gates, Settings > Remote rows hidden on Apple TV. Left
+  for later (ranked): dev-notes/apple-tv.md "Not on Apple TV yet". Swift only compiled by CI.
 - **Claude, 2026-11-27 - Sports Trak "not responding" on big playlists (`claude/sports-trak-anr`, worktree
   `VesperTV-claude-sportsanr`, from main bde3ba0):** LOG-X7Z2W2 (SHIELD, 1036, 32k channels, 7 extra leagues): every 30 s
   poll held the UI 3.2-3.5 s (`MainStall ... jobs=[matcherPrepare]`), twice = ANR. `SportsChannelMatcher._matchDay` now
@@ -974,7 +993,8 @@ the track-rank fix is in 1006. Still needs dajokahn's onn (test build).
   opens a later 6 h window like catch-up's, up to 7 days (`_anchorFor`, `_shiftTo`, `_shiftPastEdge`); Back = now; a
   programme crossing a window edge is one press. Every OS (one shared guide). (3) Details card line heights (Compact cut
   2 px). `test/guide_whole_rows_test.dart`. Apple TV: touch surface setting (dev-notes/apple-tv.md, TestFlight 954), hold
-  OK repeats (`held_ok_repeat.dart`, 952), 4K HDR `hwdec-image-format nv12` on iOS / tvOS (929). Next build > 954.
+  OK repeats (`held_ok_repeat.dart`, 952), 4K HDR `hwdec-image-format nv12` on iOS / tvOS (929). **Unbeaten82 confirmed on
+  TestFlight 954 (2026-11-22): no more solid blue on UHD channels, and the guide's bottom row shows whole.** Next build > 954.
 - **Claude, 2026-11-21 - Silo media server (`claude/silo-server`, worktree `VesperTV-claude-silo`):** Discord (BallerMC)
   + owner: Silo (siloserver.org) in the servers connector, every OS incl. iOS, standalone (owner: "not just through
   jellyfin"). Settings > Media Hub sources > **Connect Silo** (its own row; also inside Connect a media server): the
