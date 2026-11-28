@@ -159,6 +159,45 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('a remote: Up reaches "Don\'t show this again", OK ticks it',
+      (tester) async {
+    await pump(tester, tv: true, tips: true);
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Before you start'), findsOneWidget);
+    final box = find.byType(CheckboxListTile);
+    bool boxFocused() {
+      final at = FocusManager.instance.primaryFocus?.context;
+      if (at == null) return false;
+      final tile = tester.element(box);
+      var inside = at == tile;
+      at.visitAncestorElements((e) => !(inside = inside || e == tile));
+      return inside;
+    }
+
+    expect(boxFocused(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(boxFocused(), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(tester.widget<CheckboxListTile>(box).value, isTrue);
+    // Down: OK again, which closes it onto screen 1, for good.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(boxFocused(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Before you start'), findsNothing);
+    expect(focused(), 'desktop-multiview-cell-0');
+    final storage = tester
+        .element(find.byType(DesktopMultiviewScreen))
+        .read<StorageService>();
+    expect(storage.getMultiviewHideTips(), isTrue);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
   testWidgets('a computer keeps typing in the picker at once', (tester) async {
     await pump(tester, tv: false);
     await tester.tap(find.byIcon(Icons.add_circle_outline).first);

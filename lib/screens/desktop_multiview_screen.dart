@@ -61,13 +61,19 @@ import 'multiview_screen.dart'
 /// the sound opens Change channel / Reload / Remove (the hover buttons on
 /// each screen are for a mouse only).
 class DesktopMultiviewScreen extends StatefulWidget {
-  const DesktopMultiviewScreen({super.key, this.initialChannel});
+  const DesktopMultiviewScreen(
+      {super.key, this.initialChannel, this.initialChannels = const []});
 
   /// Plays on the first screen when Multiview opens: the player bar's
   /// Multiview button brings the channel it was playing. Back returns the
   /// channel with the sound ([Navigator.pop] result) so the player can go
   /// on with it.
   final Channel? initialChannel;
+
+  /// Sports Trak's "Play in Multiview": one screen per checked live game
+  /// (up to 4, after [initialChannel] if both are given), in order, the
+  /// first with the sound ([desktopMultiviewOpening] picks the layout).
+  final List<Channel> initialChannels;
 
   @override
   State<DesktopMultiviewScreen> createState() => _DesktopMultiviewScreenState();
@@ -97,14 +103,43 @@ class _MultiviewCell {
 /// Swap mode rotates the playing screens through the big one (Android's,
 /// owner 2026-10-29). Remembered with the Android keys
 /// (`getMultiviewMain` / `getMultiviewQuad`).
-enum _MultiviewLayout { dual, quad, main }
+enum DesktopMultiviewLayout { dual, quad, main }
+
+/// How Multiview opens with [channels] channels handed to it (Sports Trak's
+/// Play in Multiview, the player bar's Multiview button): equal screens,
+/// one per channel, like Android's `MultiviewScreen.initialChannels`.
+/// [slots] = the screens on show.
+///
+/// A remote (Apple TV, Android's model): 1-4 channels = that many equal
+/// screens (2 side by side, 3-4 in the 2 x 2 grid); none = one screen, or
+/// 1 + 3 when it was chosen last ([remembered]).
+///
+/// A mouse: 2 channels = the 2-screen layout, 3-4 = the 4-screen grid;
+/// none or one keeps the layout chosen last. Never remembered itself.
+({DesktopMultiviewLayout layout, int slots}) desktopMultiviewOpening(
+    int channels,
+    {required bool remote,
+    required DesktopMultiviewLayout remembered}) {
+  final n = channels.clamp(0, 4);
+  if (remote) {
+    return n == 0 && remembered == DesktopMultiviewLayout.main
+        ? (layout: DesktopMultiviewLayout.main, slots: 4)
+        : (layout: DesktopMultiviewLayout.quad, slots: math.max(1, n));
+  }
+  final layout = n >= 3
+      ? DesktopMultiviewLayout.quad
+      : n == 2
+          ? DesktopMultiviewLayout.dual
+          : remembered;
+  return (layout: layout, slots: layout == DesktopMultiviewLayout.dual ? 2 : 4);
+}
 
 class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   static const _cellCount = 4;
   final List<_MultiviewCell> _cells =
       List.generate(_cellCount, (_) => _MultiviewCell());
   int _activeCell = 0;
-  _MultiviewLayout _layout = _MultiviewLayout.quad;
+  DesktopMultiviewLayout _layout = DesktopMultiviewLayout.quad;
 
   /// 1 + 3 Swap mode: arrows (or a click on a small screen) move the
   /// playing screens through the big one; only the big one has sound. The
@@ -153,7 +188,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   final _panelKey = GlobalKey<SportsModeLivePanelState>();
   bool _menuOpen = false;
 
-  bool get _main => _layout == _MultiviewLayout.main;
+  bool get _main => _layout == DesktopMultiviewLayout.main;
 
   @override
   void initState() {
@@ -161,33 +196,75 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     _comeback = AppleTvComeback.listen(_onBackOnScreen);
     final storage = context.read<StorageService>();
     _layout = storage.getMultiviewMain()
-        ? _MultiviewLayout.main
+        ? DesktopMultiviewLayout.main
         : storage.getMultiviewQuad()
-            ? _MultiviewLayout.quad
-            : _MultiviewLayout.dual;
-    final first = widget.initialChannel;
+            ? DesktopMultiviewLayout.quad
+            : DesktopMultiviewLayout.dual;
+    final initial = [
+      if (widget.initialChannel case final c?) c,
+      ...widget.initialChannels,
+    ].take(_cellCount).toList();
+    // From the player or Sports Trak: equal screens, one per channel
+    // (Android's); else the layout chosen last.
+    final opening = desktopMultiviewOpening(initial.length,
+        remote: _tv, remembered: _layout);
+    _layout = opening.layout;
     if (_tv) {
-      // From the player: equal screens first (Android's); else the 1 + 3
-      // layout when it was chosen last.
-      if (first != null || !_main) {
-        _layout = _MultiviewLayout.quad;
-        _slots = 1;
-      } else {
-        _slots = _cellCount;
-      }
+      _slots = opening.slots;
       _headerScope.addListener(_onHeaderFocus);
       _hideHeaderSoon(const Duration(seconds: 4));
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) return;
-        _cellFocus[0].requestFocus();
-        await showMultiviewTips(context);
-        if (mounted) _cellFocus[0].requestFocus();
+    }
+    // The connections tip (one per screen) first, Android's popup, until
+    // "Don't show this again" (Settings' "Show the Multiview tip" brings it
+    // back). A remote: screen 1 has focus under it and again after it; OK
+    // is focused in it, Up reaches the check box.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final tv = _tv;
+      if (tv) _cellFocus[0].requestFocus();
+      await showMultiviewTips(context);
+      if (mounted && tv) _cellFocus[0].requestFocus();
+    });
+    if (initial.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_openInitial(initial));
       });
     }
-    if (first != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _assign(0, first);
-      });
+  }
+
+  /// The longest a screen of [DesktopMultiviewScreen.initialChannels] waits
+  /// for the one before it to show a picture ([_openInitial]).
+  static const _openGap = Duration(seconds: 4);
+
+  /// The channels Multiview opened with, one screen each in order, one at a
+  /// time like Android's: the next screen connects once the one before
+  /// shows a picture (at most [_openGap]), as a 1-connection account or a
+  /// weak device chokes on several streams opening together. A screen the
+  /// viewer filled meanwhile, or that is no longer on show, is skipped.
+  Future<void> _openInitial(List<Channel> channels) async {
+    for (final (i, channel) in channels.indexed) {
+      if (!mounted) return;
+      if (i > 0 && (_cells[i].channel != null || i >= _screensOnShow)) {
+        continue;
+      }
+      final player = _assign(i, channel);
+      if (i < channels.length - 1) await _firstPicture(player);
+    }
+  }
+
+  /// Screens the layout shows now (cells from 0).
+  int get _screensOnShow => _tv
+      ? (_main ? _cellCount : _slots)
+      : (_layout == DesktopMultiviewLayout.dual ? 2 : _cellCount);
+
+  static Future<void> _firstPicture(Player player) async {
+    if ((player.state.width ?? 0) > 0) return;
+    try {
+      await player.stream.width
+          .firstWhere((w) => (w ?? 0) > 0)
+          .timeout(_openGap);
+    } catch (_) {
+      // No picture in time, or the screen closed: the next one connects.
     }
   }
 
@@ -228,10 +305,10 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       _swapMode = false;
       _enlarged = null;
       if (main) {
-        _layout = _MultiviewLayout.main;
+        _layout = DesktopMultiviewLayout.main;
         _slots = _cellCount;
       } else {
-        _layout = _MultiviewLayout.quad;
+        _layout = DesktopMultiviewLayout.quad;
         final active = _cells[_activeCell];
         final order = [
           for (final c in _cells)
@@ -498,7 +575,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   bool _playing(_MultiviewCell c) => c.channel != null && c.player != null;
 
   bool get _canSwap =>
-      _layout == _MultiviewLayout.main && _cells.where(_playing).length >= 2;
+      _layout == DesktopMultiviewLayout.main &&
+      _cells.where(_playing).length >= 2;
 
   void _enterSwapMode() {
     if (!_canSwap) return;
@@ -585,15 +663,16 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     return KeyEventResult.ignored;
   }
 
-  void _setLayout(_MultiviewLayout layout) {
+  void _setLayout(DesktopMultiviewLayout layout) {
     if (layout == _layout) return;
     final storage = context.read<StorageService>();
-    unawaited(storage.setMultiviewMain(layout == _MultiviewLayout.main));
-    if (layout != _MultiviewLayout.main) {
-      unawaited(storage.setMultiviewQuad(layout == _MultiviewLayout.quad));
+    unawaited(storage.setMultiviewMain(layout == DesktopMultiviewLayout.main));
+    if (layout != DesktopMultiviewLayout.main) {
+      unawaited(
+          storage.setMultiviewQuad(layout == DesktopMultiviewLayout.quad));
       _swapMode = false;
     }
-    if (layout == _MultiviewLayout.dual) {
+    if (layout == DesktopMultiviewLayout.dual) {
       // Actually free cells 2/3's connections/decode sessions, not just
       // hide them — leaving them playing, muted, off-screen would still
       // hold a connection slot and a decoder for nothing visible.
@@ -638,7 +717,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     super.dispose();
   }
 
-  void _assign(int index, Channel channel) {
+  /// [channel] on screen [index] (its old stream closes); the new player.
+  Player _assign(int index, Channel channel) {
     final cell = _cells[index];
     cell.completedSubscription?.cancel();
     DesktopLiveRecovery.disposePlayer(cell.player);
@@ -665,6 +745,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       cell.controller = controller;
       cell.completedSubscription = null;
     });
+    return player;
   }
 
   /// Same manual-relaunch idea as `DesktopPlayerScreen._reload`/
@@ -803,30 +884,33 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600)),
                             const SizedBox(width: 8),
-                            PopupMenuButton<_MultiviewLayout>(
+                            PopupMenuButton<DesktopMultiviewLayout>(
                               tooltip: tr('Layout'),
                               icon: const Icon(Icons.grid_view,
                                   color: Colors.white),
                               onSelected: _setLayout,
                               itemBuilder: (context) => [
                                 CheckedPopupMenuItem(
-                                  value: _MultiviewLayout.dual,
-                                  checked: _layout == _MultiviewLayout.dual,
+                                  value: DesktopMultiviewLayout.dual,
+                                  checked:
+                                      _layout == DesktopMultiviewLayout.dual,
                                   child: Text(tr('2 channels')),
                                 ),
                                 CheckedPopupMenuItem(
-                                  value: _MultiviewLayout.quad,
-                                  checked: _layout == _MultiviewLayout.quad,
+                                  value: DesktopMultiviewLayout.quad,
+                                  checked:
+                                      _layout == DesktopMultiviewLayout.quad,
                                   child: Text(tr('4 channels')),
                                 ),
                                 CheckedPopupMenuItem(
-                                  value: _MultiviewLayout.main,
-                                  checked: _layout == _MultiviewLayout.main,
+                                  value: DesktopMultiviewLayout.main,
+                                  checked:
+                                      _layout == DesktopMultiviewLayout.main,
                                   child: Text(tr('1 + 3 screens')),
                                 ),
                               ],
                             ),
-                            if (_layout == _MultiviewLayout.main)
+                            if (_layout == DesktopMultiviewLayout.main)
                               TextButton.icon(
                                 icon: Icon(Icons.swap_vert,
                                     color: _swapMode
@@ -885,7 +969,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                           // available height, i.e. 1.3x the even-split baseline —
                           // once both cells are filled they're back to equal flex
                           // (13:13) and split evenly like a normal multiview grid.
-                          child: _layout == _MultiviewLayout.main
+                          child: _layout == DesktopMultiviewLayout.main
                               ? Row(
                                   children: [
                                     Expanded(
@@ -909,7 +993,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                                     ),
                                   ],
                                 )
-                              : _layout == _MultiviewLayout.dual
+                              : _layout == DesktopMultiviewLayout.dual
                                   ? Column(
                                       children: [
                                         Expanded(
