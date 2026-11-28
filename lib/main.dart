@@ -306,7 +306,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// computers, iPhone) at [launch] only: it has no warm exit, and a computer
   /// quits after AppExit.beforeWarm.
   bool _fullscreenResumePlanned({bool launch = false}) =>
-      (Platform.isAndroid || (launch && usesMediaKit)) &&
+      // media_kit: Apple TV only for now (box test 2026-11-28); computers
+      // and iPhone keep the resume after the live lists until tried there.
+      (Platform.isAndroid || (launch && isAppleTv)) &&
       !_preferences.launchWithProfiles &&
       _profileSelection == null &&
       !_preferences.sportsMode &&
@@ -338,7 +340,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
   /// Why [_fullscreenResumePlanned] is false at launch (first reason).
   String _whyNoFullscreenPlan() {
-    if (!(Platform.isAndroid || usesMediaKit)) return 'not this player';
+    if (!(Platform.isAndroid || isAppleTv)) {
+      return usesMediaKit
+          ? 'early resume is Apple TV only: after the live lists'
+          : 'not this player';
+    }
     if (_preferences.launchWithProfiles || _profileSelection != null) {
       return "Who's watching first";
     }
@@ -1745,12 +1751,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _startupLog('media_kit: the preview already plays '
           '${DesktopMiniPlayer.instance.channel.value?.id}: no early resume');
     }
-    // media_kit (Apple TV, computers, iPhone): the same, with its own player
-    // page, opened as below once the lists are in. No page animation: the
+    // Apple TV (media_kit; computers / iPhone wait for the lists below until
+    // tried there): the same, with its own player page, from the history's
+    // copy before the lists are in. No page animation: the
     // launch's cover ([_coverForResume]) drops on the player, not on the TV
     // home sliding away under it.
     if (fullscreen &&
-        usesMediaKit &&
+        isAppleTv &&
         DesktopMiniPlayer.instance.channel.value == null) {
       final early = _playbackService.recentlyPlayed
           .where((c) => c.id == lastId && c.isLive)
