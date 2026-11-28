@@ -134,6 +134,21 @@ enum DesktopMultiviewLayout { dual, quad, main }
   return (layout: layout, slots: layout == DesktopMultiviewLayout.dual ? 2 : 4);
 }
 
+/// Why [desktopMultiviewOpening] chose its layout, for the Send log.
+String _openingWhy(int channels,
+    {required bool remote, required DesktopMultiviewLayout remembered}) {
+  final n = channels.clamp(0, 4);
+  if (remote) {
+    if (n > 0) return 'one equal screen per channel (Android\'s)';
+    return remembered == DesktopMultiviewLayout.main
+        ? 'no channel handed over, 1 + 3 chosen last'
+        : 'no channel handed over: one screen';
+  }
+  if (n >= 3) return '3-4 channels = the 4-screen grid';
+  if (n == 2) return '2 channels = the 2-screen layout';
+  return '$n channel(s): the layout chosen last';
+}
+
 class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   static const _cellCount = 4;
   final List<_MultiviewCell> _cells =
@@ -206,9 +221,20 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     ].take(_cellCount).toList();
     // From the player or Sports Trak: equal screens, one per channel
     // (Android's); else the layout chosen last.
+    final remote = _tv;
+    final remembered = _layout;
     final opening = desktopMultiviewOpening(initial.length,
-        remote: _tv, remembered: _layout);
+        remote: remote, remembered: remembered);
     _layout = opening.layout;
+    final given =
+        (widget.initialChannel == null ? 0 : 1) + widget.initialChannels.length;
+    debugPrint('DesktopMultiview: open with ${initial.length} channel(s)'
+        '${given > initial.length ? ' ($given given, first $_cellCount kept)' : ''}'
+        ' [player ${widget.initialChannel == null ? 0 : 1}, '
+        'picks ${widget.initialChannels.length}], '
+        '${remote ? 'remote' : 'mouse'}, remembered ${remembered.name} -> '
+        '${opening.layout.name}, ${opening.slots} screen(s): '
+        '${_openingWhy(initial.length, remote: remote, remembered: remembered)}');
     if (_tv) {
       _slots = opening.slots;
       _headerScope.addListener(_onHeaderFocus);
@@ -222,7 +248,18 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       if (!mounted) return;
       final tv = _tv;
       if (tv) _cellFocus[0].requestFocus();
-      await showMultiviewTips(context);
+      final storage = context.read<StorageService>();
+      if (storage.getMultiviewHideTips()) {
+        debugPrint(
+            'DesktopMultiview: tip not shown (Don\'t show again is set)');
+      } else {
+        debugPrint('DesktopMultiview: tip shown (${tv ? 'remote' : 'mouse'})');
+        final shown = Stopwatch()..start();
+        await showMultiviewTips(context);
+        debugPrint('DesktopMultiview: tip dismissed after '
+            '${shown.elapsedMilliseconds} ms, Don\'t show again '
+            '${storage.getMultiviewHideTips() ? 'ticked' : 'not ticked'}');
+      }
       if (mounted && tv) _cellFocus[0].requestFocus();
     });
     if (initial.isNotEmpty) {
@@ -241,14 +278,37 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   /// shows a picture (at most [_openGap]), as a 1-connection account or a
   /// weak device chokes on several streams opening together. A screen the
   /// viewer filled meanwhile, or that is no longer on show, is skipped.
+  ///
+  /// Send log: one `DesktopMultiview: screen i/n ...` line per screen when
+  /// it connects (ms since Multiview started opening them) and one when its
+  /// first picture came, it timed out or it closed first (ms since it
+  /// connected); the last screen's wait is watched without holding anything.
   Future<void> _openInitial(List<Channel> channels) async {
+    final opening = Stopwatch()..start();
+    final n = channels.length;
     for (final (i, channel) in channels.indexed) {
       if (!mounted) return;
-      if (i > 0 && (_cells[i].channel != null || i >= _screensOnShow)) {
+      final screen = '${i + 1}/$n';
+      if (i > 0 && _cells[i].channel != null) {
+        debugPrint('DesktopMultiview: screen $screen skipped: the viewer '
+            'filled it (${_cells[i].channel!.name})');
         continue;
       }
+      if (i > 0 && i >= _screensOnShow) {
+        debugPrint('DesktopMultiview: screen $screen skipped: not on show '
+            '(${_layout.name}, $_screensOnShow screen(s))');
+        continue;
+      }
+      debugPrint('DesktopMultiview: screen $screen connecting at '
+          '+${opening.elapsedMilliseconds} ms: ${channel.name}'
+          '${i == _activeCell ? ' (sound)' : ''}');
       final player = _assign(i, channel);
-      if (i < channels.length - 1) await _firstPicture(player);
+      final picture = _firstPicture(screen, player, last: i == n - 1);
+      if (i < n - 1) {
+        await picture;
+      } else {
+        unawaited(picture);
+      }
     }
   }
 
@@ -257,15 +317,32 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
       ? (_main ? _cellCount : _slots)
       : (_layout == DesktopMultiviewLayout.dual ? 2 : _cellCount);
 
-  static Future<void> _firstPicture(Player player) async {
-    if ((player.state.width ?? 0) > 0) return;
-    try {
-      await player.stream.width
-          .firstWhere((w) => (w ?? 0) > 0)
-          .timeout(_openGap);
-    } catch (_) {
-      // No picture in time, or the screen closed: the next one connects.
+  /// [player]'s first picture, at most [_openGap], logged as [screen]'s
+  /// (once: the first frame size only, never every change).
+  static Future<void> _firstPicture(String screen, Player player,
+      {required bool last}) async {
+    final waited = Stopwatch()..start();
+    String result;
+    if ((player.state.width ?? 0) > 0) {
+      result = 'first picture at once '
+          '(${player.state.width}x${player.state.height ?? 0})';
+    } else {
+      try {
+        final width = await player.stream.width
+            .firstWhere((w) => (w ?? 0) > 0)
+            .timeout(_openGap);
+        result = 'first picture after ${waited.elapsedMilliseconds} ms '
+            '(${width}x${player.state.height ?? 0})';
+      } on TimeoutException {
+        result = 'no picture in ${_openGap.inMilliseconds} ms (timeout)'
+            '${last ? '' : ', the next screen connects now'}';
+      } catch (_) {
+        // The screen closed (Remove, Change channel, Back) first.
+        result = 'closed before a picture '
+            '(${waited.elapsedMilliseconds} ms)';
+      }
     }
+    debugPrint('DesktopMultiview: screen $screen $result');
   }
 
   void _revealHeader({bool focus = false}) {
