@@ -933,6 +933,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       DesktopLiveRecovery.copiesOf = (channel) => _storage.getCopyFallback()
           ? _playlistManager.failoverCandidatesFor(channel)
           : const [];
+      // ...and the playlist's backup servers (Android: PlaybackService
+      // _retryOnBackupServers), the one that plays tried first next time.
+      DesktopLiveRecovery.playlistOf = (id) =>
+          _playlistManager.profiles.where((p) => p.id == id).firstOrNull;
+      DesktopLiveRecovery.rememberServer = (id, server) =>
+          unawaited(_playlistManager.rememberWorkingServer(id, server));
       PerfDiagnostics.start({
         'catalog': _playlistManager.pingCatalog,
         'epg': _epgService.pingDatabase,

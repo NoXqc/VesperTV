@@ -40,6 +40,7 @@ import 'archive_playback_sources.dart';
 import 'player_user_agent.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
+import 'live_backup_servers.dart';
 import 'live_stream_format.dart';
 import 'live_freeze_guard.dart';
 import 'live_reconnect_log.dart';
@@ -1954,10 +1955,7 @@ class PlaybackService extends ChangeNotifier {
     }
     if (profile == null || !profile.isXtream) return false;
 
-    final currentOrigin = _originOf(channel.url);
-    final candidates = profile.serverCandidates
-        .where((s) => _originOf(s) != currentOrigin)
-        .toList();
+    final candidates = LiveBackupServers.candidatesFor(profile, channel.url);
     if (candidates.isEmpty) return false;
 
     for (var i = 0; i < candidates.length; i++) {
@@ -1979,7 +1977,7 @@ class PlaybackService extends ChangeNotifier {
       await Future<void>.delayed(_backupServerDelay);
       if (currentChannel?.id != channel.id) return false;
 
-      final retryUrl = _swapOrigin(channel.url, server);
+      final retryUrl = LiveBackupServers.swapOrigin(channel.url, server);
       final retryController =
           streamController(retryUrl, httpHeaders: channel.httpHeaders);
       try {
@@ -2020,31 +2018,6 @@ class PlaybackService extends ChangeNotifier {
     reconnectStatus = null;
     notifyListeners();
     return false;
-  }
-
-  /// The `scheme://host:port` of a URL, with nothing after it — what has
-  /// to change to point the same stream at a different server.
-  static String _originOf(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null || uri.host.isEmpty) return url;
-    return uri.hasPort
-        ? '${uri.scheme}://${uri.host}:${uri.port}'
-        : '${uri.scheme}://${uri.host}';
-  }
-
-  /// Rebuilds a stream URL against [server], keeping the whole path
-  /// (`/live/user/pass/12345.ts`) as-is — a backup server for the same
-  /// account serves the same stream ids under the same credentials, so
-  /// only the origin ever differs.
-  static String _swapOrigin(String url, String server) {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return url;
-    var base = server.trim();
-    while (base.endsWith('/')) {
-      base = base.substring(0, base.length - 1);
-    }
-    final query = uri.hasQuery ? '?${uri.query}' : '';
-    return '$base${uri.path}$query';
   }
 
   /// Same-channel scheduled recording: release the provider before its alarm,
