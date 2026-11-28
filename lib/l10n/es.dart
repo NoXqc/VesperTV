@@ -4602,4 +4602,6 @@ const Map<String, String> kEs = {
       "Copiado",
   "Copy code":
       "Copiar código",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Todavía no hay nada en el servidor Tuliprox. Mantén OK en un canal en directo y elige Grabar en el servidor.",
 };

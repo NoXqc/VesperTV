@@ -17,6 +17,7 @@ import '../../services/device_defaults.dart';
 import '../../services/launcher_channels.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
+import '../../services/tuliprox.dart';
 import '../../services/apple_tv_remote.dart';
 import '../../services/remote_buttons.dart';
 import '../../services/storage_service.dart';
@@ -548,14 +549,17 @@ class SettingsCatalog {
               tr('Removes the Media Hub tab.'),
               !prefs.hideArchive,
               (v) => prefs.setHideArchive(!v)),
-          if (RecordingService.downloadsSupported)
+          // Apple TV: the Tuliprox server's recordings, once its DVR is on.
+          if (RecordingService.downloadsSupported ||
+              (RecordingService.serverRecordingsOnly &&
+                  Tuliprox.instance.serverDvr.value))
             _tab(
                 'tab_recordings',
-                RecordingService.supported
+                _recordingsTab
                     ? Icons.fiber_smart_record_outlined
                     : Icons.download_outlined,
-                RecordingService.supported ? tr('Recordings') : tr('Downloads'),
-                RecordingService.supported
+                _recordingsTab ? tr('Recordings') : tr('Downloads'),
+                _recordingsTab
                     ? tr('Removes the Recordings tab.')
                     : tr('Removes the Downloads tab.'),
                 !prefs.hideRecordings,
@@ -1757,6 +1761,11 @@ class SettingsCatalog {
           ]),
         ],
       );
+
+  /// The Recordings tab (Android; Apple TV: the Tuliprox server's), else
+  /// Windows' Downloads.
+  static bool get _recordingsTab =>
+      RecordingService.supported || RecordingService.serverRecordingsOnly;
 
   // ----------------------------------------------------------------- devices
 

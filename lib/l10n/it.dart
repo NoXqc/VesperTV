@@ -4609,4 +4609,6 @@ const Map<String, String> kIt = {
       "Copiato",
   "Copy code":
       "Copia codice",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Ancora niente sul server Tuliprox. Tieni premuto OK su un canale in diretta e scegli Registra sul server.",
 };

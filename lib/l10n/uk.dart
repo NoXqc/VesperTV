@@ -4074,4 +4074,6 @@ const Map<String, String> kUk = {
       "Скопійовано",
   "Copy code":
       "Копіювати код",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "На сервері Tuliprox ще нічого немає. Утримуйте OK на каналі в ефірі й виберіть «Записати на сервері».",
 };

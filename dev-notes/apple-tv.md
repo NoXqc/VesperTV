@@ -348,9 +348,13 @@ gated off, fixes that went to the Android stack only), then:
 6. Sports Trak hold a game > Play in Multiview (`DesktopMultiviewScreen` takes
    one `initialChannel`).
 7. A frozen-picture watchdog like `LiveFreezeGuard` on mpv properties.
-8. Live buffer tile in the options row; Multiview connections tip; Read
-   replies aloud (AVSpeechSynthesizer); the Tuliprox server recordings list
-   (Recordings is hidden on Apple TV); instant full-screen resume at startup.
+8. Live buffer tile in the options row; Multiview connections tip.
+   (Done 2026-11-28, `claude/atv-extras`, untested on a box: Read replies
+   aloud = `VesperSpeech` (AVSpeechSynthesizer, speaking only, `Speech:` log);
+   Recordings row for the Tuliprox server's part once its DVR is on
+   (`Tuliprox.serverDvr`, `TuliproxRec:` log), weekly rules in the IANA zone
+   (`vespertv/tvos` `timeZoneId`); instant full-screen resume at startup from
+   the history's copy (`StartupResume:` log).)
 
 ## Sideloading (no Mac, no TestFlight review)
 

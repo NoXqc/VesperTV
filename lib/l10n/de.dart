@@ -4505,4 +4505,6 @@ const Map<String, String> kDe = {
       "Kopiert",
   "Copy code":
       "Code kopieren",
+  "Nothing on the Tuliprox server yet. Hold OK on a live channel and pick Record on the server.":
+      "Noch nichts auf dem Tuliprox-Server. Halte OK auf einem Live-Sender und wähle Auf dem Server aufnehmen.",
 };

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../utils/desktop_platform.dart' show isAppleTv;
 import 'storage_service.dart';
 
 part 'tuliprox_player_extras.dart';
@@ -1142,6 +1143,16 @@ class Tuliprox {
       debugPrint('Tuliprox: capabilities not read ($e)');
     }
     _caps[key] = (at: now, caps: caps);
+    serverDvr.value =
+        _caps.values.any((c) => c.caps?.canReadRecordings ?? false);
+    debugPrint(caps == null
+        ? 'TuliproxRec: no capabilities for this playlist user '
+            '(serverDvr=${serverDvr.value})'
+        : 'TuliproxRec: capabilities: dvr=${caps.recordingEnabled ? 'on' : 'off'} '
+            'level=${caps.recording} '
+            'permissions=${caps.permissions.isEmpty ? 'all' : caps.permissions.where((p) => p.startsWith('recording.')).join(',')} '
+            'canList=${caps.canReadRecordings} canRecord=${caps.canRecord} '
+            '-> serverDvr=${serverDvr.value}');
     return caps;
   }
 
@@ -1548,6 +1559,40 @@ class Tuliprox {
   /// one was added / removed here, or the event stream says resync).
   final recordingsChanged = ValueNotifier<int>(0);
 
+  /// A playlist's Tuliprox server lists its recordings for this account
+  /// (DVR on: [TuliproxCapabilities.canReadRecordings]), as of the last
+  /// capabilities read. A device that can't record itself (Apple TV) shows
+  /// Recordings for the server's only then.
+  final serverDvr = ValueNotifier<bool>(false);
+
+  /// One channel per playlist among [channels], for the Tuliprox ones: its
+  /// first channel decides (never a parse of every channel).
+  List<Channel> onePerPlaylist(Iterable<Channel> channels) {
+    final checked = <String>{};
+    return [
+      for (final c in channels)
+        if (checked.add(c.playlistId) && refOf(c) != null) c
+    ];
+  }
+
+  bool _serverDvrChecked = false;
+
+  /// Reads the capabilities of each Tuliprox playlist among [channels] once
+  /// a run, so [serverDvr] is known before anything played.
+  Future<void> checkServerDvrOnce(Iterable<Channel> channels) async {
+    if (_serverDvrChecked) return;
+    _serverDvrChecked = true;
+    final tuliprox = onePerPlaylist(channels);
+    debugPrint('TuliproxRec: checking ${tuliprox.length} Tuliprox '
+        'playlist(s) for a server DVR');
+    var withDvr = 0;
+    for (final c in tuliprox) {
+      if (await dvrFor(c) != null) withDvr++;
+    }
+    debugPrint('TuliproxRec: $withDvr of ${tuliprox.length} list recordings '
+        'for this account (serverDvr=${serverDvr.value})');
+  }
+
   void _ensureEvents(TuliproxLogin l, TuliproxCapabilities caps) {
     if (!caps.eventStream) return;
     final key = '${l.base}|${l.username}';
@@ -1715,8 +1760,13 @@ class Tuliprox {
       required DateTime end}) async {
     final dvr = await dvrFor(channel);
     if (dvr == null || !dvr.caps.canRecord) {
+      debugPrint('TuliproxRec: record once refused here '
+          '(${dvr == null ? 'no server DVR for this playlist' : 'this account may not record'})');
       throw TuliproxRecordingError('recording_forbidden', status: 403);
     }
+    debugPrint('TuliproxRec: record once ${dvr.ref}: '
+        '${end.difference(start).inMinutes} min, starts in '
+        '${start.difference(DateTime.now()).inMinutes} min');
     final l = dvr.login;
     final vid = dvr.ref.id;
     var pre = const Duration(minutes: 1);
@@ -1768,11 +1818,19 @@ class Tuliprox {
       {required DateTime start, required Duration duration}) async {
     final dvr = await dvrFor(channel);
     if (dvr == null || !dvr.caps.canRecord) {
+      debugPrint('TuliproxRec: weekly refused here '
+          '(${dvr == null ? 'no server DVR for this playlist' : 'this account may not record'})');
       throw TuliproxRecordingError('recording_forbidden', status: 403);
     }
     final zone = await deviceTimeZone();
     final at = zone == null ? start.toUtc() : start.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
+    debugPrint('TuliproxRec: weekly ${dvr.ref}: weekday=${at.weekday} '
+        'start=${two(at.hour)}:${two(at.minute)} '
+        'duration=${duration.inMinutes} min timezone=${zone ?? 'UTC'} '
+        '(${zone == null ? 'no IANA zone from this device: UTC' : 'device zone'}, '
+        'device offset ${start.toLocal().timeZoneOffset.inMinutes} min, '
+        '${start.toLocal().timeZoneName})');
     final rule = await api.createRecordingRule(dvr.login,
         vid: dvr.ref.id,
         weekday: at.weekday,
@@ -1790,14 +1848,24 @@ class Tuliprox {
     return rule;
   }
 
-  /// The device's IANA time zone (Android); null elsewhere.
+  /// The device's IANA time zone (Android; Apple TV through `VesperMenu`'s
+  /// channel in tvos/Runner/AppDelegate.swift); null elsewhere: Dart only
+  /// knows the zone's abbreviation and offset, and a fixed offset would be
+  /// an hour off after a daylight-saving change just like UTC.
   static Future<String?> deviceTimeZone() async {
-    if (kIsWeb || !Platform.isAndroid) return null;
+    if (kIsWeb || !(Platform.isAndroid || isAppleTv)) return null;
     try {
-      final id = await const MethodChannel('com.nox.nox_iptv/device_type')
+      final id = await (isAppleTv
+              ? const MethodChannel('vespertv/tvos')
+              : const MethodChannel('com.nox.nox_iptv/device_type'))
           .invokeMethod<String>('timeZoneId');
-      return id == null || id.isEmpty ? null : id;
-    } catch (_) {
+      if (id == null || id.isEmpty) {
+        debugPrint('TuliproxRec: the device gave no time zone');
+        return null;
+      }
+      return id;
+    } catch (e) {
+      debugPrint('TuliproxRec: device time zone not read ($e)');
       return null;
     }
   }

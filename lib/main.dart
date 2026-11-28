@@ -301,10 +301,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// player is pushed ([_dropResumeCover]), or after 8 s whatever happens.
   final _resumeCover = ValueNotifier<bool>(false);
 
-  /// The Startup choice will open the last channel full screen (Android).
-  bool get _fullscreenResumePlanned =>
-      Platform.isAndroid &&
-      !usesMediaKit &&
+  /// The Startup choice will open the last channel full screen: Android (the
+  /// launch and a warm return), and the media_kit player (Apple TV,
+  /// computers, iPhone) at [launch] only: it has no warm exit, and a computer
+  /// quits after AppExit.beforeWarm.
+  bool _fullscreenResumePlanned({bool launch = false}) =>
+      (Platform.isAndroid || (launch && usesMediaKit)) &&
       !_preferences.launchWithProfiles &&
       _profileSelection == null &&
       !_preferences.sportsMode &&
@@ -319,18 +321,41 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// The launch's last channel, started before the TV home's first build.
   ({Channel channel, Future<void> started})? _earlyResume;
 
-  /// A notification or a launcher card opened the app: it opens that, not
-  /// the last channel.
+  /// A notification or a launcher card (Apple TV: a Top Shelf item) opened
+  /// the app: it opens that, not the last channel.
   Future<bool> _openedFromOutside() async =>
-      Platform.isAndroid &&
-      (await _episodeBackground?.pendingTap == true ||
-          await _sportsNotifications?.pendingTap == true ||
-          _episodeNotificationOpened ||
-          await LauncherChannels.instance.hasPendingLink ||
-          LauncherChannels.instance.openedRecently);
+      (Platform.isAndroid &&
+          (await _episodeBackground?.pendingTap == true ||
+              await _sportsNotifications?.pendingTap == true ||
+              _episodeNotificationOpened)) ||
+      await LauncherChannels.instance.hasPendingLink ||
+      LauncherChannels.instance.openedRecently;
 
-  void _coverForResume() {
-    if (!_fullscreenResumePlanned) return;
+  /// Send log: the launch's resume, step by step, with the time since
+  /// launch (`StartupResume: +1234ms ...`). Channel ids only, never links.
+  static void _startupLog(String what) =>
+      debugPrint('StartupResume: +${PerfDiagnostics.sinceLaunchMs}ms $what');
+
+  /// Why [_fullscreenResumePlanned] is false at launch (first reason).
+  String _whyNoFullscreenPlan() {
+    if (!(Platform.isAndroid || usesMediaKit)) return 'not this player';
+    if (_preferences.launchWithProfiles || _profileSelection != null) {
+      return "Who's watching first";
+    }
+    if (_preferences.sportsMode) return 'Sports Mode';
+    if (_preferences.hideLiveTv) return 'Live TV hidden';
+    if (_preferences.effectiveStartSection != 'tv') {
+      return 'Open on ${_preferences.effectiveStartSection}';
+    }
+    if (!_storage.getResumeLastChannelAtStartup()) {
+      return 'Resume last channel in full screen is off';
+    }
+    if (_storage.getLastChannelId() == null) return 'no last channel';
+    return '?';
+  }
+
+  void _coverForResume({bool launch = false}) {
+    if (!_fullscreenResumePlanned(launch: launch)) return;
     _resumeCover.value = true;
     Future<void>.delayed(const Duration(seconds: 8), _dropResumeCover);
   }
@@ -1317,11 +1342,21 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           enabled: () => _preferences.launchWithProfiles,
           show: _returnToProfiles);
       final selection = _profileSelection;
-      _coverForResume();
+      _coverForResume(launch: true);
       // The last channel starts connecting now, from the history's copy,
       // while the TV home builds under the cover (it was pushed only after
       // that first build: ~0.8 s + the stream's own ~2 s, owner's
       // stopwatch 2026-11-19). The resume below opens the player on it.
+      // media_kit: its player is a page that opens its own stream, so it
+      // can't start before the UI; [_resumeLastChannel] pushes it from the
+      // same copy as soon as the navigator is there. No copy (the channel
+      // only played in the guide's preview, say), or a Top Shelf item opened
+      // the app: no cover, the TV home shows while the live lists load.
+      final player = usesMediaKit ? 'media_kit' : 'Android';
+      if (!_resumeCover.value) {
+        _startupLog('$player: no full-screen resume planned '
+            '(${_whyNoFullscreenPlan()})');
+      }
       if (_resumeCover.value && !await _openedFromOutside()) {
         await _playbackService.init();
         _historyReadEarly = true;
@@ -1329,11 +1364,27 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         final early = _playbackService.recentlyPlayed
             .where((c) => c.id == lastId && c.isLive)
             .firstOrNull;
-        if (early != null) {
+        _startupLog('$player: cover up, last channel $lastId '
+            '${early == null ? 'not in the history (${_playbackService.recentlyPlayed.length} items)' : 'found in the history'}');
+        if (early == null) {
+          if (usesMediaKit) {
+            _resumeCover.value = false;
+            _startupLog('media_kit: cover dropped, the resume waits for the '
+                'live lists');
+          }
+        } else if (!usesMediaKit) {
           PerfDiagnostics.mark('earlyPlay');
+          _startupLog('Android: playing ${early.id} before the UI');
           _earlyResume =
               (channel: early, started: _playbackService.play(early));
+        } else {
+          _startupLog('media_kit: the player opens on ${early.id} once the '
+              'navigator is there');
         }
+      } else if (_resumeCover.value) {
+        _startupLog('$player: a notification or launcher card opened the '
+            'app${usesMediaKit ? ', cover dropped' : ''}');
+        if (usesMediaKit) _resumeCover.value = false;
       }
       setState(() => _ready = true);
       // Never mount a previous viewer's home, consume startup routes, or resume
@@ -1562,18 +1613,34 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
   /// After a resume from the history's copy: once the live lists are in,
   /// a channel this viewer can no longer see (its group hidden since)
-  /// stops.
-  Future<void> _checkResumedStillVisible(String id) async {
+  /// stops. [mediaKit]: the media_kit player plays it (its page, or the
+  /// guide's preview after Back), not [PlaybackService]; a viewer who
+  /// already moved on to another channel keeps it.
+  Future<void> _checkResumedStillVisible(String id,
+      {bool mediaKit = false}) async {
     await PerfDiagnostics.task(
         'liveList', _playlistManager.ensureLiveChannelsLoaded);
     PerfDiagnostics.mark('liveList');
     final visible =
         _playlistManager.visibleChannels(category: 'tv').any((c) => c.id == id);
-    if (!visible && mounted) {
-      debugPrint('Resume: stopped (no longer in the live list)');
-      await _playbackService.stop();
-      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    _startupLog(
+        'live lists in: $id ${visible ? 'still visible' : 'no longer in the live list'}');
+    if (visible || !mounted) return;
+    if (mediaKit && _storage.getLastChannelId() != id) {
+      _startupLog('media_kit: the viewer moved on to another channel, kept');
+      return;
     }
+    debugPrint('Resume: stopped (no longer in the live list)');
+    _startupLog('stopped $id (its group is hidden now)');
+    if (mediaKit) {
+      final mini = DesktopMiniPlayer.instance;
+      if (mini.channel.value?.id == id) mini.clear();
+    } else {
+      await _playbackService.stop();
+    }
+    // A player page closes without its Back (the media_kit one disposes
+    // its stream instead of handing it to the preview).
+    _navigatorKey.currentState?.popUntil((route) => route.isFirst);
   }
 
   Future<void> _autoResumeLastChannel() async {
@@ -1586,7 +1653,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
   Future<void> _resumeLastChannel() async {
     // Send log: why a launch or warm return did or didn't resume.
-    void skipped(String why) => debugPrint('Resume: skipped ($why)');
+    void skipped(String why) {
+      debugPrint('Resume: skipped ($why)');
+      _startupLog('skipped ($why)');
+    }
+
+    _startupLog('resume asked (${usesMediaKit ? 'media_kit' : 'Android'}, '
+        'cover ${_resumeCover.value ? 'up' : 'down'})');
     // Started before the UI (_bootstrap): open the player on it.
     final early = _earlyResume;
     _earlyResume = null;
@@ -1609,6 +1682,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       if (navigator != null && mounted) {
         debugPrint('Resume: full screen (started before the UI)');
+        _startupLog('Android: full screen on ${early.channel.id} (started '
+            'before the UI)');
         PerfDiagnostics.mark('playerPushed');
         GuideKey.guideLayoutBehindPlayer();
         unawaited(navigator.push(_resumeRoute(navigator, early.channel)));
@@ -1659,6 +1734,61 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return;
       }
     }
+    if (usesMediaKit) {
+      _startupLog('media_kit: last channel $lastId, '
+          '${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'nothing'}'
+          '${elsewhere ? ' (Open on ${_preferences.effectiveStartSection})' : ''}');
+    }
+    if (fullscreen &&
+        usesMediaKit &&
+        DesktopMiniPlayer.instance.channel.value != null) {
+      _startupLog('media_kit: the preview already plays '
+          '${DesktopMiniPlayer.instance.channel.value?.id}: no early resume');
+    }
+    // media_kit (Apple TV, computers, iPhone): the same, with its own player
+    // page, opened as below once the lists are in. No page animation: the
+    // launch's cover ([_coverForResume]) drops on the player, not on the TV
+    // home sliding away under it.
+    if (fullscreen &&
+        usesMediaKit &&
+        DesktopMiniPlayer.instance.channel.value == null) {
+      final early = _playbackService.recentlyPlayed
+          .where((c) => c.id == lastId && c.isLive)
+          .firstOrNull;
+      var navigator = _navigatorKey.currentState;
+      // The application's first frame (its navigator) can still be ahead.
+      var frames = 0;
+      for (;
+          early != null && navigator == null && mounted && frames < 30;
+          frames++) {
+        await WidgetsBinding.instance.endOfFrame;
+        navigator = _navigatorKey.currentState;
+      }
+      if (early == null) {
+        _startupLog('media_kit: $lastId not in the history '
+            '(${_playbackService.recentlyPlayed.length} items): falls back '
+            'to the live lists');
+      } else if (navigator == null || !mounted) {
+        _startupLog('media_kit: no navigator after $frames frame(s): falls '
+            'back to the live lists');
+      }
+      if (early != null && navigator != null && mounted) {
+        debugPrint('Resume: full screen (from history)');
+        _startupLog('media_kit: full screen on ${early.id} from the history '
+            '(early, ${frames == 0 ? 'navigator ready' : 'after $frames frame(s)'})');
+        PerfDiagnostics.mark('playerPushed');
+        // No forced landscape on a phone (see below).
+        final route = PlayerPageRoute<void>(
+            instant: true,
+            builder: (_) =>
+                DesktopPlayerScreen(channel: early, turnSideways: false));
+        unawaited(navigator.push(route));
+        GuideKey.showPlayingGroupOnHome();
+        _dropResumeCover();
+        await _checkResumedStillVisible(lastId, mediaKit: true);
+        return;
+      }
+    }
     await PerfDiagnostics.task(
         'liveList', _playlistManager.ensureLiveChannelsLoaded);
     PerfDiagnostics.mark('liveList');
@@ -1675,6 +1805,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (channel.id == lastId) {
         debugPrint(
             'Resume: ${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'}');
+        _startupLog(
+            '${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'} '
+            'on ${channel.id} after the live lists');
         if (usesMediaKit) {
           if (fullscreen) {
             // No forced landscape on a phone: nobody asked for this one

@@ -23,7 +23,8 @@ class VoiceEvent {
 /// Android's speech recognizer and text-to-speech (VoiceBridge.kt), and the
 /// iPhone's (VesperVoice in ios/Runner/AppDelegate.swift, same channel). On
 /// Fire TV and computers there is none: the viewer types or talks from the
-/// phone.
+/// phone. Apple TV only speaks (VesperSpeech in tvos/Runner/AppDelegate.swift,
+/// same channel): tvOS has no speech recognizer, so listening stays off there.
 class VoiceInput {
   VoiceInput._();
   static final instance = VoiceInput._();
@@ -40,16 +41,22 @@ class VoiceInput {
   /// The assistant launch ([VoiceBridge.onIntent]): called while running.
   VoidCallback? onAssist;
 
-  /// A platform with the voice bridge.
+  /// A platform with the voice bridge (listening and speaking).
   static bool get _native =>
       Platform.isAndroid || (Platform.isIOS && !isAppleTv);
 
+  /// A platform that reads replies aloud: the voice bridge, or Apple TV's
+  /// speech-only one.
+  static bool get _speaks => _native || isAppleTv;
+
   bool _handlerSet = false;
   void _ensureHandler() {
-    if (_handlerSet || !Platform.isAndroid) return;
+    if (_handlerSet || !(Platform.isAndroid || isAppleTv)) return;
     _handlerSet = true;
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'assist' && await takeAssist()) onAssist?.call();
+      // Apple TV's synthesizer: started / finished / cancelled (Send log).
+      if (call.method == 'speech') debugPrint('Speech: ${call.arguments}');
       return null;
     });
   }
@@ -151,24 +158,41 @@ class VoiceInput {
     } catch (_) {}
   }
 
+  /// Send log `Speech:` lines: the reply's length and language, never its
+  /// words. Apple TV answers with the voice it picked (or why none).
   Future<void> speak(String text) async {
-    if (!_native || text.trim().isEmpty) return;
+    if (!_speaks) {
+      debugPrint('Speech: not read aloud (no text-to-speech on this device)');
+      return;
+    }
+    if (text.trim().isEmpty) return;
+    _ensureHandler();
+    debugPrint('Speech: speak lang=$language chars=${text.length}');
     try {
-      await _channel
-          .invokeMethod<void>('speak', {'text': text, 'lang': language});
+      final answer = await _channel
+          .invokeMethod<Object?>('speak', {'text': text, 'lang': language});
+      if (answer != null) debugPrint('Speech: $answer');
     } catch (e) {
-      debugPrint('VoiceInput: speak failed: $e');
+      debugPrint('Speech: speak failed: $e');
     }
   }
 
   Future<void> speakIfWanted(String text) async {
-    if (speakReplies()) await speak(text);
+    if (speakReplies()) {
+      await speak(text);
+    } else {
+      debugPrint('Speech: not read aloud (Read replies aloud is off)');
+    }
   }
 
   Future<void> stopSpeaking() async {
-    if (!_native) return;
+    if (!_speaks) return;
+    debugPrint('Speech: stopSpeaking');
     try {
-      await _channel.invokeMethod<void>('stopSpeaking');
-    } catch (_) {}
+      final answer = await _channel.invokeMethod<Object?>('stopSpeaking');
+      if (answer != null) debugPrint('Speech: $answer');
+    } catch (e) {
+      debugPrint('Speech: stopSpeaking failed: $e');
+    }
   }
 }
