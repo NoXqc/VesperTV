@@ -1360,10 +1360,19 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // (CLAUDE.md §10, "Open in Multiview").
     final playback = context.read<PlaybackService>();
     await _setPreview(null, null);
-    await playback.stop();
+    if (_desktopSports) {
+      // media_kit (computers, iPhone, Apple TV): Multiview runs its own
+      // players, so the small player lets go of whatever it plays (a
+      // background channel too): one connection per screen.
+      DesktopMiniPlayer.instance.clear();
+    } else {
+      await playback.stop();
+    }
     if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => MultiviewScreen(initialChannels: channels)));
+        builder: (_) => _desktopSports
+            ? DesktopMultiviewScreen(initialChannels: channels)
+            : MultiviewScreen(initialChannels: channels)));
   }
 
   // -------------------------------------------------------------- actions
@@ -1879,7 +1888,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         hasPick: _picks.channelIdFor(game) != null,
         offerPlayHere: watch != null || !_isPreviewing(game),
         offerMultiview: watch == null &&
-            !_desktopSports &&
             game.state == GameState.live &&
             matches.isNotEmpty &&
             !context.read<AppPreferences>().hideMultiview,

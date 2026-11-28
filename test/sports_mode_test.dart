@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ import 'package:nox_iptv/models/profile_copy.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/sports_screen.dart';
 import 'package:nox_iptv/screens/multiview_screen.dart';
+import 'package:nox_iptv/screens/desktop_multiview_screen.dart';
 import 'package:nox_iptv/services/guide_key.dart';
 import 'package:nox_iptv/screens/player_screen.dart';
 import 'package:nox_iptv/screens/sports_live_list_screen.dart';
@@ -304,8 +306,11 @@ void main() {
   }
 
   String? getFocus() => FocusManager.instance.primaryFocus?.debugLabel;
-  Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
-    await tester.sendKeyEvent(key);
+
+  /// [platform]: the key map to send with (Windows' has no Select key).
+  Future<void> press(WidgetTester tester, LogicalKeyboardKey key,
+      {String? platform}) async {
+    await tester.sendKeyEvent(key, platform: platform);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
   }
@@ -840,12 +845,14 @@ void main() {
   const college = 'basketball.mens-college-basketball';
   const collegeLabel = "NCAA Men's Basketball";
 
-  Future<void> holdSelect(WidgetTester tester) async {
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+  Future<void> holdSelect(WidgetTester tester, {String? platform}) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select,
+        platform: platform);
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select,
+        platform: platform);
     await tester.pump();
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select, platform: platform);
     await tester.pumpAndSettle();
   }
 
@@ -2568,39 +2575,54 @@ void main() {
     await disposePage(tester);
   });
 
-  testWidgets('hold OK > Play in Multiview opens the checked live games',
-      (tester) async {
-    await prefs.setSportsMode(false);
-    final games = await matchedGames();
-    final routes = _MultiviewRoutes();
-    await open(tester, games: games, observer: routes);
-    await tester.pumpAndSettle();
-    InkWell card(String id) => tester.widget<InkWell>(find.byWidgetPredicate(
-        (w) => w is InkWell && w.focusNode?.debugLabel == 'sports-card-$id'));
-    card('nhl:game100').focusNode!.requestFocus();
-    await tester.pump();
-    await holdSelect(tester);
-    final entry = find.text('Play in Multiview');
-    await tester.scrollUntilVisible(entry, 120,
-        scrollable: find
-            .descendant(
-                of: find.byType(Dialog), matching: find.byType(Scrollable))
-            .first);
-    await tester.tap(entry);
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.check), findsOneWidget);
-    card('nhl:game101').focusNode!.requestFocus();
-    await tester.pump();
-    await press(tester, LogicalKeyboardKey.select);
-    expect(find.byIcon(Icons.check), findsNWidgets(2));
-    expect(playback.plays, isEmpty);
-    await press(tester, LogicalKeyboardKey.mediaPlayPause);
-    await tester.pumpAndSettle();
-    expect(routes.channels.map((c) => c.id), ['p1::0', 'p1::1']);
-    expect(find.byIcon(Icons.check), findsNothing);
-    expect(tester.takeException(), isNull);
-    await disposePage(tester);
-  });
+  // media_kit (computers, iPhone, Apple TV) offers it too, into its own
+  // Multiview (DesktopMultiviewScreen), the checked games in order. A remote
+  // on both (Apple TV on media_kit); its keys go with Android's key map, as
+  // Windows' has no Select key.
+  for (final (platform, screen) in [
+    (TargetPlatform.android, MultiviewScreen),
+    (TargetPlatform.windows, DesktopMultiviewScreen),
+  ]) {
+    testWidgets(
+        'hold OK > Play in Multiview opens the checked live games '
+        '(${platform.name})', (tester) async {
+      debugDefaultTargetPlatformOverride = platform;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await prefs.setSportsMode(false);
+      final games = await matchedGames();
+      final routes = _MultiviewRoutes();
+      await open(tester, games: games, observer: routes);
+      await tester.pumpAndSettle();
+      InkWell card(String id) => tester.widget<InkWell>(find.byWidgetPredicate(
+          (w) => w is InkWell && w.focusNode?.debugLabel == 'sports-card-$id'));
+      card('nhl:game100').focusNode!.requestFocus();
+      await tester.pump();
+      await holdSelect(tester, platform: 'android');
+      final entry = find.text('Play in Multiview');
+      await tester.scrollUntilVisible(entry, 120,
+          scrollable: find
+              .descendant(
+                  of: find.byType(Dialog), matching: find.byType(Scrollable))
+              .first);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.check), findsOneWidget);
+      card('nhl:game101').focusNode!.requestFocus();
+      await tester.pump();
+      await press(tester, LogicalKeyboardKey.select, platform: 'android');
+      expect(find.byIcon(Icons.check), findsNWidgets(2));
+      expect(playback.plays, isEmpty);
+      await press(tester, LogicalKeyboardKey.mediaPlayPause,
+          platform: 'android');
+      await tester.pumpAndSettle();
+      expect(routes.screens, [screen]);
+      expect(routes.channels.map((c) => c.id), ['p1::0', 'p1::1']);
+      expect(find.byIcon(Icons.check), findsNothing);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
 
   testWidgets('Live now group: one row per game, hold OK = its sources',
       (tester) async {
@@ -2671,15 +2693,23 @@ void main() {
   });
 }
 
-/// Records Multiview pushes and removes them (no video in a widget test).
+/// Records Multiview pushes (Android's or the media_kit one) and removes
+/// them (no video in a widget test).
 class _MultiviewRoutes extends NavigatorObserver {
   final List<Channel> channels = [];
+  final List<Type> screens = [];
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (previousRoute == null || route is! MaterialPageRoute) return;
     final page = route.builder(navigator!.context);
-    if (page is! MultiviewScreen) return;
-    channels.addAll(page.initialChannels);
+    final initial = switch (page) {
+      MultiviewScreen(:final initialChannels) => initialChannels,
+      DesktopMultiviewScreen(:final initialChannels) => initialChannels,
+      _ => null,
+    };
+    if (initial == null) return;
+    screens.add(page.runtimeType);
+    channels.addAll(initial);
     scheduleMicrotask(() => navigator!.removeRoute(route));
   }
 }

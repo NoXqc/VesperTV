@@ -2067,16 +2067,16 @@ class SettingsCatalog {
                         'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.'),
                 value: prefs.dataPool,
                 onChanged: prefs.setDataPool),
-            if (!usesMediaKit)
-              SettingsToggle(
-                  id: 'multiview_tip',
-                  icon: Icons.grid_view,
-                  title: tr('Show the Multiview tip'),
-                  help: tr(
-                      'The connections reminder shown when opening Multiview.'),
-                  value: !_storage.getMultiviewHideTips(),
-                  onChanged: (v) =>
-                      _save(() => _storage.setMultiviewHideTips(!v))),
+            // Every Multiview shows the tip (DesktopMultiviewScreen too).
+            SettingsToggle(
+                id: 'multiview_tip',
+                icon: Icons.grid_view,
+                title: tr('Show the Multiview tip'),
+                help: tr(
+                    'The connections reminder shown when opening Multiview.'),
+                value: !_storage.getMultiviewHideTips(),
+                onChanged: (v) =>
+                    _save(() => _storage.setMultiviewHideTips(!v))),
             if (!usesMediaKit)
               SettingsChoice(
                   id: 'multiview_frame_saver',
